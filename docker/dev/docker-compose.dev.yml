@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  repomap-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.venv
+    volumes:
+      - .:/app
+      - ./cache:/app/cache
+      - ../aider:/aider  # Mount aider for development
+    environment:
+      - PYTHONPATH=/app
+      - CACHE_DIR=/app/cache
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - VIRTUAL_ENV=/opt/venv
+    working_dir: /app
+    command: ["/bin/bash", "-c", "source /opt/venv/bin/activate && python external_repomap.py /project --verbose"]
+    stdin_open: true
+    tty: true
+
+  repomap-api-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.venv
+    volumes:
+      - .:/app
+      - ./cache:/app/cache
+      - ../aider:/aider  # Mount aider for development
+    environment:
+      - PYTHONPATH=/app
+      - CACHE_DIR=/app/cache
+      - DEBUG=true
+      - LOG_LEVEL=DEBUG
+      - VIRTUAL_ENV=/opt/venv
+    working_dir: /app
+    command: ["/bin/bash", "-c", "source /opt/venv/bin/activate && python enhanced_api_server.py"]
+    ports:
+      - "8000:8000"
+    stdin_open: true
+    tty: true
+
+  repomap-test:
+    build:
+      context: .
+      dockerfile: Dockerfile.venv
+    volumes:
+      - .:/app
+      - ./cache:/app/cache
+      - ../aider:/aider  # Mount aider for development
+    environment:
+      - PYTHONPATH=/app
+      - CACHE_DIR=/app/cache
+      - VIRTUAL_ENV=/opt/venv
+    working_dir: /app
+    command: ["/bin/bash", "-c", "source /opt/venv/bin/activate && pip install pytest pytest-cov && pytest tests/ -v"]
+    stdin_open: true
+    tty: true

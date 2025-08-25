@@ -1,0 +1,183 @@
+
+api_server.py:
+⋮
+│app = Flask(__name__)
+⋮
+│class RepoMapAPI:
+│    def __init__(self, docker_image="repomap-tool"):
+⋮
+│    def generate_repo_map(self, project_path, map_tokens=1024, force_refresh=False):
+⋮
+│    def get_cache_stats(self, project_path):
+⋮
+│    def clear_cache(self, project_path):
+⋮
+│repo_map_api = RepoMapAPI()
+│
+│@app.route('/health', methods=['GET'])
+│def health():
+⋮
+│@app.route('/repo-map', methods=['POST'])
+│def generate_repo_map():
+⋮
+│@app.route('/cache/stats', methods=['POST'])
+│def get_cache_stats():
+⋮
+│@app.route('/cache/clear', methods=['POST'])
+│def clear_cache():
+⋮
+
+client_example.py:
+⋮
+│class RepoMapClient:
+│    def __init__(self, api_url: str = "http://localhost:5000"):
+⋮
+│    def generate_repo_map(self, project_path: str, map_tokens: int = 1024, force_refresh: bool = Fa
+⋮
+│    def get_cache_stats(self, project_path: str) -> Dict[str, Any]:
+⋮
+│    def clear_cache(self, project_path: str) -> Dict[str, Any]:
+⋮
+│    def health_check(self) -> Dict[str, Any]:
+⋮
+│class LLMIntegrationExample:
+│    def __init__(self, repo_map_client: RepoMapClient):
+⋮
+│    def get_codebase_context(self, project_path: str, user_request: str) -> str:
+⋮
+│    def _estimate_token_budget(self, user_request: str) -> int:
+⋮
+│def example_usage():
+⋮
+│def openai_integration_example():
+⋮
+│def langchain_integration_example():
+⋮
+
+enhanced_api_server.py:
+⋮
+│app = Flask(__name__)
+⋮
+│class EnhancedRepoMapAPI:
+│    def __init__(self, docker_image="repomap-tool"):
+⋮
+│    def extract_mentioned_files(self, message_text: str) -> Set[str]:
+⋮
+│    def extract_mentioned_identifiers(self, message_text: str) -> Set[str]:
+⋮
+│    def get_identifier_filename_matches(self, mentioned_idents: Set[str]) -> Set[str]:
+⋮
+│    def generate_dynamic_repo_map(self, project_path: str, message_text: str, 
+│                                 chat_files: List[str] = None, map_tokens: int = 1024, 
+⋮
+│    def generate_repo_map(self, project_path: str, map_tokens: int = 1024, force_refresh: bool = Fa
+⋮
+│enhanced_api = EnhancedRepoMapAPI()
+│
+│@app.route('/health', methods=['GET'])
+│def health():
+⋮
+│@app.route('/repo-map/dynamic', methods=['POST'])
+│def generate_dynamic_repo_map():
+⋮
+│@app.route('/repo-map', methods=['POST'])
+│def generate_repo_map():
+⋮
+│@app.route('/context/analyze', methods=['POST'])
+│def analyze_context():
+⋮
+
+enhanced_client_example.py:
+⋮
+│class EnhancedRepoMapClient:
+│    def __init__(self, api_url: str = "http://localhost:5000"):
+│        self.api_url = api_url
+│        self.conversation_history = []
+⋮
+│    def add_message(self, role: str, content: str):
+⋮
+│    def add_chat_file(self, file_path: str):
+⋮
+│    def remove_chat_file(self, file_path: str):
+⋮
+│    def get_dynamic_repo_map(self, project_path: str, message_text: str = None, 
+⋮
+│    def analyze_context(self, message_text: str) -> Dict[str, Any]:
+⋮
+│    def get_repo_map(self, project_path: str, map_tokens: int = 1024, force_refresh: bool = False) 
+⋮
+│    def health_check(self) -> Dict[str, Any]:
+⋮
+│class ConversationManager:
+│    def __init__(self, repo_map_client: EnhancedRepoMapClient, project_path: str):
+│        self.repo_map_client = repo_map_client
+│        self.project_path = project_path
+⋮
+│    def start_conversation(self, initial_message: str = None):
+⋮
+│    def update_context(self, message: str):
+⋮
+│    def send_message(self, message: str, map_tokens: int = 1024) -> str:
+⋮
+│    def add_file_to_chat(self, file_path: str):
+⋮
+│    def remove_file_from_chat(self, file_path: str):
+⋮
+│def example_conversation():
+⋮
+│def openai_integration_example():
+⋮
+│def langchain_integration_example():
+⋮
+
+external_repomap.py:
+⋮
+│logger = logging.getLogger(__name__)
+│
+⋮
+│class DockerRepoMap:
+│    def __init__(self, project_root, map_tokens=1024, cache_dir=None, verbose=True):
+│        self.project_root = Path(project_root).resolve()
+│        self.map_tokens = map_tokens
+│        self.cache_dir = Path(cache_dir) if cache_dir else self.project_root
+│        self.verbose = verbose
+│        
+│        # Create mock objects
+│        self.mock_model, self.mock_io = self._create_mocks()
+│        
+│        # Initialize RepoMap
+⋮
+│    def _create_mocks(self):
+│        """Create mock objects for aider dependencies"""
+│        
+│        class MockModel:
+│            def __init__(self, map_tokens):
+│                self.map_tokens = map_tokens
+⋮
+│            def token_count(self, text):
+⋮
+│            def get_repo_map_tokens(self):
+⋮
+│        class MockIO:
+│            def __init__(self, verbose=True):
+⋮
+│            def read_text(self, fname):
+⋮
+│            def tool_output(self, msg):
+⋮
+│            def tool_warning(self, msg):
+⋮
+│            def tool_error(self, msg):
+⋮
+│    def get_source_files(self, extensions=None):
+⋮
+│    def generate_repo_map(self, chat_files=None, mentioned_fnames=None, mentioned_idents=None, forc
+⋮
+│    def get_cache_stats(self):
+⋮
+│    def clear_cache(self):
+⋮
+│    def save_repo_map(self, repo_content, output_file=None):
+⋮
+│def main():
+⋮

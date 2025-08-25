@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "repomap-tool"
+version = "0.1.0"
+description = "Portable code analysis tool using aider libraries"
+authors = [{name = "Your Name", email = "your.email@example.com"}]
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = [
+    "aider-chat",
+    "networkx>=3.0",
+    "diskcache>=5.6.0",
+    "grep-ast>=0.1.0",
+    "pygments>=2.15.0",
+    "tqdm>=4.65.0",
+    "tree-sitter==0.24.0",
+    "packaging>=21.0",
+    "click>=8.0",
+    "colorama>=0.4.4",
+    "rich>=13.0.0",
+    "numpy>=1.21.0",
+    "scipy>=1.7.0",
+    "fuzzywuzzy>=0.18.0",
+    "python-Levenshtein>=0.21.0",
+    "pydantic>=2.0.0",
+    "click>=8.0.0",
+]
+
+[project.scripts]
+repomap-tool = "repomap_tool.cli:cli"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=22.0.0",
+    "flake8>=5.0.0",
+    "mypy>=1.0.0",
+n 
+    "types-requests>=2.28.0",
+    "types-PyYAML>=6.0.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--verbose",
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term-missing",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503"]
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# Per-module options
+[[tool.mypy.overrides]]
+module = [
+    "fuzzywuzzy.*",
+    "Levenshtein.*",
+    "tree_sitter.*",
+    "aider.*",
+]
+ignore_missing_imports = true
+
+# Source directories
+mypy_path = "src"
+exclude = [
+    "tests/",
+    ".*/__pycache__/",
+    ".*/\.venv/",
+    ".*/venv/",
+]
