@@ -8,9 +8,9 @@ the actual codebase and provides much more flexible matching.
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
 
-from adaptive_semantic_matcher import AdaptiveSemanticMatcher
+from matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
 
 def test_adaptive_matcher():
     """Test the adaptive semantic matcher with various scenarios."""

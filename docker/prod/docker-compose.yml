@@ -2,14 +2,16 @@ version: '3.8'
 
 services:
   repomap:
-    build: .
+    build:
+      context: ../..
+      dockerfile: docker/prod/Dockerfile
     volumes:
       - ./projects:/projects
       - ./cache:/app/cache
     environment:
       - PYTHONPATH=/app
       - CACHE_DIR=/app/cache
-    command: ["/projects/my-project", "--map-tokens", "2048", "--verbose"]
+    command: ["analyze", "/projects/test-project", "--verbose"]
     # Uncomment the line below to run interactively
     # stdin_open: true
     # tty: true

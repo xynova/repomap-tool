@@ -16,7 +16,7 @@ from collections import Counter
 import math
 
 # Import our existing fuzzy matcher
-from fuzzy_matcher import FuzzyMatcher
+from .fuzzy_matcher import FuzzyMatcher
 
 logger = logging.getLogger(__name__)
 

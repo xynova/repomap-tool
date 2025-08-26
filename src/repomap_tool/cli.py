@@ -17,11 +17,11 @@ from rich.table import Table
 from rich.panel import Panel
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ..models import (
+from .models import (
     RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig,
     SearchRequest, create_error_response
 )
-from ..core import DockerRepoMap
+from .core import DockerRepoMap
 
 console = Console()
 

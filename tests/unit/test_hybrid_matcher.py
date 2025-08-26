@@ -8,9 +8,9 @@ than rigid dictionary approaches.
 
 import sys
 import os
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
 
-from hybrid_matcher import HybridMatcher
+from matchers.hybrid_matcher import HybridMatcher
 
 def test_hybrid_matcher():
     """Test the hybrid matcher with various scenarios."""

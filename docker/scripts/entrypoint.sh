@@ -7,21 +7,18 @@ show_help() {
     echo "Docker RepoMap Tool"
     echo ""
     echo "Usage:"
-    echo "  docker run repomap-tool <project_path> [options]"
+    echo "  docker run repomap-tool <command> [options]"
+    echo ""
+    echo "Commands:"
+    echo "  analyze <project_path>    Analyze a project and generate a code map"
+    echo "  search <project_path> <query>  Search for identifiers in a project"
+    echo "  config <project_path>     Generate a configuration file for the project"
+    echo "  version                   Show version information"
     echo ""
     echo "Examples:"
-    echo "  docker run -v /path/to/project:/project repomap-tool /project"
-    echo "  docker run -v /path/to/project:/project repomap-tool /project --map-tokens 2048"
-    echo "  docker run -v /path/to/project:/project repomap-tool /project --cache-stats"
-    echo ""
-    echo "Options:"
-    echo "  --map-tokens N     Token budget for repo map (default: 1024)"
-    echo "  --output FILE      Output file path"
-    echo "  --clear-cache      Clear cache before generating"
-    echo "  --force-refresh    Force refresh of repo map"
-    echo "  --cache-stats      Show cache statistics"
-    echo "  --verbose          Verbose output"
-    echo "  --extensions       File extensions to include"
+    echo "  docker run -v /path/to/project:/project repomap-tool analyze /project"
+    echo "  docker run -v /path/to/project:/project repomap-tool search /project 'auth'"
+    echo "  docker run -v /path/to/project:/project repomap-tool config /project"
     echo ""
     echo "Volume mounts:"
     echo "  -v /host/project:/project    Mount your project directory"
@@ -34,13 +31,13 @@ if [[ "$1" == "--help" || "$1" == "-h" ]]; then
     exit 0
 fi
 
-# Check if project path is provided
+# Check if command is provided
 if [[ -z "$1" ]]; then
-    echo "Error: Project path is required"
+    echo "Error: Command is required"
     echo ""
     show_help
     exit 1
 fi
 
-# Run the repomap script
-exec python external_repomap.py "$@"
+# Run the CLI
+exec repomap-tool "$@"

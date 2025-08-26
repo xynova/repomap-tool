@@ -1,4 +1,4 @@
-# Dockerfile
+# Dockerfile for Docker RepoMap Tool
 FROM python:3.11-slim
 
 # Install system dependencies
@@ -13,18 +13,14 @@ WORKDIR /app
 # Copy package configuration
 COPY pyproject.toml setup.py ./
 
-# Install Python dependencies
+# Copy the entire source code
+COPY src/ ./src/
+
+# Install Python dependencies and the package
+RUN pip install --upgrade pip setuptools wheel
 RUN pip install -e .
 
-# Install aider-chat from PyPI (no need to copy parent directory)
-RUN pip install aider-chat
-
-# Copy the repomap script and matchers
-COPY src/external_repomap.py .
-COPY src/matchers/fuzzy_matcher.py .
-COPY src/matchers/adaptive_semantic_matcher.py .
-COPY src/matchers/hybrid_matcher.py .
-COPY src/matchers/semantic_matcher.py .
+# Copy the entrypoint script
 COPY docker/scripts/entrypoint.sh .
 
 # Make entrypoint executable
