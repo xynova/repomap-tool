@@ -1,184 +1,229 @@
-# RepoMap Tool - Supercharge Your Code Analysis
+# RepoMap Tool
 
-**Transform how you understand, search, and navigate complex codebases with intelligent fuzzy and semantic matching.**
+![Archaeologist exploring ancient code](arch1.jpg)
 
-## 🎯 Why RepoMap Tool?
+**Why?** AI code assistants struggle with large codebases. They often miss context, can't find related code when names don't match exactly, and waste precious context window space searching for the right files. This leads to inaccurate suggestions and inefficient code generation.
 
-### The Problem
-Modern codebases are massive and complex. Traditional search tools like `grep` or basic IDE search often miss the mark because:
-- **Exact matches fail**: Code uses different naming conventions (`userAuth` vs `user_auth` vs `UserAuth`)
-- **Semantic connections are hidden**: Related functions scattered across files with different names
-- **Context is lost**: You find a function but don't understand its relationships
-- **Time wasted**: Hours spent manually tracing code relationships
+**What?** RepoMap Tool is an intelligent code analysis engine that supercharges AI code assistants by providing comprehensive codebase understanding. It combines fuzzy matching (finding similar names) with semantic analysis (understanding meaning) to give AI assistants the context they need for accurate code suggestions.
 
-### The Solution
-RepoMap Tool combines **fuzzy matching** and **semantic analysis** to give you superhuman code navigation abilities:
+**How?** It analyzes your codebase structure, maps relationships between files and functions, and provides AI assistants with intelligent search capabilities to discover and understand the code they need to work with effectively.
 
-- 🔍 **Find anything, even with typos or different naming**
-- 🧠 **Discover semantic relationships between code elements**
-- ⚡ **Navigate complex codebases in seconds, not hours**
-- 🎯 **Get context-aware results that understand your codebase**
+## The Problem
 
-## 🚀 Perfect For
+When AI code assistants work with large codebases, they face these critical challenges:
 
-### 🔧 **Development Teams**
-- **Onboard new developers** faster by showing code relationships
-- **Refactor with confidence** by understanding all usages
-- **Debug efficiently** by finding related code instantly
-- **Code reviews** with full context of changes
+- **Context window limitations**: AI assistants waste precious tokens searching for relevant code
+- **Naming variations**: AI can't find code when the same concept is named `userAuth`, `user_auth`, `UserAuth`, or `authenticate_user`
+- **Scattered logic**: AI misses related functionality spread across multiple files with different naming conventions
+- **Incomplete context**: AI generates suggestions without understanding the full codebase structure
+- **Inefficient searches**: AI spends time on irrelevant files instead of focusing on the most relevant code
 
-### 🏗️ **Architects & Tech Leads**
-- **Analyze codebase health** and identify technical debt
-- **Plan refactoring** with complete dependency mapping
-- **Document architecture** automatically from code structure
-- **Enforce patterns** by finding violations
+## The Solution
 
-### 🔍 **DevOps & SRE**
-- **Incident response** - quickly find relevant code during outages
-- **Security audits** - identify all usages of vulnerable patterns
-- **Performance optimization** - locate bottlenecks across the codebase
-- **Compliance checks** - verify coding standards
+RepoMap Tool addresses these AI assistant challenges through:
 
-### 🎓 **Learning & Research**
-- **Study open source projects** with intelligent navigation
-- **Research code patterns** across multiple repositories
-- **Academic research** in software engineering
-- **Code archaeology** - understand legacy systems
+### 🔍 **Fuzzy Matching**
+Enables AI assistants to find code even when names don't match exactly:
+- `userAuth` ↔ `user_auth` ↔ `UserAuth`
+- `dataProcessor` ↔ `process_data` ↔ `DataProcessor`
+- Handles typos, abbreviations, and naming conventions that confuse AI
 
-## 💡 Real-World Use Cases
+### 🧠 **Semantic Analysis**
+Gives AI assistants understanding of what code does, not just what it's called:
+- AI can find authentication logic even if it's named `login`, `signin`, or `verify_credentials`
+- AI discovers data processing functions regardless of naming patterns
+- AI identifies related functionality across different modules
 
-### Example 1: The "User Authentication" Hunt
-**Traditional approach**: Search for "auth", "login", "user" separately, manually check each result
-**With RepoMap**: One search finds `authenticate_user()`, `login_handler`, `UserAuthService`, `validate_credentials()` - all semantically related!
+### ⚡ **Hybrid Approach**
+Provides AI assistants with comprehensive search capabilities through parallel analysis:
 
-### Example 2: Refactoring Confidence
-**Before**: Nervous about renaming `processData()` because you're not sure where it's used
-**With RepoMap**: Instantly see all 23 usages across 8 files, including fuzzy matches like `process_data()` and `ProcessData()`
+```mermaid
+graph LR
+    A[User Query] --> B[Hybrid Matcher]
+    
+    B --> C[Fuzzy Analysis]
+    B --> D[Semantic Analysis]
+    
+    C --> E[String Similarity Scores]
+    D --> F[Semantic Similarity Scores]
+    
+    E --> G[Score Combination]
+    F --> G
+    
+    G --> H[Weighted Ranking]
+    H --> I[Final Results]
+    
+    style A fill:#e3f2fd
+    style B fill:#fff3e0
+    style G fill:#f3e5f5
+    style I fill:#e8f5e8
+```
 
-### Example 3: Debugging Nightmares
-**Traditional**: Hours tracing through logs, guessing which files to check
-**With RepoMap**: Search for error patterns, find all related error handling code, and understand the full error flow
+- **Parallel processing**: Both fuzzy and semantic analysis run simultaneously
+- **Score combination**: Results are intelligently merged for optimal coverage
+- **Weighted ranking**: Balances string similarity with conceptual understanding
+- **Context-aware**: Adapts to your specific codebase patterns
 
-## 🛠️ Quick Start
+## Real-World Scenarios
 
+### Scenario 1: AI Assistant Finding Authentication Code
+**AI needs to understand**: "How does user authentication work in this codebase?"
+**Without RepoMap**: AI might miss `login`, `signin`, or `verify_credentials` functions
+**With RepoMap**: AI discovers all authentication-related code regardless of naming conventions
+
+### Scenario 2: AI Assistant Understanding Data Flow
+**AI needs to understand**: "How does data get processed in this application?"
+**Without RepoMap**: AI might only see files with "process" in the name
+**With RepoMap**: AI gets a comprehensive view of the entire data pipeline
+
+### Scenario 3: AI Assistant Planning Refactoring
+**AI needs to understand**: "What code would be affected if I change the user model?"
+**Without RepoMap**: AI might miss hidden dependencies and cause breaking changes
+**With RepoMap**: AI can analyze all relationships and dependencies automatically
+
+## Getting Started
+
+### Quick Start with Docker
 ```bash
 # Clone the repository
 git clone <repository-url>
 cd repomap-tool
 
-# Build and run with Docker (no installation needed!)
+# Build and run with Docker
 make docker-build
 make docker-run
 
-# Or run directly with Docker
-docker run --rm -v $(pwd):/project repomap-tool analyze /project
+# Analyze your project
+docker run repomap-tool analyze /path/to/your/project
+
+# Search for code
+docker run repomap-tool search /path/to/your/project "user authentication"
 ```
 
-**That's it!** The tool is now running and ready to analyze your codebase. 🚀
+### Basic Usage Examples
 
-## 🔥 Key Features
-
-### 🎯 **Intelligent Search**
-- **Fuzzy matching**: Find `userAuth` when searching for `user_auth`
-- **Semantic matching**: Discover related concepts even with different names
-- **Hybrid approach**: Combine both for comprehensive results
-- **Context awareness**: Understand relationships between code elements
-
-### 📊 **Rich Analysis**
-- **Code maps**: Visual representation of your codebase structure
-- **Dependency graphs**: See how components interact
-- **Pattern detection**: Identify common coding patterns
-- **Metrics**: Code complexity, file relationships, and more
-
-### 🚀 **Developer Experience**
-- **CLI interface**: Simple commands for quick analysis
-- **API server**: Integrate with your existing tools
-- **Docker support**: Run anywhere, no installation hassles
-- **Type safety**: Built with modern Python practices
-
-### 🔌 **Tool Integration**
-- **IDE plugins**: Works with VS Code, PyCharm, and more
-- **CI/CD integration**: Automated code analysis in pipelines
-- **API access**: Build custom tools on top of RepoMap
-- **Export formats**: JSON, CSV, and custom formats
-
-## 🏆 Success Stories
-
-> *"RepoMap Tool cut our onboarding time from 2 weeks to 3 days. New developers can now understand our 500K+ line codebase in hours, not weeks."* - Senior Developer, FinTech Startup
-
-> *"During a critical production incident, RepoMap helped us find the root cause in 15 minutes instead of 4 hours. It literally saved us thousands in downtime costs."* - DevOps Lead, E-commerce Platform
-
-> *"Our refactoring success rate went from 60% to 95% because we can now see all the hidden dependencies before making changes."* - Tech Lead, SaaS Company
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Docker (that's it!)
-
-### Quick Start with Docker
-
+**Find authentication-related code:**
 ```bash
-# Clone and run with Docker (no Python installation needed!)
-git clone <repository-url>
-cd repomap-tool
-make docker-build
-make docker-run
+docker run repomap-tool search . "user login authentication"
 ```
 
-### Alternative: Direct Docker
-
+**Discover data processing functions:**
 ```bash
-# Run directly with Docker
-docker run --rm -v $(pwd):/project repomap-tool analyze /project
+docker run repomap-tool search . "data processing pipeline" --match-type semantic
 ```
 
-### Using the Tool
-
-Once running, you can:
-
+**Find code with similar names:**
 ```bash
-# Analyze a project
-repomap-tool analyze /path/to/project
-
-# Search with fuzzy matching
-repomap-tool search /path/to/project "user authentication"
-
-# Get semantic relationships
-repomap-tool search /path/to/project "data processing" --match-type semantic
-
-# Generate configuration
-repomap-tool config /path/to/project
+docker run repomap-tool search . "userAuth" --match-type fuzzy
 ```
 
-### For Developers (Optional)
-
-If you want to develop or customize:
-
+**Get comprehensive results:**
 ```bash
-# Setup Python development environment
-make setup
-make install-dev
-
-# Run tests
-make test
+docker run repomap-tool search . "error handling" --match-type hybrid
 ```
 
-## 📚 Documentation
+## Key Benefits for AI Code Assistants
 
-- [Integration Guide](docs/README_INTEGRATION_SUMMARY.md) - How to integrate with existing tools
-- [API Documentation](docs/api/) - REST API reference
-- [Development Guide](docs/guides/) - Contributing and extending
+### 🧠 **Enhanced Context Understanding**
+- Provides AI assistants with comprehensive codebase context
+- Enables better understanding of relationships between files and functions
+- Helps AI generate more accurate and contextually relevant code suggestions
 
-## 🤝 Contributing
+### 🔍 **Intelligent Code Discovery**
+- AI assistants can find related code even when names don't match exactly
+- Discovers hidden dependencies and connections that might be missed
+- Enables AI to suggest improvements based on similar patterns across the codebase
 
-We welcome contributions! See our [Development Guide](docs/guides/) for details.
+### 🎯 **Precise Code Location**
+- Helps AI assistants quickly locate the exact code they need to modify
+- Reduces context window waste by finding the most relevant code sections
+- Enables more targeted and efficient code generation
 
-## 📄 License
+### 🔗 **Dependency Awareness**
+- AI assistants can understand what code would be affected by changes
+- Prevents breaking changes by identifying all related components
+- Enables safer refactoring suggestions with full impact analysis
 
-MIT License - see LICENSE file for details.
+### 📊 **Code Quality Intelligence**
+- Provides AI with insights into code complexity and coupling
+- Helps AI suggest better architectural patterns and improvements
+- Enables more informed decisions about code organization and structure
 
----
+### ⚡ **Faster AI Response Times**
+- Reduces the time AI assistants spend searching for relevant code
+- Enables more efficient context gathering and analysis
+- Results in quicker, more accurate code suggestions and completions
 
-**Ready to transform how you work with code?** 🚀
+## When to Use RepoMap Tool
 
-Start with `repomap-tool analyze /path/to/your/project` and see the difference immediately!
+### Perfect for:
+- **Large codebases** (100+ files)
+- **Legacy systems** with inconsistent naming
+- **Team projects** where naming conventions vary
+- **Code exploration** and understanding
+- **Refactoring preparation** and impact analysis
+- **Onboarding** new developers to existing codebases
+
+### Use Cases:
+- **"How does this feature work?"** - Understand implementation details
+- **"Where is this functionality?"** - Find specific code quickly
+- **"What would break if I change this?"** - Analyze dependencies
+- **"Is there similar code elsewhere?"** - Find duplicates or alternatives
+- **"How is data flowing through this system?"** - Map data pipelines
+
+## Search Strategies
+
+### Fuzzy Matching
+Best for finding code when you know part of the name or there are naming variations.
+
+**Example**: Searching for "userAuth" will find:
+- `userAuth`
+- `user_auth`
+- `UserAuth`
+- `authenticateUser`
+- `userAuthentication`
+
+### Semantic Matching
+Best for finding code based on what it does, regardless of naming.
+
+**Example**: Searching for "user authentication" will find:
+- Functions that handle login/logout
+- Password validation code
+- Session management
+- Authorization checks
+- Security-related utilities
+
+### Hybrid Matching
+Best for comprehensive results that combine both approaches.
+
+**Example**: Searching for "data processing" will find:
+- Functions with "process" in the name (fuzzy)
+- Functions that transform or manipulate data (semantic)
+- Related utilities and helpers
+- Pipeline components
+
+## Project Analysis
+
+RepoMap Tool doesn't just search - it analyzes your entire codebase to understand:
+
+- **File relationships**: Which files import or depend on others
+- **Function connections**: How functions call each other
+- **Data flow**: How data moves through your application
+- **Code complexity**: Which parts are most complex or tightly coupled
+- **Architecture patterns**: How your code is organized
+
+This analysis enables more intelligent searching and provides insights into your codebase structure.
+
+## Getting Help
+
+- **Documentation**: [API Guide](docs/API_GUIDE.md), [CLI Reference](docs/CLI_GUIDE.md)
+- **Examples**: Check the `examples/` directory for practical usage
+- **Architecture**: [Development Guide](docs/architecture/DEVELOPMENT_GUIDE.md)
+
+## Contributing
+
+We welcome contributions! See our [Development Guide](docs/architecture/DEVELOPMENT_GUIDE.md) for how to get started.
+
+## License
+
+MIT License - feel free to use in your projects.
