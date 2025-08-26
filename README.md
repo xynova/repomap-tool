@@ -1,12 +1,49 @@
-# RepoMap Tool
+# RepoMap Tool (Inspired by Aider)
 
-![Archaeologist exploring ancient code](arch1.jpg)
+*A Tool to Help AI Assistants Navigate and Understand Codebases*
+
+
+
+> "Code archaeology isn't just about finding what works, but understanding why it was written that way in the first place." 
+> `James Wilson`
+
+
+![Archaeologist exploring ancient code](docs/images/arch1.jpg)
+
+
+
+## Overview
+
 
 **Why?** AI code assistants struggle with large codebases. They often miss context, can't find related code when names don't match exactly, and waste precious context window space searching for the right files. This leads to inaccurate suggestions and inefficient code generation.
 
 **What?** RepoMap Tool is an intelligent code analysis engine that supercharges AI code assistants by providing comprehensive codebase understanding. It combines fuzzy matching (finding similar names) with semantic analysis (understanding meaning) to give AI assistants the context they need for accurate code suggestions.
 
 **How?** It analyzes your codebase structure, maps relationships between files and functions, and provides AI assistants with intelligent search capabilities to discover and understand the code they need to work with effectively.
+
+
+## Table of Contents
+
+- [The Problem](#the-problem)
+- [The Solution](#the-solution)
+  - [🔍 Fuzzy Matching](#-fuzzy-matching)
+  - [🧠 Semantic Analysis](#-semantic-analysis) 
+  - [⚡ Hybrid Approach](#-hybrid-approach)
+  - [🔗 Dependency Awareness](#-dependency-awareness)
+  - [📊 Code Quality Intelligence](#-code-quality-intelligence)
+  - [⚡ Faster AI Response Times](#-faster-ai-response-times)
+- [When to Use RepoMap Tool](#when-to-use-repomap-tool)
+  - [Perfect for](#perfect-for)
+  - [Use Cases](#use-cases)
+- [Search Strategies](#search-strategies)
+  - [Fuzzy Matching](#fuzzy-matching)
+  - [Semantic Matching](#semantic-matching)
+  - [Hybrid Matching](#hybrid-matching)
+- [Project Analysis](#project-analysis)
+- [Getting Help](#getting-help)
+- [Contributing](#contributing)
+- [License](#license)
+
 
 ## The Problem
 
