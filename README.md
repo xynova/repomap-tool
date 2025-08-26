@@ -130,32 +130,42 @@ cd repomap-tool
 make docker-build
 
 # Analyze your project (with cache persistence)
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool analyze /workspace
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool analyze /workspace
 
 # Search for code (with cache persistence)
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "user authentication"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool search /workspace "user authentication"
+
+# Try it with our example project
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace repomap-tool repomap-tool search /workspace "auth"
 ```
 
 ### Basic Usage Examples
 
-**Find authentication-related code:**
+**Try with our example project first:**
 ```bash
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "user login authentication"
+# Search for authentication-related code
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace repomap-tool repomap-tool search /workspace "auth"
+
+# Find specific function names
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace repomap-tool repomap-tool search /workspace "authenticate_user"
+
+# Test fuzzy matching with different naming conventions
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace repomap-tool repomap-tool search /workspace "user_auth"
 ```
 
-**Discover data processing functions:**
+**Now try with your own project:**
 ```bash
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "data processing pipeline" --match-type semantic
-```
+# Find authentication-related code
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool search /workspace "user login authentication"
 
-**Find code with similar names:**
-```bash
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "userAuth" --match-type fuzzy
-```
+# Discover data processing functions
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool search /workspace "data processing pipeline"
 
-**Get comprehensive results:**
-```bash
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "error handling" --match-type hybrid
+# Find code with similar names
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool search /workspace "userAuth"
+
+# Get comprehensive results
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool search /workspace "error handling"
 ```
 
 ## Key Benefits for AI Code Assistants
