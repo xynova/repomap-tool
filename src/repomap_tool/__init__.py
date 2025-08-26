@@ -23,9 +23,15 @@ except ImportError:
 # Import models
 try:
     from .models import (
-        RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig,
-        MatchResult, SearchRequest, SearchResponse, ProjectInfo,
-        HealthCheck, ErrorResponse
+        RepoMapConfig,
+        FuzzyMatchConfig,
+        SemanticMatchConfig,
+        MatchResult,
+        SearchRequest,
+        SearchResponse,
+        ProjectInfo,
+        HealthCheck,
+        ErrorResponse,
     )
 except ImportError:
     # Fallback imports
@@ -43,12 +49,12 @@ __all__ = [
     "DockerRepoMap",
     "cli",
     "RepoMapConfig",
-    "FuzzyMatchConfig", 
+    "FuzzyMatchConfig",
     "SemanticMatchConfig",
     "MatchResult",
     "SearchRequest",
     "SearchResponse",
     "ProjectInfo",
     "HealthCheck",
-    "ErrorResponse"
+    "ErrorResponse",
 ]
