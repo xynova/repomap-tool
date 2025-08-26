@@ -26,7 +26,7 @@ build: ## Build package
 	source venv/bin/activate && python setup.py sdist bdist_wheel
 
 docker-build: ## Build Docker image
-	docker build -f docker/prod/Dockerfile -t repomap-tool .
+	docker build -f docker/Dockerfile -t repomap-tool .
 
 docker-run: ## Run Docker container
 	docker run --rm -v $(PWD)/test-project:/project repomap-tool /project --fuzzy-match

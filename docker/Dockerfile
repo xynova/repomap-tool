@@ -20,11 +20,7 @@ COPY src/ ./src/
 RUN pip install --upgrade pip setuptools wheel
 RUN pip install -e .
 
-# Copy the entrypoint script
-COPY docker/scripts/entrypoint.sh .
-
-# Make entrypoint executable
-RUN chmod +x entrypoint.sh
+# No entrypoint script needed - use direct CLI commands
 
 # Create a volume for persistent cache
 VOLUME ["/app/cache"]
@@ -33,5 +29,5 @@ VOLUME ["/app/cache"]
 ENV PYTHONPATH=/app
 ENV CACHE_DIR=/app/cache
 
-# Default command
-ENTRYPOINT ["./entrypoint.sh"]
+# Default command - show help
+CMD ["repomap-tool", "--help"]
