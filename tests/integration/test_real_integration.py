@@ -8,7 +8,6 @@ These tests verify the actual functionality by testing:
 3. End-to-end workflows
 """
 
-import os
 import sys
 import tempfile
 import shutil
@@ -17,7 +16,7 @@ from pathlib import Path
 import pytest
 
 # Add src to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'src'))
 
 # flake8: noqa: E402
 from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher

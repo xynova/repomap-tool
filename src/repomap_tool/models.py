@@ -156,6 +156,11 @@ class ProjectInfo(BaseModel):
     analysis_time_ms: float = Field(description="Analysis time in milliseconds")
     cache_size_bytes: Optional[int] = Field(default=None, description="Cache size in bytes")
     last_updated: datetime = Field(description="Last analysis timestamp")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 
 class HealthCheck(BaseModel):
@@ -177,6 +182,11 @@ class ErrorResponse(BaseModel):
     details: Optional[Dict[str, Any]] = Field(default=None, description="Error details")
     timestamp: datetime = Field(default_factory=datetime.now, description="Error timestamp")
     request_id: Optional[str] = Field(default=None, description="Request ID for tracking")
+    
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.isoformat()
+        }
 
 
 # Utility functions for working with models

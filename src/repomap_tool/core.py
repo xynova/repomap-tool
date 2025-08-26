@@ -217,10 +217,33 @@ class DockerRepoMap:
         return MockRepoMap(self.config)
     
     def _extract_identifiers(self, project_map: Dict) -> Set[str]:
-        """Extract all identifiers from the project map."""
+        """Extract all identifiers from the project map.
+        
+        This method handles both simple and complex project map structures:
+        - Simple: project_map["identifiers"] contains a list of all identifiers
+        - Complex: project_map["files"][filename]["identifiers"] contains per-file identifiers
+        - Hybrid: Both structures may be present (as in mock implementation)
+        """
         identifiers = set()
-        if "identifiers" in project_map:
-            identifiers.update(project_map["identifiers"])
+        
+        # Handle None or empty project_map
+        if not project_map:
+            return identifiers
+            
+        # Check if project_map has top-level identifiers key
+        if "identifiers" in project_map and project_map["identifiers"] is not None:
+            # Ensure identifiers is iterable
+            if isinstance(project_map["identifiers"], (list, set, tuple)):
+                identifiers.update(project_map["identifiers"])
+            else:
+                self.logger.warning(f"Unexpected identifiers type: {type(project_map['identifiers'])}")
+        
+        # Also check for file-based identifiers (complex structure)
+        for file_path, file_data in project_map.items():
+            if isinstance(file_data, dict) and "identifiers" in file_data:
+                if isinstance(file_data["identifiers"], (list, set, tuple)):
+                    identifiers.update(file_data["identifiers"])
+        
         return identifiers
     
     def _get_project_files(self) -> List[str]:
@@ -248,16 +271,28 @@ class DockerRepoMap:
         """Analyze types of identifiers in the project."""
         types = {'functions': 0, 'classes': 0, 'variables': 0, 'constants': 0, 'other': 0}
         
+        # Handle None or empty identifiers
+        if not identifiers:
+            return types
+        
         for identifier in identifiers:
-            if identifier.isupper():
-                types['constants'] += 1
-            elif identifier[0].isupper():
-                types['classes'] += 1
-            elif identifier.endswith('()'):
-                types['functions'] += 1
-            elif identifier.islower():
-                types['variables'] += 1
-            else:
+            # Skip None or non-string identifiers
+            if not identifier or not isinstance(identifier, str):
+                continue
+                
+            try:
+                if identifier.isupper():
+                    types['constants'] += 1
+                elif identifier[0].isupper():
+                    types['classes'] += 1
+                elif identifier.endswith('()'):
+                    types['functions'] += 1
+                elif identifier.islower():
+                    types['variables'] += 1
+                else:
+                    types['other'] += 1
+            except (IndexError, AttributeError) as e:
+                self.logger.warning(f"Error analyzing identifier '{identifier}': {e}")
                 types['other'] += 1
         
         return types

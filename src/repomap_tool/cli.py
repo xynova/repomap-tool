@@ -239,7 +239,7 @@ def display_project_info(project_info: ProjectInfo, output_format: str) -> None:
     """Display project analysis results."""
     
     if output_format == 'json':
-        console.print(json.dumps(project_info.model_dump(), indent=2))
+        console.print(project_info.model_dump_json(indent=2))
         return
     
     # Create rich table for display
@@ -285,7 +285,7 @@ def display_search_results(response: SearchResponse, output_format: str) -> None
     """Display search results."""
     
     if output_format == 'json':
-        console.print(json.dumps(response.model_dump(), indent=2))
+        console.print(response.model_dump_json(indent=2))
         return
     
     # Create rich table for results
