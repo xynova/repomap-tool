@@ -11,7 +11,7 @@ This module provides a more flexible approach than rigid dictionaries by using:
 
 import re
 import logging
-from typing import Dict, List, Set, Tuple, Optional, Any
+from typing import Dict, List, Set, Tuple, Any
 from collections import Counter
 import math
 
@@ -71,10 +71,10 @@ class HybridMatcher:
         programming_vectors = {
             # Data types
             'string': [1, 0, 0, 0, 0], 'int': [1, 0, 0, 0, 0], 'float': [1, 0, 0, 0, 0],
-            'list': [1, 0, 0, 0, 0], 'dict': [1, 0, 0, 0, 0], 'set': [1, 0, 0, 0, 0],
+            'list': [1, 0, 0, 0, 0], 'dict': [1, 0, 0, 0, 0], 'set_type': [1, 0, 0, 0, 0],
             
             # Operations
-            'get': [0, 1, 0, 0, 0], 'set': [0, 1, 0, 0, 0], 'add': [0, 1, 0, 0, 0],
+            'get': [0, 1, 0, 0, 0], 'set_value': [0, 1, 0, 0, 0], 'add': [0, 1, 0, 0, 0],
             'remove': [0, 1, 0, 0, 0], 'update': [0, 1, 0, 0, 0], 'delete': [0, 1, 0, 0, 0],
             
             # Actions

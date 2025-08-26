@@ -9,7 +9,7 @@ import re
 import logging
 from typing import List, Set, Tuple, Dict, Optional
 from fuzzywuzzy import fuzz
-from difflib import SequenceMatcher
+
 
 # Configure logging
 logger = logging.getLogger(__name__)

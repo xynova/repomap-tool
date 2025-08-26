@@ -61,9 +61,7 @@ line-length = 88
 target-version = ['py38']
 include = '\\.pyi?$'
 
-[tool.flake8]
-max-line-length = 88
-extend-ignore = ["E203", "W503"]
+
 
 [tool.mypy]
 python_version = "3.9"
@@ -81,21 +79,22 @@ warn_unreachable = true
 strict_equality = true
 
 # Per-module options
+# External libraries without comprehensive type annotations
 [[tool.mypy.overrides]]
 module = "fuzzywuzzy.*"
-ignore_missing_imports = true
+ignore_missing_imports = true  # Fuzzy string matching library lacks type stubs
 
 [[tool.mypy.overrides]]
 module = "Levenshtein.*"
-ignore_missing_imports = true
+ignore_missing_imports = true  # Optional dependency for fuzzywuzzy performance, no type stubs
 
 [[tool.mypy.overrides]]
 module = "tree_sitter.*"
-ignore_missing_imports = true
+ignore_missing_imports = true  # Code parsing library used by aider, missing type annotations
 
 [[tool.mypy.overrides]]
 module = "aider.*"
-ignore_missing_imports = true
+ignore_missing_imports = true  # Main external dependency, complex library without complete type support
 
 # Source directories
 mypy_path = "src"

@@ -7,24 +7,25 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'src'))
 
+# flake8: noqa: E402
+from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+
 def test_imports():
     """Test that all core modules can be imported."""
     try:
-        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
         print("✅ FuzzyMatcher imported successfully")
     except ImportError as e:
         print(f"❌ FuzzyMatcher import failed: {e}")
         return False
     
     try:
-        from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
         print("✅ AdaptiveSemanticMatcher imported successfully")
     except ImportError as e:
         print(f"❌ AdaptiveSemanticMatcher import failed: {e}")
         return False
     
     try:
-        from repomap_tool.matchers.hybrid_matcher import HybridMatcher
         print("✅ HybridMatcher imported successfully")
     except ImportError as e:
         print(f"❌ HybridMatcher import failed: {e}")
@@ -35,8 +36,6 @@ def test_imports():
 def test_fuzzy_matcher():
     """Test basic fuzzy matching functionality."""
     try:
-        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-        
         matcher = FuzzyMatcher(threshold=70, verbose=False)
         
         # Test data
@@ -62,8 +61,6 @@ def test_fuzzy_matcher():
 def test_adaptive_matcher():
     """Test basic adaptive semantic matching functionality."""
     try:
-        from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-        
         matcher = AdaptiveSemanticMatcher(verbose=False)
         
         # Test data

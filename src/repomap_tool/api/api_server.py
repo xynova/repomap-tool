@@ -3,12 +3,9 @@
 
 from flask import Flask, request, jsonify
 import subprocess
-import json
 import os
 import re
-import tempfile
 import logging
-from pathlib import Path
 from typing import Set, Dict, Any, List, Optional
 
 app = Flask(__name__)

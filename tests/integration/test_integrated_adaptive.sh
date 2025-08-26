@@ -5,7 +5,7 @@ echo "================================================"
 
 # Build the Docker image with adaptive semantic matching
 echo "📦 Building Docker image..."
-./build.sh
+make docker-build
 
 if [ $? -ne 0 ]; then
     echo "❌ Build failed"

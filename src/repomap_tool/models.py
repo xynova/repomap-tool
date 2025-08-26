@@ -8,7 +8,7 @@ and match results using Pydantic for validation and serialization.
 
 from pathlib import Path
 from typing import List, Dict, Optional, Any, Literal, Union
-from pydantic import BaseModel, Field, validator, field_validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 import logging
 

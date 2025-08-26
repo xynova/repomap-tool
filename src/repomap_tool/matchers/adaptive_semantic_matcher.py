@@ -8,7 +8,7 @@ predefined categories. It's much more flexible and adaptive.
 
 import re
 import logging
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple
 from collections import Counter
 import math
 

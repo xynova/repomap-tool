@@ -1,4 +1,4 @@
-.PHONY: help setup test lint mypy format clean build docker-build docker-run check ci
+.PHONY: help setup test lint mypy format clean build docker-build docker-run check ci test-docker
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -11,7 +11,7 @@ test: ## Run functionality tests only
 	source venv/bin/activate && pytest tests/ -v
 
 lint: ## Run linting
-	source venv/bin/activate && flake8 src/ tests/ --max-line-length=88
+	source venv/bin/activate && flake8 src/ tests/
 
 mypy: ## Run mypy type checking
 	source venv/bin/activate && mypy src/ --config-file pyproject.toml
@@ -20,13 +20,13 @@ format: ## Format code
 	source venv/bin/activate && black src/ tests/
 
 check: ## Run all quality checks (lint + mypy + format check)
-	source venv/bin/activate && flake8 src/ tests/ --max-line-length=88
+	source venv/bin/activate && flake8 src/ tests/
 	source venv/bin/activate && mypy src/ --config-file pyproject.toml
 	source venv/bin/activate && black --check src/ tests/ --line-length=88
 
 ci: ## Run comprehensive checks (test + lint + mypy + format check)
 	source venv/bin/activate && pytest tests/ -v
-	source venv/bin/activate && flake8 src/ tests/ --max-line-length=88
+	source venv/bin/activate && flake8 src/ tests/
 	source venv/bin/activate && mypy src/ --config-file pyproject.toml
 	source venv/bin/activate && black --check src/ tests/ --line-length=88
 
@@ -44,3 +44,6 @@ install-dev: ## Install in development mode
 
 uninstall: ## Uninstall package
 	source venv/bin/activate && pip uninstall repomap-tool -y
+
+test-docker: ## Run Docker-based integration tests
+	bash tests/integration/test_integrated_adaptive.sh

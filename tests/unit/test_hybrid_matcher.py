@@ -6,10 +6,12 @@ This script demonstrates how the hybrid matcher works and why it's better
 than rigid dictionary approaches.
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
 
+# flake8: noqa: E402
 from repomap_tool.matchers.hybrid_matcher import HybridMatcher
 
 def test_hybrid_matcher():
@@ -146,7 +148,7 @@ def test_hybrid_matcher():
             for identifier, score, _ in matches[:3]:
                 print(f"      - {identifier} (score: {score:.2f})")
         else:
-            print(f"   ❌ No matches found")
+            print("   ❌ No matches found")
     
     # Show TF-IDF benefits
     print("\n📈 TF-IDF Benefits:")

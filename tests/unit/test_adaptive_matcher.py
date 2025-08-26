@@ -6,10 +6,12 @@ This script demonstrates how the adaptive semantic matcher learns from
 the actual codebase and provides much more flexible matching.
 """
 
-import sys
 import os
+import sys
+
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
 
+# flake8: noqa: E402
 from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
 
 def test_adaptive_matcher():

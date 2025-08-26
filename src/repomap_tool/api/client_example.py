@@ -2,8 +2,6 @@
 # enhanced_client_example.py
 
 import requests
-import json
-import os
 from typing import Dict, Any, List, Optional
 
 class EnhancedRepoMapClient:
@@ -91,7 +89,7 @@ class ConversationManager:
         context_analysis = self.repo_map_client.analyze_context(message)
         
         if context_analysis["success"]:
-            print(f"Context Analysis:")
+            print("Context Analysis:")
             print(f"  Mentioned files: {context_analysis['mentioned_files']}")
             print(f"  Mentioned identifiers: {context_analysis['mentioned_identifiers']}")
             print(f"  Filename matches: {context_analysis['filename_matches']}")

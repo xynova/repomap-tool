@@ -8,7 +8,7 @@ for configuration management, validation, and structured data handling.
 
 import os
 import sys
-import json
+
 import time
 import logging
 from pathlib import Path
@@ -17,15 +17,14 @@ from datetime import datetime
 
 # Import Pydantic models
 from .models import (
-    RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig,
+    RepoMapConfig,
     MatchResult, SearchRequest, SearchResponse, ProjectInfo
 )
 
 # Import aider components
 try:
     from aider.repomap import RepoMap
-    from aider.special import filter_important_files
-    from aider.dump import dump
+
 except ImportError as e:
     logging.error(f"Failed to import aider components: {e}")
     logging.error("Make sure aider is installed: pip install aider")
@@ -131,8 +130,8 @@ class DockerRepoMap:
             self.logger.info(f"Initialized SemanticMatcher: {self.config.semantic_match}")
         
         # Initialize hybrid matcher if both are enabled
-        if (self.config.fuzzy_match.enabled and 
-            self.config.semantic_match.enabled):
+        if (self.config.fuzzy_match.enabled and
+                self.config.semantic_match.enabled):
             self.hybrid_matcher = HybridMatcher(
                 fuzzy_threshold=self.config.fuzzy_match.threshold,
                 semantic_threshold=self.config.semantic_match.threshold,
@@ -227,7 +226,6 @@ class DockerRepoMap:
     def _get_project_files(self) -> List[str]:
         """Get list of project files."""
         try:
-            import os
             files = []
             for root, dirs, filenames in os.walk(self.config.project_root):
                 for filename in filenames:

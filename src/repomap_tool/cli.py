@@ -8,8 +8,8 @@ for argument validation and structured output.
 
 import json
 import sys
-from pathlib import Path
-from typing import Optional, Dict, Any, Literal
+
+from typing import Optional, Literal
 
 import click
 from rich.console import Console
