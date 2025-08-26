@@ -224,7 +224,7 @@ class DockerRepoMap:
         - Complex: project_map["files"][filename]["identifiers"] contains per-file identifiers
         - Hybrid: Both structures may be present (as in mock implementation)
         """
-        identifiers = set()
+        identifiers: Set[str] = set()
         
         # Handle None or empty project_map
         if not project_map:

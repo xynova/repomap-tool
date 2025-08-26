@@ -69,12 +69,12 @@ class HybridMatcher:
         # Simple word vectors for common programming concepts
         # This is a lightweight alternative to full word embeddings
         programming_vectors = {
-                    # Data types
-        'string': [1, 0, 0, 0, 0], 'int': [1, 0, 0, 0, 0], 'float': [1, 0, 0, 0, 0],
-        'list': [1, 0, 0, 0, 0], 'dict': [1, 0, 0, 0, 0], 'set_collection': [1, 0, 0, 0, 0],
-        
-        # Operations
-        'get': [0, 1, 0, 0, 0], 'set_operation': [0, 1, 0, 0, 0], 'add': [0, 1, 0, 0, 0],
+            # Data types
+            'string': [1, 0, 0, 0, 0], 'int': [1, 0, 0, 0, 0], 'float': [1, 0, 0, 0, 0],
+            'list': [1, 0, 0, 0, 0], 'dict': [1, 0, 0, 0, 0], 'set_collection': [1, 0, 0, 0, 0],
+            
+            # Operations
+            'get': [0, 1, 0, 0, 0], 'set_operation': [0, 1, 0, 0, 0], 'add': [0, 1, 0, 0, 0],
             'remove': [0, 1, 0, 0, 0], 'update': [0, 1, 0, 0, 0], 'delete': [0, 1, 0, 0, 0],
             
             # Actions

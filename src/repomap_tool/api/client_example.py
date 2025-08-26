@@ -221,7 +221,7 @@ def openai_integration_example() -> None:
         context = conversation.send_message(message)
         
         # Send to OpenAI
-        response = openai.ChatCompletion.create(  # type: ignore
+        response = openai.ChatCompletion.create(  # type: ignore[attr-defined]
             model="gpt-4",
             messages=[
                 {
@@ -243,9 +243,9 @@ def openai_integration_example() -> None:
 
 def langchain_integration_example() -> None:
     """Example of integrating with LangChain using dynamic context"""
-    from langchain.llms import OpenAI  # type: ignore
-    from langchain.prompts import PromptTemplate  # type: ignore
-    from langchain.chains import LLMChain  # type: ignore
+    from langchain.llms import OpenAI
+    from langchain.prompts import PromptTemplate
+    from langchain.chains import LLMChain
     
     # Initialize clients
     repo_map_client = EnhancedRepoMapClient("http://localhost:5000")
