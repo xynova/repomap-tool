@@ -128,7 +128,6 @@ cd repomap-tool
 
 # Build and run with Docker
 make docker-build
-make docker-run
 
 # Analyze your project (with cache persistence)
 docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool analyze /workspace

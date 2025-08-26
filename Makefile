@@ -28,9 +28,6 @@ build: ## Build package
 docker-build: ## Build Docker image
 	docker build -f docker/Dockerfile -t repomap-tool .
 
-docker-run: ## Run Docker container
-	docker run --rm -v $(PWD)/test-project:/project repomap-tool /project --fuzzy-match
-
 install-dev: ## Install in development mode
 	source venv/bin/activate && pip install -e .
 
