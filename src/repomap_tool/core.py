@@ -150,6 +150,10 @@ class DockerRepoMap:
             
             def __call__(self, *args, **kwargs):
                 return "Mock response"
+            
+            def token_count(self, text: str) -> int:
+                # Simple token estimation
+                return len(text.split())
         
         class MockIO:
             def __init__(self):
@@ -161,6 +165,17 @@ class DockerRepoMap:
             
             def add_tool_call(self, message: str):
                 self.tool_call_messages.append(message)
+            
+            def tool_error(self, message: str):
+                self.tool_error_messages.append(message)
+            
+            def tool_warning(self, message: str):
+                # Mock warning method
+                pass
+            
+            def tool_output(self, message: str):
+                # Mock output method
+                pass
         
         return MockModel(self.config.map_tokens), MockIO()
     
@@ -259,8 +274,24 @@ class DockerRepoMap:
         start_time = time.time()
         
         try:
-            # Get project map
-            project_map = self.repo_map.get_map()
+            # Get project files first
+            project_files = self._get_project_files()
+            if not project_files:
+                # If no files found, return empty analysis
+                return ProjectInfo(
+                    project_root=str(self.config.project_root),
+                    total_files=0,
+                    total_identifiers=0,
+                    file_types={},
+                    identifier_types={'variables': 0, 'functions': 0, 'classes': 0, 'constants': 0, 'other': 0},
+                    analysis_time_ms=0,
+                    cache_size_bytes=self._get_cache_size(),
+                    last_updated=datetime.now()
+                )
+            
+            # Get project map using real RepoMap method with actual files
+            file_names = [str(f.relative_to(self.config.project_root)) for f in project_files]
+            project_map = self.repo_map.get_ranked_tags_map(file_names, max_map_tokens=self.config.map_tokens)
             
             # Extract identifiers
             all_identifiers = self._extract_identifiers(project_map)
@@ -305,8 +336,24 @@ class DockerRepoMap:
         start_time = time.time()
         
         try:
-            # Get all identifiers
-            project_map = self.repo_map.get_map()
+            # Get project files first
+            project_files = self._get_project_files()
+            if not project_files:
+                # If no files found, return empty results
+                return SearchResponse(
+                    query=request.query,
+                    match_type=request.match_type,
+                    threshold=request.threshold,
+                    total_results=0,
+                    results=[],
+                    search_time_ms=0,
+                    cache_hit=False,
+                    metadata={"strategies_used": request.strategies or [], "include_context": request.include_context}
+                )
+            
+            # Get all identifiers using real RepoMap method with actual files
+            file_names = [str(f.relative_to(self.config.project_root)) for f in project_files]
+            project_map = self.repo_map.get_ranked_tags_map(file_names, max_map_tokens=self.config.map_tokens)
             all_identifiers = self._extract_identifiers(project_map)
             
             # Perform search based on match type
