@@ -95,8 +95,15 @@ class DockerRepoMap:
         # Create mock objects for aider
         self.mock_model, self.mock_io = self._create_mocks()
         
-        # Initialize RepoMap with mock implementation
-        self.repo_map = self._create_mock_repo_map()
+        # Initialize RepoMap with real implementation
+        self.repo_map = RepoMap(
+            map_tokens=self.config.map_tokens,
+            root=str(self.config.project_root),
+            main_model=self.mock_model,
+            io=self.mock_io,
+            verbose=self.config.verbose,
+            refresh="auto" if self.config.refresh_cache else "no"
+        )
         
         # Initialize matchers if available
         if MATCHERS_AVAILABLE:
