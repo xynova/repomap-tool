@@ -130,33 +130,33 @@ cd repomap-tool
 make docker-build
 make docker-run
 
-# Analyze your project
-docker run repomap-tool analyze /path/to/your/project
+# Analyze your project (with cache persistence)
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool analyze /workspace
 
-# Search for code
-docker run repomap-tool search /path/to/your/project "user authentication"
+# Search for code (with cache persistence)
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "user authentication"
 ```
 
 ### Basic Usage Examples
 
 **Find authentication-related code:**
 ```bash
-docker run repomap-tool search . "user login authentication"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "user login authentication"
 ```
 
 **Discover data processing functions:**
 ```bash
-docker run repomap-tool search . "data processing pipeline" --match-type semantic
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "data processing pipeline" --match-type semantic
 ```
 
 **Find code with similar names:**
 ```bash
-docker run repomap-tool search . "userAuth" --match-type fuzzy
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "userAuth" --match-type fuzzy
 ```
 
 **Get comprehensive results:**
 ```bash
-docker run repomap-tool search . "error handling" --match-type hybrid
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool search /workspace "error handling" --match-type hybrid
 ```
 
 ## Key Benefits for AI Code Assistants
