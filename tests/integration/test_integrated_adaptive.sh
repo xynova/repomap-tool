@@ -5,7 +5,7 @@ echo "================================================"
 
 # Build the Docker image with adaptive semantic matching
 echo "📦 Building Docker image..."
-./build.sh
+make docker-build
 
 if [ $? -ne 0 ]; then
     echo "❌ Build failed"
@@ -14,64 +14,63 @@ fi
 
 echo "✅ Build successful"
 
-# Test 1: Basic adaptive semantic matching
+# Test 1: Basic semantic matching
 echo ""
-echo "🔍 Test 1: Basic Adaptive Semantic Matching"
-echo "-------------------------------------------"
-docker run --rm -v $(pwd)/..:/project repomap-tool /project \
-    --mentioned-idents "process,valid,create" \
-    --adaptive-semantic \
-    --semantic-threshold 0.05 \
-    --verbose
+echo "🔍 Test 1: Basic Semantic Matching"
+echo "----------------------------------"
+docker run --rm -v $(pwd)/..:/project repomap-tool repomap-tool analyze /project \
+    --semantic \
+    --threshold 0.05 \
+    --verbose \
+    --output json
 
-# Test 2: Domain-specific terms
+# Test 2: Fuzzy matching
 echo ""
-echo "🔍 Test 2: Domain-Specific Terms"
-echo "--------------------------------"
-docker run --rm -v $(pwd)/..:/project repomap-tool /project \
-    --mentioned-idents "widget,gadget,doohickey" \
-    --adaptive-semantic \
-    --semantic-threshold 0.1 \
-    --verbose
+echo "🔍 Test 2: Fuzzy Matching"
+echo "-------------------------"
+docker run --rm -v $(pwd)/..:/project repomap-tool repomap-tool analyze /project \
+    --fuzzy \
+    --threshold 0.6 \
+    --verbose \
+    --output json
 
-# Test 3: Combined fuzzy + adaptive semantic
+# Test 3: Combined fuzzy + semantic
 echo ""
-echo "🔍 Test 3: Combined Fuzzy + Adaptive Semantic"
-echo "---------------------------------------------"
-docker run --rm -v $(pwd)/..:/project repomap-tool /project \
-    --mentioned-idents "auth,data,file" \
-    --fuzzy-match \
-    --fuzzy-threshold 60 \
-    --adaptive-semantic \
-    --semantic-threshold 0.1 \
-    --verbose
+echo "🔍 Test 3: Combined Fuzzy + Semantic"
+echo "------------------------------------"
+docker run --rm -v $(pwd)/..:/project repomap-tool repomap-tool analyze /project \
+    --fuzzy \
+    --semantic \
+    --threshold 0.1 \
+    --verbose \
+    --output json
 
-# Test 4: Complex queries
+# Test 4: High threshold for precision
 echo ""
-echo "🔍 Test 4: Complex Queries"
-echo "--------------------------"
-docker run --rm -v $(pwd)/..:/project repomap-tool /project \
-    --mentioned-idents "connection pool,rate limit,audit trail" \
-    --adaptive-semantic \
-    --semantic-threshold 0.2 \
-    --verbose
+echo "🔍 Test 4: High Threshold (Precision)"
+echo "-------------------------------------"
+docker run --rm -v $(pwd)/..:/project repomap-tool repomap-tool analyze /project \
+    --semantic \
+    --threshold 0.8 \
+    --verbose \
+    --output json
 
-# Test 5: Low threshold to see more matches
+# Test 5: Low threshold for recall
 echo ""
-echo "🔍 Test 5: Low Threshold (More Matches)"
-echo "---------------------------------------"
-docker run --rm -v $(pwd)/..:/project repomap-tool /project \
-    --mentioned-idents "user,api,db" \
-    --adaptive-semantic \
-    --semantic-threshold 0.01 \
-    --verbose
+echo "🔍 Test 5: Low Threshold (Recall)"
+echo "---------------------------------"
+docker run --rm -v $(pwd)/..:/project repomap-tool repomap-tool analyze /project \
+    --semantic \
+    --threshold 0.01 \
+    --verbose \
+    --output json
 
 echo ""
 echo "✅ All tests completed!"
 echo ""
-echo "🎯 Key Benefits of Adaptive Semantic Matching:"
-echo "   - Learns from actual codebase patterns"
-echo "   - No predefined categories needed"
-echo "   - Handles domain-specific terminology"
-echo "   - Adapts to different naming conventions"
-echo "   - Discovers semantic relationships automatically"
+echo "🎯 Key Benefits of RepoMap Tool:"
+echo "   - Semantic code analysis and matching"
+echo "   - Fuzzy string matching capabilities"
+echo "   - Configurable thresholds for precision/recall"
+echo "   - Multiple output formats (JSON, text, markdown)"
+echo "   - Docker-based deployment for consistency"
