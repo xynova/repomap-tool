@@ -453,7 +453,7 @@ class DockerRepoMap:
                         identifier=identifier,
                         score=score,
                         strategy="basic",
-                        match_type="basic",
+                        match_type="fuzzy",
                         metadata={"query": request.query}
                     )
                     results.append(result)
@@ -532,7 +532,7 @@ class DockerRepoMap:
                         identifier=identifier,
                         score=score,
                         strategy="substring",
-                        match_type="basic",
+                        match_type="fuzzy",
                         metadata={"basic_match": True}
                     )
                     results.append(result)
