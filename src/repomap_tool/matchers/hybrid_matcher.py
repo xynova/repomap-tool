@@ -11,7 +11,7 @@ This module provides a more flexible approach than rigid dictionaries by using:
 
 import re
 import logging
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple, Optional, Any
 from collections import Counter
 import math
 
@@ -52,19 +52,19 @@ class HybridMatcher:
         )
         
         # TF-IDF components
-        self.word_frequencies = Counter()
+        self.word_frequencies: Counter[str] = Counter()
         self.total_identifiers = 0
-        self.idf_cache = {}
+        self.idf_cache: Dict[str, float] = {}
         
         # Word embeddings (optional)
-        self.word_vectors = {}
+        self.word_vectors: Dict[str, List[float]] = {}
         if use_word_embeddings:
             self._initialize_word_embeddings()
         
         if self.verbose:
             logger.info(f"Initialized HybridMatcher (fuzzy: {fuzzy_threshold}, semantic: {semantic_threshold})")
     
-    def _initialize_word_embeddings(self):
+    def _initialize_word_embeddings(self) -> None:
         """Initialize lightweight word embeddings for common programming terms."""
         # Simple word vectors for common programming concepts
         # This is a lightweight alternative to full word embeddings
@@ -90,7 +90,7 @@ class HybridMatcher:
             'count': [0, 0, 0, 0, 1], 'size': [0, 0, 0, 0, 1], 'length': [0, 0, 0, 0, 1],
         }
         
-        self.word_vectors = programming_vectors
+        self.word_vectors = programming_vectors  # type: ignore
     
     def split_identifier(self, identifier: str) -> List[str]:
         """Split an identifier into words (same as fuzzy matcher)."""
@@ -109,7 +109,7 @@ class HybridMatcher:
         
         return [word.lower() for word in words if word]
     
-    def build_tfidf_model(self, all_identifiers: Set[str]):
+    def build_tfidf_model(self, all_identifiers: Set[str]) -> None:
         """
         Build TF-IDF model from all identifiers in the codebase.
         
@@ -211,10 +211,11 @@ class HybridMatcher:
         
         for q_vec in query_vectors:
             for i_vec in identifier_vectors:
-                # Simple cosine similarity for small vectors
-                dot_product = sum(a * b for a, b in zip(q_vec, i_vec))
-                q_magnitude = math.sqrt(sum(a * a for a in q_vec))
-                i_magnitude = math.sqrt(sum(a * a for a in i_vec))
+                if q_vec is not None and i_vec is not None:
+                    # Simple cosine similarity for small vectors
+                    dot_product = sum(a * b for a, b in zip(q_vec, i_vec))
+                    q_magnitude = math.sqrt(sum(a * a for a in q_vec))
+                    i_magnitude = math.sqrt(sum(a * a for a in i_vec))
                 
                 if q_magnitude > 0 and i_magnitude > 0:
                     similarity = dot_product / (q_magnitude * i_magnitude)
@@ -330,7 +331,7 @@ class HybridMatcher:
         return matches
     
     def get_match_analysis(self, query: str, all_identifiers: Set[str], 
-                          max_matches: int = 10) -> Dict:
+                          max_matches: int = 10) -> Dict[str, Any]:
         """
         Get detailed analysis of matches for a query.
         
@@ -344,7 +345,7 @@ class HybridMatcher:
         """
         matches = self.find_hybrid_matches(query, all_identifiers, threshold=0.1)
         
-        analysis = {
+        analysis: Dict[str, Any] = {
             'query': query,
             'total_matches': len(matches),
             'top_matches': matches[:max_matches],

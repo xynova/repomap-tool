@@ -32,16 +32,16 @@ class AdaptiveSemanticMatcher:
         self.verbose = verbose
         
         # TF-IDF components
-        self.word_frequencies = Counter()
+        self.word_frequencies: Counter[str] = Counter()
         self.total_identifiers = 0
-        self.idf_cache = {}
+        self.idf_cache: Dict[str, float] = {}
         
         # Identifier analysis
-        self.identifier_words = {}  # identifier -> set of words
-        self.word_to_identifiers = {}  # word -> set of identifiers containing it
+        self.identifier_words: Dict[str, Set[str]] = {}  # identifier -> set of words
+        self.word_to_identifiers: Dict[str, Set[str]] = {}  # word -> set of identifiers containing it
         
         # Similarity cache
-        self.similarity_cache = {}
+        self.similarity_cache: Dict[str, float] = {}
         
         if self.verbose:
             logger.info("Initialized AdaptiveSemanticMatcher")
@@ -78,7 +78,7 @@ class AdaptiveSemanticMatcher:
         
         return [word.lower() for word in words if word]
     
-    def learn_from_identifiers(self, all_identifiers: Set[str]):
+    def learn_from_identifiers(self, all_identifiers: Set[str]) -> None:
         """
         Learn semantic patterns from all identifiers in the codebase.
         
@@ -391,7 +391,7 @@ class AdaptiveSemanticMatcher:
         
         return clusters
     
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the similarity cache."""
         self.similarity_cache.clear()
     

@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Portable code analysis tool using aider libraries"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
-requires-python = ">=3.8"
+requires-python = ">=3.9"
 dependencies = [
     "aider-chat>=0.82.0",
     "networkx>=3.0",
@@ -40,6 +40,8 @@ dev = [
     "mypy>=1.0.0",
     "types-requests>=2.28.0",
     "types-PyYAML>=6.0.0",
+    "types-Flask>=2.0.0",
+    "types-openai>=4.0.0",
 ]
 
 [tool.pytest.ini_options]
@@ -64,7 +66,7 @@ max-line-length = 88
 extend-ignore = ["E203", "W503"]
 
 [tool.mypy]
-python_version = "3.8"
+python_version = "3.9"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
@@ -80,12 +82,19 @@ strict_equality = true
 
 # Per-module options
 [[tool.mypy.overrides]]
-module = [
-    "fuzzywuzzy.*",
-    "Levenshtein.*",
-    "tree_sitter.*",
-    "aider.*",
-]
+module = "fuzzywuzzy.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "Levenshtein.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tree_sitter.*"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "aider.*"
 ignore_missing_imports = true
 
 # Source directories

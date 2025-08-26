@@ -10,7 +10,7 @@ import sys
 import os
 sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'src'))
 
-from matchers.hybrid_matcher import HybridMatcher
+from repomap_tool.matchers.hybrid_matcher import HybridMatcher
 
 def test_hybrid_matcher():
     """Test the hybrid matcher with various scenarios."""

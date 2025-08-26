@@ -7,37 +7,38 @@ import os
 from typing import Dict, Any, List, Optional
 
 class EnhancedRepoMapClient:
-    def __init__(self, api_url: str = "http://localhost:5000"):
+    def __init__(self, api_url: str = "http://localhost:5000") -> None:
         self.api_url = api_url
-        self.conversation_history = []
-        self.chat_files = []
+        self.conversation_history: List[Dict[str, str]] = []
+        self.chat_files: List[str] = []
     
-    def add_message(self, role: str, content: str):
+    def add_message(self, role: str, content: str) -> None:
         """Add a message to conversation history"""
         self.conversation_history.append({
             "role": role,
             "content": content
         })
     
-    def add_chat_file(self, file_path: str):
+    def add_chat_file(self, file_path: str) -> None:
         """Add a file to the chat context"""
         if file_path not in self.chat_files:
             self.chat_files.append(file_path)
     
-    def remove_chat_file(self, file_path: str):
+    def remove_chat_file(self, file_path: str) -> None:
         """Remove a file from the chat context"""
         if file_path in self.chat_files:
             self.chat_files.remove(file_path)
     
-    def get_dynamic_repo_map(self, project_path: str, message_text: str = None, 
+    def get_dynamic_repo_map(self, project_path: str, message_text: Optional[str] = None, 
                            map_tokens: int = 1024, force_refresh: bool = False) -> Dict[str, Any]:
         """Generate repo map dynamically based on conversation context"""
         
         # Use the latest message if not provided
-        if message_text is None and self.conversation_history:
-            message_text = self.conversation_history[-1]["content"]
-        elif message_text is None:
-            message_text = ""
+        if message_text is None:
+            if self.conversation_history:
+                message_text = self.conversation_history[-1]["content"]
+            else:
+                message_text = ""
         
         payload = {
             "project_path": project_path,
@@ -48,13 +49,13 @@ class EnhancedRepoMapClient:
         }
         
         response = requests.post(f"{self.api_url}/repo-map/dynamic", json=payload)
-        return response.json()
+        return response.json()  # type: ignore
     
     def analyze_context(self, message_text: str) -> Dict[str, Any]:
         """Analyze message text to extract mentioned files and identifiers"""
         payload = {"message_text": message_text}
         response = requests.post(f"{self.api_url}/context/analyze", json=payload)
-        return response.json()
+        return response.json()  # type: ignore
     
     def get_repo_map(self, project_path: str, map_tokens: int = 1024, force_refresh: bool = False) -> Dict[str, Any]:
         """Generate basic repo map (backward compatibility)"""
@@ -65,26 +66,26 @@ class EnhancedRepoMapClient:
         }
         
         response = requests.post(f"{self.api_url}/repo-map", json=payload)
-        return response.json()
+        return response.json()  # type: ignore
     
     def health_check(self) -> Dict[str, Any]:
         """Check API health"""
         response = requests.get(f"{self.api_url}/health")
-        return response.json()
+        return response.json()  # type: ignore
 
 class ConversationManager:
-    def __init__(self, repo_map_client: EnhancedRepoMapClient, project_path: str):
+    def __init__(self, repo_map_client: EnhancedRepoMapClient, project_path: str) -> None:
         self.repo_map_client = repo_map_client
         self.project_path = project_path
-        self.current_context = None
+        self.current_context: Optional[Dict[str, Any]] = None
     
-    def start_conversation(self, initial_message: str = None):
+    def start_conversation(self, initial_message: Optional[str] = None) -> None:
         """Start a new conversation"""
         if initial_message:
             self.repo_map_client.add_message("user", initial_message)
             self.update_context(initial_message)
     
-    def update_context(self, message: str):
+    def update_context(self, message: str) -> Optional[Dict[str, Any]]:
         """Update the conversation context based on a new message"""
         # Analyze the message for context
         context_analysis = self.repo_map_client.analyze_context(message)
@@ -103,7 +104,7 @@ class ConversationManager:
         
         if result["success"]:
             self.current_context = result
-            return result["repo_map"]
+            return result["repo_map"]  # type: ignore
         else:
             print(f"Error updating context: {result['error']}")
             return None
@@ -135,17 +136,17 @@ Remember:
         else:
             return f"Error: Could not generate repo map for request: {message}"
     
-    def add_file_to_chat(self, file_path: str):
+    def add_file_to_chat(self, file_path: str) -> None:
         """Add a file to the chat context"""
         self.repo_map_client.add_chat_file(file_path)
         print(f"Added {file_path} to chat context")
     
-    def remove_file_from_chat(self, file_path: str):
+    def remove_file_from_chat(self, file_path: str) -> None:
         """Remove a file from the chat context"""
         self.repo_map_client.remove_chat_file(file_path)
         print(f"Removed {file_path} from chat context")
 
-def example_conversation():
+def example_conversation() -> None:
     """Example of a dynamic conversation with repo map updates"""
     
     # Initialize client
@@ -196,7 +197,7 @@ def example_conversation():
     print("Context for LLM:")
     print(context5[:500] + "..." if len(context5) > 500 else context5)
 
-def openai_integration_example():
+def openai_integration_example() -> None:
     """Example of integrating with OpenAI using dynamic context"""
     import openai
     
@@ -222,7 +223,7 @@ def openai_integration_example():
         context = conversation.send_message(message)
         
         # Send to OpenAI
-        response = openai.ChatCompletion.create(
+        response = openai.ChatCompletion.create(  # type: ignore
             model="gpt-4",
             messages=[
                 {
@@ -242,11 +243,11 @@ def openai_integration_example():
         # Add response to conversation history
         conversation.repo_map_client.add_message("assistant", response.choices[0].message.content)
 
-def langchain_integration_example():
+def langchain_integration_example() -> None:
     """Example of integrating with LangChain using dynamic context"""
-    from langchain.llms import OpenAI
-    from langchain.prompts import PromptTemplate
-    from langchain.chains import LLMChain
+    from langchain.llms import OpenAI  # type: ignore
+    from langchain.prompts import PromptTemplate  # type: ignore
+    from langchain.chains import LLMChain  # type: ignore
     
     # Initialize clients
     repo_map_client = EnhancedRepoMapClient("http://localhost:5000")

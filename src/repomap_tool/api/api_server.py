@@ -9,13 +9,13 @@ import re
 import tempfile
 import logging
 from pathlib import Path
-from typing import Set, Dict, Any, List
+from typing import Set, Dict, Any, List, Optional
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
 
 class EnhancedRepoMapAPI:
-    def __init__(self, docker_image="repomap-tool"):
+    def __init__(self, docker_image: str = "repomap-tool") -> None:
         self.docker_image = docker_image
     
     def extract_mentioned_files(self, message_text: str) -> Set[str]:
@@ -102,7 +102,7 @@ class EnhancedRepoMapAPI:
         return filename_matches
     
     def generate_dynamic_repo_map(self, project_path: str, message_text: str, 
-                                 chat_files: List[str] = None, map_tokens: int = 1024, 
+                                 chat_files: Optional[List[str]] = None, map_tokens: int = 1024, 
                                  force_refresh: bool = False) -> Dict[str, Any]:
         """Generate repo map dynamically based on conversation context"""
         
@@ -201,12 +201,12 @@ class EnhancedRepoMapAPI:
 enhanced_api = EnhancedRepoMapAPI()
 
 @app.route('/health', methods=['GET'])
-def health():
+def health() -> Any:
     """Health check endpoint"""
     return jsonify({"status": "healthy", "service": "enhanced-repo-map-api"})
 
 @app.route('/repo-map/dynamic', methods=['POST'])
-def generate_dynamic_repo_map():
+def generate_dynamic_repo_map() -> Any:
     """Generate repo map dynamically based on conversation context"""
     try:
         data = request.get_json()
@@ -251,7 +251,7 @@ def generate_dynamic_repo_map():
         }), 500
 
 @app.route('/repo-map', methods=['POST'])
-def generate_repo_map():
+def generate_repo_map() -> Any:
     """Generate basic repo map (backward compatibility)"""
     try:
         data = request.get_json()
@@ -292,7 +292,7 @@ def generate_repo_map():
         }), 500
 
 @app.route('/context/analyze', methods=['POST'])
-def analyze_context():
+def analyze_context() -> Any:
     """Analyze message text to extract mentioned files and identifiers"""
     try:
         data = request.get_json()

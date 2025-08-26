@@ -12,32 +12,32 @@ __email__ = "your.email@example.com"
 try:
     from .core import DockerRepoMap
 except ImportError:
-    DockerRepoMap = None
+    DockerRepoMap = None  # type: ignore
 
 # Import CLI
 try:
     from .cli import cli
 except ImportError:
-    cli = None
+    cli = None  # type: ignore
 
 # Import models
 try:
-    from ..models import (
+    from .models import (
         RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig,
         MatchResult, SearchRequest, SearchResponse, ProjectInfo,
         HealthCheck, ErrorResponse
     )
 except ImportError:
     # Fallback imports
-    RepoMapConfig = None
-    FuzzyMatchConfig = None
-    SemanticMatchConfig = None
-    MatchResult = None
-    SearchRequest = None
-    SearchResponse = None
-    ProjectInfo = None
-    HealthCheck = None
-    ErrorResponse = None
+    RepoMapConfig = None  # type: ignore
+    FuzzyMatchConfig = None  # type: ignore
+    SemanticMatchConfig = None  # type: ignore
+    MatchResult = None  # type: ignore
+    SearchRequest = None  # type: ignore
+    SearchResponse = None  # type: ignore
+    ProjectInfo = None  # type: ignore
+    HealthCheck = None  # type: ignore
+    ErrorResponse = None  # type: ignore
 
 __all__ = [
     "DockerRepoMap",

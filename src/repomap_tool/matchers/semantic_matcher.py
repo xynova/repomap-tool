@@ -260,7 +260,7 @@ class DomainSemanticMatcher:
         Returns:
             Dictionary mapping category names to counts
         """
-        category_counts = {}
+        category_counts: Dict[str, int] = {}
         
         for identifier in all_identifiers:
             categories = self.get_semantic_categories(identifier)
@@ -293,7 +293,7 @@ class DomainSemanticMatcher:
         """
         return self.semantic_mappings.get(category, [])
     
-    def add_custom_mapping(self, category: str, terms: List[str]):
+    def add_custom_mapping(self, category: str, terms: List[str]) -> None:
         """
         Add custom semantic mapping for a category.
         

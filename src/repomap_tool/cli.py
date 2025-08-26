@@ -9,7 +9,7 @@ for argument validation and structured output.
 import json
 import sys
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Literal
 
 import click
 from rich.console import Console
@@ -19,7 +19,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from .models import (
     RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig,
-    SearchRequest, create_error_response
+    SearchRequest, SearchResponse, ProjectInfo, create_error_response
 )
 from .core import DockerRepoMap
 
@@ -28,7 +28,7 @@ console = Console()
 
 @click.group()
 @click.version_option(version="0.1.0")
-def cli():
+def cli() -> None:
     """Docker RepoMap - Intelligent code analysis and identifier matching."""
     pass
 
@@ -43,7 +43,7 @@ def cli():
 @click.option('--output', '-o', type=click.Choice(['json', 'text', 'markdown']), default='json', help='Output format')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
 def analyze(project_path: str, config: Optional[str], fuzzy: bool, semantic: bool, 
-           threshold: float, max_results: int, output: str, verbose: bool):
+           threshold: float, max_results: int, output: str, verbose: bool) -> None:
     """Analyze a project and generate a code map."""
     
     try:
@@ -51,7 +51,7 @@ def analyze(project_path: str, config: Optional[str], fuzzy: bool, semantic: boo
         if config:
             config_obj = load_config_file(config)
         else:
-            config_obj = create_default_config(project_path, fuzzy, semantic, threshold, max_results, output, verbose)
+            config_obj = create_default_config(project_path, fuzzy, semantic, threshold, max_results, output, verbose)  # type: ignore
         
         # Initialize RepoMap
         with Progress(
@@ -87,8 +87,8 @@ def analyze(project_path: str, config: Optional[str], fuzzy: bool, semantic: boo
 @click.option('--strategies', '-s', multiple=True, help='Specific matching strategies')
 @click.option('--output', '-o', type=click.Choice(['json', 'text', 'table']), default='table', help='Output format')
 @click.option('--verbose', '-v', is_flag=True, help='Verbose output')
-def search(project_path: str, query: str, match_type: str, threshold: float, 
-          max_results: int, strategies: tuple, output: str, verbose: bool):
+def search(project_path: str, query: str, match_type: Literal['fuzzy', 'semantic', 'hybrid'], threshold: float, 
+          max_results: int, strategies: tuple, output: str, verbose: bool) -> None:
     """Search for identifiers in a project."""
     
     try:
@@ -132,7 +132,7 @@ def search(project_path: str, query: str, match_type: str, threshold: float,
 @cli.command()
 @click.argument('project_path', type=click.Path(exists=True, file_okay=False, dir_okay=True))
 @click.option('--output', '-o', type=click.Path(), help='Output file for configuration')
-def config(project_path: str, output: Optional[str]):
+def config(project_path: str, output: Optional[str]) -> None:
     """Generate a configuration file for the project."""
     
     try:
@@ -140,7 +140,7 @@ def config(project_path: str, output: Optional[str]):
         config_obj = create_default_config(project_path, fuzzy=True, semantic=True, threshold=0.7, max_results=50, output='json', verbose=True)
         
         # Convert to dictionary
-        config_dict = config_obj.model_dump(indent=2)
+        config_dict = config_obj.model_dump()
         
         if output:
             # Write to file
@@ -162,7 +162,7 @@ def config(project_path: str, output: Optional[str]):
 
 
 @cli.command()
-def version():
+def version() -> None:
     """Show version information."""
     console.print(Panel(
         "[bold blue]Docker RepoMap[/bold blue]\n"
@@ -185,7 +185,7 @@ def load_config_file(config_path: str) -> RepoMapConfig:
 
 
 def create_default_config(project_path: str, fuzzy: bool, semantic: bool, 
-                         threshold: float, max_results: int, output: str, verbose: bool) -> RepoMapConfig:
+                         threshold: float, max_results: int, output: Literal['json', 'text', 'markdown'], verbose: bool) -> RepoMapConfig:
     """Create default configuration."""
     
     # Create fuzzy match config
@@ -235,7 +235,7 @@ def create_search_config(project_path: str, match_type: str, verbose: bool) -> R
     return config
 
 
-def display_project_info(project_info, output_format: str):
+def display_project_info(project_info: ProjectInfo, output_format: str) -> None:
     """Display project analysis results."""
     
     if output_format == 'json':
@@ -281,7 +281,7 @@ def display_project_info(project_info, output_format: str):
         console.print(id_table)
 
 
-def display_search_results(response, output_format: str):
+def display_search_results(response: SearchResponse, output_format: str) -> None:
     """Display search results."""
     
     if output_format == 'json':

@@ -41,7 +41,7 @@ class FuzzyMatcher:
         self.strategies = strategies or ['prefix', 'substring', 'levenshtein']
         self.cache_results = cache_results
         self.verbose = verbose
-        self.match_cache = {}
+        self.match_cache: Dict[str, List[Tuple[str, int]]] = {}
         
         # Validate strategies
         valid_strategies = {'prefix', 'suffix', 'substring', 'levenshtein', 'word'}
@@ -187,7 +187,7 @@ class FuzzyMatcher:
         
         return summary
     
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the match cache."""
         self.match_cache.clear()
         if self.verbose:
