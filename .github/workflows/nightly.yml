@@ -45,7 +45,7 @@ jobs:
         mypy src/ --config-file pyproject.toml
 
     - name: Upload coverage artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: coverage-${{ matrix.python-version }}
         path: htmlcov/
@@ -58,7 +58,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      uses: docker/setup-buildx-action@v4
 
     - name: Build Docker image
       run: |
@@ -122,7 +122,7 @@ jobs:
 
     steps:
     - name: Download coverage artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
       with:
         path: coverage/
 
@@ -141,7 +141,7 @@ jobs:
         echo "- Status: ${{ needs.nightly-api-test.result }}" >> nightly-report.md
 
     - name: Upload nightly report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: nightly-report
         path: nightly-report.md
