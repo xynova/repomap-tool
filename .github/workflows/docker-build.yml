@@ -16,15 +16,41 @@ on:
       - 'pyproject.toml'
       - 'setup.py'
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   docker-build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_tag: ${{ steps.tags.outputs.full_tag }}
     
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Generate image tags
+      id: tags
+      run: |
+        # Create tags with date and commit SHA for easy expiration
+        DATE_TAG=$(date +%Y%m%d-%H%M%S)
+        COMMIT_TAG=${GITHUB_SHA::8}
+        echo "date_tag=$DATE_TAG" >> $GITHUB_OUTPUT
+        echo "commit_tag=$COMMIT_TAG" >> $GITHUB_OUTPUT
+        echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$DATE_TAG-$COMMIT_TAG" >> $GITHUB_OUTPUT
 
     - name: Cache Docker layers
       uses: actions/cache@v4
@@ -34,41 +60,57 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
-    - name: Build and test Docker image
+    - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./docker/Dockerfile
         platforms: linux/amd64,linux/arm64
-        push: false
-        tags: repomap-tool:test
+        push: true
+        tags: ${{ steps.tags.outputs.full_tag }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 
-    - name: Test Docker image
+    - name: Test Docker image locally
       run: |
-        docker run --rm repomap-tool:test repomap-tool --help
+        # Pull the image we just pushed to test it
+        docker pull ${{ steps.tags.outputs.full_tag }}
+        docker run --rm ${{ steps.tags.outputs.full_tag }} repomap-tool --help
 
     - name: Move cache
       run: |
         rm -rf /tmp/.buildx-cache
         mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
+    - name: Output image tag for next job
+      run: |
+        echo "image_tag=${{ steps.tags.outputs.full_tag }}" >> $GITHUB_OUTPUT
+
   docker-integration-test:
     runs-on: ubuntu-latest
     needs: docker-build
+    permissions:
+      contents: read
+      packages: read
 
     steps:
     - uses: actions/checkout@v4
 
-    - name: Build Docker image for integration tests
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Pull Docker image for integration tests
       run: |
-        docker build -f docker/Dockerfile -t repomap-tool:integration .
+        docker pull ${{ needs.docker-build.outputs.image_tag }}
 
     - name: Run Docker integration tests
       run: |
         # Test basic functionality
-        docker run --rm repomap-tool:integration repomap-tool --help
+        docker run --rm ${{ needs.docker-build.outputs.image_tag }} repomap-tool --help
         
         # Test with a sample project
         mkdir -p test-docker-project
@@ -78,10 +120,42 @@ jobs:
         docker run --rm \
           -v $(pwd)/test-docker-project:/workspace \
           -w /workspace \
-          repomap-tool:integration \
+          ${{ needs.docker-build.outputs.image_tag }} \
           repomap-tool analyze . --output-format json || true
 
     - name: Cleanup
       run: |
-        docker rmi repomap-tool:integration || true
+        docker rmi ${{ needs.docker-build.outputs.image_tag }} || true
         rm -rf test-docker-project
+
+  cleanup-old-images:
+    runs-on: ubuntu-latest
+    needs: [docker-build, docker-integration-test]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup GitHub CLI
+      run: |
+        # Install GitHub CLI
+        type -p curl >/dev/null || (sudo apt update && sudo apt install curl -y)
+        curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && sudo chmod go+r /usr/share/keyrings/githubcli-archive-keyring.gpg \
+        && echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null \
+        && sudo apt update \
+        && sudo apt install gh -y
+    
+    - name: Authenticate with GitHub
+      run: |
+        echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+    
+    - name: Cleanup old Docker images
+      run: |
+        echo "Cleaning up Docker images older than 7 days..."
+        echo "Current image: ${{ needs.docker-build.outputs.image_tag }}"
+        # Run cleanup script (keep images for 7 days)
+        ./scripts/dev/cleanup_docker_images.sh 7
