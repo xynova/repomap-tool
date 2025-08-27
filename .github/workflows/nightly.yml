@@ -5,6 +5,16 @@ on:
     # Run every day at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch: # Allow manual triggering
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.github/workflows/nightly.yml'
+      - '.github/scripts/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '.github/workflows/nightly.yml'
+      - '.github/scripts/**'
 
 jobs:
   nightly-test:
