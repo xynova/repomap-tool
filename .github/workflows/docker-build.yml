@@ -56,6 +56,7 @@ jobs:
         echo "date_tag=$DATE_TAG" >> $GITHUB_OUTPUT
         echo "commit_tag=$COMMIT_TAG" >> $GITHUB_OUTPUT
         echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$DATE_TAG-$COMMIT_TAG" >> $GITHUB_OUTPUT
+        echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
 
     - name: Cache Docker layers
       uses: actions/cache@v4
@@ -72,7 +73,9 @@ jobs:
         file: ./docker/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ steps.tags.outputs.full_tag }}
+        tags: |
+          ${{ steps.tags.outputs.full_tag }}
+          ${{ steps.tags.outputs.latest_tag }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
 

@@ -44,7 +44,11 @@ jobs:
         LATEST_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
         
         # Pull the latest image to ensure we have it locally
-        docker pull $LATEST_IMAGE
+        echo "Pulling latest image: $LATEST_IMAGE"
+        if ! docker pull $LATEST_IMAGE; then
+          echo "Error: Failed to pull latest image. Make sure the docker-build workflow has run successfully."
+          exit 1
+        fi
         
         # Get the image digest for reference
         DIGEST=$(docker images --digests --format "table {{.Digest}}" | grep -v DIGEST | head -1)
@@ -56,10 +60,16 @@ jobs:
         SOURCE_IMAGE="${{ steps.get-image.outputs.source_image }}"
         
         # Tag the validated image with release tags
-        for TAG in ${{ steps.meta.outputs.tags }}; do
-          echo "Tagging $SOURCE_IMAGE as $TAG"
-          docker tag $SOURCE_IMAGE $TAG
-          docker push $TAG
+        echo "Available tags: ${{ steps.meta.outputs.tags }}"
+        
+        # Split the tags string and process each tag
+        IFS=$'\n' read -d '' -r -a TAGS <<< "${{ steps.meta.outputs.tags }}"
+        for TAG in "${TAGS[@]}"; do
+          if [ -n "$TAG" ]; then
+            echo "Tagging $SOURCE_IMAGE as $TAG"
+            docker tag $SOURCE_IMAGE $TAG
+            docker push $TAG
+          fi
         done
 
   test-release:
