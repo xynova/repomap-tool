@@ -5,13 +5,23 @@ on:
     # Run every day at 2 AM UTC
     - cron: '0 2 * * *'
   workflow_dispatch: # Allow manual triggering
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.github/workflows/nightly.yml'
+      - '.github/scripts/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '.github/workflows/nightly.yml'
+      - '.github/scripts/**'
 
 jobs:
   nightly-test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.11"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -58,7 +68,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v4
+      uses: docker/setup-buildx-action@v3
 
     - name: Build Docker image
       run: |
