@@ -168,6 +168,35 @@ docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace rep
 docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace repomap-tool repomap-tool search /workspace "error handling"
 ```
 
+### Docker Images
+
+We provide several Docker image variants:
+
+**Latest Release:**
+```bash
+docker pull ghcr.io/xynova/repomap-tool:latest
+```
+
+**Nightly Build (Latest Development):**
+```bash
+docker pull ghcr.io/xynova/repomap-tool:nightly
+```
+
+**Specific Version:**
+```bash
+docker pull ghcr.io/xynova/repomap-tool:v1.2.3
+```
+
+**Using Pre-built Images:**
+```bash
+# Use the latest release
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool analyze /workspace
+
+# Use the nightly build for latest features
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:nightly repomap-tool analyze /workspace
+```
+```
+
 ## Key Benefits for AI Code Assistants
 
 ### 🧠 **Enhanced Context Understanding**
