@@ -63,8 +63,8 @@ jobs:
         # Tag the validated image with release tags
         echo "Available tags: ${{ steps.meta.outputs.tags }}"
         
-        # Split the tags string and process each tag
-        IFS=$'\n' read -d '' -r -a TAGS <<< "${{ steps.meta.outputs.tags }}"
+        # Split the tags string (space-separated) and process each tag
+        read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
         for TAG in "${TAGS[@]}"; do
           if [ -n "$TAG" ]; then
             echo "Tagging $SOURCE_IMAGE as $TAG"
