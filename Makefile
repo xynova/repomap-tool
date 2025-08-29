@@ -8,48 +8,48 @@ setup: ## Setup development environment
 	./scripts/setup/setup_venv.sh
 
 test: ## Run functionality tests only
-	source venv/bin/activate && pytest tests/ -v
+	venv/bin/pytest tests/ -v
 
 lint: ## Run linting
-	source venv/bin/activate && flake8 src/ tests/
+	venv/bin/flake8 src/ tests/
 
 mypy: ## Run mypy type checking
-	source venv/bin/activate && mypy src/ --config-file pyproject.toml
+	venv/bin/mypy src/ --config-file pyproject.toml
 
 format: ## Format code
-	source venv/bin/activate && black src/ tests/
+	venv/bin/black src/ tests/
 
 check: ## Run all quality checks (lint + mypy + format check)
-	source venv/bin/activate && flake8 src/ tests/
-	source venv/bin/activate && mypy src/ --config-file pyproject.toml
-	source venv/bin/activate && black --check src/ tests/ --line-length=88
+	venv/bin/flake8 src/ tests/
+	venv/bin/mypy src/ --config-file pyproject.toml
+	venv/bin/black --check src/ tests/ --line-length=88
 
 ci: ## Run comprehensive checks (test + lint + mypy + format check)
-	source venv/bin/activate && pytest tests/ -v
-	source venv/bin/activate && flake8 src/ tests/
-	source venv/bin/activate && mypy src/ --config-file pyproject.toml
-	source venv/bin/activate && black --check src/ tests/ --line-length=88
+	venv/bin/pytest tests/ -v
+	venv/bin/flake8 src/ tests/
+	venv/bin/mypy src/ --config-file pyproject.toml
+	venv/bin/black --check src/ tests/ --line-length=88
 
 clean: ## Clean build artifacts
 	rm -rf build/ dist/ *.egg-info/ __pycache__/ .pytest_cache/ htmlcov/
 
 build: ## Build package
-	source venv/bin/activate && python setup.py sdist bdist_wheel
+	venv/bin/python setup.py sdist bdist_wheel
 
 docker-build: ## Build Docker image
 	docker build -f docker/Dockerfile -t repomap-tool .
 
 install-dev: ## Install in development mode
-	source venv/bin/activate && pip install -e .
+	venv/bin/pip install -e .
 
 uninstall: ## Uninstall package
-	source venv/bin/activate && pip uninstall repomap-tool -y
+	venv/bin/pip uninstall repomap-tool -y
 
 test-docker: ## Run Docker-based integration tests
 	bash tests/integration/test_integrated_adaptive.sh
 
 test-self-integration: ## Run self-integration tests (repomap-tool testing itself)
-	source venv/bin/activate && pytest tests/integration/test_self_integration.py -v
+	venv/bin/pytest tests/integration/test_self_integration.py -v
 
 test-integration: ## Run all integration tests
-	source venv/bin/activate && pytest tests/integration/ -v
+	venv/bin/pytest tests/integration/ -v

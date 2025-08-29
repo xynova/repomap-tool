@@ -156,17 +156,8 @@ class DockerRepoMap:
         )
 
         # Extract identifiers from all project files
-        identifiers = set()
-        for file_path in project_files:
-            try:
-                if self.repo_map is not None:
-                    tags = self.repo_map.get_tags(file_path, file_path)
-                    for tag in tags:
-                        if hasattr(tag, "name") and tag.name:
-                            identifiers.add(tag.name)
-            except Exception as e:
-                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
-                continue
+        identifier_list = self._extract_identifiers_from_files(project_files)
+        identifiers = set(identifier_list)
 
         # Analyze project structure
         file_types = analyze_file_types(project_files)
@@ -196,17 +187,7 @@ class DockerRepoMap:
         )
 
         # Extract identifiers from all project files
-        identifiers = []
-        for file_path in project_files:
-            try:
-                if self.repo_map is not None:
-                    tags = self.repo_map.get_tags(file_path, file_path)
-                    for tag in tags:
-                        if hasattr(tag, "name") and tag.name:
-                            identifiers.append(tag.name)
-            except Exception as e:
-                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
-                continue
+        identifiers = self._extract_identifiers_from_files(project_files)
 
         if not identifiers:
             return SearchResponse(
@@ -253,19 +234,8 @@ class DockerRepoMap:
         )
 
         # Extract identifiers from all project files
-        identifiers = set()
-        for file_path in project_files:
-            try:
-                if self.repo_map is not None:
-                    tags = self.repo_map.get_tags(file_path, file_path)
-                    for tag in tags:
-                        if hasattr(tag, "name") and tag.name:
-                            identifiers.add(tag.name)
-            except Exception as e:
-                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
-                continue
-
-        return sorted(list(identifiers))
+        identifiers = self._extract_identifiers_from_files(project_files)
+        return sorted(list(set(identifiers)))
 
     def get_ranked_tags_map(self) -> Dict[str, float]:
         """Get a map of tags with their relevance scores."""
@@ -274,17 +244,8 @@ class DockerRepoMap:
         )
 
         # Extract identifiers from all project files
-        identifiers = set()
-        for file_path in project_files:
-            try:
-                if self.repo_map is not None:
-                    tags = self.repo_map.get_tags(file_path, file_path)
-                    for tag in tags:
-                        if hasattr(tag, "name") and tag.name:
-                            identifiers.add(tag.name)
-            except Exception as e:
-                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
-                continue
+        identifier_list = self._extract_identifiers_from_files(project_files)
+        identifiers = set(identifier_list)
 
         # Simple ranking based on identifier characteristics
         ranked_map = {}
@@ -306,3 +267,26 @@ class DockerRepoMap:
     def _get_project_files(self) -> List[str]:
         """Get list of project files, respecting .gitignore patterns."""
         return get_project_files(str(self.config.project_root), self.config.verbose)
+
+    def _extract_identifiers_from_files(self, project_files: List[str]) -> List[str]:
+        """
+        Extract identifiers from project files.
+
+        Args:
+            project_files: List of file paths to process
+
+        Returns:
+            List of identifier names extracted from the files
+        """
+        identifiers = []
+        for file_path in project_files:
+            try:
+                if self.repo_map is not None:
+                    tags = self.repo_map.get_tags(file_path, file_path)
+                    for tag in tags:
+                        if hasattr(tag, "name") and tag.name:
+                            identifiers.append(tag.name)
+            except Exception as e:
+                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
+                continue
+        return identifiers

@@ -31,7 +31,7 @@ def parse_gitignore(gitignore_path: Path) -> List[str]:
                 # Skip empty lines and comments
                 if line and not line.startswith("#"):
                     patterns.append(line)
-    except Exception as e:
+    except (IOError, OSError) as e:
         logging.warning(f"Failed to read .gitignore file {gitignore_path}: {e}")
 
     return patterns
@@ -64,6 +64,16 @@ def should_ignore_file(
     rel_path_str = str(rel_path)
 
     for pattern in gitignore_patterns:
+        # Skip empty patterns
+        if not pattern or pattern.isspace():
+            continue
+
+        # Handle negation patterns (starting with !)
+        if pattern.startswith("!"):
+            # For now, we'll skip negation patterns as they require more complex logic
+            # TODO: Implement proper negation support
+            continue
+
         # Handle directory patterns (ending with /)
         if pattern.endswith("/"):
             dir_pattern = pattern[:-1]
@@ -73,9 +83,9 @@ def should_ignore_file(
             ):
                 return True
 
-        # Handle file patterns
-        elif pattern.startswith("*"):
-            # Wildcard pattern
+        # Handle patterns with wildcards (anywhere in the pattern)
+        elif "*" in pattern or "?" in pattern:
+            # Use fnmatch for any pattern containing wildcards
             if fnmatch.fnmatch(rel_path_str, pattern):
                 return True
         else:

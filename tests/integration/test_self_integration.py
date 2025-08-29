@@ -390,9 +390,9 @@ class TestSelfIntegration:
             assert len(result.context) > 0
 
             # Context should contain the identifier name
-            assert result.identifier.name in result.context
+            assert result.identifier in result.context
 
-            print(f"Context for {result.identifier.name}: {result.context[:100]}...")
+            print(f"Context for {result.identifier}: {result.context[:100]}...")
 
     def test_search_result_ranking(self):
         """Test that search results are properly ranked by relevance."""

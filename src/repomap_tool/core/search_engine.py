@@ -147,14 +147,14 @@ def basic_search(
     for identifier in identifiers:
         if query_lower in identifier.lower():
             # Simple scoring based on position and length
-            score = 1.0
+            score = 0.8  # Base score for substring matches
             if identifier.lower().startswith(query_lower):
-                score = 2.0  # Higher score for prefix matches
+                score = 1.0  # Higher score for prefix matches (max allowed)
 
             results.append(
                 MatchResult(
                     identifier=identifier,
-                    score=min(score, 1.0),  # Ensure score is <= 1.0
+                    score=score,  # Let the model's validator handle normalization
                     strategy="basic_string_match",
                     match_type="fuzzy",  # Use fuzzy as the closest match type
                     context=f"Found in identifier: {identifier}",
