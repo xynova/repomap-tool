@@ -524,9 +524,11 @@ class DockerRepoMap:
         # Convert to MatchResult objects
         results = []
         for identifier, score in matches:
+            # Normalize score to ensure it's within 0.0-1.0 range
+            normalized_score = max(0.0, min(1.0, score))
             result = MatchResult(
                 identifier=identifier,
-                score=score,
+                score=normalized_score,
                 strategy="semantic",
                 match_type="semantic",
                 metadata={"tfidf_score": score},
