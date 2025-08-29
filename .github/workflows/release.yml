@@ -63,8 +63,8 @@ jobs:
         # Tag the validated image with release tags
         echo "Available tags: ${{ steps.meta.outputs.tags }}"
         
-        # Split the tags string and process each tag
-        IFS=$'\n' read -d '' -r -a TAGS <<< "${{ steps.meta.outputs.tags }}"
+        # Split the tags string (space-separated) and process each tag
+        read -ra TAGS <<< "${{ steps.meta.outputs.tags }}"
         for TAG in "${TAGS[@]}"; do
           if [ -n "$TAG" ]; then
             echo "Tagging $SOURCE_IMAGE as $TAG"
@@ -89,14 +89,19 @@ jobs:
 
     - name: Test released images
       run: |
-        # Test the versioned release image (e.g., v1.2.3)
-        VERSION_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
-        docker pull $VERSION_TAG
+        # Test the latest tag (always available)
+        LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        echo "Testing latest tag: $LATEST_TAG"
+        docker pull $LATEST_TAG
+        docker run --rm $LATEST_TAG repomap-tool --help
         
-        # Test basic functionality
-        docker run --rm $VERSION_TAG repomap-tool --help
+        # Test the nightly image that was used as source
+        NIGHTLY_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
+        echo "Testing nightly tag: $NIGHTLY_TAG"
+        docker pull $NIGHTLY_TAG
+        docker run --rm $NIGHTLY_TAG repomap-tool --help
         
-        # Test with a sample project
+        # Test with a sample project using the latest tag
         mkdir -p test-release-project
         echo "print('Hello, World!')" > test-release-project/test.py
         
@@ -104,17 +109,18 @@ jobs:
         docker run --rm \
           -v $(pwd)/test-release-project:/workspace \
           -w /workspace \
-          $VERSION_TAG \
+          $LATEST_TAG \
           repomap-tool analyze . --output-format json || true
         
-        # Also test the latest tag
-        docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-        docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest repomap-tool --help
-        
-        # Test the nightly image that was used as source
-        NIGHTLY_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
-        docker pull $NIGHTLY_TAG
-        docker run --rm $NIGHTLY_TAG repomap-tool --help
+        # If this is a release event with a tag, also test the versioned tag
+        if [ -n "${{ github.event.release.tag_name }}" ]; then
+          VERSION_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
+          echo "Testing version tag: $VERSION_TAG"
+          docker pull $VERSION_TAG
+          docker run --rm $VERSION_TAG repomap-tool --help
+        else
+          echo "No release tag name available, skipping version tag test"
+        fi
 
     - name: Cleanup
       run: |
