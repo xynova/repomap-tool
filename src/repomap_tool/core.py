@@ -357,6 +357,12 @@ class DockerRepoMap:
 
         # Handle dictionary format (mock/standalone implementation)
         if isinstance(project_map, dict):
+            # Handle Tag objects from aider (new format)
+            if "tags" in project_map and project_map["tags"] is not None:
+                for tag in project_map["tags"]:
+                    if hasattr(tag, 'name') and tag.name:
+                        identifiers.add(tag.name)
+            
             # Check if project_map has top-level identifiers key
             if "identifiers" in project_map and project_map["identifiers"] is not None:
                 # Ensure identifiers is iterable
@@ -610,17 +616,21 @@ class DockerRepoMap:
                     last_updated=datetime.now(),
                 )
 
-            # Get project map using real RepoMap method with actual files
-            file_names = [
-                str(Path(f).relative_to(self.config.project_root))
-                for f in project_files
-            ]
+            # Get project tags using real RepoMap method with actual files
+            all_tags = []
             if self.repo_map is not None:
-                project_map = self.repo_map.get_ranked_tags_map(
-                    file_names, max_map_tokens=self.config.map_tokens
-                )
-            else:
-                project_map = {}
+                for file_path in project_files:
+                    rel_fname = str(Path(file_path).relative_to(self.config.project_root))
+                    try:
+                        tags = self.repo_map.get_tags(file_path, rel_fname)
+                        if tags:
+                            all_tags.extend(tags)
+                    except Exception as e:
+                        if self.config.verbose:
+                            self.logger.warning(f"Failed to get tags for {rel_fname}: {e}")
+            
+            # Convert tags to a format that _extract_identifiers can handle
+            project_map = {"tags": all_tags} if all_tags else {}
 
             # Extract identifiers
             all_identifiers = self._extract_identifiers(project_map)
@@ -684,16 +694,20 @@ class DockerRepoMap:
                 )
 
             # Get all identifiers using real RepoMap method with actual files
-            file_names = [
-                str(Path(f).relative_to(self.config.project_root))
-                for f in project_files
-            ]
+            all_tags = []
             if self.repo_map is not None:
-                project_map = self.repo_map.get_ranked_tags_map(
-                    file_names, max_map_tokens=self.config.map_tokens
-                )
-            else:
-                project_map = {}
+                for file_path in project_files:
+                    rel_fname = str(Path(file_path).relative_to(self.config.project_root))
+                    try:
+                        tags = self.repo_map.get_tags(file_path, rel_fname)
+                        if tags:
+                            all_tags.extend(tags)
+                    except Exception as e:
+                        if self.config.verbose:
+                            self.logger.warning(f"Failed to get tags for {rel_fname}: {e}")
+            
+            # Convert tags to a format that _extract_identifiers can handle
+            project_map = {"tags": all_tags} if all_tags else {}
             all_identifiers = self._extract_identifiers(project_map)
 
             # Perform search based on match type
