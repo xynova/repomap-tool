@@ -47,3 +47,9 @@ uninstall: ## Uninstall package
 
 test-docker: ## Run Docker-based integration tests
 	bash tests/integration/test_integrated_adaptive.sh
+
+test-self-integration: ## Run self-integration tests (repomap-tool testing itself)
+	source venv/bin/activate && pytest tests/integration/test_self_integration.py -v
+
+test-integration: ## Run all integration tests
+	source venv/bin/activate && pytest tests/integration/ -v

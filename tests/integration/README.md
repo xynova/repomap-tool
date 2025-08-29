@@ -35,6 +35,22 @@ chmod +x tests/integration/run_self_integration_tests.sh
 ./tests/integration/run_self_integration_tests.sh
 ```
 
+### Using Make (Recommended)
+
+```bash
+# Run all tests (including self-integration tests)
+make test
+
+# Run only self-integration tests
+make test-self-integration
+
+# Run all integration tests
+make test-integration
+
+# Run comprehensive checks (tests + lint + mypy + format)
+make ci
+```
+
 ### Manual Execution
 
 ```bash
