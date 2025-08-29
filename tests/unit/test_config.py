@@ -1,24 +1,35 @@
 #!/usr/bin/env python3
 
-from src.repomap_tool.cli import create_search_config
-from src.repomap_tool.core import DockerRepoMap
+import pytest
+from repomap_tool.cli import create_search_config
+from repomap_tool.core import DockerRepoMap
 
-# Test the search config
-config = create_search_config('.', 'fuzzy', True)
-print(f'Fuzzy enabled: {config.fuzzy_match.enabled}')
-print(f'Semantic enabled: {config.semantic_match.enabled}')
 
-# Initialize RepoMap with this config
-dm = DockerRepoMap(config)
-print(f'Fuzzy matcher available: {dm.fuzzy_matcher is not None}')
+def test_search_config_creation():
+    """Test that search config is created correctly."""
+    config = create_search_config('.', 'fuzzy', True)
+    
+    assert config.fuzzy_match.enabled is True
+    assert config.semantic_match.enabled is False
 
-if dm.fuzzy_matcher:
-    print('Testing fuzzy matcher...')
-    # Test with some identifiers
-    test_identifiers = {'DockerRepoMap', 'parse_gitignore', 'should_ignore_file'}
-    matches = dm.fuzzy_matcher.match_identifiers('DockerRepoMap', test_identifiers)
-    print(f'Found {len(matches)} matches for "DockerRepoMap":')
-    for identifier, score in matches:
-        print(f'  {identifier}: {score}%')
-else:
-    print('Fuzzy matcher not available')
+
+def test_fuzzy_matcher_initialization():
+    """Test that fuzzy matcher is initialized correctly."""
+    config = create_search_config('.', 'fuzzy', True)
+    dm = DockerRepoMap(config)
+    
+    assert dm.fuzzy_matcher is not None
+
+
+def test_fuzzy_matcher_functionality():
+    """Test that fuzzy matcher works correctly."""
+    config = create_search_config('.', 'fuzzy', True)
+    dm = DockerRepoMap(config)
+    
+    if dm.fuzzy_matcher:
+        test_identifiers = {'DockerRepoMap', 'parse_gitignore', 'should_ignore_file'}
+        matches = dm.fuzzy_matcher.match_identifiers('DockerRepoMap', test_identifiers)
+        
+        # Should find exact match
+        assert len(matches) > 0
+        assert any(identifier == 'DockerRepoMap' and score == 100 for identifier, score in matches)
