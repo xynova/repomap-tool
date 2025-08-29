@@ -16,6 +16,9 @@ class SimpleIO:
     def tool_warning(self, msg):
         pass
 
+    def tool_output(self, msg):
+        pass
+
 
 class SimpleModel:
     def token_count(self, text):
@@ -32,7 +35,7 @@ def test_get_ranked_tags_map():
     """Test that get_ranked_tags_map returns expected format."""
     rm = RepoMap(root=".", io=SimpleIO(), main_model=SimpleModel())
 
-    test_file = "src/repomap_tool/core.py"
+    test_file = "src/repomap_tool/core/repo_map.py"
     result = rm.get_ranked_tags_map([test_file], max_map_tokens=1024)
 
     # Can return None or string (as we discovered)
@@ -43,7 +46,7 @@ def test_get_tags():
     """Test that get_tags returns tag objects."""
     rm = RepoMap(root=".", io=SimpleIO(), main_model=SimpleModel())
 
-    test_file = "src/repomap_tool/core.py"
+    test_file = "src/repomap_tool/core/repo_map.py"
     tags = list(rm.get_tags(test_file, test_file))
 
     # Should find some tags

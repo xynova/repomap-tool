@@ -6,12 +6,14 @@ from aider.models import Model, DEFAULT_MODEL_NAME
 
 
 def test_tag_extraction():
-    """Test that tags are extracted correctly from core.py."""
+    """Test that tags are extracted correctly from core/repo_map.py."""
     # Initialize RepoMap
     rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
-    # Get tags from core.py
-    tags = rm.get_tags("src/repomap_tool/core.py", "src/repomap_tool/core.py")
+    # Get tags from core/repo_map.py
+    tags = rm.get_tags(
+        "src/repomap_tool/core/repo_map.py", "src/repomap_tool/core/repo_map.py"
+    )
 
     # Should find some tags
     assert len(tags) > 0
@@ -27,8 +29,10 @@ def test_dockerrepomap_tag():
     # Initialize RepoMap
     rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
-    # Get tags from core.py
-    tags = rm.get_tags("src/repomap_tool/core.py", "src/repomap_tool/core.py")
+    # Get tags from core/repo_map.py
+    tags = rm.get_tags(
+        "src/repomap_tool/core/repo_map.py", "src/repomap_tool/core/repo_map.py"
+    )
 
     # Look for DockerRepoMap specifically
     docker_tags = [tag for tag in tags if "DockerRepoMap" in tag.name]
@@ -43,8 +47,10 @@ def test_definition_tags():
     # Initialize RepoMap
     rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
-    # Get tags from core.py
-    tags = rm.get_tags("src/repomap_tool/core.py", "src/repomap_tool/core.py")
+    # Get tags from core/repo_map.py
+    tags = rm.get_tags(
+        "src/repomap_tool/core/repo_map.py", "src/repomap_tool/core/repo_map.py"
+    )
 
     # Look for all 'def' kind tags
     def_tags = [tag for tag in tags if tag.kind == "def"]

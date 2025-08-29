@@ -3,7 +3,6 @@
 import pytest
 from repomap_tool.core import DockerRepoMap
 from repomap_tool.models import RepoMapConfig
-from pathlib import Path
 
 
 def test_identifier_extraction():
@@ -15,13 +14,13 @@ def test_identifier_extraction():
     project_files = dm._get_project_files()
     all_tags = []
     for file_path in project_files:
-        rel_fname = str(Path(file_path).relative_to(config.project_root))
+        # file_path is already relative to project root
         try:
-            tags = dm.repo_map.get_tags(file_path, rel_fname)
+            tags = dm.repo_map.get_tags(file_path, file_path)
             if tags:
                 all_tags.extend(tags)
         except Exception as e:
-            pytest.fail(f"Failed to get tags for {rel_fname}: {e}")
+            pytest.fail(f"Failed to get tags for {file_path}: {e}")
 
     identifiers = set()
     for tag in all_tags:
@@ -43,13 +42,13 @@ def test_fuzzy_search_with_real_identifiers():
     project_files = dm._get_project_files()
     all_tags = []
     for file_path in project_files:
-        rel_fname = str(Path(file_path).relative_to(config.project_root))
+        # file_path is already relative to project root
         try:
-            tags = dm.repo_map.get_tags(file_path, rel_fname)
+            tags = dm.repo_map.get_tags(file_path, file_path)
             if tags:
                 all_tags.extend(tags)
         except Exception as e:
-            pytest.fail(f"Failed to get tags for {rel_fname}: {e}")
+            pytest.fail(f"Failed to get tags for {file_path}: {e}")
 
     identifiers = set()
     for tag in all_tags:
