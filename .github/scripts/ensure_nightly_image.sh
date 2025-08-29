@@ -12,10 +12,8 @@ NIGHTLY_TAG="$REGISTRY/$IMAGE_NAME:nightly"
 echo "Checking if nightly image exists: $NIGHTLY_TAG"
 
 # Try to pull the nightly image
-if docker pull $NIGHTLY_TAG >/dev/null 2>&1; then
+if docker manifest inspect $NIGHTLY_TAG >/dev/null 2>&1; then
     echo "✅ Nightly image exists and is accessible"
-    echo "Image details:"
-    docker images $NIGHTLY_TAG --format "table {{.Repository}}\t{{.Tag}}\t{{.Size}}\t{{.CreatedAt}}"
 else
     echo "❌ Nightly image not found or not accessible"
     echo ""
