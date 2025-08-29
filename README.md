@@ -195,7 +195,6 @@ docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghc
 # Use the nightly build for latest features
 docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:nightly repomap-tool analyze /workspace
 ```
-```
 
 ## Key Benefits for AI Code Assistants
 
