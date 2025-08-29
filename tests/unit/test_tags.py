@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-import pytest
 from aider.repomap import RepoMap
 from aider.io import InputOutput
 from aider.models import Model, DEFAULT_MODEL_NAME
@@ -9,46 +8,46 @@ from aider.models import Model, DEFAULT_MODEL_NAME
 def test_tag_extraction():
     """Test that tags are extracted correctly from core.py."""
     # Initialize RepoMap
-    rm = RepoMap(root='.', main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
+    rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
     # Get tags from core.py
-    tags = rm.get_tags('src/repomap_tool/core.py', 'src/repomap_tool/core.py')
+    tags = rm.get_tags("src/repomap_tool/core.py", "src/repomap_tool/core.py")
 
     # Should find some tags
     assert len(tags) > 0
 
     # Check available kinds
     kinds = set(tag.kind for tag in tags)
-    assert 'def' in kinds
-    assert 'ref' in kinds
+    assert "def" in kinds
+    assert "ref" in kinds
 
 
 def test_dockerrepomap_tag():
     """Test that DockerRepoMap tag is found."""
     # Initialize RepoMap
-    rm = RepoMap(root='.', main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
+    rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
     # Get tags from core.py
-    tags = rm.get_tags('src/repomap_tool/core.py', 'src/repomap_tool/core.py')
+    tags = rm.get_tags("src/repomap_tool/core.py", "src/repomap_tool/core.py")
 
     # Look for DockerRepoMap specifically
-    docker_tags = [tag for tag in tags if 'DockerRepoMap' in tag.name]
-    
+    docker_tags = [tag for tag in tags if "DockerRepoMap" in tag.name]
+
     # Should find DockerRepoMap
     assert len(docker_tags) > 0
-    assert any(tag.name == 'DockerRepoMap' for tag in docker_tags)
+    assert any(tag.name == "DockerRepoMap" for tag in docker_tags)
 
 
 def test_definition_tags():
     """Test that definition tags are found."""
     # Initialize RepoMap
-    rm = RepoMap(root='.', main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
+    rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
     # Get tags from core.py
-    tags = rm.get_tags('src/repomap_tool/core.py', 'src/repomap_tool/core.py')
+    tags = rm.get_tags("src/repomap_tool/core.py", "src/repomap_tool/core.py")
 
     # Look for all 'def' kind tags
-    def_tags = [tag for tag in tags if tag.kind == 'def']
-    
+    def_tags = [tag for tag in tags if tag.kind == "def"]
+
     # Should find some definition tags
     assert len(def_tags) > 0

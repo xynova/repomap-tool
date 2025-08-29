@@ -7,7 +7,6 @@ for configuration management, validation, and structured data handling.
 """
 
 import os
-import sys
 import re
 import fnmatch
 import time
@@ -29,14 +28,6 @@ from .models import (
 try:
     from aider.repomap import RepoMap
 
-except ImportError as e:
-    logging.error(f"Failed to import aider components: {e}")
-    logging.error("Make sure aider is installed: pip install aider")
-    sys.exit(1)
-
-# Import aider components
-try:
-    from aider.repomap import RepoMap
     AIDER_AVAILABLE = True
 except ImportError as e:
     logging.error(f"Failed to import aider components: {e}")
@@ -58,71 +49,76 @@ except ImportError as e:
 def parse_gitignore(gitignore_path: Path) -> List[str]:
     """
     Parse a .gitignore file and return list of patterns.
-    
+
     Args:
         gitignore_path: Path to .gitignore file
-        
+
     Returns:
         List of gitignore patterns
     """
-    patterns = []
+    patterns: List[str] = []
     if not gitignore_path.exists():
         return patterns
-        
+
     try:
-        with open(gitignore_path, 'r') as f:
+        with open(gitignore_path, "r") as f:
             for line in f:
                 line = line.strip()
                 # Skip empty lines and comments
-                if line and not line.startswith('#'):
+                if line and not line.startswith("#"):
                     patterns.append(line)
     except Exception as e:
         logging.warning(f"Failed to read .gitignore file {gitignore_path}: {e}")
-    
+
     return patterns
 
 
-def should_ignore_file(file_path: Path, gitignore_patterns: List[str], project_root: Path) -> bool:
+def should_ignore_file(
+    file_path: Path, gitignore_patterns: List[str], project_root: Path
+) -> bool:
     """
     Check if a file should be ignored based on .gitignore patterns.
-    
+
     Args:
         file_path: Path to the file to check
         gitignore_patterns: List of .gitignore patterns
         project_root: Root directory of the project
-        
+
     Returns:
         True if file should be ignored, False otherwise
     """
     if not gitignore_patterns:
         return False
-        
+
     # Get relative path from project root
     try:
         rel_path = file_path.relative_to(project_root)
     except ValueError:
         # File is not under project root
         return False
-    
+
     rel_path_str = str(rel_path)
-    
+
     for pattern in gitignore_patterns:
         # Handle directory patterns (ending with /)
-        if pattern.endswith('/'):
+        if pattern.endswith("/"):
             dir_pattern = pattern[:-1]
-            if rel_path_str.startswith(dir_pattern + '/') or rel_path_str == dir_pattern:
+            if (
+                rel_path_str.startswith(dir_pattern + "/")
+                or rel_path_str == dir_pattern
+            ):
                 return True
-        
+
         # Handle file patterns
-        elif pattern.startswith('*'):
+        elif pattern.startswith("*"):
             # Wildcard pattern
             if fnmatch.fnmatch(rel_path_str, pattern):
                 return True
         else:
             # Exact match or prefix match
-            if rel_path_str == pattern or rel_path_str.startswith(pattern + '/'):
+            if rel_path_str == pattern or rel_path_str.startswith(pattern + "/"):
                 return True
-    
+
     return False
 
 
@@ -180,14 +176,15 @@ class DockerRepoMap:
             # Create real aider components
             from aider.io import InputOutput
             from aider.models import Model
-            
+
             # Create a simple IO object
             self.io = InputOutput()
-            
+
             # Create a simple Model object
             from aider.models import DEFAULT_MODEL_NAME
+
             self.model = Model(DEFAULT_MODEL_NAME)
-            
+
             # Initialize RepoMap with real implementation
             self.repo_map = RepoMap(
                 map_tokens=self.config.map_tokens,
@@ -198,11 +195,8 @@ class DockerRepoMap:
                 refresh="auto" if self.config.refresh_cache else "no",
             )
         else:
-            # Fallback to standalone implementation
-            self.repo_map = StandaloneRepoMap(
-                project_root=str(self.config.project_root),
-                verbose=self.config.verbose
-            )
+            # Fallback to mock implementation
+            self.repo_map = self._create_mock_repo_map()
 
         # Initialize matchers if available
         if MATCHERS_AVAILABLE:
@@ -340,19 +334,18 @@ class DockerRepoMap:
         # Handle string format (real aider RepoMap)
         if isinstance(project_map, str):
             # Extract identifiers from the string using regex
-            import re
             # Look for function/class definitions and variable names
             patterns = [
-                r'def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(',
-                r'class\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[:\(]',
-                r'([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*[^=]',  # Variable assignments
-                r'([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)',  # Function calls
+                r"def\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(",
+                r"class\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*[:\(]",
+                r"([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*[^=]",  # Variable assignments
+                r"([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)",  # Function calls
             ]
-            
+
             for pattern in patterns:
                 matches = re.findall(pattern, project_map)
                 identifiers.update(matches)
-            
+
             return identifiers
 
         # Handle dictionary format (mock/standalone implementation)
@@ -360,9 +353,9 @@ class DockerRepoMap:
             # Handle Tag objects from aider (new format)
             if "tags" in project_map and project_map["tags"] is not None:
                 for tag in project_map["tags"]:
-                    if hasattr(tag, 'name') and tag.name:
+                    if hasattr(tag, "name") and tag.name:
                         identifiers.add(tag.name)
-            
+
             # Check if project_map has top-level identifiers key
             if "identifiers" in project_map and project_map["identifiers"] is not None:
                 # Ensure identifiers is iterable
@@ -385,35 +378,45 @@ class DockerRepoMap:
         """Get list of project files, respecting .gitignore patterns."""
         try:
             # Parse .gitignore file
-            gitignore_path = self.config.project_root / ".gitignore"
+            gitignore_path = Path(self.config.project_root) / ".gitignore"
             gitignore_patterns = parse_gitignore(gitignore_path)
-            
+
             if gitignore_patterns:
-                self.logger.info(f"Loaded {len(gitignore_patterns)} .gitignore patterns")
-            
+                self.logger.info(
+                    f"Loaded {len(gitignore_patterns)} .gitignore patterns"
+                )
+
             files = []
             for root, dirs, filenames in os.walk(self.config.project_root):
                 # Filter out ignored directories
-                dirs[:] = [d for d in dirs if not should_ignore_file(
-                    Path(root) / d, gitignore_patterns, self.config.project_root
-                )]
-                
+                dirs[:] = [
+                    d
+                    for d in dirs
+                    if not should_ignore_file(
+                        Path(root) / d,
+                        gitignore_patterns,
+                        Path(self.config.project_root),
+                    )
+                ]
+
                 for filename in filenames:
                     file_path = Path(root) / filename
-                    
+
                     # Check if file should be ignored
-                    if should_ignore_file(file_path, gitignore_patterns, self.config.project_root):
+                    if should_ignore_file(
+                        file_path, gitignore_patterns, Path(self.config.project_root)
+                    ):
                         if self.config.verbose:
                             self.logger.debug(f"Ignoring file (gitignore): {file_path}")
                         continue
-                    
+
                     # Only include supported file types
                     if filename.endswith((".py", ".js", ".java", ".cpp", ".c", ".h")):
                         files.append(str(file_path))
-            
+
             if self.config.verbose:
                 self.logger.info(f"Found {len(files)} files after .gitignore filtering")
-            
+
             return files
         except Exception as e:
             self.logger.error(f"Error scanning project files: {e}")
@@ -622,15 +625,19 @@ class DockerRepoMap:
             all_tags = []
             if self.repo_map is not None:
                 for file_path in project_files:
-                    rel_fname = str(Path(file_path).relative_to(self.config.project_root))
+                    rel_fname = str(
+                        Path(file_path).relative_to(self.config.project_root)
+                    )
                     try:
                         tags = self.repo_map.get_tags(file_path, rel_fname)
                         if tags:
                             all_tags.extend(tags)
                     except Exception as e:
                         if self.config.verbose:
-                            self.logger.warning(f"Failed to get tags for {rel_fname}: {e}")
-            
+                            self.logger.warning(
+                                f"Failed to get tags for {rel_fname}: {e}"
+                            )
+
             # Convert tags to a format that _extract_identifiers can handle
             project_map = {"tags": all_tags} if all_tags else {}
 
@@ -699,15 +706,19 @@ class DockerRepoMap:
             all_tags = []
             if self.repo_map is not None:
                 for file_path in project_files:
-                    rel_fname = str(Path(file_path).relative_to(self.config.project_root))
+                    rel_fname = str(
+                        Path(file_path).relative_to(self.config.project_root)
+                    )
                     try:
                         tags = self.repo_map.get_tags(file_path, rel_fname)
                         if tags:
                             all_tags.extend(tags)
                     except Exception as e:
                         if self.config.verbose:
-                            self.logger.warning(f"Failed to get tags for {rel_fname}: {e}")
-            
+                            self.logger.warning(
+                                f"Failed to get tags for {rel_fname}: {e}"
+                            )
+
             # Convert tags to a format that _extract_identifiers can handle
             project_map = {"tags": all_tags} if all_tags else {}
             all_identifiers = self._extract_identifiers(project_map)
