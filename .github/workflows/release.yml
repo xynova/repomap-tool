@@ -36,24 +36,25 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=raw,value=latest
 
-    - name: Get latest validated image
+    - name: Get nightly validated image
       id: get-image
       run: |
-        # Get the most recent validated image from the registry
-        # This assumes the docker-build workflow has already built and pushed a validated image
-        LATEST_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        # Get the most recent nightly validated image from the registry
+        # This assumes the nightly workflow has already built and pushed a validated image
+        NIGHTLY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
         
-        # Pull the latest image to ensure we have it locally
-        echo "Pulling latest image: $LATEST_IMAGE"
-        if ! docker pull $LATEST_IMAGE; then
-          echo "Error: Failed to pull latest image. Make sure the docker-build workflow has run successfully."
+        # Pull the nightly image to ensure we have it locally
+        echo "Pulling nightly image: $NIGHTLY_IMAGE"
+        if ! docker pull $NIGHTLY_IMAGE; then
+          echo "Error: Failed to pull nightly image. Make sure the nightly workflow has run successfully."
+          echo "You can manually trigger the nightly workflow to build a validated image."
           exit 1
         fi
         
         # Get the image digest for reference
         DIGEST=$(docker images --digests --format "table {{.Digest}}" | grep -v DIGEST | head -1)
         echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
-        echo "source_image=$LATEST_IMAGE" >> $GITHUB_OUTPUT
+        echo "source_image=$NIGHTLY_IMAGE" >> $GITHUB_OUTPUT
 
     - name: Tag and push release images
       run: |
@@ -109,6 +110,11 @@ jobs:
         # Also test the latest tag
         docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
         docker run --rm ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest repomap-tool --help
+        
+        # Test the nightly image that was used as source
+        NIGHTLY_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
+        docker pull $NIGHTLY_TAG
+        docker run --rm $NIGHTLY_TAG repomap-tool --help
 
     - name: Cleanup
       run: |
