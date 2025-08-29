@@ -12,7 +12,7 @@ import fnmatch
 import time
 import logging
 from pathlib import Path
-from typing import List, Set, Dict, Any, Optional, Tuple
+from typing import List, Set, Dict, Any, Optional
 from datetime import datetime
 
 # Import Pydantic models
@@ -24,15 +24,6 @@ from .models import (
     ProjectInfo,
 )
 
-# Import aider components
-try:
-    from aider.repomap import RepoMap
-
-    AIDER_AVAILABLE = True
-except ImportError as e:
-    logging.error(f"Failed to import aider components: {e}")
-    logging.error("Make sure aider-chat is installed: pip install aider-chat")
-    AIDER_AVAILABLE = False
 
 # Import matchers
 try:
@@ -172,31 +163,30 @@ class DockerRepoMap:
 
     def _initialize_components(self) -> None:
         """Initialize all components based on configuration."""
-        if AIDER_AVAILABLE:
-            # Create real aider components
+        # Require aider dependencies - no fallback
+        try:
+            from aider.repomap import RepoMap
             from aider.io import InputOutput
-            from aider.models import Model
+            from aider.models import Model, DEFAULT_MODEL_NAME
+        except ImportError as e:
+            raise ImportError(
+                f"aider-chat is required but not installed: {e}\n"
+                "Install with: pip install aider-chat"
+            ) from e
 
-            # Create a simple IO object
-            self.io = InputOutput()
+        # Create real components
+        io = InputOutput()
+        model = Model(DEFAULT_MODEL_NAME)
 
-            # Create a simple Model object
-            from aider.models import DEFAULT_MODEL_NAME
-
-            self.model = Model(DEFAULT_MODEL_NAME)
-
-            # Initialize RepoMap with real implementation
-            self.repo_map = RepoMap(
-                map_tokens=self.config.map_tokens,
-                root=str(self.config.project_root),
-                main_model=self.model,
-                io=self.io,
-                verbose=self.config.verbose,
-                refresh="auto" if self.config.refresh_cache else "no",
-            )
-        else:
-            # Fallback to mock implementation
-            self.repo_map = self._create_mock_repo_map()
+        # Initialize RepoMap with real implementation
+        self.repo_map = RepoMap(
+            map_tokens=self.config.map_tokens,
+            root=str(self.config.project_root),
+            main_model=model,
+            io=io,
+            verbose=self.config.verbose,
+            refresh="auto" if self.config.refresh_cache else "no",
+        )
 
         # Initialize matchers if available
         if MATCHERS_AVAILABLE:
@@ -231,91 +221,6 @@ class DockerRepoMap:
                 verbose=self.config.verbose,
             )
             self.logger.info("Initialized HybridMatcher")
-
-    def _create_mocks(self) -> Tuple[Any, Any]:
-        """Create mock objects for aider dependencies."""
-
-        class MockModel:
-            def __init__(self, map_tokens: int):
-                self.map_tokens = map_tokens
-                self.info = {"max_input_tokens": 8192}
-
-            def __call__(self, *args: Any, **kwargs: Any) -> str:
-                return "Mock response"
-
-            def token_count(self, text: str) -> int:
-                # Simple token estimation
-                return len(text.split())
-
-        class MockIO:
-            def __init__(self) -> None:
-                self.tool_error_messages: List[str] = []
-                self.tool_call_messages: List[str] = []
-
-            def add_tool_error(self, message: str) -> None:
-                self.tool_error_messages.append(message)
-
-            def add_tool_call(self, message: str) -> None:
-                self.tool_call_messages.append(message)
-
-            def tool_error(self, message: str) -> None:
-                self.tool_error_messages.append(message)
-
-            def tool_warning(self, message: str) -> None:
-                # Mock warning method
-                pass
-
-            def tool_output(self, message: str) -> None:
-                # Mock output method
-                pass
-
-        return MockModel(self.config.map_tokens), MockIO()
-
-    def _create_mock_repo_map(self) -> Any:
-        """Create a mock RepoMap object with required methods."""
-
-        class MockRepoMap:
-            def __init__(self, config: Any) -> None:
-                self.config = config
-                self.root = str(config.project_root)
-                self.map_tokens = config.map_tokens
-                self.verbose = config.verbose
-
-            def get_map(self) -> Dict[str, Any]:
-                """Return a mock project map with sample identifiers."""
-                # Create a mock project map with sample data
-                mock_map = {
-                    "files": {
-                        "main.py": {
-                            "identifiers": ["hello_world", "main", "print"],
-                            "content": "def hello_world():\n    print('Hello, World!')",
-                        },
-                        "utils.py": {
-                            "identifiers": [
-                                "process_data",
-                                "validate_input",
-                                "format_output",
-                            ],
-                            "content": "def process_data(data):\n    return data.upper()",
-                        },
-                    },
-                    "identifiers": [
-                        "hello_world",
-                        "main",
-                        "print",
-                        "process_data",
-                        "validate_input",
-                        "format_output",
-                    ],
-                    "stats": {
-                        "total_files": 2,
-                        "total_identifiers": 6,
-                        "file_types": {"python": 2},
-                    },
-                }
-                return mock_map
-
-        return MockRepoMap(self.config)
 
     def _extract_identifiers(self, project_map: Any) -> Set[str]:
         """Extract all identifiers from the project map.
