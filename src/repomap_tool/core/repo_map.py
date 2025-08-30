@@ -87,22 +87,20 @@ class DockerRepoMap:
         try:
             from aider.repomap import RepoMap
             from aider.io import InputOutput
-            from aider.models import Model, DEFAULT_MODEL_NAME
         except ImportError as e:
             raise ImportError(
                 f"aider-chat is required but not installed: {e}\n"
                 "Install with: pip install aider-chat"
             ) from e
 
-        # Create real components
+        # Create real components without LLM model to avoid unnecessary initialization
         io = InputOutput()
-        model = Model(DEFAULT_MODEL_NAME)
 
-        # Initialize RepoMap with real implementation
+        # Initialize RepoMap without LLM model since we use our own semantic analysis
         self.repo_map = RepoMap(
             map_tokens=self.config.map_tokens,
             root=str(self.config.project_root),
-            main_model=model,
+            main_model=None,  # No LLM model needed - we use our own matchers
             io=io,
             verbose=self.config.verbose,
             refresh="auto" if self.config.refresh_cache else "no",
