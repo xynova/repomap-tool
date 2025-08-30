@@ -178,20 +178,31 @@ jobs:
         chmod +x tests/integration/test_integrated_adaptive.sh
         chmod +x tests/integration/test_docker_real_codebase.sh
         
-        # Run the comprehensive Docker integration test against real codebase
+        # Test 7: Comprehensive real codebase analysis
+        echo "📋 Test 7: Comprehensive real codebase analysis"
         docker run --rm \
           -v $(pwd):/project \
-          -w /project \
           repomap-tool-test \
-          bash -c "
-            # Install make if not available
-            if ! command -v make &> /dev/null; then
-              apt-get update && apt-get install -y make
-            fi
-            
-            # Run the full test suite
-            make test-docker-real
-          "
+          repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json
+        
+        # Test 8: Comprehensive search tests
+        echo "📋 Test 8: Comprehensive search tests"
+        docker run --rm \
+          -v $(pwd):/project \
+          repomap-tool-test \
+          repomap-tool search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          repomap-tool-test \
+          repomap-tool search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          repomap-tool-test \
+          repomap-tool search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+        
+        echo "✅ Full Docker test suite completed successfully!"
 
     - name: Cleanup Docker image
       run: |

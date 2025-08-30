@@ -113,7 +113,7 @@ jobs:
           echo '    def __init__(self):' >> /tmp/release-test-project/test.py
           echo '        self.value = 42' >> /tmp/release-test-project/test.py
           cd /tmp/release-test-project
-          repomap-tool analyze . --output-format json
+          repomap-tool analyze . --output json
         "
         
         # Test 2: Real codebase analysis
@@ -121,28 +121,28 @@ jobs:
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool analyze /project --output-format json
+          repomap-tool analyze /project --output json
         
         # Test 3: Search functionality
         echo "📋 Test 3: Search functionality"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "analyze_project" --output-format json
+          repomap-tool search /project "analyze_project" --output json
         
         # Test 4: Fuzzy matching
         echo "📋 Test 4: Fuzzy matching"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "FuzzyMatcher" --output-format json
+          repomap-tool search /project "FuzzyMatcher" --output json
         
         # Test 5: Semantic matching
         echo "📋 Test 5: Semantic matching"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "semantic" --output-format json
+          repomap-tool search /project "semantic" --output json
         
         # If this is a release event with a tag, also test the versioned tag
         if [ -n "${{ github.event.release.tag_name }}" ]; then
@@ -156,7 +156,7 @@ jobs:
           docker run --rm \
             -v $(pwd):/project \
             $VERSION_TAG \
-            repomap-tool analyze /project --output-format json
+            repomap-tool analyze /project --output json
         else
           echo "No release tag name available, skipping version tag test"
         fi
@@ -173,20 +173,48 @@ jobs:
         chmod +x tests/integration/test_integrated_adaptive.sh
         chmod +x tests/integration/test_docker_real_codebase.sh
         
-        # Run the comprehensive Docker integration test against real codebase
+        # Test 7: Comprehensive real codebase analysis
+        echo "📋 Test 7: Comprehensive real codebase analysis"
         docker run --rm \
           -v $(pwd):/project \
-          -w /project \
           $LATEST_TAG \
-          bash -c "
-            # Install make if not available
-            if ! command -v make &> /dev/null; then
-              apt-get update && apt-get install -y make
-            fi
-            
-            # Run the full test suite
-            make test-docker-real
-          "
+          repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json
+        
+        # Test 8: Comprehensive search tests
+        echo "📋 Test 8: Comprehensive search tests"
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "SemanticMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+        
+        # Test 9: Advanced analysis modes
+        echo "📋 Test 9: Advanced analysis modes"
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool analyze /project --fuzzy --threshold 0.6 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json
+        
+        echo "✅ Full release Docker test suite completed successfully!"
 
     - name: Cleanup
       run: |
