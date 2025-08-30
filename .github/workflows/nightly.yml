@@ -46,7 +46,16 @@ jobs:
 
     - name: Run comprehensive tests
       run: |
+        # Run all tests including unit, integration, and self-integration tests
         pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10
+        
+        # Run self-integration tests specifically for detailed reporting
+        echo "=== Running Self-Integration Tests ==="
+        pytest tests/integration/test_self_integration.py -v --durations=10
+        
+        # Run all integration tests for comprehensive coverage
+        echo "=== Running All Integration Tests ==="
+        pytest tests/integration/ -v --durations=10
 
     - name: Run linting and type checking
       run: |

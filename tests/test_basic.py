@@ -21,21 +21,22 @@ def test_imports():
         print("✅ FuzzyMatcher imported successfully")
     except ImportError as e:
         print(f"❌ FuzzyMatcher import failed: {e}")
-        return False
+        assert False, f"FuzzyMatcher import failed: {e}"
 
     try:
         print("✅ AdaptiveSemanticMatcher imported successfully")
     except ImportError as e:
         print(f"❌ AdaptiveSemanticMatcher import failed: {e}")
-        return False
+        assert False, f"AdaptiveSemanticMatcher import failed: {e}"
 
     try:
         print("✅ HybridMatcher imported successfully")
     except ImportError as e:
         print(f"❌ HybridMatcher import failed: {e}")
-        return False
+        assert False, f"HybridMatcher import failed: {e}"
 
-    return True
+    # If we get here, all imports succeeded
+    assert True
 
 
 def test_fuzzy_matcher():
@@ -60,14 +61,14 @@ def test_fuzzy_matcher():
 
         if results:
             print("✅ FuzzyMatcher basic functionality works")
-            return True
+            assert True
         else:
             print("❌ FuzzyMatcher returned no results")
-            return False
+            assert False, "FuzzyMatcher returned no results"
 
     except Exception as e:
         print(f"❌ FuzzyMatcher test failed: {e}")
-        return False
+        assert False, f"FuzzyMatcher test failed: {e}"
 
 
 def test_adaptive_matcher():
@@ -95,14 +96,14 @@ def test_adaptive_matcher():
 
         if results:
             print("✅ AdaptiveSemanticMatcher basic functionality works")
-            return True
+            assert True
         else:
             print("❌ AdaptiveSemanticMatcher returned no results")
-            return False
+            assert False, "AdaptiveSemanticMatcher returned no results"
 
     except Exception as e:
         print(f"❌ AdaptiveSemanticMatcher test failed: {e}")
-        return False
+        assert False, f"AdaptiveSemanticMatcher test failed: {e}"
 
 
 if __name__ == "__main__":
