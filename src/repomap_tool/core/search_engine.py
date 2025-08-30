@@ -5,7 +5,7 @@ This module handles different types of search operations (fuzzy, semantic, hybri
 """
 
 import logging
-from typing import List, Any
+from typing import List, Any, Optional
 from ..models import MatchResult
 
 
@@ -116,7 +116,13 @@ def hybrid_search(
         return []
 
     try:
-        results = hybrid_matcher.match_identifiers(query, identifiers)
+        # Ensure TF-IDF model is built for hybrid matcher
+        if hasattr(hybrid_matcher, "build_tfidf_model") and identifiers:
+            # Convert list to set for the build_tfidf_model method
+            identifier_set = set(identifiers)
+            hybrid_matcher.build_tfidf_model(identifier_set)
+
+        results = hybrid_matcher.match_identifiers(query, set(identifiers))
         # Convert to MatchResult format and limit results
         match_results = []
         for identifier, score in results[:limit]:
@@ -136,30 +142,52 @@ def hybrid_search(
 
 
 def basic_search(
-    query: str,
-    identifiers: List[str],
+    query: Optional[str],
+    identifiers: Optional[List[str]],
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform basic string search on identifiers."""
-    query_lower = query.lower()
+    # Handle None inputs gracefully
+    if query is None:
+        logging.warning("Basic search received None query, returning empty results")
+        return []
+
+    if identifiers is None:
+        logging.warning(
+            "Basic search received None identifiers, returning empty results"
+        )
+        return []
+
+    try:
+        query_lower = query.lower()
+    except AttributeError:
+        logging.warning(
+            f"Basic search received non-string query: {type(query)}, returning empty results"
+        )
+        return []
+
     results = []
 
     for identifier in identifiers:
-        if query_lower in identifier.lower():
-            # Simple scoring based on position and length
-            score = 0.8  # Base score for substring matches
-            if identifier.lower().startswith(query_lower):
-                score = 1.0  # Higher score for prefix matches (max allowed)
+        try:
+            if query_lower in identifier.lower():
+                # Simple scoring based on position and length
+                score = 0.8  # Base score for substring matches
+                if identifier.lower().startswith(query_lower):
+                    score = 1.0  # Higher score for prefix matches (max allowed)
 
-            results.append(
-                MatchResult(
-                    identifier=identifier,
-                    score=score,  # Let the model's validator handle normalization
-                    strategy="basic_string_match",
-                    match_type="fuzzy",  # Use fuzzy as the closest match type
-                    context=f"Found in identifier: {identifier}",
+                results.append(
+                    MatchResult(
+                        identifier=identifier,
+                        score=score,  # Let the model's validator handle normalization
+                        strategy="basic_string_match",
+                        match_type="fuzzy",  # Use fuzzy as the closest match type
+                        context=f"Found in identifier: {identifier}",
+                    )
                 )
-            )
+        except (AttributeError, TypeError):
+            # Skip invalid identifiers
+            continue
 
     # Sort by score (descending) and limit results
     results.sort(key=lambda x: x.score, reverse=True)
