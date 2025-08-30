@@ -3,7 +3,6 @@
 from aider.repomap import RepoMap
 from aider.io import InputOutput
 from aider.models import Model, DEFAULT_MODEL_NAME
-import os
 
 
 def test_repomap_creation():

@@ -294,6 +294,7 @@ class DockerRepoMap:
             except Exception as e:
                 self.logger.warning(f"Error processing {file_path}: {e}")
                 import traceback
+
                 self.logger.debug(f"Traceback: {traceback.format_exc()}")
                 continue
         return identifiers
