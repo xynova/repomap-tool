@@ -17,6 +17,8 @@ echo "✅ Build successful"
 # Create a test project directory
 echo "📁 Creating test project..."
 TEST_PROJECT_DIR=$(mktemp -d)
+# Ensure cleanup on exit (including error exits)
+trap 'rm -rf "$TEST_PROJECT_DIR"' EXIT
 echo "Test project created at: $TEST_PROJECT_DIR"
 
 # Create sample Python files for testing
@@ -78,7 +80,7 @@ run_test() {
     echo "$(echo "$test_name" | sed 's/./-/g')"
     
     # Run test in separate container instance
-    if docker run --rm -v "$TEST_PROJECT_DIR:/project" repomap-tool $test_command; then
+    if docker run --rm -v "$TEST_PROJECT_DIR:/project" repomap-tool bash -c "$test_command"; then
         echo "✅ $test_name passed"
         return 0
     else
@@ -114,11 +116,6 @@ run_test "Test 6: Help Command" \
 # Test 7: Version command
 run_test "Test 7: Version Command" \
     "repomap-tool --version" || exit 1
-
-# Cleanup
-echo ""
-echo "🧹 Cleaning up test project..."
-rm -rf "$TEST_PROJECT_DIR"
 
 echo ""
 echo "✅ All tests completed successfully!"

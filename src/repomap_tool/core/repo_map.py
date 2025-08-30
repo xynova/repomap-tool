@@ -8,6 +8,7 @@ code analysis and search functionality.
 import logging
 import os
 import time
+import traceback
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -293,8 +294,6 @@ class DockerRepoMap:
                     self.logger.warning("repo_map is None")
             except Exception as e:
                 self.logger.warning(f"Error processing {file_path}: {e}")
-                import traceback
-
                 self.logger.debug(f"Traceback: {traceback.format_exc()}")
                 continue
         return identifiers

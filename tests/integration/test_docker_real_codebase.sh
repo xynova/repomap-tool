@@ -24,7 +24,7 @@ run_test() {
     echo "$(echo "$test_name" | sed 's/./-/g')"
     
     # Run test in separate container instance against the real codebase
-    if docker run --rm -v "$(pwd):/project" repomap-tool $test_command; then
+    if docker run --rm -v "$(pwd):/project" repomap-tool bash -c "$test_command"; then
         echo "✅ $test_name passed"
         return 0
     else
