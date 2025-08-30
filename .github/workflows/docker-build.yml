@@ -133,7 +133,7 @@ jobs:
           echo '    def __init__(self):' >> /tmp/test-project/test.py
           echo '        self.value = 42' >> /tmp/test-project/test.py
           cd /tmp/test-project
-          repomap-tool analyze . --output-format json
+          repomap-tool analyze . --output json
         "
         
         # Test 3: Real codebase analysis (make test-docker-real equivalent)
@@ -141,28 +141,28 @@ jobs:
         docker run --rm \
           -v $(pwd):/project \
           ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool analyze /project --output-format json
+          repomap-tool analyze /project --output json
         
         # Test 4: Search functionality
         echo "📋 Test 4: Search functionality"
         docker run --rm \
           -v $(pwd):/project \
           ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "analyze_project" --output-format json
+          repomap-tool search /project "analyze_project" --output json
         
         # Test 5: Fuzzy matching
         echo "📋 Test 5: Fuzzy matching"
         docker run --rm \
           -v $(pwd):/project \
           ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "FuzzyMatcher" --output-format json
+          repomap-tool search /project "FuzzyMatcher" --output json
         
         # Test 6: Semantic matching
         echo "📋 Test 6: Semantic matching"
         docker run --rm \
           -v $(pwd):/project \
           ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "semantic" --output-format json
+          repomap-tool search /project "semantic" --output json
         
         echo "✅ All Docker integration tests completed successfully!"
 
