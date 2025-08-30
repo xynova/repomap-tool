@@ -4,14 +4,12 @@ Unit tests for search engine functions.
 
 This module tests the core search functions that currently have no unit tests:
 - fuzzy_search()
-- semantic_search() 
+- semantic_search()
 - hybrid_search()
 - basic_search()
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
-from typing import List, Set
+from unittest.mock import Mock
 
 from repomap_tool.core.search_engine import (
     fuzzy_search,
@@ -376,7 +374,9 @@ class TestSearchEngineIntegration:
         mock_fuzzy_matcher.match_identifiers.return_value = [("test_function", 90)]
 
         mock_semantic_matcher = Mock()
-        mock_semantic_matcher.find_semantic_matches.return_value = [("test_function", 85)]
+        mock_semantic_matcher.find_semantic_matches.return_value = [
+            ("test_function", 85)
+        ]
 
         mock_hybrid_matcher = Mock()
         mock_hybrid_matcher.build_tfidf_model = Mock()
@@ -386,7 +386,9 @@ class TestSearchEngineIntegration:
         fuzzy_results = fuzzy_search(query, identifiers, mock_fuzzy_matcher, limit)
         assert all(isinstance(r, MatchResult) for r in fuzzy_results)
 
-        semantic_results = semantic_search(query, identifiers, mock_semantic_matcher, limit)
+        semantic_results = semantic_search(
+            query, identifiers, mock_semantic_matcher, limit
+        )
         assert all(isinstance(r, MatchResult) for r in semantic_results)
 
         hybrid_results = hybrid_search(query, identifiers, mock_hybrid_matcher, limit)

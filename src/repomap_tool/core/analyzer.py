@@ -50,7 +50,7 @@ def analyze_identifier_types(identifiers: Set[str]) -> Dict[str, int]:
         if not identifier:
             identifier_types["other"] += 1
             continue
-            
+
         if identifier.isupper() and "_" in identifier:
             # CONSTANT_NAME
             identifier_types["constants"] += 1

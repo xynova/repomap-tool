@@ -84,15 +84,15 @@ class RepoMapConfig(BaseModel):
         # Handle empty strings explicitly
         if isinstance(v, str) and not v.strip():
             raise ValueError("Project root cannot be empty or whitespace only")
-        
+
         # Handle null bytes
-        if isinstance(v, str) and '\x00' in v:
+        if isinstance(v, str) and "\x00" in v:
             raise ValueError("Project root cannot contain null bytes")
-        
+
         # Check path length before resolving
         if isinstance(v, str) and len(v) > 4096:  # Reasonable limit
             raise ValueError("Project root path too long (max 4096 characters)")
-        
+
         try:
             path = Path(v).resolve()
             if not path.exists():
@@ -111,15 +111,15 @@ class RepoMapConfig(BaseModel):
         """Convert cache_dir to Path if provided."""
         if v is None:
             return None
-        
+
         # Handle null bytes
-        if isinstance(v, str) and '\x00' in v:
+        if isinstance(v, str) and "\x00" in v:
             raise ValueError("Cache directory cannot contain null bytes")
-        
+
         # Check path length
         if isinstance(v, str) and len(v) > 4096:
             raise ValueError("Cache directory path too long (max 4096 characters)")
-        
+
         try:
             return Path(v).resolve()
         except (OSError, ValueError) as e:

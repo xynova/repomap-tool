@@ -5,7 +5,7 @@ This module handles different types of search operations (fuzzy, semantic, hybri
 """
 
 import logging
-from typing import List, Any
+from typing import List, Any, Optional
 from ..models import MatchResult
 
 
@@ -117,11 +117,11 @@ def hybrid_search(
 
     try:
         # Ensure TF-IDF model is built for hybrid matcher
-        if hasattr(hybrid_matcher, 'build_tfidf_model') and identifiers:
+        if hasattr(hybrid_matcher, "build_tfidf_model") and identifiers:
             # Convert list to set for the build_tfidf_model method
             identifier_set = set(identifiers)
             hybrid_matcher.build_tfidf_model(identifier_set)
-        
+
         results = hybrid_matcher.match_identifiers(query, set(identifiers))
         # Convert to MatchResult format and limit results
         match_results = []
@@ -142,8 +142,8 @@ def hybrid_search(
 
 
 def basic_search(
-    query: str,
-    identifiers: List[str],
+    query: Optional[str],
+    identifiers: Optional[List[str]],
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform basic string search on identifiers."""
@@ -151,17 +151,21 @@ def basic_search(
     if query is None:
         logging.warning("Basic search received None query, returning empty results")
         return []
-    
+
     if identifiers is None:
-        logging.warning("Basic search received None identifiers, returning empty results")
+        logging.warning(
+            "Basic search received None identifiers, returning empty results"
+        )
         return []
-    
+
     try:
         query_lower = query.lower()
     except AttributeError:
-        logging.warning(f"Basic search received non-string query: {type(query)}, returning empty results")
+        logging.warning(
+            f"Basic search received non-string query: {type(query)}, returning empty results"
+        )
         return []
-    
+
     results = []
 
     for identifier in identifiers:

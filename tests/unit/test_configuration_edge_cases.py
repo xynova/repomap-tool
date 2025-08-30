@@ -9,19 +9,14 @@ import pytest
 import tempfile
 import os
 from pathlib import Path
-from unittest.mock import Mock, patch
-from typing import Dict, Any
+
 
 from repomap_tool.models import (
     RepoMapConfig,
     FuzzyMatchConfig,
     SemanticMatchConfig,
     SearchRequest,
-    SearchResponse,
     MatchResult,
-    ProjectInfo,
-    HealthCheck,
-    ErrorResponse,
     create_config_from_dict,
     config_to_dict,
     validate_search_request,
@@ -61,13 +56,19 @@ class TestRepoMapConfigEdgeCases:
 
         for path in empty_paths:
             # Act & Assert - Should raise validation error for whitespace-only paths
-            with pytest.raises((ValueError, Exception), match="Project root cannot be empty or whitespace only"):
+            with pytest.raises(
+                (ValueError, Exception),
+                match="Project root cannot be empty or whitespace only",
+            ):
                 RepoMapConfig(project_root=path)
 
     def test_config_with_empty_string_project_root(self):
         """Test configuration with empty string project root (should be rejected)."""
         # Act & Assert - Empty string should be rejected
-        with pytest.raises((ValueError, Exception), match="Project root cannot be empty or whitespace only"):
+        with pytest.raises(
+            (ValueError, Exception),
+            match="Project root cannot be empty or whitespace only",
+        ):
             RepoMapConfig(project_root="")
 
     def test_config_with_malicious_project_root(self):
@@ -89,7 +90,9 @@ class TestRepoMapConfigEdgeCases:
                     RepoMapConfig(project_root=path)
             except Exception as e:
                 # Should not crash with unexpected exceptions
-                assert "Project root does not exist" in str(e) or "Project root must be a directory" in str(e)
+                assert "Project root does not exist" in str(
+                    e
+                ) or "Project root must be a directory" in str(e)
 
     def test_config_with_extreme_map_tokens(self):
         """Test configuration with extreme map_tokens values."""
@@ -149,7 +152,13 @@ class TestRepoMapConfigEdgeCases:
             # Act & Assert - Should handle type coercion gracefully
             try:
                 config = RepoMapConfig(project_root=".", log_level=level)
-                assert config.log_level in ["INFO", "WARNING", "ERROR", "DEBUG", "CRITICAL"]
+                assert config.log_level in [
+                    "INFO",
+                    "WARNING",
+                    "ERROR",
+                    "DEBUG",
+                    "CRITICAL",
+                ]
             except Exception as e:
                 pytest.fail(f"Log level coercion failed: {e}")
 
@@ -201,13 +210,16 @@ class TestRepoMapConfigEdgeCases:
                 assert config.cache_dir is not None
             except Exception as e:
                 # Should not crash with unexpected exceptions
-                assert any(msg in str(e) for msg in [
-                    "Project root does not exist",
-                    "Project root must be a directory", 
-                    "Cache directory cannot contain null bytes",
-                    "Cache directory path too long",
-                    "Invalid cache directory"
-                ])
+                assert any(
+                    msg in str(e)
+                    for msg in [
+                        "Project root does not exist",
+                        "Project root must be a directory",
+                        "Cache directory cannot contain null bytes",
+                        "Cache directory path too long",
+                        "Invalid cache directory",
+                    ]
+                )
 
     def test_config_with_none_values(self):
         """Test configuration with None values."""
@@ -218,7 +230,7 @@ class TestRepoMapConfigEdgeCases:
                 project_root=temp_dir,
                 cache_dir=None,  # This is allowed
             )
-            
+
             assert config.cache_dir is None
             assert config.verbose is True  # Default value
             assert config.refresh_cache is False  # Default value
@@ -233,7 +245,7 @@ class TestRepoMapConfigEdgeCases:
                     project_root=temp_dir,
                     verbose=None,  # Should raise error
                 )
-            
+
             with pytest.raises((ValueError, Exception)):
                 RepoMapConfig(
                     project_root=temp_dir,
@@ -570,10 +582,7 @@ class TestMatchResultEdgeCases:
             # Act & Assert - Should raise validation error for invalid scores
             with pytest.raises((ValueError, Exception)):
                 MatchResult(
-                    identifier="test",
-                    score=score,
-                    strategy="test",
-                    match_type="fuzzy"
+                    identifier="test", score=score, strategy="test", match_type="fuzzy"
                 )
 
     def test_match_result_with_valid_scores(self):
@@ -584,12 +593,9 @@ class TestMatchResultEdgeCases:
         for score in valid_scores:
             # Act & Assert - Should accept valid scores
             result = MatchResult(
-                identifier="test",
-                score=score,
-                strategy="test",
-                match_type="fuzzy"
+                identifier="test", score=score, strategy="test", match_type="fuzzy"
             )
-            
+
             # Score should be exactly as provided
             assert result.score == score
 
@@ -610,7 +616,7 @@ class TestMatchResultEdgeCases:
                     score=0.5,
                     strategy="test",
                     match_type="fuzzy",
-                    line_number=line_number
+                    line_number=line_number,
                 )
 
     def test_match_result_with_invalid_match_type(self):
@@ -628,10 +634,7 @@ class TestMatchResultEdgeCases:
             # Act & Assert - Should raise validation error
             with pytest.raises(ValueError):
                 MatchResult(
-                    identifier="test",
-                    score=0.5,
-                    strategy="test",
-                    match_type=match_type
+                    identifier="test", score=0.5, strategy="test", match_type=match_type
                 )
 
     def test_match_result_with_malicious_identifier(self):
@@ -653,11 +656,13 @@ class TestMatchResultEdgeCases:
                     identifier=identifier,
                     score=0.5,
                     strategy="test",
-                    match_type="fuzzy"
+                    match_type="fuzzy",
                 )
                 assert result.identifier == identifier
             except Exception as e:
-                pytest.fail(f"Malicious identifier '{identifier}' broke the system: {e}")
+                pytest.fail(
+                    f"Malicious identifier '{identifier}' broke the system: {e}"
+                )
 
 
 class TestUtilityFunctionEdgeCases:
@@ -730,15 +735,15 @@ class TestConfigurationIntegrationEdgeCases:
                     "enabled": True,
                     "threshold": 70,
                     "strategies": ["prefix", "substring"],
-                    "cache_results": True
+                    "cache_results": True,
                 },
                 "semantic_match": {
                     "enabled": True,
                     "threshold": 0.1,
                     "use_tfidf": True,
                     "min_word_length": 3,
-                    "cache_results": True
-                }
+                    "cache_results": True,
+                },
             }
 
             # Act & Assert - Should handle edge case config gracefully
@@ -762,7 +767,7 @@ class TestConfigurationIntegrationEdgeCases:
                 config_dict = config_to_dict(config)
                 assert isinstance(config_dict, dict)
                 assert "project_root" in config_dict
-                
+
                 # Test round-trip serialization
                 new_config = create_config_from_dict(config_dict)
                 assert new_config.project_root == config.project_root

@@ -10,10 +10,8 @@ import pytest
 import tempfile
 import shutil
 import os
-import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
-from typing import List, Dict, Any
+from unittest.mock import Mock
 
 from repomap_tool.core.search_engine import (
     fuzzy_search,
@@ -24,13 +22,11 @@ from repomap_tool.core.search_engine import (
 from repomap_tool.core.analyzer import (
     analyze_file_types,
     analyze_identifier_types,
-    get_cache_size,
 )
 from repomap_tool.models import (
     RepoMapConfig,
     SearchRequest,
     FuzzyMatchConfig,
-    SemanticMatchConfig,
 )
 from repomap_tool.core.repo_map import DockerRepoMap
 
@@ -59,7 +55,7 @@ class TestSearchEngineEdgeCases:
         for malicious_input in malicious_inputs:
             # Act
             results = fuzzy_search(malicious_input, ["test"], mock_matcher, 10)
-            
+
             # Assert - Should not crash or behave unexpectedly
             assert isinstance(results, list)
             assert all(isinstance(r.identifier, str) for r in results)
@@ -85,7 +81,7 @@ class TestSearchEngineEdgeCases:
         for unicode_input in unicode_inputs:
             # Act
             results = semantic_search(unicode_input, ["test"], mock_matcher, 10)
-            
+
             # Assert - Should handle Unicode gracefully
             assert isinstance(results, list)
 
@@ -101,7 +97,7 @@ class TestSearchEngineEdgeCases:
         for broken_matcher in broken_matchers:
             # Act
             results = hybrid_search("test", ["test"], broken_matcher, 10)
-            
+
             # Assert - Should handle broken matcher gracefully
             assert isinstance(results, list)
             assert len(results) == 0
@@ -123,7 +119,7 @@ class TestSearchEngineEdgeCases:
         for query, identifiers in extreme_cases:
             # Act
             results = basic_search(query, identifiers, 10)
-            
+
             # Assert - Should not crash
             assert isinstance(results, list)
             assert all(isinstance(r.identifier, str) for r in results)
@@ -143,7 +139,7 @@ class TestSearchEngineEdgeCases:
                 assert isinstance(results, list)
             except Exception as e:
                 pytest.fail(f"None query input broke the system: {e}")
-            
+
             try:
                 results = search_func("test", None, mock_matcher, 10)
                 assert isinstance(results, list)
@@ -156,12 +152,12 @@ class TestSearchEngineEdgeCases:
         # Test semantic_search with proper mock configuration
         semantic_mock = Mock()
         semantic_mock.find_semantic_matches.return_value = []
-        
+
         # Test hybrid_search with proper mock configuration
         hybrid_mock = Mock()
         hybrid_mock.build_tfidf_model.return_value = None
         hybrid_mock.match_identifiers.return_value = []
-        
+
         search_functions = [
             (semantic_search, semantic_mock),
             (hybrid_search, hybrid_mock),
@@ -175,7 +171,7 @@ class TestSearchEngineEdgeCases:
                 assert isinstance(results, list)
             except Exception as e:
                 pytest.fail(f"None query input broke the system: {e}")
-            
+
             try:
                 results = search_func("test", None, mock_matcher, 10)
                 assert isinstance(results, list)
@@ -213,7 +209,7 @@ class TestSearchEngineEdgeCases:
 
         # Act
         results = fuzzy_search("test", ["test"], mock_matcher, -1)
-        
+
         # Assert - Should handle negative limits gracefully
         assert isinstance(results, list)
 
@@ -225,7 +221,7 @@ class TestSearchEngineEdgeCases:
 
         # Act
         results = fuzzy_search("test", ["test"], mock_matcher, 0)
-        
+
         # Assert - Should return empty list
         assert len(results) == 0
 
@@ -252,7 +248,7 @@ class TestAnalyzerEdgeCases:
         for malicious_path in malicious_paths:
             # Act
             result = analyze_file_types([malicious_path])
-            
+
             # Assert - Should not crash
             assert isinstance(result, dict)
 
@@ -276,7 +272,7 @@ class TestAnalyzerEdgeCases:
 
         # Act
         result = analyze_identifier_types(malicious_identifiers)
-        
+
         # Assert - Should not crash
         assert isinstance(result, dict)
         assert "functions" in result
@@ -292,14 +288,18 @@ class TestAnalyzerEdgeCases:
             set(),  # Empty set
             {"a" * 10000},  # Very long identifier
             {"a", "b", "c"} | {"d", "e", "f"} | {"g", "h", "i"},  # Multiple identifiers
-            {"a" + str(i) for i in range(100)},  # Many unique identifiers (reduced for performance)
-            {"a" * i for i in range(100)},  # Many different lengths (reduced for performance)
+            {
+                "a" + str(i) for i in range(100)
+            },  # Many unique identifiers (reduced for performance)
+            {
+                "a" * i for i in range(100)
+            },  # Many different lengths (reduced for performance)
         ]
 
         for extreme_case in extreme_cases:
             # Act
             result = analyze_identifier_types(extreme_case)
-            
+
             # Assert - Should not crash
             assert isinstance(result, dict)
             assert all(isinstance(v, int) for v in result.values())
@@ -355,7 +355,7 @@ class TestRepoMapEdgeCases:
             # Act & Assert - Should handle nonexistent paths gracefully
             with pytest.raises((ValueError, FileNotFoundError)):
                 config = RepoMapConfig(project_root=path)
-                repomap = DockerRepoMap(config)
+                DockerRepoMap(config)
 
     def test_repo_map_with_file_as_project_root(self):
         """Test RepoMap with a file as project root (should be directory)."""
@@ -364,7 +364,7 @@ class TestRepoMapEdgeCases:
             # Act & Assert - Should handle file as project root gracefully
             with pytest.raises((ValueError, IsADirectoryError)):
                 config = RepoMapConfig(project_root=temp_file.name)
-                repomap = DockerRepoMap(config)
+                DockerRepoMap(config)
 
     def test_repo_map_with_empty_directory(self):
         """Test RepoMap with empty directory."""
@@ -375,7 +375,7 @@ class TestRepoMapEdgeCases:
 
             # Act
             project_info = repomap.analyze_project()
-            
+
             # Assert - Should handle empty directory gracefully
             assert project_info.total_files == 0
             assert project_info.total_identifiers == 0
@@ -397,7 +397,7 @@ class TestRepoMapEdgeCases:
 
             # Act
             project_info = repomap.analyze_project()
-            
+
             # Assert - Should handle large directory gracefully
             assert project_info.total_files > 0
             assert project_info.total_identifiers > 0
@@ -409,7 +409,7 @@ class TestRepoMapEdgeCases:
             # Create corrupted files
             corrupted_files = [
                 ("binary.bin", b"\x00\x01\x02\x03"),
-                ("unicode_error.py", "def test(): \x00 pass".encode('utf-8')),
+                ("unicode_error.py", "def test(): \x00 pass".encode("utf-8")),
                 ("permission_denied.py", "def test(): pass"),
             ]
 
@@ -418,7 +418,7 @@ class TestRepoMapEdgeCases:
                 if filename == "permission_denied.py":
                     file_path.write_text("def test(): pass")
                     # Make file unreadable (Unix only)
-                    if os.name != 'nt':
+                    if os.name != "nt":
                         os.chmod(file_path, 0o000)
                 else:
                     file_path.write_bytes(content)
@@ -428,7 +428,7 @@ class TestRepoMapEdgeCases:
 
             # Act
             project_info = repomap.analyze_project()
-            
+
             # Assert - Should handle corrupted files gracefully
             assert isinstance(project_info.total_files, int)
             assert isinstance(project_info.total_identifiers, int)
@@ -440,13 +440,12 @@ class TestRepoMapEdgeCases:
             # Create a file and a symlink to it
             original_file = Path(temp_dir) / "original.py"
             original_file.write_text("def original(): pass")
-            
+
             symlink_file = Path(temp_dir) / "symlink.py"
-            if os.name != 'nt':  # Unix-like systems
+            if os.name != "nt":  # Unix-like systems
                 symlink_file.symlink_to(original_file)
             else:
                 # On Windows, create a copy instead
-                import shutil
                 shutil.copy2(original_file, symlink_file)
 
             config = RepoMapConfig(project_root=temp_dir)
@@ -454,7 +453,7 @@ class TestRepoMapEdgeCases:
 
             # Act
             project_info = repomap.analyze_project()
-            
+
             # Assert - Should handle symlinks gracefully
             assert isinstance(project_info.total_files, int)
 
@@ -462,7 +461,7 @@ class TestRepoMapEdgeCases:
         """Test RepoMap with circular symbolic links."""
         # Arrange
         with tempfile.TemporaryDirectory() as temp_dir:
-            if os.name != 'nt':  # Unix-like systems only
+            if os.name != "nt":  # Unix-like systems only
                 # Create circular symlinks
                 link1 = Path(temp_dir) / "link1"
                 link2 = Path(temp_dir) / "link2"
@@ -474,7 +473,7 @@ class TestRepoMapEdgeCases:
 
                 # Act
                 project_info = repomap.analyze_project()
-                
+
                 # Assert - Should handle circular symlinks gracefully
                 assert isinstance(project_info.total_files, int)
 
@@ -490,10 +489,11 @@ class TestRepoMapEdgeCases:
 
             for filename, file_type in special_files:
                 file_path = Path(temp_dir) / filename
-                if file_type == "mkfifo" and os.name != 'nt':
+                if file_type == "mkfifo" and os.name != "nt":
                     os.mkfifo(file_path)
-                elif file_type == "socket" and os.name != 'nt':
+                elif file_type == "socket" and os.name != "nt":
                     import socket
+
                     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     sock.bind(str(file_path))
                     sock.close()
@@ -503,7 +503,7 @@ class TestRepoMapEdgeCases:
 
             # Act
             project_info = repomap.analyze_project()
-            
+
             # Assert - Should handle special files gracefully
             assert isinstance(project_info.total_files, int)
 
@@ -571,7 +571,7 @@ class TestMemoryAndPerformanceEdgeCases:
 
         # Act
         results = fuzzy_search("test", many_identifiers, mock_matcher, 10)
-        
+
         # Assert - Should handle many identifiers gracefully
         assert isinstance(results, list)
 
@@ -582,7 +582,7 @@ class TestMemoryAndPerformanceEdgeCases:
 
         # Act
         result = analyze_file_types(many_files)
-        
+
         # Assert - Should handle many files gracefully
         assert isinstance(result, dict)
         assert result["py"] == 10000
@@ -594,7 +594,7 @@ class TestMemoryAndPerformanceEdgeCases:
 
         # Act
         result = analyze_identifier_types(many_identifiers)
-        
+
         # Assert - Should handle many identifiers gracefully
         assert isinstance(result, dict)
         assert sum(result.values()) == 10000
@@ -607,7 +607,6 @@ class TestConcurrencyEdgeCases:
         """Test concurrent access to shared resources."""
         # Arrange
         import threading
-        import time
 
         results = []
         errors = []
@@ -663,18 +662,16 @@ class TestIntegrationEdgeCases:
 
             # Act
             project_info = repomap.analyze_project()
-            
+
             # Assert - Should handle edge cases gracefully
             assert isinstance(project_info.total_files, int)
             assert isinstance(project_info.total_identifiers, int)
 
             # Test search with edge cases
             search_request = SearchRequest(
-                query="test",
-                match_type="fuzzy",
-                max_results=5
+                query="test", match_type="fuzzy", max_results=5
             )
             search_response = repomap.search_identifiers(search_request)
-            
+
             # Assert - Should handle search with edge cases gracefully
             assert isinstance(search_response.total_results, int)

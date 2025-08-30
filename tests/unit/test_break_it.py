@@ -9,17 +9,12 @@ These are the scenarios that are most likely to cause issues in production.
 import pytest
 import tempfile
 import os
-import sys
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 import threading
-import time
 
 from repomap_tool.core.search_engine import (
     fuzzy_search,
-    semantic_search,
-    hybrid_search,
-    basic_search,
 )
 from repomap_tool.core.analyzer import (
     analyze_file_types,
@@ -182,13 +177,18 @@ class TestEasiestWaysToBreakIt:
 
         for path in nonexistent_paths:
             # Act & Assert - Should raise validation error for nonexistent paths
-            with pytest.raises((ValueError, Exception), match="Project root does not exist"):
+            with pytest.raises(
+                (ValueError, Exception), match="Project root does not exist"
+            ):
                 RepoMapConfig(project_root=path)
 
     def test_09b_empty_project_breaks_repo_map(self):
         """Empty project paths should be handled gracefully."""
         # Arrange - Empty path (should be rejected)
-        with pytest.raises((ValueError, Exception), match="Project root cannot be empty or whitespace only"):
+        with pytest.raises(
+            (ValueError, Exception),
+            match="Project root cannot be empty or whitespace only",
+        ):
             RepoMapConfig(project_root="")
 
     def test_10_file_as_project_root_breaks_repo_map(self):
@@ -199,9 +199,11 @@ class TestEasiestWaysToBreakIt:
             try:
                 with pytest.raises((ValueError, IsADirectoryError)):
                     config = RepoMapConfig(project_root=temp_file.name)
-                    repomap = DockerRepoMap(config)
+                    DockerRepoMap(config)
             except Exception as e:
-                pytest.fail(f"File as project root didn't raise expected exception: {e}")
+                pytest.fail(
+                    f"File as project root didn't raise expected exception: {e}"
+                )
 
     def test_11_empty_directory_breaks_repo_map(self):
         """Empty directories can cause issues with file processing."""
@@ -225,7 +227,7 @@ class TestEasiestWaysToBreakIt:
             # Create corrupted files
             corrupted_files = [
                 ("binary.bin", b"\x00\x01\x02\x03"),
-                ("unicode_error.py", "def test(): \x00 pass".encode('utf-8')),
+                ("unicode_error.py", "def test(): \x00 pass".encode("utf-8")),
             ]
 
             for filename, content in corrupted_files:
@@ -407,9 +409,7 @@ class TestEasiestWaysToBreakIt:
                 assert isinstance(project_info.total_identifiers, int)
 
                 search_request = SearchRequest(
-                    query="test",
-                    match_type="fuzzy",
-                    max_results=5
+                    query="test", match_type="fuzzy", max_results=5
                 )
                 search_response = repomap.search_identifiers(search_request)
                 assert isinstance(search_response.total_results, int)
@@ -423,9 +423,12 @@ class TestRealWorldBreakScenarios:
     def test_network_timeout_breaks_system(self):
         """Network timeouts commonly break systems that depend on external services."""
         # Arrange - Mock network timeout
-        with patch('aider.repomap.RepoMap.get_tags', side_effect=TimeoutError("Network timeout")):
+        with patch(
+            "aider.repomap.RepoMap.get_tags",
+            side_effect=TimeoutError("Network timeout"),
+        ):
             config = RepoMapConfig(project_root=".")
-            
+
             # Act & Assert - Should handle network timeout gracefully
             try:
                 repomap = DockerRepoMap(config)
@@ -437,7 +440,9 @@ class TestRealWorldBreakScenarios:
     def test_disk_full_breaks_system(self):
         """Disk full scenarios commonly break file processing systems."""
         # Arrange - Mock disk full scenario
-        with patch('pathlib.Path.write_text', side_effect=OSError("No space left on device")):
+        with patch(
+            "pathlib.Path.write_text", side_effect=OSError("No space left on device")
+        ):
             # Act & Assert - Should handle disk full gracefully
             try:
                 result = analyze_file_types(["test.py"])
@@ -448,7 +453,9 @@ class TestRealWorldBreakScenarios:
     def test_permission_denied_breaks_system(self):
         """Permission denied scenarios commonly break file processing systems."""
         # Arrange - Mock permission denied
-        with patch('pathlib.Path.read_text', side_effect=PermissionError("Permission denied")):
+        with patch(
+            "pathlib.Path.read_text", side_effect=PermissionError("Permission denied")
+        ):
             # Act & Assert - Should handle permission denied gracefully
             try:
                 result = analyze_file_types(["test.py"])
