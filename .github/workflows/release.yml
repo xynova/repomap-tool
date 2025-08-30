@@ -89,39 +89,105 @@ jobs:
 
     - name: Test released images
       run: |
+        echo "🧪 Running comprehensive release Docker integration tests..."
+        
         # Test the latest tag (always available)
         LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
-        echo "Testing latest tag: $LATEST_TAG"
+        echo "📋 Testing latest tag: $LATEST_TAG"
         docker pull $LATEST_TAG
         docker run --rm $LATEST_TAG repomap-tool --help
         
         # Test the nightly image that was used as source
         NIGHTLY_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
-        echo "Testing nightly tag: $NIGHTLY_TAG"
+        echo "📋 Testing nightly tag: $NIGHTLY_TAG"
         docker pull $NIGHTLY_TAG
         docker run --rm $NIGHTLY_TAG repomap-tool --help
         
-        # Test with a sample project using the latest tag
-        mkdir -p test-release-project
-        echo "print('Hello, World!')" > test-release-project/test.py
+        # Test 1: Small test project analysis
+        echo "📋 Test 1: Small test project analysis"
+        docker run --rm $LATEST_TAG bash -c "
+          mkdir -p /tmp/release-test-project
+          echo 'def hello_world():' > /tmp/release-test-project/test.py
+          echo '    print(\"Hello, World!\")' >> /tmp/release-test-project/test.py
+          echo 'class TestClass:' >> /tmp/release-test-project/test.py
+          echo '    def __init__(self):' >> /tmp/release-test-project/test.py
+          echo '        self.value = 42' >> /tmp/release-test-project/test.py
+          cd /tmp/release-test-project
+          repomap-tool analyze . --output-format json
+        "
         
-        # Run analysis on the test project
+        # Test 2: Real codebase analysis
+        echo "📋 Test 2: Real codebase analysis"
         docker run --rm \
-          -v $(pwd)/test-release-project:/workspace \
-          -w /workspace \
+          -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool analyze . --output-format json || true
+          repomap-tool analyze /project --output-format json
+        
+        # Test 3: Search functionality
+        echo "📋 Test 3: Search functionality"
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "analyze_project" --output-format json
+        
+        # Test 4: Fuzzy matching
+        echo "📋 Test 4: Fuzzy matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "FuzzyMatcher" --output-format json
+        
+        # Test 5: Semantic matching
+        echo "📋 Test 5: Semantic matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          $LATEST_TAG \
+          repomap-tool search /project "semantic" --output-format json
         
         # If this is a release event with a tag, also test the versioned tag
         if [ -n "${{ github.event.release.tag_name }}" ]; then
           VERSION_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
-          echo "Testing version tag: $VERSION_TAG"
+          echo "📋 Testing version tag: $VERSION_TAG"
           docker pull $VERSION_TAG
           docker run --rm $VERSION_TAG repomap-tool --help
+          
+          # Test version tag with real codebase
+          echo "📋 Test 6: Version tag real codebase analysis"
+          docker run --rm \
+            -v $(pwd):/project \
+            $VERSION_TAG \
+            repomap-tool analyze /project --output-format json
         else
           echo "No release tag name available, skipping version tag test"
         fi
+        
+        echo "✅ All release Docker integration tests completed successfully!"
+
+    - name: Run full release Docker test suite
+      run: |
+        echo "🧪 Running full release Docker test suite..."
+        
+        LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
+        
+        # Make the test scripts executable
+        chmod +x tests/integration/test_integrated_adaptive.sh
+        chmod +x tests/integration/test_docker_real_codebase.sh
+        
+        # Run the comprehensive Docker integration test against real codebase
+        docker run --rm \
+          -v $(pwd):/project \
+          -w /project \
+          $LATEST_TAG \
+          bash -c "
+            # Install make if not available
+            if ! command -v make &> /dev/null; then
+              apt-get update && apt-get install -y make
+            fi
+            
+            # Run the full test suite
+            make test-docker-real
+          "
 
     - name: Cleanup
       run: |
-        rm -rf test-release-project
+        echo "Cleanup completed"

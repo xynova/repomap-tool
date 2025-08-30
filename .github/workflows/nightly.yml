@@ -113,29 +113,81 @@ jobs:
         # Pull the image we just pushed to test it
         docker pull ${{ steps.tags.outputs.nightly_latest }}
         
-        # Test basic functionality
+        echo "🧪 Running comprehensive nightly Docker integration tests..."
+        
+        # Test 1: Basic functionality
+        echo "📋 Test 1: Basic functionality"
         docker run --rm ${{ steps.tags.outputs.nightly_latest }} repomap-tool --help
         
-        # Test with a more complex project structure
-        mkdir -p nightly-test-project
-        mkdir -p nightly-test-project/src
-        mkdir -p nightly-test-project/tests
+        # Test 2: Small test project analysis
+        echo "📋 Test 2: Small test project analysis"
+        docker run --rm ${{ steps.tags.outputs.nightly_latest }} bash -c "
+          mkdir -p /tmp/nightly-test-project
+          echo 'def hello_world():' > /tmp/nightly-test-project/test.py
+          echo '    print(\"Hello, World!\")' >> /tmp/nightly-test-project/test.py
+          echo 'class TestClass:' >> /tmp/nightly-test-project/test.py
+          echo '    def __init__(self):' >> /tmp/nightly-test-project/test.py
+          echo '        self.value = 42' >> /tmp/nightly-test-project/test.py
+          cd /tmp/nightly-test-project
+          repomap-tool analyze . --output-format json
+        "
         
-        echo "def hello(): print('Hello, World!')" > nightly-test-project/src/main.py
-        echo "def test_hello(): assert True" > nightly-test-project/tests/test_main.py
-        echo "# Test project for nightly builds" > nightly-test-project/README.md
-        
-        # Run analysis on the test project
+        # Test 3: Real codebase analysis
+        echo "📋 Test 3: Real codebase analysis"
         docker run --rm \
-          -v $(pwd)/nightly-test-project:/workspace \
-          -w /workspace \
+          -v $(pwd):/project \
           ${{ steps.tags.outputs.nightly_latest }} \
-          repomap-tool analyze . --output-format json || true
+          repomap-tool analyze /project --output-format json
+        
+        # Test 4: Search functionality
+        echo "📋 Test 4: Search functionality"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ steps.tags.outputs.nightly_latest }} \
+          repomap-tool search /project "analyze_project" --output-format json
+        
+        # Test 5: Fuzzy matching
+        echo "📋 Test 5: Fuzzy matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ steps.tags.outputs.nightly_latest }} \
+          repomap-tool search /project "FuzzyMatcher" --output-format json
+        
+        # Test 6: Semantic matching
+        echo "📋 Test 6: Semantic matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ steps.tags.outputs.nightly_latest }} \
+          repomap-tool search /project "semantic" --output-format json
+        
+        echo "✅ All nightly Docker integration tests completed successfully!"
+
+    - name: Run full nightly Docker test suite
+      run: |
+        echo "🧪 Running full nightly Docker test suite..."
+        
+        # Make the test scripts executable
+        chmod +x tests/integration/test_integrated_adaptive.sh
+        chmod +x tests/integration/test_docker_real_codebase.sh
+        
+        # Run the comprehensive Docker integration test against real codebase
+        docker run --rm \
+          -v $(pwd):/project \
+          -w /project \
+          ${{ steps.tags.outputs.nightly_latest }} \
+          bash -c "
+            # Install make if not available
+            if ! command -v make &> /dev/null; then
+              apt-get update && apt-get install -y make
+            fi
+            
+            # Run the full test suite
+            make test-docker-real
+          "
 
     - name: Cleanup
       run: |
         docker rmi ${{ steps.tags.outputs.nightly_latest }} || true
-        rm -rf nightly-test-project
 
   nightly-api-test:
     runs-on: ubuntu-latest

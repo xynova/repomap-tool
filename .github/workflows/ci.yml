@@ -11,6 +11,7 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/scripts/**'
       - 'Makefile'
+      - 'docker/**'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -21,6 +22,7 @@ on:
       - '.github/workflows/ci.yml'
       - '.github/scripts/**'
       - 'Makefile'
+      - 'docker/**'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
@@ -109,6 +111,91 @@ jobs:
     - name: Run mypy
       run: |
         mypy src/ --config-file pyproject.toml
+
+  docker-integration-test:
+    runs-on: ubuntu-latest
+    needs: [test, lint, type-check]
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Build Docker image for testing
+      run: |
+        docker build -f docker/Dockerfile -t repomap-tool-test .
+
+    - name: Run comprehensive Docker integration tests
+      run: |
+        echo "🧪 Running comprehensive Docker integration tests..."
+        
+        # Test 1: Basic functionality
+        echo "📋 Test 1: Basic functionality"
+        docker run --rm repomap-tool-test repomap-tool --help
+        
+        # Test 2: Small test project (make test-docker equivalent)
+        echo "📋 Test 2: Small test project analysis"
+        docker run --rm repomap-tool-test bash -c "
+          mkdir -p /tmp/test-project
+          echo 'def hello_world():' > /tmp/test-project/test.py
+          echo '    print(\"Hello, World!\")' >> /tmp/test-project/test.py
+          echo 'class TestClass:' >> /tmp/test-project/test.py
+          echo '    def __init__(self):' >> /tmp/test-project/test.py
+          echo '        self.value = 42' >> /tmp/test-project/test.py
+          cd /tmp/test-project
+          repomap-tool analyze . --output-format json
+        "
+        
+        # Test 3: Real codebase analysis (make test-docker-real equivalent)
+        echo "📋 Test 3: Real codebase analysis"
+        docker run --rm \
+          -v $(pwd):/project \
+          repomap-tool-test \
+          repomap-tool analyze /project --output-format json
+        
+        # Test 4: Search functionality
+        echo "📋 Test 4: Search functionality"
+        docker run --rm \
+          -v $(pwd):/project \
+          repomap-tool-test \
+          repomap-tool search /project "analyze_project" --output-format json
+        
+        # Test 5: Fuzzy matching
+        echo "📋 Test 5: Fuzzy matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          repomap-tool-test \
+          repomap-tool search /project "FuzzyMatcher" --output-format json
+        
+        echo "✅ All Docker integration tests completed successfully!"
+
+    - name: Run full Docker test suite
+      run: |
+        echo "🧪 Running full Docker test suite..."
+        
+        # Make the test scripts executable
+        chmod +x tests/integration/test_integrated_adaptive.sh
+        chmod +x tests/integration/test_docker_real_codebase.sh
+        
+        # Run the comprehensive Docker integration test against real codebase
+        docker run --rm \
+          -v $(pwd):/project \
+          -w /project \
+          repomap-tool-test \
+          bash -c "
+            # Install make if not available
+            if ! command -v make &> /dev/null; then
+              apt-get update && apt-get install -y make
+            fi
+            
+            # Run the full test suite
+            make test-docker-real
+          "
+
+    - name: Cleanup Docker image
+      run: |
+        docker rmi repomap-tool-test || true
 
   integration-test:
     runs-on: ubuntu-latest
