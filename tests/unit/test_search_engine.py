@@ -110,7 +110,7 @@ class TestSemanticSearch:
         query = "data processing"
         identifiers = ["data_processor", "file_handler", "data_analyzer"]
         mock_matcher = Mock()
-        mock_matcher.find_semantic_matches.return_value = [
+        mock_matcher.match_identifiers.return_value = [
             ("data_processor", 85),
             ("data_analyzer", 75),
         ]
@@ -147,7 +147,7 @@ class TestSemanticSearch:
         query = "data"
         identifiers = ["data_processor", "file_handler"]
         mock_matcher = Mock()
-        mock_matcher.find_semantic_matches.return_value = []
+        mock_matcher.match_identifiers.return_value = []
         limit = 5
 
         # Act
@@ -164,7 +164,7 @@ class TestSemanticSearch:
         query = "data"
         identifiers = ["data_processor", "file_handler"]
         mock_matcher = Mock()
-        mock_matcher.find_semantic_matches.side_effect = Exception("Test error")
+        mock_matcher.match_identifiers.side_effect = Exception("Test error")
         limit = 5
 
         # Act

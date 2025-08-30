@@ -5,10 +5,12 @@ This module handles extracting identifiers from project maps and code files.
 """
 
 import re
-from typing import Set, Any
+from typing import Union
+from ..protocols import ProjectMap, IdentifierSet
+from ..utils.type_validator import safe_validate_project_map
 
 
-def extract_identifiers(project_map: Any) -> Set[str]:
+def extract_identifiers(project_map: Union[ProjectMap, str, None]) -> IdentifierSet:
     """
     Extract all identifiers from the project map.
 
@@ -23,7 +25,7 @@ def extract_identifiers(project_map: Any) -> Set[str]:
     Returns:
         Set of extracted identifiers
     """
-    identifiers: Set[str] = set()
+    identifiers: IdentifierSet = set()
 
     # Handle None or empty project_map
     if not project_map:
@@ -48,25 +50,21 @@ def extract_identifiers(project_map: Any) -> Set[str]:
 
     # Handle dictionary format (mock/standalone implementation)
     if isinstance(project_map, dict):
-        # Handle Tag objects from aider (new format)
-        if "tags" in project_map and project_map["tags"] is not None:
-            for tag in project_map["tags"]:
-                if hasattr(tag, "name") and tag.name:
-                    identifiers.add(tag.name)
+        # Use type validation for structured data
+        validated_map = safe_validate_project_map(project_map)  # type: ignore
 
-        # Check if project_map has top-level identifiers key
-        if "identifiers" in project_map and project_map["identifiers"] is not None:
-            # Ensure identifiers is iterable
-            if isinstance(project_map["identifiers"], (list, set, tuple)):
-                identifiers.update(project_map["identifiers"])
-            else:
-                # Log warning but don't fail
-                pass
+        # Extract identifiers from validated structure
+        if validated_map["tags"]:
+            for tag in validated_map["tags"]:
+                if tag["name"]:
+                    identifiers.add(tag["name"])
 
-        # Also check for file-based identifiers (complex structure)
-        for file_path, file_data in project_map.items():
-            if isinstance(file_data, dict) and "identifiers" in file_data:
-                if isinstance(file_data["identifiers"], (list, set, tuple)):
+        if validated_map["identifiers"]:
+            identifiers.update(validated_map["identifiers"])
+
+        if validated_map["files"]:
+            for file_data in validated_map["files"].values():
+                if file_data["identifiers"]:
                     identifiers.update(file_data["identifiers"])
 
     return identifiers

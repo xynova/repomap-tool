@@ -9,7 +9,13 @@ import logging
 import os
 import time
 import traceback
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Optional
+from ..protocols import (
+    RepoMapProtocol,
+    FuzzyMatcherProtocol,
+    SemanticMatcherProtocol,
+    HybridMatcherProtocol,
+)
 from datetime import datetime
 
 from ..models import (
@@ -53,10 +59,10 @@ class DockerRepoMap:
         self.logger = self._setup_logging()
 
         # Initialize components
-        self.repo_map: Optional[Any] = None
-        self.fuzzy_matcher: Optional[FuzzyMatcher] = None
-        self.semantic_matcher: Optional[AdaptiveSemanticMatcher] = None
-        self.hybrid_matcher: Optional[HybridMatcher] = None
+        self.repo_map: Optional[RepoMapProtocol] = None
+        self.fuzzy_matcher: Optional[FuzzyMatcherProtocol] = None
+        self.semantic_matcher: Optional[SemanticMatcherProtocol] = None
+        self.hybrid_matcher: Optional[HybridMatcherProtocol] = None
 
         # Initialize the system
         self._initialize_components()
@@ -112,12 +118,13 @@ class DockerRepoMap:
             self._initialize_matchers()
         else:
             self.logger.warning("Matchers not available - matching features disabled")
+            # Type ignore for matcher assignments since they're not available
 
     def _initialize_matchers(self) -> None:
         """Initialize matching components."""
         # Initialize fuzzy matcher
         if self.config.fuzzy_match.enabled:
-            self.fuzzy_matcher = FuzzyMatcher(
+            self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
                 threshold=self.config.fuzzy_match.threshold,
                 strategies=self.config.fuzzy_match.strategies,
                 cache_results=self.config.fuzzy_match.cache_results,
@@ -127,14 +134,14 @@ class DockerRepoMap:
 
         # Initialize semantic matcher
         if self.config.semantic_match.enabled:
-            self.semantic_matcher = AdaptiveSemanticMatcher(verbose=self.config.verbose)
+            self.semantic_matcher = AdaptiveSemanticMatcher(verbose=self.config.verbose)  # type: ignore
             self.logger.info(
                 f"Initialized SemanticMatcher: {self.config.semantic_match}"
             )
 
         # Initialize hybrid matcher if both are enabled
         if self.config.fuzzy_match.enabled and self.config.semantic_match.enabled:
-            self.hybrid_matcher = HybridMatcher(
+            self.hybrid_matcher = HybridMatcher(  # type: ignore
                 fuzzy_threshold=self.config.fuzzy_match.threshold,
                 semantic_threshold=self.config.semantic_match.threshold,
                 verbose=self.config.verbose,

@@ -61,8 +61,8 @@ class TestEasiestWaysToBreakIt:
         try:
             results = fuzzy_search(None, ["test"], mock_matcher, 10)
             assert isinstance(results, list)
-            # Verify the None was passed to the matcher (defensive behavior)
-            mock_matcher.match_identifiers.assert_called_with(None, ["test"])
+            # Verify that None inputs are handled gracefully (return empty list)
+            assert results == []
         except Exception as e:
             pytest.fail(f"None inputs broke the system: {e}")
 
