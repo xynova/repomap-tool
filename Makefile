@@ -1,4 +1,4 @@
-.PHONY: help setup test lint mypy format clean build docker-build docker-run check ci test-docker
+.PHONY: help setup test lint mypy format clean build docker-build docker-run check ci test-docker test-docker-real
 
 help: ## Show this help message
 	@echo "Available commands:"
@@ -45,8 +45,11 @@ install-dev: ## Install in development mode
 uninstall: ## Uninstall package
 	venv/bin/pip uninstall repomap-tool -y
 
-test-docker: ## Run Docker-based integration tests
+test-docker: ## Run Docker-based integration tests (small test project)
 	bash tests/integration/test_integrated_adaptive.sh
+
+test-docker-real: ## Run Docker tests against real codebase
+	bash tests/integration/test_docker_real_codebase.sh
 
 test-self-integration: ## Run self-integration tests (repomap-tool testing itself)
 	venv/bin/pytest tests/integration/test_self_integration.py -v

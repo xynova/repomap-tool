@@ -1,39 +1,24 @@
 #!/usr/bin/env python3
 
 from aider.repomap import RepoMap
+from aider.io import InputOutput
+from aider.models import Model, DEFAULT_MODEL_NAME
 import os
 
 
-class SimpleIO:
-    def read_text(self, fname):
-        if os.path.exists(fname):
-            with open(fname, "r") as f:
-                content = f.read()
-            return content
-        else:
-            return "def test(): pass"
-
-    def tool_warning(self, msg):
-        pass
-
-    def tool_output(self, msg):
-        pass
-
-
-class SimpleModel:
-    def token_count(self, text):
-        return len(text.split())
-
-
 def test_repomap_creation():
-    """Test that RepoMap can be created with simple components."""
-    rm = RepoMap(root=".", io=SimpleIO(), main_model=SimpleModel())
+    """Test that RepoMap can be created with real components."""
+    io = InputOutput()
+    model = Model(DEFAULT_MODEL_NAME)
+    rm = RepoMap(root=".", io=io, main_model=model)
     assert rm is not None
 
 
 def test_get_ranked_tags_map():
     """Test that get_ranked_tags_map returns expected format."""
-    rm = RepoMap(root=".", io=SimpleIO(), main_model=SimpleModel())
+    io = InputOutput()
+    model = Model(DEFAULT_MODEL_NAME)
+    rm = RepoMap(root=".", io=io, main_model=model)
 
     test_file = "src/repomap_tool/core/repo_map.py"
     result = rm.get_ranked_tags_map([test_file], max_map_tokens=1024)
@@ -44,7 +29,9 @@ def test_get_ranked_tags_map():
 
 def test_get_tags():
     """Test that get_tags returns tag objects."""
-    rm = RepoMap(root=".", io=SimpleIO(), main_model=SimpleModel())
+    io = InputOutput()
+    model = Model(DEFAULT_MODEL_NAME)
+    rm = RepoMap(root=".", io=io, main_model=model)
 
     test_file = "src/repomap_tool/core/repo_map.py"
     tags = list(rm.get_tags(test_file, test_file))

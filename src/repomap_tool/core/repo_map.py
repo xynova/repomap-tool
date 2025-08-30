@@ -6,6 +6,7 @@ code analysis and search functionality.
 """
 
 import logging
+import os
 import time
 from typing import List, Dict, Any, Optional
 from datetime import datetime
@@ -282,11 +283,19 @@ class DockerRepoMap:
         for file_path in project_files:
             try:
                 if self.repo_map is not None:
-                    tags = self.repo_map.get_tags(file_path, file_path)
+                    # file_path is already relative, so we need to make it absolute for aider
+                    abs_path = os.path.join(self.config.project_root, file_path)
+                    self.logger.debug(f"Processing {file_path} -> {abs_path}")
+                    tags = self.repo_map.get_tags(abs_path, file_path)
+                    self.logger.debug(f"Found {len(tags)} tags in {file_path}")
                     for tag in tags:
                         if hasattr(tag, "name") and tag.name:
                             identifiers.append(tag.name)
+                else:
+                    self.logger.warning("repo_map is None")
             except Exception as e:
-                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
+                self.logger.warning(f"Error processing {file_path}: {e}")
+                import traceback
+                self.logger.debug(f"Traceback: {traceback.format_exc()}")
                 continue
         return identifiers
