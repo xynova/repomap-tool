@@ -6,7 +6,9 @@ code analysis and search functionality.
 """
 
 import logging
+import os
 import time
+import traceback
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
@@ -86,22 +88,20 @@ class DockerRepoMap:
         try:
             from aider.repomap import RepoMap
             from aider.io import InputOutput
-            from aider.models import Model, DEFAULT_MODEL_NAME
         except ImportError as e:
             raise ImportError(
                 f"aider-chat is required but not installed: {e}\n"
                 "Install with: pip install aider-chat"
             ) from e
 
-        # Create real components
+        # Create real components without LLM model to avoid unnecessary initialization
         io = InputOutput()
-        model = Model(DEFAULT_MODEL_NAME)
 
-        # Initialize RepoMap with real implementation
+        # Initialize RepoMap without LLM model since we use our own semantic analysis
         self.repo_map = RepoMap(
             map_tokens=self.config.map_tokens,
             root=str(self.config.project_root),
-            main_model=model,
+            main_model=None,  # No LLM model needed - we use our own matchers
             io=io,
             verbose=self.config.verbose,
             refresh="auto" if self.config.refresh_cache else "no",
@@ -282,11 +282,18 @@ class DockerRepoMap:
         for file_path in project_files:
             try:
                 if self.repo_map is not None:
-                    tags = self.repo_map.get_tags(file_path, file_path)
+                    # file_path is already relative, so we need to make it absolute for aider
+                    abs_path = os.path.join(self.config.project_root, file_path)
+                    self.logger.debug(f"Processing {file_path} -> {abs_path}")
+                    tags = self.repo_map.get_tags(abs_path, file_path)
+                    self.logger.debug(f"Found {len(tags)} tags in {file_path}")
                     for tag in tags:
                         if hasattr(tag, "name") and tag.name:
                             identifiers.append(tag.name)
+                else:
+                    self.logger.warning("repo_map is None")
             except Exception as e:
-                self.logger.warning(f"Failed to get tags for {file_path}: {e}")
+                self.logger.warning(f"Error processing {file_path}: {e}")
+                self.logger.debug(f"Traceback: {traceback.format_exc()}")
                 continue
         return identifiers

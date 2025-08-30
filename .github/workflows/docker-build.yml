@@ -115,26 +115,107 @@ jobs:
       run: |
         docker pull ${{ needs.docker-build.outputs.image_tag }}
 
-    - name: Run Docker integration tests
+    - name: Run comprehensive Docker integration tests
       run: |
-        # Test basic functionality
+        echo "🧪 Running comprehensive Docker integration tests..."
+        
+        # Test 1: Basic functionality
+        echo "📋 Test 1: Basic functionality"
         docker run --rm ${{ needs.docker-build.outputs.image_tag }} repomap-tool --help
         
-        # Test with a sample project
-        mkdir -p test-docker-project
-        echo "print('Hello, World!')" > test-docker-project/test.py
+        # Test 2: Small test project (make test-docker equivalent)
+        echo "📋 Test 2: Small test project analysis"
+        docker run --rm ${{ needs.docker-build.outputs.image_tag }} bash -c "
+          mkdir -p /tmp/test-project
+          echo 'def hello_world():' > /tmp/test-project/test.py
+          echo '    print(\"Hello, World!\")' >> /tmp/test-project/test.py
+          echo 'class TestClass:' >> /tmp/test-project/test.py
+          echo '    def __init__(self):' >> /tmp/test-project/test.py
+          echo '        self.value = 42' >> /tmp/test-project/test.py
+          cd /tmp/test-project
+          repomap-tool analyze . --output json
+        "
         
-        # Run analysis on the test project
+        # Test 3: Real codebase analysis (make test-docker-real equivalent)
+        echo "📋 Test 3: Real codebase analysis"
         docker run --rm \
-          -v $(pwd)/test-docker-project:/workspace \
-          -w /workspace \
+          -v $(pwd):/project \
           ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool analyze . --output-format json || true
+          repomap-tool analyze /project --output json
+        
+        # Test 4: Search functionality
+        echo "📋 Test 4: Search functionality"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "analyze_project" --output json
+        
+        # Test 5: Fuzzy matching
+        echo "📋 Test 5: Fuzzy matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "FuzzyMatcher" --output json
+        
+        # Test 6: Semantic matching
+        echo "📋 Test 6: Semantic matching"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "semantic" --output json
+        
+        echo "✅ All Docker integration tests completed successfully!"
+
+    - name: Run full Docker test suite
+      run: |
+        echo "🧪 Running full Docker test suite..."
+        
+        # Test 7: Comprehensive real codebase analysis
+        echo "📋 Test 7: Comprehensive real codebase analysis"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json
+        
+        # Test 8: Comprehensive search tests
+        echo "📋 Test 8: Comprehensive search tests"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool search /project "SemanticMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+        
+        # Test 9: Advanced analysis modes
+        echo "📋 Test 9: Advanced analysis modes"
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool analyze /project --fuzzy --threshold 0.6 --verbose --output json
+        
+        docker run --rm \
+          -v $(pwd):/project \
+          ${{ needs.docker-build.outputs.image_tag }} \
+          repomap-tool analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json
+        
+        echo "✅ Full Docker test suite completed successfully!"
 
     - name: Cleanup
       run: |
         docker rmi ${{ needs.docker-build.outputs.image_tag }} || true
-        rm -rf test-docker-project
 
   cleanup-old-images:
     runs-on: ubuntu-latest
