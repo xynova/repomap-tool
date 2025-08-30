@@ -370,6 +370,37 @@ class HybridMatcher:
 
         return matches
 
+    def match_identifiers(
+        self, query: str, all_identifiers: Set[str]
+    ) -> List[Tuple[str, int]]:
+        """
+        Match a query against all identifiers using hybrid approach.
+        
+        This method provides a consistent interface with FuzzyMatcher.match_identifiers
+        by returning (identifier, score) tuples where score is an integer (0-100).
+
+        Args:
+            query: The identifier to search for
+            all_identifiers: Set of all available identifiers
+
+        Returns:
+            List of (identifier, score) tuples, sorted by score (highest first)
+        """
+        # Use a lower threshold for match_identifiers to be more inclusive
+        threshold = 0.1
+        
+        # Get hybrid matches
+        hybrid_matches = self.find_hybrid_matches(query, all_identifiers, threshold)
+        
+        # Convert to the expected format: (identifier, score) where score is 0-100
+        matches = []
+        for identifier, overall_score, component_scores in hybrid_matches:
+            # Convert float score (0.0-1.0) to integer score (0-100)
+            score = int(overall_score * 100)
+            matches.append((identifier, score))
+        
+        return matches
+
     def get_match_analysis(
         self, query: str, all_identifiers: Set[str], max_matches: int = 10
     ) -> Dict[str, Any]:

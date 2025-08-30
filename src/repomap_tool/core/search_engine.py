@@ -116,7 +116,13 @@ def hybrid_search(
         return []
 
     try:
-        results = hybrid_matcher.match_identifiers(query, identifiers)
+        # Ensure TF-IDF model is built for hybrid matcher
+        if hasattr(hybrid_matcher, 'build_tfidf_model') and identifiers:
+            # Convert list to set for the build_tfidf_model method
+            identifier_set = set(identifiers)
+            hybrid_matcher.build_tfidf_model(identifier_set)
+        
+        results = hybrid_matcher.match_identifiers(query, set(identifiers))
         # Convert to MatchResult format and limit results
         match_results = []
         for identifier, score in results[:limit]:

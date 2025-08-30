@@ -29,5 +29,5 @@ VOLUME ["/app/cache"]
 ENV PYTHONPATH=/app
 ENV CACHE_DIR=/app/cache
 
-# Default command - show help
-CMD ["repomap-tool", "--help"]
+# Set entrypoint to repomap-tool
+ENTRYPOINT ["repomap-tool"]
