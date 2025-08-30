@@ -147,25 +147,43 @@ def basic_search(
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform basic string search on identifiers."""
-    query_lower = query.lower()
+    # Handle None inputs gracefully
+    if query is None:
+        logging.warning("Basic search received None query, returning empty results")
+        return []
+    
+    if identifiers is None:
+        logging.warning("Basic search received None identifiers, returning empty results")
+        return []
+    
+    try:
+        query_lower = query.lower()
+    except AttributeError:
+        logging.warning(f"Basic search received non-string query: {type(query)}, returning empty results")
+        return []
+    
     results = []
 
     for identifier in identifiers:
-        if query_lower in identifier.lower():
-            # Simple scoring based on position and length
-            score = 0.8  # Base score for substring matches
-            if identifier.lower().startswith(query_lower):
-                score = 1.0  # Higher score for prefix matches (max allowed)
+        try:
+            if query_lower in identifier.lower():
+                # Simple scoring based on position and length
+                score = 0.8  # Base score for substring matches
+                if identifier.lower().startswith(query_lower):
+                    score = 1.0  # Higher score for prefix matches (max allowed)
 
-            results.append(
-                MatchResult(
-                    identifier=identifier,
-                    score=score,  # Let the model's validator handle normalization
-                    strategy="basic_string_match",
-                    match_type="fuzzy",  # Use fuzzy as the closest match type
-                    context=f"Found in identifier: {identifier}",
+                results.append(
+                    MatchResult(
+                        identifier=identifier,
+                        score=score,  # Let the model's validator handle normalization
+                        strategy="basic_string_match",
+                        match_type="fuzzy",  # Use fuzzy as the closest match type
+                        context=f"Found in identifier: {identifier}",
+                    )
                 )
-            )
+        except (AttributeError, TypeError):
+            # Skip invalid identifiers
+            continue
 
     # Sort by score (descending) and limit results
     results.sort(key=lambda x: x.score, reverse=True)
