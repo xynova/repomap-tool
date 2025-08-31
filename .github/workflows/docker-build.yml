@@ -1,6 +1,9 @@
 name: Docker Build
 
 on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
   push:
     branches: [ main, develop ]
     paths:
@@ -60,6 +63,13 @@ jobs:
         echo "commit_tag=$COMMIT_TAG" >> $GITHUB_OUTPUT
         echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$DATE_TAG-$COMMIT_TAG" >> $GITHUB_OUTPUT
         echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+        
+        # Add nightly tags if running on schedule
+        if [ "${{ github.event_name }}" = "schedule" ]; then
+          NIGHTLY_DATE=$(date +%Y%m%d)
+          echo "nightly_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly-$NIGHTLY_DATE" >> $GITHUB_OUTPUT
+          echo "nightly_latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly" >> $GITHUB_OUTPUT
+        fi
 
     - name: Extract metadata
       id: meta
@@ -88,7 +98,12 @@ jobs:
         file: ./docker/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
+        tags: |
+          ${{ steps.meta.outputs.tags }}
+          ${{ steps.tags.outputs.full_tag }}
+          ${{ steps.tags.outputs.latest_tag }}
+          ${{ steps.tags.outputs.nightly_tag }}
+          ${{ steps.tags.outputs.nightly_latest_tag }}
         labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
