@@ -1,17 +1,12 @@
 #!/bin/bash
 
 # Entrypoint script for repomap-tool Docker container
-# This script handles both tool commands and bash commands
+# Converts simplified commands to full CLI calls
 
 set -e
 
-# If the first argument is "bash", check if it's bash -c
-if [ "$1" = "bash" ] && [ "$2" = "-c" ]; then
-    # For bash -c "command", execute the command through our CLI
-    # Use eval to properly parse the command string
-    eval "exec python3 -m repomap_tool.cli $3"
-elif [ "$1" = "bash" ]; then
-    # For other bash commands, execute directly
+# If the first argument is "bash", execute bash commands directly
+if [ "$1" = "bash" ]; then
     exec "$@"
 else
     # Otherwise, run the repomap-tool CLI
