@@ -17,38 +17,32 @@ logger = logging.getLogger(__name__)
 
 class PerformanceConfig(BaseModel):
     """Configuration for performance optimizations."""
-    
+
     max_workers: int = Field(
-        default=4, ge=1, le=16, 
-        description="Maximum number of worker threads for parallel processing"
+        default=4,
+        ge=1,
+        le=16,
+        description="Maximum number of worker threads for parallel processing",
     )
     cache_size: int = Field(
-        default=1000, ge=100, le=10000,
-        description="Maximum number of cache entries"
+        default=1000, ge=100, le=10000, description="Maximum number of cache entries"
     )
     max_memory_mb: int = Field(
-        default=100, ge=10, le=1000,
-        description="Maximum memory usage in MB"
+        default=100, ge=10, le=1000, description="Maximum memory usage in MB"
     )
     enable_progress: bool = Field(
-        default=True,
-        description="Enable progress bars for long-running operations"
+        default=True, description="Enable progress bars for long-running operations"
     )
     enable_monitoring: bool = Field(
-        default=True,
-        description="Enable performance monitoring"
+        default=True, description="Enable performance monitoring"
     )
     parallel_threshold: int = Field(
-        default=10, 
-        description="Minimum number of files to trigger parallel processing"
+        default=10, description="Minimum number of files to trigger parallel processing"
     )
-    cache_ttl: int = Field(
-        default=3600,
-        description="Cache time-to-live in seconds"
-    )
+    cache_ttl: int = Field(default=3600, description="Cache time-to-live in seconds")
     allow_fallback: bool = Field(
         default=False,
-        description="Allow fallback to sequential processing on parallel errors (not recommended for development)"
+        description="Allow fallback to sequential processing on parallel errors (not recommended for development)",
     )
 
 

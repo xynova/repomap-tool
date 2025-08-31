@@ -71,7 +71,7 @@ class DockerRepoMap:
         self.parallel_extractor = ParallelTagExtractor(
             max_workers=self.config.performance.max_workers,
             enable_progress=self.config.performance.enable_progress,
-            console=self.console
+            console=self.console,
         )
 
         # Initialize the system
@@ -193,7 +193,7 @@ class DockerRepoMap:
             cache_size_bytes=get_cache_size(),
             last_updated=datetime.now(),
         )
-    
+
     def analyze_project_with_progress(self) -> ProjectInfo:
         """
         Analyze the project with progress indication.
@@ -203,12 +203,18 @@ class DockerRepoMap:
         """
         if not self.config.performance.enable_progress:
             return self.analyze_project()
-        
-        from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
-        
+
+        from rich.progress import (
+            Progress,
+            SpinnerColumn,
+            TextColumn,
+            BarColumn,
+            TimeElapsedColumn,
+        )
+
         start_time = time.time()
         self.logger.info("Starting project analysis with progress tracking...")
-        
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -217,31 +223,35 @@ class DockerRepoMap:
             TimeElapsedColumn(),
             console=self.console,
         ) as progress:
-            
+
             # Task 1: Scan files
             scan_task = progress.add_task("Scanning project files...", total=None)
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
             progress.update(scan_task, completed=True)
-            
+
             # Task 2: Extract identifiers
             extract_task = progress.add_task(
-                f"Extracting identifiers from {len(project_files)} files...", 
-                total=len(project_files) if len(project_files) < self.config.performance.parallel_threshold else None
+                f"Extracting identifiers from {len(project_files)} files...",
+                total=(
+                    len(project_files)
+                    if len(project_files) < self.config.performance.parallel_threshold
+                    else None
+                ),
             )
             identifier_list = self._extract_identifiers_from_files(project_files)
             progress.update(extract_task, completed=True)
-            
+
             # Task 3: Analyze results
             analyze_task = progress.add_task("Analyzing results...", total=None)
             identifiers = set(identifier_list)
             file_types = analyze_file_types(project_files)
             identifier_types = analyze_identifier_types(identifiers)
             progress.update(analyze_task, completed=True)
-        
+
         processing_time = time.time() - start_time
-        
+
         project_info = ProjectInfo(
             project_root=str(self.config.project_root),
             total_files=len(project_files),
@@ -252,14 +262,14 @@ class DockerRepoMap:
             cache_size_bytes=get_cache_size(),
             last_updated=datetime.now(),
         )
-        
+
         self.logger.info(
             f"Project analysis completed in {processing_time:.2f}s: "
             f"{len(project_files)} files, {len(identifiers)} identifiers"
         )
-        
+
         return project_info
-    
+
     def get_performance_metrics(self) -> Dict[str, Any]:
         """
         Get performance metrics from the parallel processor.
@@ -269,14 +279,14 @@ class DockerRepoMap:
         """
         if not self.config.performance.enable_monitoring:
             return {"monitoring_disabled": True}
-        
+
         try:
             metrics = self.parallel_extractor.get_performance_metrics()
             metrics["configuration"] = {
                 "max_workers": self.config.performance.max_workers,
                 "parallel_threshold": self.config.performance.parallel_threshold,
                 "enable_progress": self.config.performance.enable_progress,
-                "enable_monitoring": self.config.performance.enable_monitoring
+                "enable_monitoring": self.config.performance.enable_monitoring,
             }
             return metrics
         except Exception as e:
@@ -385,19 +395,25 @@ class DockerRepoMap:
             List of identifier names extracted from the files
         """
         # Use parallel processing if we have enough files and it's enabled
-        if (len(project_files) >= self.config.performance.parallel_threshold and 
-            self.config.performance.enable_progress):
-            
-            self.logger.info(f"Using parallel processing for {len(project_files)} files")
+        if (
+            len(project_files) >= self.config.performance.parallel_threshold
+            and self.config.performance.enable_progress
+        ):
+
+            self.logger.info(
+                f"Using parallel processing for {len(project_files)} files"
+            )
             return self._extract_identifiers_parallel(project_files)
         else:
-            self.logger.debug(f"Using sequential processing for {len(project_files)} files")
+            self.logger.debug(
+                f"Using sequential processing for {len(project_files)} files"
+            )
             return self._extract_identifiers_sequential(project_files)
-    
+
     def _extract_identifiers_parallel(self, project_files: List[str]) -> List[str]:
         """
         Extract identifiers from files using parallel processing.
-        
+
         For development tools: fails fast with helpful error messages.
 
         Args:
@@ -405,7 +421,7 @@ class DockerRepoMap:
 
         Returns:
             List of identifier names extracted from the files
-            
+
         Raises:
             Exception: If parallel processing fails, with helpful debugging info
         """
@@ -413,9 +429,9 @@ class DockerRepoMap:
             identifiers, stats = self.parallel_extractor.extract_tags_parallel(
                 files=project_files,
                 project_root=str(self.config.project_root),
-                repo_map=self.repo_map
+                repo_map=self.repo_map,
             )
-            
+
             # Log performance statistics
             if self.config.performance.enable_monitoring:
                 self.logger.info(
@@ -424,9 +440,9 @@ class DockerRepoMap:
                     f"{stats.total_identifiers} identifiers found, "
                     f"{stats.processing_time:.2f}s total time"
                 )
-            
+
             return identifiers
-            
+
         except Exception as e:
             # Development-focused: fail fast with helpful error messages
             self.logger.error(f"Parallel processing failed: {e}")
@@ -436,11 +452,13 @@ class DockerRepoMap:
             self.logger.error("  - Memory constraints")
             self.logger.error("")
             self.logger.error("Try these solutions:")
-            self.logger.error(f"  - Reduce --max-workers (current: {self.config.performance.max_workers})")
+            self.logger.error(
+                f"  - Reduce --max-workers (current: {self.config.performance.max_workers})"
+            )
             self.logger.error("  - Use --no-progress to disable progress tracking")
             self.logger.error("  - Check file permissions and disk space")
             self.logger.error("")
-            
+
             # Provide specific suggestions based on error type
             error_str = str(e).lower()
             if "memory" in error_str or "out of memory" in error_str:
@@ -451,14 +469,16 @@ class DockerRepoMap:
                 self.logger.error("💡 File system issue detected - try: --no-progress")
             elif "timeout" in error_str:
                 self.logger.error("💡 Timeout issue detected - try: --max-workers 1")
-            
+
             # Fail fast for development - let developer handle it
             if self.config.performance.allow_fallback:
-                self.logger.warning("Fallback enabled - switching to sequential processing...")
+                self.logger.warning(
+                    "Fallback enabled - switching to sequential processing..."
+                )
                 return self._extract_identifiers_sequential(project_files)
             else:
                 raise
-    
+
     def _extract_identifiers_sequential(self, project_files: List[str]) -> List[str]:
         """
         Extract identifiers from files using sequential processing.

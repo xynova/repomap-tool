@@ -43,6 +43,20 @@ Thumbs.db
 .coverage
 htmlcov/
 .pytest_cache/
+coverage.xml
+
+# Security reports
+bandit-report.json
+safety-report.json
+
+# Type checking cache
+.mypy_cache/
+
+# Code formatting cache
+.black_cache/
+
+# Linting cache
+.flake8_cache/
 
 # Logs
 *.log
