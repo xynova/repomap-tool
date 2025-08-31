@@ -7,8 +7,8 @@ VENV_PYTHON = $(VENV_BIN)/python
 VENV_PIP = $(VENV_BIN)/pip
 
 # Docker configuration
-DOCKER_IMAGE_NAME = repomap-tool
-DOCKER_TAG = latest
+DOCKER_IMAGE_NAME ?= repomap-tool
+DOCKER_TAG ?= latest
 
 # Default target
 help:
