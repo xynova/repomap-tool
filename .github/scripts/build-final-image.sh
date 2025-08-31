@@ -12,11 +12,15 @@ PYTHON_VERSION=${PYTHON_VERSION:-"3.11"}
 
 echo "🔧 Building final image using cached dependencies..."
 
-# Get the dependencies hash
-if [ -f .deps-image-tag ]; then
+# Get the dependencies hash (from env var in CI, or file in local dev)
+if [ -n "$DEPS_HASH" ]; then
+    REQUIREMENTS_HASH="$DEPS_HASH"
+    echo "📦 Using dependencies hash from environment: $REQUIREMENTS_HASH"
+elif [ -f .deps-image-tag ]; then
     REQUIREMENTS_HASH=$(cat .deps-image-tag)
+    echo "📦 Using dependencies hash from file: $REQUIREMENTS_HASH"
 else
-    echo "❌ No dependencies image tag found. Run build-deps-image.sh first."
+    echo "❌ No dependencies hash found. Set DEPS_HASH environment variable or run build-deps-image.sh first."
     exit 1
 fi
 

@@ -91,7 +91,18 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
-    - name: Build and push Docker image
+    - name: Build and push base image with dependencies
+      id: deps-build
+      run: |
+        echo "🔧 Building base image with dependencies only..."
+        ./.github/scripts/build-deps-image.sh
+
+    - name: Build and push final image using cached dependencies
+      run: |
+        echo "🔧 Building final image using cached dependencies..."
+        DEPS_HASH="${{ steps.deps-build.outputs.deps_hash }}" ./.github/scripts/build-final-image.sh
+
+    - name: Build and push Docker image (fallback)
       uses: docker/build-push-action@v5
       with:
         context: .

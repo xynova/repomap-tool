@@ -50,5 +50,10 @@ echo "✅ Base image built and pushed successfully!"
 echo "   Image: ${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}"
 echo "   Latest: ${REGISTRY}/${IMAGE_NAME}:deps-latest"
 
-# Output the hash for use in other scripts
+# Output the hash for GitHub Actions (if running in CI)
+if [ -n "$GITHUB_OUTPUT" ]; then
+    echo "deps_hash=$REQUIREMENTS_HASH" >> $GITHUB_OUTPUT
+fi
+
+# Also write to file for local development
 echo "$REQUIREMENTS_HASH" > .deps-image-tag
