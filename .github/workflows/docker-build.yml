@@ -142,8 +142,8 @@ jobs:
         
         # Extract the image name and tag for make targets
         # IMAGE_TAG format: ghcr.io/xynova/repomap-tool:20250831-152053-8a819625
-        DOCKER_IMAGE_NAME=$(echo "$IMAGE_TAG" | cut -d: -f1)
-        DOCKER_TAG=$(echo "$IMAGE_TAG" | cut -d: -f2)
+        export DOCKER_IMAGE_NAME=$(echo "$IMAGE_TAG" | cut -d: -f1)
+        export DOCKER_TAG=$(echo "$IMAGE_TAG" | cut -d: -f2)
         
         echo "Using image: $IMAGE_TAG"
         echo "DOCKER_IMAGE_NAME: $DOCKER_IMAGE_NAME"
