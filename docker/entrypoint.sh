@@ -10,5 +10,5 @@ if [ "$1" = "bash" ]; then
     exec "$@"
 else
     # Otherwise, run the repomap-tool CLI
-    exec python -m repomap_tool.cli "$@"
+    exec python3 -m repomap_tool.cli "$@"
 fi
