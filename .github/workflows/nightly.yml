@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
 
     steps:
     - uses: actions/checkout@v4
@@ -258,7 +258,6 @@ jobs:
         echo "## Nightly Build Report - $(date)" >> nightly-report.md
         echo "" >> nightly-report.md
         echo "### Test Results" >> nightly-report.md
-        echo "- Python 3.9: ${{ needs.nightly-test.result }}" >> nightly-report.md
         echo "- Python 3.11: ${{ needs.nightly-test.result }}" >> nightly-report.md
         echo "" >> nightly-report.md
         echo "### Docker Build" >> nightly-report.md

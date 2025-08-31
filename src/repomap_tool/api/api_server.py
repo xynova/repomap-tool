@@ -135,18 +135,21 @@ class EnhancedRepoMapAPI:
             # Validate and sanitize inputs for security
             if not os.path.isabs(project_path) or ".." in project_path:
                 return {"success": False, "error": "Invalid project path"}
-            
+
             # Sanitize file lists to prevent command injection
             def sanitize_filename(filename: str) -> str:
                 """Sanitize filename to prevent command injection"""
                 import re
+
                 # Remove any potentially dangerous characters
-                return re.sub(r'[;&|`$(){}[\]"\'\\]', '', filename)
-            
+                return re.sub(r'[;&|`$(){}[\]"\'\\]', "", filename)
+
             chat_abs_files = [sanitize_filename(f) for f in chat_abs_files]
             mentioned_abs_files = [sanitize_filename(f) for f in mentioned_abs_files]
-            mentioned_idents_sanitized = [sanitize_filename(ident) for ident in mentioned_idents]
-            
+            mentioned_idents_sanitized = [
+                sanitize_filename(ident) for ident in mentioned_idents
+            ]
+
             # Build Docker command with context
             cmd = [
                 "docker",
@@ -173,7 +176,11 @@ class EnhancedRepoMapAPI:
 
             # Run the command
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=300, shell=False  # nosec B603 - Input validated and sanitized
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                shell=False,  # nosec B603
             )
 
             if result.returncode == 0:

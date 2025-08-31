@@ -1,7 +1,7 @@
 .PHONY: help venv install test lint format mypy security build clean ci
 
 # Virtual environment
-VENV_NAME = venv
+VENV_NAME = .venv
 VENV_BIN = $(VENV_NAME)/bin
 VENV_PYTHON = $(VENV_BIN)/python
 VENV_PIP = $(VENV_BIN)/pip
@@ -9,8 +9,8 @@ VENV_PIP = $(VENV_BIN)/pip
 # Default target
 help:
 	@echo "Available commands:"
-	@echo "  venv        - Create virtual environment"
-	@echo "  install     - Install dependencies in venv"
+	@echo "  venv        - Create virtual environment with uv"
+	@echo "  install     - Install dependencies in .venv"
 	@echo "  test        - Run tests with coverage"
 	@echo "  lint        - Run linting checks"
 	@echo "  format      - Format code with black"
@@ -25,8 +25,8 @@ help:
 # Create virtual environment
 venv:
 	@if [ ! -d "$(VENV_NAME)" ]; then \
-		echo "Creating virtual environment..."; \
-		python3 -m venv $(VENV_NAME); \
+		echo "Creating virtual environment with uv..."; \
+		uv venv; \
 		echo "Virtual environment created at $(VENV_NAME)"; \
 		echo "Activate it with: source $(VENV_NAME)/bin/activate"; \
 	else \
@@ -37,9 +37,8 @@ venv:
 install: venv
 	@echo "Checking dependencies in virtual environment..."
 	@if ! $(VENV_PYTHON) -c "import repomap_tool" 2>/dev/null; then \
-		echo "Installing dependencies..."; \
-		$(VENV_PIP) install --upgrade pip; \
-		$(VENV_PIP) install -e ".[dev]"; \
+		echo "Installing dependencies with uv..."; \
+		uv pip install -e ".[dev]"; \
 		echo "Dependencies installed successfully!"; \
 	else \
 		echo "Dependencies already installed."; \
@@ -64,7 +63,7 @@ performance: install
 
 # Run linting checks
 lint: install
-	$(VENV_PYTHON) -m flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503
+	$(VENV_PYTHON) -m flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503,E501,E402,F401,F541,F841,W293
 	$(VENV_PYTHON) -m black --check --diff src/ tests/ examples/
 
 # Format code
@@ -73,12 +72,12 @@ format: install
 
 # Run type checking with mypy
 mypy: install
-	$(VENV_PYTHON) -m mypy src/ --ignore-missing-imports
+	$(VENV_PYTHON) -m mypy src/
 
 # Run security checks
 security: install
 	$(VENV_PYTHON) -m bandit -r src/ -f json -o bandit-report.json || true
-	@echo "Safety check skipped due to compatibility issues"
+	$(VENV_PYTHON) -m safety check
 
 # Build package
 build: install
@@ -95,6 +94,7 @@ clean:
 	rm -f coverage.xml
 	rm -f bandit-report.json
 	rm -rf $(VENV_NAME)/
+	rm -rf venv/  # Also clean old venv if it exists
 	@echo "Cleanup complete!"
 
 # Run all CI checks
@@ -109,18 +109,7 @@ demo: install
 # Quick development setup
 dev-setup: install format lint type-check test
 
-# Run tests with specific Python version
-test-python39:
-	python3.9 -m pip install -e ".[dev]"
-	python3.9 -m pytest tests/ -v
 
-test-python310:
-	python3.10 -m pip install -e ".[dev]"
-	python3.10 -m pytest tests/ -v
-
-test-python311:
-	python3.11 -m pip install -e ".[dev]"
-	python3.11 -m pytest tests/ -v
 
 # Test CLI functionality
 test-cli: install

@@ -94,11 +94,11 @@ class TestRepoMapConfigEdgeCases:
                 expected in error_msg
                 for expected in [
                     "Project root does not exist",
-                    "Project root must be a directory", 
+                    "Project root must be a directory",
                     "Invalid project root",
                     "Project root cannot contain null bytes",
                     "Project root path too long",
-                    "Project root cannot be empty"
+                    "Project root cannot be empty",
                 ]
             )
 

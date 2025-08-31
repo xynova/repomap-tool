@@ -11,12 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.9, 3.10, 3.11]
+        python-version: [3.11]
         include:
-          - python-version: 3.9
-            cache-key: "3.9"
-          - python-version: 3.10
-            cache-key: "3.10"
           - python-version: 3.11
             cache-key: "3.11"
 

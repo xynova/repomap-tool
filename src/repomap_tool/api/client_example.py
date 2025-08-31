@@ -49,13 +49,17 @@ class EnhancedRepoMapClient:
             "force_refresh": force_refresh,
         }
 
-        response = requests.post(f"{self.api_url}/repo-map/dynamic", json=payload, timeout=30)
+        response = requests.post(
+            f"{self.api_url}/repo-map/dynamic", json=payload, timeout=30
+        )
         return response.json()  # type: ignore
 
     def analyze_context(self, message_text: str) -> Dict[str, Any]:
         """Analyze message text to extract mentioned files and identifiers"""
         payload = {"message_text": message_text}
-        response = requests.post(f"{self.api_url}/context/analyze", json=payload, timeout=30)
+        response = requests.post(
+            f"{self.api_url}/context/analyze", json=payload, timeout=30
+        )
         return response.json()  # type: ignore
 
     def get_repo_map(
