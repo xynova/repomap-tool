@@ -102,6 +102,12 @@ ci: test security build
 	@echo "Note: Type checking and linting issues found but not blocking CI."
 	@echo "Run 'make mypy' and 'make lint' to see details."
 
+# Run comprehensive nightly tests
+nightly: install
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10
+	$(VENV_PYTHON) -m pytest tests/integration/test_self_integration.py -v --durations=10
+	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10
+
 # Run performance demo
 demo: install
 	cd examples && $(shell pwd)/$(VENV_PYTHON) performance_demo.py

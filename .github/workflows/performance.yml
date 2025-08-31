@@ -42,7 +42,7 @@ jobs:
     - name: Run performance tests
       run: |
         echo "🧪 Running performance tests..."
-        PYTHONPATH=src pytest tests/unit/test_performance.py -v --tb=short
+        make performance
 
     - name: Test performance configurations
       run: |

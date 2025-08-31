@@ -7,7 +7,6 @@ on:
       - 'docker/**'
       - 'src/**'
       - 'pyproject.toml'
-      - 'setup.py'
       - '.github/workflows/docker-build.yml'
       - '.github/scripts/cleanup_docker_images.sh'
   pull_request:
@@ -16,7 +15,6 @@ on:
       - 'docker/**'
       - 'src/**'
       - 'pyproject.toml'
-      - 'setup.py'
       - '.github/workflows/docker-build.yml'
       - '.github/scripts/cleanup_docker_images.sh'
   workflow_dispatch: # Allow manual triggering

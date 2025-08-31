@@ -11,7 +11,7 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /app
 
 # Copy package configuration
-COPY pyproject.toml setup.py ./
+COPY pyproject.toml ./
 
 # Copy the entire source code
 COPY src/ ./src/
