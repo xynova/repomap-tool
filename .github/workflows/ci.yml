@@ -40,7 +40,6 @@ jobs:
     - name: Install dependencies
       run: |
         make install
-        pip install pytest-cov
 
     - name: Run tests with coverage
       run: |

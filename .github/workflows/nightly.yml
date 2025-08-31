@@ -223,13 +223,18 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
     - name: Install API dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -r src/repomap_tool/api/requirements-api.txt
+        uv pip install -r src/repomap_tool/api/requirements-api.txt
 
     - name: Test API functionality
       run: |
+        source .venv/bin/activate
         # Test if API modules can be imported
         python -c "from repomap_tool.api import api_server; print('API server module imported successfully')" || true
         
