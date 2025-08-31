@@ -1,4 +1,4 @@
-.PHONY: help venv install test lint format mypy security build clean ci docker-build docker-test docker-test-ci docker-clean docker-run ci-all
+.PHONY: help venv install test lint format mypy security build clean ci docker-deps docker-final
 
 # Virtual environment
 VENV_NAME = .venv
@@ -96,7 +96,7 @@ mypy: install
 # Run security checks
 security: install
 	$(VENV_PYTHON) -m bandit -r src/ -f json -o bandit-report.json || true
-	@echo "Safety check temporarily disabled due to compatibility issues"
+	$(VENV_PYTHON) -m safety check
 
 # Build package
 build: install
@@ -114,6 +114,7 @@ clean:
 	rm -f bandit-report.json
 	rm -rf $(VENV_NAME)/
 	rm -rf venv/  # Also clean old venv if it exists
+	rm -f .deps-image-tag
 	@echo "Cleanup complete!"
 
 # Run all CI checks
@@ -131,10 +132,18 @@ nightly: install
 demo: install
 	cd examples && $(shell pwd)/$(VENV_PYTHON) performance_demo.py
 
+# Build and push base image with dependencies only
+docker-deps:
+	@echo "🔧 Building base image with dependencies only..."
+	./.github/scripts/build-deps-image.sh
+
+# Build final image using cached dependencies
+docker-final: docker-deps
+	@echo "🔧 Building final image using cached dependencies..."
+	./.github/scripts/build-final-image.sh
+
 # Quick development setup
 dev-setup: install format lint type-check test
-
-
 
 # Test CLI functionality
 test-cli: install
