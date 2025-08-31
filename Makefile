@@ -185,9 +185,9 @@ docker-test: docker-build
 # Docker test for CI (uses full registry path)
 docker-test-ci:
 	@echo "🧪 Running comprehensive Docker tests in CI..."
-	@echo "1. Testing Docker image build..."
+	@echo "1. Testing Docker image availability..."
 	@docker images | grep $(DOCKER_IMAGE_NAME) || (echo "❌ Docker image not found" && exit 1)
-	@echo "✅ Docker image exists"
+	@echo "✅ Docker image exists: $(DOCKER_IMAGE_NAME):$(DOCKER_TAG)"
 	@echo ""
 	@echo "2. Testing basic CLI functionality..."
 	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) --help || (echo "❌ CLI help failed" && exit 1)

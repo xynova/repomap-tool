@@ -17,7 +17,6 @@ COPY pyproject.toml ./
 COPY src/ ./src/
 
 # Install Python dependencies and the package
-RUN pip install --upgrade pip setuptools wheel
 RUN pip install -e .
 
 # No entrypoint script needed - use direct CLI commands

@@ -3,16 +3,19 @@
 echo "🧪 Testing Docker RepoMap Tool Against Real Codebase"
 echo "===================================================="
 
-# Build the Docker image
-echo "📦 Building Docker image..."
-make docker-build
-
-if [ $? -ne 0 ]; then
-    echo "❌ Build failed"
-    exit 1
+# Check if we're in CI (DOCKER_IMAGE_NAME is set) or local development
+if [ -n "$DOCKER_IMAGE_NAME" ]; then
+    echo "📦 CI mode: Using pre-built Docker image"
+    echo "Image: ${DOCKER_IMAGE_NAME}:${DOCKER_TAG}"
+else
+    echo "📦 Local mode: Building Docker image..."
+    make docker-build
+    if [ $? -ne 0 ]; then
+        echo "❌ Build failed"
+        exit 1
+    fi
+    echo "✅ Build successful"
 fi
-
-echo "✅ Build successful"
 
 # Function to run a test in a separate container
 run_test() {
@@ -23,8 +26,11 @@ run_test() {
     echo "🔍 $test_name"
     echo "$(echo "$test_name" | sed 's/./-/g')"
     
+    # Use environment variables for Docker image, fallback to repomap-tool for local development
+    local docker_image="${DOCKER_IMAGE_NAME:-repomap-tool}:${DOCKER_TAG:-latest}"
+    
     # Run test in separate container instance against the real codebase
-    if docker run --rm -v "$(pwd):/project" repomap-tool bash -c "$test_command"; then
+    if docker run --rm -v "$(pwd):/project" "$docker_image" bash -c "$test_command"; then
         echo "✅ $test_name passed"
         return 0
     else
