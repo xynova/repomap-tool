@@ -10,7 +10,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import logging
 
 from rich.progress import (
@@ -19,7 +19,6 @@ from rich.progress import (
     TextColumn,
     BarColumn,
     TimeElapsedColumn,
-    TaskID,
 )
 from rich.console import Console
 
@@ -264,7 +263,7 @@ class ParallelTagExtractor:
                 f"Failed to process file {file_path}: {str(e)}"
             ) from e
 
-    def _create_progress_context(self):
+    def _create_progress_context(self) -> Progress:
         """Create a progress bar context."""
         return Progress(
             SpinnerColumn(),
@@ -355,8 +354,8 @@ class ParallelTagExtractor:
 class nullcontext:
     """Null context manager for when progress is disabled."""
 
-    def __enter__(self):
+    def __enter__(self) -> None:
         return None
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, exc_type: Any, exc_val: Any, exc_tb: Any) -> None:
         pass

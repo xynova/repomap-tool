@@ -120,7 +120,7 @@ def analyze(
                 no_progress,
                 no_monitoring,
                 allow_fallback,
-            )  # type: ignore
+            )
 
         # Initialize RepoMap
         with Progress(
@@ -423,7 +423,7 @@ def create_default_config(
     semantic: bool,
     threshold: float,
     max_results: int,
-    output: Literal["json", "text", "markdown"],
+    output: str,
     verbose: bool,
     max_workers: int = 4,
     parallel_threshold: int = 10,
@@ -463,7 +463,7 @@ def create_default_config(
         semantic_match=semantic_config,
         performance=performance_config,
         max_results=max_results,
-        output_format=output,
+        output_format=output,  # type: ignore[arg-type]
         verbose=verbose,
     )
 

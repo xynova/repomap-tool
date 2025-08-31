@@ -85,14 +85,22 @@ class TestRepoMapConfigEdgeCases:
 
         for path in malicious_paths:
             # Act & Assert - Should handle malicious paths gracefully
-            try:
-                with pytest.raises(ValueError):
-                    RepoMapConfig(project_root=path)
-            except Exception as e:
-                # Should not crash with unexpected exceptions
-                assert "Project root does not exist" in str(
-                    e
-                ) or "Project root must be a directory" in str(e)
+            with pytest.raises(ValueError) as excinfo:
+                RepoMapConfig(project_root=path)
+            # Verify the error message contains expected content
+            error_msg = str(excinfo.value)
+            # Check for various validation error messages that might be raised
+            assert any(
+                expected in error_msg
+                for expected in [
+                    "Project root does not exist",
+                    "Project root must be a directory", 
+                    "Invalid project root",
+                    "Project root cannot contain null bytes",
+                    "Project root path too long",
+                    "Project root cannot be empty"
+                ]
+            )
 
     def test_config_with_extreme_map_tokens(self):
         """Test configuration with extreme map_tokens values."""

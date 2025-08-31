@@ -46,7 +46,7 @@ htmlcov/
 coverage.xml
 
 # Security reports
-bandit-report.json
+bandit-report*.json
 safety-report.json
 
 # Type checking cache

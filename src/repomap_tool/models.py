@@ -129,13 +129,16 @@ class RepoMapConfig(BaseModel):
 
         try:
             path = Path(v).resolve()
-            if not path.exists():
-                raise ValueError(f"Project root does not exist: {path}")
-            if not path.is_dir():
-                raise ValueError(f"Project root must be a directory: {path}")
-            return path
         except (OSError, ValueError) as e:
-            raise ValueError(f"Invalid project root '{v}': {e}")
+            if "File name too long" in str(e):
+                raise ValueError("Project root path too long") from e
+            raise ValueError(f"Invalid project root path: {e}") from e
+
+        if not path.exists():
+            raise ValueError(f"Project root does not exist: {path}")
+        if not path.is_dir():
+            raise ValueError(f"Project root must be a directory: {path}")
+        return path
 
     @field_validator("cache_dir")
     @classmethod
