@@ -16,6 +16,11 @@ on:
       - '.github/workflows/nightly.yml'
       - '.github/scripts/**'
 
+# Concurrency control - cancel in-progress workflows from the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   nightly-test:
     runs-on: ubuntu-latest

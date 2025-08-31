@@ -1,4 +1,4 @@
-name: Docker Build & Test
+name: Docker Build
 
 on:
   push:
@@ -9,7 +9,6 @@ on:
       - 'pyproject.toml'
       - '.github/workflows/docker-build.yml'
       - '.github/scripts/cleanup_docker_images.sh'
-      - 'Makefile'
   pull_request:
     branches: [ main, develop ]
     paths:
@@ -18,8 +17,12 @@ on:
       - 'pyproject.toml'
       - '.github/workflows/docker-build.yml'
       - '.github/scripts/cleanup_docker_images.sh'
-      - 'Makefile'
   workflow_dispatch: # Allow manual triggering
+
+# Concurrency control - cancel in-progress workflows from the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
