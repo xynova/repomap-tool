@@ -79,8 +79,12 @@ run_test() {
     echo "🔍 $test_name"
     echo "$(echo "$test_name" | sed 's/./-/g')"
     
-    # Run test in separate container instance
-    if docker run --rm -v "$TEST_PROJECT_DIR:/project" repomap-tool bash -c "$test_command"; then
+    # Use environment variables for Docker image, fallback to repomap-tool for local development
+    local docker_image="${DOCKER_IMAGE_NAME:-repomap-tool}:${DOCKER_TAG:-latest}"
+    
+    # Run test in separate container instance against the real codebase
+    # Run command directly so the entrypoint script can handle it
+    if docker run --rm -v "$(pwd):/project" "$docker_image" $test_command; then
         echo "✅ $test_name passed"
         return 0
     else
