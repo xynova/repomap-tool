@@ -44,22 +44,20 @@ jobs:
     - name: Get nightly validated image
       id: get-image
       run: |
-        # Get the most recent nightly validated image from the registry
-        # This assumes the nightly workflow has already built and pushed a validated image
+        # Get the most recent validated nightly image from the registry
         NIGHTLY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
         
-        # Pull the nightly image to ensure we have it locally
+        # Pull the nightly image (most recent nightly build)
         echo "Pulling nightly image: $NIGHTLY_IMAGE"
-        if ! docker pull $NIGHTLY_IMAGE; then
-          echo "Error: Failed to pull nightly image. Make sure the nightly workflow has run successfully."
-          echo "You can manually trigger the nightly workflow to build a validated image."
+        if docker pull $NIGHTLY_IMAGE; then
+          echo "✅ Using nightly image: $NIGHTLY_IMAGE"
+          echo "source_image=$NIGHTLY_IMAGE" >> $GITHUB_OUTPUT
+        else
+          echo "❌ No nightly image found. Cannot create release."
+          echo "Please ensure a nightly build has completed successfully before creating a release."
+          echo "You can manually trigger the docker-build workflow to create a nightly image."
           exit 1
         fi
-        
-        # Get the image digest for reference
-        DIGEST=$(docker images --digests --format "table {{.Digest}}" | grep -v DIGEST | head -1)
-        echo "image_digest=$DIGEST" >> $GITHUB_OUTPUT
-        echo "source_image=$NIGHTLY_IMAGE" >> $GITHUB_OUTPUT
 
     - name: Tag and push release images
       run: |

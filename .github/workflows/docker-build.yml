@@ -83,56 +83,22 @@ jobs:
           type=semver,pattern={{major}}.{{minor}}
           type=sha,prefix=sha-
 
-    - name: Cache Docker layers
-      uses: actions/cache@v4
-      with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ hashFiles('docker/Dockerfile', 'pyproject.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-
-    - name: Install Python dependencies for scripts
-      run: |
-        python3 -m pip install toml
-
     - name: Build and push base image with dependencies
       id: deps-build
       run: |
         echo "🔧 Building base image with dependencies only..."
+        # Install toml for the script
+        python3 -m pip install toml
         ./.github/scripts/build-deps-image.sh
 
     - name: Build and push final image using cached dependencies
       run: |
         echo "🔧 Building final image using cached dependencies..."
-        DEPS_HASH="${{ steps.deps-build.outputs.deps_hash }}" ./.github/scripts/build-final-image.sh
-
-    - name: Build and push Docker image (fallback)
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./docker/Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: true
-        tags: |
-          ${{ steps.meta.outputs.tags }}
-          ${{ steps.tags.outputs.full_tag }}
-          ${{ steps.tags.outputs.latest_tag }}
-          ${{ steps.tags.outputs.nightly_tag }}
-          ${{ steps.tags.outputs.nightly_latest_tag }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
-        build-args: |
-          BUILDKIT_INLINE_CACHE=1
-
-    - name: Move cache
-      run: |
-        rm -rf /tmp/.buildx-cache
-        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
-
-    - name: Output image tag for next job
-      run: |
-        echo "image_tag=${{ steps.tags.outputs.full_tag }}" >> $GITHUB_OUTPUT
+        DEPS_HASH="${{ steps.deps-build.outputs.deps_hash }}" \
+        FULL_TAG="${{ steps.tags.outputs.full_tag }}" \
+        NIGHTLY_TAG="${{ steps.tags.outputs.nightly_tag }}" \
+        NIGHTLY_LATEST_TAG="${{ steps.tags.outputs.nightly_latest_tag }}" \
+        ./.github/scripts/build-final-image.sh
 
   docker-test:
     runs-on: ubuntu-latest

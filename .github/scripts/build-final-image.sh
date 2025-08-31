@@ -33,15 +33,50 @@ docker pull "${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}" || {
     exit 1
 }
 
+# Determine the first tag to build to (for tagging other images)
+FIRST_TAG=""
+if [ -n "$FULL_TAG" ]; then
+    FIRST_TAG="$FULL_TAG"
+elif [ -n "$NIGHTLY_TAG" ]; then
+    FIRST_TAG="$NIGHTLY_TAG"
+elif [ -n "$NIGHTLY_LATEST_TAG" ]; then
+    FIRST_TAG="$NIGHTLY_LATEST_TAG"
+else
+    # If no tags provided, build to a temporary tag
+    FIRST_TAG="${REGISTRY}/${IMAGE_NAME}:temp-$(date +%s)"
+fi
+
 # Build final image using the base image
-echo "🐳 Building final image..."
+echo "🐳 Building final image to: $FIRST_TAG"
 docker build \
     --target final \
     --build-arg BASE_IMAGE="${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}" \
-    --tag "${REGISTRY}/${IMAGE_NAME}:latest" \
+    --tag "$FIRST_TAG" \
     --file docker/Dockerfile \
     .
 
-echo "✅ Final image built successfully!"
-echo "   Image: ${REGISTRY}/${IMAGE_NAME}:latest"
+# Push the first tag
+echo "📤 Pushing: $FIRST_TAG"
+docker push "$FIRST_TAG"
+
+# Handle additional tags if provided
+if [ -n "$FULL_TAG" ] && [ "$FULL_TAG" != "$FIRST_TAG" ]; then
+    echo "📤 Tagging and pushing: $FULL_TAG"
+    docker tag "$FIRST_TAG" "$FULL_TAG"
+    docker push "$FULL_TAG"
+fi
+
+if [ -n "$NIGHTLY_TAG" ] && [ "$NIGHTLY_TAG" != "$FIRST_TAG" ]; then
+    echo "📤 Tagging and pushing: $NIGHTLY_TAG"
+    docker tag "$FIRST_TAG" "$NIGHTLY_TAG"
+    docker push "$NIGHTLY_TAG"
+fi
+
+if [ -n "$NIGHTLY_LATEST_TAG" ] && [ "$NIGHTLY_LATEST_TAG" != "$FIRST_TAG" ]; then
+    echo "📤 Tagging and pushing: $NIGHTLY_LATEST_TAG"
+    docker tag "$FIRST_TAG" "$NIGHTLY_LATEST_TAG"
+    docker push "$NIGHTLY_LATEST_TAG"
+fi
+
+echo "✅ Final image built and pushed successfully!"
 echo "   Base: ${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}"
