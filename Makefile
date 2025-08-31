@@ -25,8 +25,14 @@ help:
 # Create virtual environment
 venv:
 	@if [ ! -d "$(VENV_NAME)" ]; then \
-		echo "Creating virtual environment with uv..."; \
-		uv venv; \
+		echo "Creating virtual environment..."; \
+		if command -v uv &> /dev/null; then \
+			echo "Using uv for virtual environment..."; \
+			uv venv; \
+		else \
+			echo "Using python -m venv for virtual environment..."; \
+			python3 -m venv $(VENV_NAME); \
+		fi; \
 		echo "Virtual environment created at $(VENV_NAME)"; \
 		echo "Activate it with: source $(VENV_NAME)/bin/activate"; \
 	else \
@@ -37,8 +43,14 @@ venv:
 install: venv
 	@echo "Checking dependencies in virtual environment..."
 	@if ! $(VENV_PYTHON) -c "import repomap_tool" 2>/dev/null; then \
-		echo "Installing dependencies with uv..."; \
-		uv pip install -e ".[dev]"; \
+		echo "Installing dependencies..."; \
+		if command -v uv &> /dev/null; then \
+			echo "Using uv for dependency installation..."; \
+			uv pip install -e ".[dev]"; \
+		else \
+			echo "Using pip for dependency installation..."; \
+			$(VENV_PIP) install -e ".[dev]"; \
+		fi; \
 		echo "Dependencies installed successfully!"; \
 	else \
 		echo "Dependencies already installed."; \
