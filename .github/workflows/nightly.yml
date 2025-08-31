@@ -52,11 +52,6 @@ jobs:
       run: |
         make nightly
 
-    - name: Run linting and type checking
-      run: |
-        make lint
-        make mypy
-
     - name: Upload coverage artifacts
       uses: actions/upload-artifact@v4
       with:

@@ -1,10 +1,14 @@
-.PHONY: help venv install test lint format mypy security build clean ci
+.PHONY: help venv install test lint format mypy security build clean ci docker-build docker-test docker-test-ci docker-clean docker-run ci-all
 
 # Virtual environment
 VENV_NAME = .venv
 VENV_BIN = $(VENV_NAME)/bin
 VENV_PYTHON = $(VENV_BIN)/python
 VENV_PIP = $(VENV_BIN)/pip
+
+# Docker configuration
+DOCKER_IMAGE_NAME = repomap-tool
+DOCKER_TAG = latest
 
 # Default target
 help:
@@ -21,6 +25,14 @@ help:
 	@echo "  ci          - Run all CI checks"
 	@echo "  performance - Run performance tests"
 	@echo "  demo        - Run performance demo"
+	@echo ""
+	@echo "Docker commands:"
+	@echo "  docker-build    - Build Docker image"
+	@echo "  docker-test     - Run comprehensive Docker tests"
+	@echo "  docker-test-ci  - Run Docker tests for CI environment"
+	@echo "  docker-clean    - Clean Docker images and containers"
+	@echo "  docker-run      - Run Docker container interactively"
+	@echo "  ci-all          - Run complete CI (local + Docker)"
 
 # Create virtual environment
 venv:
@@ -144,3 +156,64 @@ dev: dev-setup test-performance-configs test-cli
 
 # Full CI simulation
 full-ci: clean install ci test-performance-configs test-cli demo
+
+# Docker targets
+docker-build:
+	@echo "🐳 Building Docker image..."
+	docker build -t $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) -f docker/Dockerfile .
+	@echo "✅ Docker image built successfully: $(DOCKER_IMAGE_NAME):$(DOCKER_TAG)"
+
+docker-test: docker-build
+	@echo "🧪 Running comprehensive Docker tests..."
+	@echo "1. Testing Docker image build..."
+	@docker images | grep $(DOCKER_IMAGE_NAME) || (echo "❌ Docker image not found" && exit 1)
+	@echo "✅ Docker image exists"
+	@echo ""
+	@echo "2. Testing basic CLI functionality..."
+	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) --help || (echo "❌ CLI help failed" && exit 1)
+	@echo "✅ CLI help works"
+	@echo ""
+	@echo "3. Testing version command..."
+	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) version || (echo "❌ Version command failed" && exit 1)
+	@echo "✅ Version command works"
+	@echo ""
+	@echo "4. Running integration tests against real codebase..."
+	@chmod +x tests/integration/test_docker_real_codebase.sh
+	./tests/integration/test_docker_real_codebase.sh
+	@echo "✅ All Docker tests completed successfully"
+
+# Docker test for CI (uses full registry path)
+docker-test-ci:
+	@echo "🧪 Running comprehensive Docker tests in CI..."
+	@echo "1. Testing Docker image build..."
+	@docker images | grep $(DOCKER_IMAGE_NAME) || (echo "❌ Docker image not found" && exit 1)
+	@echo "✅ Docker image exists"
+	@echo ""
+	@echo "2. Testing basic CLI functionality..."
+	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) --help || (echo "❌ CLI help failed" && exit 1)
+	@echo "✅ CLI help works"
+	@echo ""
+	@echo "3. Testing version command..."
+	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) version || (echo "❌ Version command failed" && exit 1)
+	@echo "✅ Version command works"
+	@echo ""
+	@echo "4. Running integration tests against real codebase..."
+	@chmod +x tests/integration/test_docker_real_codebase.sh
+	./tests/integration/test_docker_real_codebase.sh
+	@echo "✅ All Docker tests completed successfully"
+
+docker-clean:
+	@echo "🧹 Cleaning Docker artifacts..."
+	docker rmi $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) 2>/dev/null || true
+	docker system prune -f
+	@echo "✅ Docker cleanup complete"
+
+docker-run: docker-build
+	@echo "🚀 Running Docker container interactively..."
+	@echo "Use 'exit' to leave the container"
+	docker run -it --rm -v "$(PWD):/project" $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) bash
+
+# Complete CI workflow (local + Docker)
+ci-all: ci docker-test
+	@echo "✅ Complete CI workflow completed successfully"
+	@echo "🎯 All tests passed in both local and Docker environments"
