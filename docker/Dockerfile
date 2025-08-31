@@ -10,16 +10,20 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Copy package configuration
+# Copy package configuration first for better caching
 COPY pyproject.toml ./
 
-# Copy the entire source code
+# Install pip-tools and generate requirements.txt
+RUN pip install pip-tools && pip-compile pyproject.toml --output-file requirements.txt
+
+# Install production dependencies only (without the package itself)
+RUN pip install -r requirements.txt
+
+# Copy source code (this layer will be cached unless source changes)
 COPY src/ ./src/
 
-# Install Python dependencies and the package
-RUN pip install -e .
-
-# No entrypoint script needed - use direct CLI commands
+# Install the package in editable mode (without reinstalling dependencies)
+RUN pip install -e . --no-deps
 
 # Create a volume for persistent cache
 VOLUME ["/app/cache"]
@@ -28,5 +32,5 @@ VOLUME ["/app/cache"]
 ENV PYTHONPATH=/app
 ENV CACHE_DIR=/app/cache
 
-# Set entrypoint to repomap-tool
-ENTRYPOINT ["repomap-tool"]
+# Set entrypoint to the Python module
+ENTRYPOINT ["python", "-m", "repomap_tool.cli"]

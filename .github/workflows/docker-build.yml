@@ -58,11 +58,23 @@ jobs:
         echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$DATE_TAG-$COMMIT_TAG" >> $GITHUB_OUTPUT
         echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
 
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+
     - name: Cache Docker layers
       uses: actions/cache@v4
       with:
         path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        key: ${{ runner.os }}-buildx-${{ hashFiles('docker/Dockerfile', 'pyproject.toml') }}
         restore-keys: |
           ${{ runner.os }}-buildx-
 
@@ -73,11 +85,12 @@ jobs:
         file: ./docker/Dockerfile
         platforms: linux/amd64,linux/arm64
         push: true
-        tags: |
-          ${{ steps.tags.outputs.full_tag }}
-          ${{ steps.tags.outputs.latest_tag }}
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
         cache-from: type=local,src=/tmp/.buildx-cache
         cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+        build-args: |
+          BUILDKIT_INLINE_CACHE=1
 
     - name: Move cache
       run: |
