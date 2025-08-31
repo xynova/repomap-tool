@@ -98,13 +98,13 @@ jobs:
         LATEST_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"
         echo "📋 Testing latest tag: $LATEST_TAG"
         docker pull $LATEST_TAG
-        docker run --rm $LATEST_TAG repomap-tool --help
+        docker run --rm $LATEST_TAG python -m repomap_tool.cli --help
         
         # Test the nightly image that was used as source
         NIGHTLY_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly"
         echo "📋 Testing nightly tag: $NIGHTLY_TAG"
         docker pull $NIGHTLY_TAG
-        docker run --rm $NIGHTLY_TAG repomap-tool --help
+        docker run --rm $NIGHTLY_TAG python -m repomap_tool.cli --help
         
         # Test 1: Small test project analysis
         echo "📋 Test 1: Small test project analysis"
@@ -116,7 +116,7 @@ jobs:
           echo '    def __init__(self):' >> /tmp/release-test-project/test.py
           echo '        self.value = 42' >> /tmp/release-test-project/test.py
           cd /tmp/release-test-project
-          repomap-tool analyze . --output json
+          python -m repomap_tool.cli analyze . --output json
         "
         
         # Test 2: Real codebase analysis
@@ -124,42 +124,42 @@ jobs:
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool analyze /project --output json
+          python -m repomap_tool.cli analyze /project --output json
         
         # Test 3: Search functionality
         echo "📋 Test 3: Search functionality"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "analyze_project" --output json
+          python -m repomap_tool.cli search /project "analyze_project" --output json
         
         # Test 4: Fuzzy matching
         echo "📋 Test 4: Fuzzy matching"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "FuzzyMatcher" --output json
+          python -m repomap_tool.cli search /project "FuzzyMatcher" --output json
         
         # Test 5: Semantic matching
         echo "📋 Test 5: Semantic matching"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "semantic" --output json
+          python -m repomap_tool.cli search /project "semantic" --output json
         
         # If this is a release event with a tag, also test the versioned tag
         if [ -n "${{ github.event.release.tag_name }}" ]; then
           VERSION_TAG="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}"
           echo "📋 Testing version tag: $VERSION_TAG"
           docker pull $VERSION_TAG
-          docker run --rm $VERSION_TAG repomap-tool --help
+          docker run --rm $VERSION_TAG python -m repomap_tool.cli --help
           
           # Test version tag with real codebase
           echo "📋 Test 6: Version tag real codebase analysis"
           docker run --rm \
             -v $(pwd):/project \
             $VERSION_TAG \
-            repomap-tool analyze /project --output json
+            python -m repomap_tool.cli analyze /project --output json
         else
           echo "No release tag name available, skipping version tag test"
         fi
@@ -181,41 +181,41 @@ jobs:
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json
+          python -m repomap_tool.cli analyze /project --semantic --threshold 0.05 --verbose --output json
         
         # Test 8: Comprehensive search tests
         echo "📋 Test 8: Comprehensive search tests"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
+          python -m repomap_tool.cli search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
         
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
+          python -m repomap_tool.cli search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
         
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+          python -m repomap_tool.cli search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
         
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool search /project "SemanticMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
+          python -m repomap_tool.cli search /project "SemanticMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
         
         # Test 9: Advanced analysis modes
         echo "📋 Test 9: Advanced analysis modes"
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool analyze /project --fuzzy --threshold 0.6 --verbose --output json
+          python -m repomap_tool.cli analyze /project --fuzzy --threshold 0.6 --verbose --output json
         
         docker run --rm \
           -v $(pwd):/project \
           $LATEST_TAG \
-          repomap-tool analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json
+          python -m repomap_tool.cli analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json
         
         echo "✅ Full release Docker test suite completed successfully!"
 

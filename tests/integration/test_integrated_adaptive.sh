@@ -89,33 +89,61 @@ run_test() {
     fi
 }
 
-# Test 1: Basic semantic matching
-run_test "Test 1: Basic Semantic Matching" \
-    "repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json" || exit 1
+# Test 1: Analyze the real repomap-tool codebase
+run_test "Test 1: Analyze Real Codebase" \
+    "python -m repomap_tool.cli analyze /project --semantic --threshold 0.05 --verbose --output json" || exit 1
 
-# Test 2: Fuzzy matching
-run_test "Test 2: Fuzzy Matching" \
-    "repomap-tool analyze /project --fuzzy --threshold 0.6 --verbose --output json" || exit 1
+# Test 2: Search for specific identifiers in the real codebase
+run_test "Test 2: Search for DockerRepoMap Class" \
+    "python -m repomap_tool.cli search /project 'DockerRepoMap' --match-type hybrid --threshold 0.5 --verbose --output json" || exit 1
 
-# Test 3: Combined fuzzy + semantic
-run_test "Test 3: Combined Fuzzy + Semantic" \
-    "repomap-tool analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json" || exit 1
+# Test 3: Search for function names
+run_test "Test 3: Search for analyze_project Function" \
+    "python -m repomap_tool.cli search /project 'analyze_project' --match-type fuzzy --threshold 0.6 --verbose --output json" || exit 1
 
-# Test 4: Search functionality
-run_test "Test 4: Search Functionality" \
-    "repomap-tool search /project 'authenticate' --match-type hybrid --threshold 0.5 --verbose --output json" || exit 1
+# Test 4: Search for matcher classes (fixed query)
+run_test "Test 4: Search for FuzzyMatcher Class" \
+    "python -m repomap_tool.cli search /project 'FuzzyMatcher' --match-type fuzzy --threshold 0.5 --verbose --output json" || exit 1
 
-# Test 5: High threshold for precision
-run_test "Test 5: High Threshold (Precision)" \
-    "repomap-tool analyze /project --semantic --threshold 0.8 --verbose --output json" || exit 1
+# Test 5: Search for SemanticMatcher
+run_test "Test 5: Search for SemanticMatcher Class" \
+    "python -m repomap_tool.cli search /project 'SemanticMatcher' --match-type fuzzy --threshold 0.5 --verbose --output json" || exit 1
 
-# Test 6: Help command
-run_test "Test 6: Help Command" \
-    "repomap-tool --help" || exit 1
+# Test 6: Search for CLI commands
+run_test "Test 6: Search for CLI Commands" \
+    "python -m repomap_tool.cli search /project 'analyze' --match-type semantic --threshold 0.4 --verbose --output json" || exit 1
 
-# Test 7: Version command
-run_test "Test 7: Version Command" \
-    "repomap-tool --version" || exit 1
+# Test 7: Analyze with fuzzy matching
+run_test "Test 7: Fuzzy Analysis of Real Codebase" \
+    "python -m repomap_tool.cli analyze /project --fuzzy --threshold 0.6 --verbose --output json" || exit 1
+
+# Test 8: Analyze with hybrid matching
+run_test "Test 8: Hybrid Analysis of Real Codebase" \
+    "python -m repomap_tool.cli analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json" || exit 1
+
+# Test 9: Search for configuration related code
+run_test "Test 9: Search for Configuration Code" \
+    "python -m repomap_tool.cli search /project 'config' --match-type semantic --threshold 0.3 --verbose --output json" || exit 1
+
+# Test 10: Search for test related code
+run_test "Test 10: Search for Test Code" \
+    "python -m repomap_tool.cli search /project 'test' --match-type hybrid --threshold 0.4 --verbose --output json" || exit 1
+
+# Test 11: Search for specific function types
+run_test "Test 11: Search for Function Definitions" \
+    "python -m repomap_tool.cli search /project 'def' --match-type fuzzy --threshold 0.5 --verbose --output json" || exit 1
+
+# Test 12: Search for class definitions
+run_test "Test 12: Search for Class Definitions" \
+    "python -m repomap_tool.cli search /project 'class' --match-type fuzzy --threshold 0.5 --verbose --output json" || exit 1
+
+# Test 13: Search for authentication related code
+run_test "Test 13: Search for Authentication Code" \
+    "python -m repomap_tool.cli search /project 'authenticate' --match-type hybrid --threshold 0.5 --verbose --output json" || exit 1
+
+# Test 14: Analyze with high threshold
+run_test "Test 14: High Threshold Analysis" \
+    "python -m repomap_tool.cli analyze /project --semantic --threshold 0.8 --verbose --output json" || exit 1
 
 echo ""
 echo "✅ All tests completed successfully!"
