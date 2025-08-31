@@ -130,13 +130,13 @@ cd repomap-tool
 make docker-build
 
 # Analyze your project (with cache persistence)
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool analyze /workspace
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest analyze /workspace
 
 # Search for code (with cache persistence)
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "user authentication"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "user authentication"
 
 # Try it with our example project
-docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "auth"
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "auth"
 ```
 
 ### Basic Usage Examples
@@ -144,28 +144,28 @@ docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/worksp
 **Try with our example project first:**
 ```bash
 # Search for authentication-related code
-docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "auth"
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "auth"
 
 # Find specific function names
-docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "authenticate_user"
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "authenticate_user"
 
 # Test fuzzy matching with different naming conventions
-docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "user_auth"
+docker run -v $(pwd)/.repomap:/app/cache -v $(pwd)/examples/test-project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "user_auth"
 ```
 
 **Now try with your own project:**
 ```bash
 # Find authentication-related code
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "user login authentication"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "user login authentication"
 
 # Discover data processing functions
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "data processing pipeline"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "data processing pipeline"
 
 # Find code with similar names
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "userAuth"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "userAuth"
 
 # Get comprehensive results
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool search /workspace "error handling"
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest search /workspace "error handling"
 ```
 
 ### Docker Images
@@ -190,10 +190,10 @@ docker pull ghcr.io/xynova/repomap-tool:v1.2.3
 **Using Pre-built Images:**
 ```bash
 # Use the latest release
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest repomap-tool analyze /workspace
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest analyze /workspace
 
 # Use the nightly build for latest features
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:nightly repomap-tool analyze /workspace
+docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:nightly analyze /workspace
 ```
 
 ## Key Benefits for AI Code Assistants
