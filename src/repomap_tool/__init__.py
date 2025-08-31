@@ -45,6 +45,78 @@ except ImportError:
     HealthCheck = None  # type: ignore
     ErrorResponse = None  # type: ignore
 
+# Import protocols for type safety
+try:
+    from .protocols import (
+        RepoMapProtocol,
+        MatcherProtocol,
+        FuzzyMatcherProtocol,
+        SemanticMatcherProtocol,
+        HybridMatcherProtocol,
+        CacheManagerProtocol,
+        FileScannerProtocol,
+        ProjectAnalyzerProtocol,
+        ProjectMap,
+        Tag,
+        FileData,
+        IdentifierSet,
+        MatchResult as ProtocolMatchResult,
+        CacheStats,
+        ProjectInfo as ProtocolProjectInfo,
+    )
+except ImportError:
+    # Fallback imports
+    RepoMapProtocol = None  # type: ignore
+    MatcherProtocol = None  # type: ignore
+    FuzzyMatcherProtocol = None  # type: ignore
+    SemanticMatcherProtocol = None  # type: ignore
+    HybridMatcherProtocol = None  # type: ignore
+    CacheManagerProtocol = None  # type: ignore
+    FileScannerProtocol = None  # type: ignore
+    ProjectAnalyzerProtocol = None  # type: ignore
+    ProjectMap = None  # type: ignore
+    Tag = None  # type: ignore
+    FileData = None  # type: ignore
+    IdentifierSet = None  # type: ignore
+    ProtocolMatchResult = None  # type: ignore
+    CacheStats = None  # type: ignore
+    ProtocolProjectInfo = None  # type: ignore
+
+# Import exception hierarchy
+try:
+    from .exceptions import (
+        RepoMapError,
+        ConfigurationError,
+        FileAccessError,
+        TagExtractionError,
+        MatcherError,
+        CacheError,
+        ValidationError,
+        SearchError,
+        ProjectAnalysisError,
+        RepoMapMemoryError,
+        NetworkError,
+        RepoMapTimeoutError,
+        safe_operation,
+        handle_errors,
+    )
+except ImportError:
+    # Fallback imports
+    RepoMapError = None  # type: ignore
+    ConfigurationError = None  # type: ignore
+    FileAccessError = None  # type: ignore
+    TagExtractionError = None  # type: ignore
+    MatcherError = None  # type: ignore
+    CacheError = None  # type: ignore
+    ValidationError = None  # type: ignore
+    SearchError = None  # type: ignore
+    ProjectAnalysisError = None  # type: ignore
+    RepoMapMemoryError = None  # type: ignore
+    NetworkError = None  # type: ignore
+    RepoMapTimeoutError = None  # type: ignore
+    safe_operation = None  # type: ignore
+    handle_errors = None  # type: ignore
+
 __all__ = [
     "DockerRepoMap",
     "cli",
@@ -57,4 +129,35 @@ __all__ = [
     "ProjectInfo",
     "HealthCheck",
     "ErrorResponse",
+    # Protocol exports
+    "RepoMapProtocol",
+    "MatcherProtocol",
+    "FuzzyMatcherProtocol",
+    "SemanticMatcherProtocol",
+    "HybridMatcherProtocol",
+    "CacheManagerProtocol",
+    "FileScannerProtocol",
+    "ProjectAnalyzerProtocol",
+    "ProjectMap",
+    "Tag",
+    "FileData",
+    "IdentifierSet",
+    "ProtocolMatchResult",
+    "CacheStats",
+    "ProtocolProjectInfo",
+    # Exception exports
+    "RepoMapError",
+    "ConfigurationError",
+    "FileAccessError",
+    "TagExtractionError",
+    "MatcherError",
+    "CacheError",
+    "ValidationError",
+    "SearchError",
+    "ProjectAnalysisError",
+    "RepoMapMemoryError",
+    "NetworkError",
+    "RepoMapTimeoutError",
+    "safe_operation",
+    "handle_errors",
 ]

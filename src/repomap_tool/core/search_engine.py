@@ -5,66 +5,87 @@ This module handles different types of search operations (fuzzy, semantic, hybri
 """
 
 import logging
-from typing import List, Any
+from typing import List, Optional
+from ..protocols import MatcherProtocol
 from ..models import MatchResult
+
+# Exception imports removed since we're using graceful degradation instead of raising exceptions
 
 
 def fuzzy_search(
     query: str,
     identifiers: List[str],
-    fuzzy_matcher: Any,
+    fuzzy_matcher: MatcherProtocol,
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform fuzzy search on identifiers."""
+    # Input validation
+    if not query or not identifiers:
+        logging.warning("Empty query or identifiers provided")
+        return []
+
     if not fuzzy_matcher:
         logging.warning("Fuzzy matcher not available")
         return []
 
     try:
-        results = fuzzy_matcher.match_identifiers(query, identifiers)
-        # Convert to MatchResult format and limit results
+        results = fuzzy_matcher.match_identifiers(query, set(identifiers))
+
+        # Validate results and process
         match_results = []
-        for identifier, score in results[:limit]:
-            match_results.append(
-                MatchResult(
-                    identifier=identifier,
-                    score=score / 100.0,  # Convert percentage to 0-1 scale
-                    strategy="fuzzy_match",
-                    match_type="fuzzy",
-                    context=f"Found in identifiers: {identifier}",
+        if results is not None and isinstance(results, (list, tuple)):
+            # Convert to MatchResult format and limit results
+            for identifier, score in results[:limit]:
+                match_results.append(
+                    MatchResult(
+                        identifier=identifier,
+                        score=score / 100.0,  # Convert percentage to 0-1 scale
+                        strategy="fuzzy_match",
+                        match_type="fuzzy",
+                        context=f"Found in identifiers: {identifier}",
+                    )
                 )
-            )
         return match_results
     except Exception as e:
         logging.error(f"Fuzzy search failed: {e}")
+        # Return empty list instead of raising for graceful degradation
         return []
 
 
 def semantic_search(
     query: str,
     identifiers: List[str],
-    semantic_matcher: Any,
+    semantic_matcher: MatcherProtocol,
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform semantic search on identifiers."""
+    # Input validation
+    if not query or not identifiers:
+        logging.warning("Empty query or identifiers provided")
+        return []
+
     if not semantic_matcher:
         logging.warning("Semantic matcher not available")
         return []
 
     try:
-        results = semantic_matcher.find_semantic_matches(query, identifiers)
-        # Convert to MatchResult format and limit results
+        # Use match_identifiers method from protocol instead of find_semantic_matches
+        results = semantic_matcher.match_identifiers(query, set(identifiers))
+
+        # Validate results and process
         match_results = []
-        for identifier, score in results[:limit]:
-            match_results.append(
-                MatchResult(
-                    identifier=identifier,
-                    score=score / 100.0,  # Convert percentage to 0-1 scale
-                    strategy="semantic_match",
-                    match_type="semantic",
-                    context=f"Found in identifiers: {identifier}",
+        if results is not None and isinstance(results, (list, tuple)):
+            # Convert to MatchResult format and limit results
+            for identifier, score in results[:limit]:
+                match_results.append(
+                    MatchResult(
+                        identifier=identifier,
+                        score=score / 100.0,  # Convert percentage to 0-1 scale
+                        strategy="semantic_match",
+                        match_type="semantic",
+                        context=f"Found in identifiers: {identifier}",
+                    )
                 )
-            )
         # If no semantic results found, fall back to basic search
         if not match_results:
             logging.info(
@@ -107,59 +128,96 @@ def semantic_search(
 def hybrid_search(
     query: str,
     identifiers: List[str],
-    hybrid_matcher: Any,
+    hybrid_matcher: MatcherProtocol,
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform hybrid search on identifiers."""
+    # Input validation
+    if not query or not identifiers:
+        logging.warning("Empty query or identifiers provided")
+        return []
+
     if not hybrid_matcher:
         logging.warning("Hybrid matcher not available")
         return []
 
     try:
-        results = hybrid_matcher.match_identifiers(query, identifiers)
-        # Convert to MatchResult format and limit results
+        # Ensure TF-IDF model is built for hybrid matcher
+        if hasattr(hybrid_matcher, "build_tfidf_model") and identifiers:
+            # Convert list to set for the build_tfidf_model method
+            identifier_set = set(identifiers)
+            hybrid_matcher.build_tfidf_model(identifier_set)
+
+        results = hybrid_matcher.match_identifiers(query, set(identifiers))
+
+        # Validate results and process
         match_results = []
-        for identifier, score in results[:limit]:
-            match_results.append(
-                MatchResult(
-                    identifier=identifier,
-                    score=score / 100.0,  # Convert percentage to 0-1 scale
-                    strategy="hybrid_match",
-                    match_type="hybrid",
-                    context=f"Found in identifiers: {identifier}",
+        if results is not None and isinstance(results, (list, tuple)):
+            # Convert to MatchResult format and limit results
+            for identifier, score in results[:limit]:
+                match_results.append(
+                    MatchResult(
+                        identifier=identifier,
+                        score=score / 100.0,  # Convert percentage to 0-1 scale
+                        strategy="hybrid_match",
+                        match_type="hybrid",
+                        context=f"Found in identifiers: {identifier}",
+                    )
                 )
-            )
         return match_results
     except Exception as e:
         logging.error(f"Hybrid search failed: {e}")
+        # Return empty list instead of raising for graceful degradation
         return []
 
 
 def basic_search(
-    query: str,
-    identifiers: List[str],
+    query: Optional[str],
+    identifiers: Optional[List[str]],
     limit: int = 10,
 ) -> List[MatchResult]:
     """Perform basic string search on identifiers."""
-    query_lower = query.lower()
+    # Handle None inputs gracefully
+    if query is None:
+        logging.warning("Basic search received None query, returning empty results")
+        return []
+
+    if identifiers is None:
+        logging.warning(
+            "Basic search received None identifiers, returning empty results"
+        )
+        return []
+
+    try:
+        query_lower = query.lower()
+    except AttributeError:
+        logging.warning(
+            f"Basic search received non-string query: {type(query)}, returning empty results"
+        )
+        return []
+
     results = []
 
     for identifier in identifiers:
-        if query_lower in identifier.lower():
-            # Simple scoring based on position and length
-            score = 0.8  # Base score for substring matches
-            if identifier.lower().startswith(query_lower):
-                score = 1.0  # Higher score for prefix matches (max allowed)
+        try:
+            if query_lower in identifier.lower():
+                # Simple scoring based on position and length
+                score = 0.8  # Base score for substring matches
+                if identifier.lower().startswith(query_lower):
+                    score = 1.0  # Higher score for prefix matches (max allowed)
 
-            results.append(
-                MatchResult(
-                    identifier=identifier,
-                    score=score,  # Let the model's validator handle normalization
-                    strategy="basic_string_match",
-                    match_type="fuzzy",  # Use fuzzy as the closest match type
-                    context=f"Found in identifier: {identifier}",
+                results.append(
+                    MatchResult(
+                        identifier=identifier,
+                        score=score,  # Let the model's validator handle normalization
+                        strategy="basic_string_match",
+                        match_type="fuzzy",  # Use fuzzy as the closest match type
+                        context=f"Found in identifier: {identifier}",
+                    )
                 )
-            )
+        except (AttributeError, TypeError):
+            # Skip invalid identifiers
+            continue
 
     # Sort by score (descending) and limit results
     results.sort(key=lambda x: x.score, reverse=True)

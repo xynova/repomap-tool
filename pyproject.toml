@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Portable code analysis tool using aider libraries"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "aider-chat>=0.82.0",
     "networkx>=3.0",
@@ -20,7 +20,7 @@ dependencies = [
     "packaging>=21.0",
     "click>=8.0.0",
     "colorama>=0.4.4",
-    "rich>=13.0.0",
+        "rich>=13.0.0",
     "numpy>=1.21.0",
     "scipy>=1.7.0",
     "fuzzywuzzy>=0.18.0",
@@ -41,6 +41,10 @@ dev = [
     "types-requests>=2.28.0",
     "types-PyYAML>=6.0.0",
     "types-Flask>=1.1.0",
+            "bandit>=1.7.0",
+        "safety>=2.3.0",
+        "typer>=0.9.0",
+        "build>=0.10.0",
 ]
 
 [tool.pytest.ini_options]
@@ -57,13 +61,13 @@ addopts = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py311']
 include = '\.pyi?$'
 
 
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true

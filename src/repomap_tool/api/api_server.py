@@ -2,7 +2,7 @@
 # enhanced_api_server.py
 
 from flask import Flask, request, jsonify
-import subprocess
+import subprocess  # nosec B404
 import os
 import re
 import logging
@@ -113,8 +113,8 @@ class EnhancedRepoMapAPI:
             chat_files = []
 
         # Extract context from message
-        mentioned_fnames = self.extract_mentioned_files(message_text)
-        mentioned_idents = self.extract_mentioned_identifiers(message_text)
+        mentioned_fnames: Set[str] = self.extract_mentioned_files(message_text)
+        mentioned_idents: Set[str] = self.extract_mentioned_identifiers(message_text)
 
         # Add filename matches for mentioned identifiers
         mentioned_fnames.update(self.get_identifier_filename_matches(mentioned_idents))
@@ -132,6 +132,24 @@ class EnhancedRepoMapAPI:
         ]
 
         try:
+            # Validate and sanitize inputs for security
+            if not os.path.isabs(project_path) or ".." in project_path:
+                return {"success": False, "error": "Invalid project path"}
+
+            # Sanitize file lists to prevent command injection
+            def sanitize_filename(filename: str) -> str:
+                """Sanitize filename to prevent command injection"""
+                import re
+
+                # Remove any potentially dangerous characters
+                return re.sub(r'[;&|`$(){}[\]"\'\\]', "", filename)
+
+            chat_abs_files = [sanitize_filename(f) for f in chat_abs_files]
+            mentioned_abs_files = [sanitize_filename(f) for f in mentioned_abs_files]
+            mentioned_idents_sanitized = [
+                sanitize_filename(ident) for ident in mentioned_idents
+            ]
+
             # Build Docker command with context
             cmd = [
                 "docker",
@@ -150,7 +168,7 @@ class EnhancedRepoMapAPI:
                 "--mentioned-files",
                 ",".join(mentioned_abs_files),
                 "--mentioned-idents",
-                ",".join(mentioned_idents),
+                ",".join(mentioned_idents_sanitized),
             ]
 
             if force_refresh:
@@ -158,7 +176,11 @@ class EnhancedRepoMapAPI:
 
             # Run the command
             result = subprocess.run(
-                cmd, capture_output=True, text=True, timeout=300  # 5 minute timeout
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+                shell=False,  # nosec B603
             )
 
             if result.returncode == 0:
@@ -339,4 +361,5 @@ def analyze_context() -> Any:
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # In production, use: app.run(host="127.0.0.1", port=5000, debug=False)
+    app.run(host="127.0.0.1", port=5000, debug=False)

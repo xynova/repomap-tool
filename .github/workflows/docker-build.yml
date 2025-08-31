@@ -1,13 +1,15 @@
 name: Docker Build
 
 on:
+  schedule:
+    # Run every day at 2 AM UTC
+    - cron: '0 2 * * *'
   push:
     branches: [ main, develop ]
     paths:
       - 'docker/**'
       - 'src/**'
       - 'pyproject.toml'
-      - 'setup.py'
       - '.github/workflows/docker-build.yml'
       - '.github/scripts/cleanup_docker_images.sh'
   pull_request:
@@ -16,10 +18,14 @@ on:
       - 'docker/**'
       - 'src/**'
       - 'pyproject.toml'
-      - 'setup.py'
       - '.github/workflows/docker-build.yml'
       - '.github/scripts/cleanup_docker_images.sh'
   workflow_dispatch: # Allow manual triggering
+
+# Concurrency control - cancel in-progress workflows from the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   REGISTRY: ghcr.io
@@ -57,44 +63,44 @@ jobs:
         echo "commit_tag=$COMMIT_TAG" >> $GITHUB_OUTPUT
         echo "full_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:$DATE_TAG-$COMMIT_TAG" >> $GITHUB_OUTPUT
         echo "latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest" >> $GITHUB_OUTPUT
+        
+        # Add nightly tags if running on schedule
+        if [ "${{ github.event_name }}" = "schedule" ]; then
+          NIGHTLY_DATE=$(date +%Y%m%d)
+          echo "nightly_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly-$NIGHTLY_DATE" >> $GITHUB_OUTPUT
+          echo "nightly_latest_tag=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:nightly" >> $GITHUB_OUTPUT
+        fi
 
-    - name: Cache Docker layers
-      uses: actions/cache@v4
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
       with:
-        path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
-        restore-keys: |
-          ${{ runner.os }}-buildx-
-
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./docker/Dockerfile
-        platforms: linux/amd64,linux/arm64
-        push: true
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
         tags: |
-          ${{ steps.tags.outputs.full_tag }}
-          ${{ steps.tags.outputs.latest_tag }}
-        cache-from: type=local,src=/tmp/.buildx-cache
-        cache-to: type=local,dest=/tmp/.buildx-cache-new,mode=max
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix=sha-
 
-    - name: Test Docker image locally
+    - name: Build and push base image with dependencies
+      id: deps-build
       run: |
-        # Pull the image we just pushed to test it
-        docker pull ${{ steps.tags.outputs.full_tag }}
-        docker run --rm ${{ steps.tags.outputs.full_tag }} repomap-tool --help
+        echo "🔧 Building base image with dependencies only..."
+        # Install toml for the script
+        python3 -m pip install toml
+        ./.github/scripts/build-deps-image.sh
 
-    - name: Move cache
+    - name: Build and push final image using cached dependencies
       run: |
-        rm -rf /tmp/.buildx-cache
-        mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+        echo "🔧 Building final image using cached dependencies..."
+        DEPS_HASH="${{ steps.deps-build.outputs.deps_hash }}" \
+        FULL_TAG="${{ steps.tags.outputs.full_tag }}" \
+        NIGHTLY_TAG="${{ steps.tags.outputs.nightly_tag }}" \
+        NIGHTLY_LATEST_TAG="${{ steps.tags.outputs.nightly_latest_tag }}" \
+        ./.github/scripts/build-final-image.sh
 
-    - name: Output image tag for next job
-      run: |
-        echo "image_tag=${{ steps.tags.outputs.full_tag }}" >> $GITHUB_OUTPUT
-
-  docker-integration-test:
+  docker-test:
     runs-on: ubuntu-latest
     needs: docker-build
     permissions:
@@ -104,6 +110,20 @@ jobs:
     steps:
     - uses: actions/checkout@v4
 
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.11
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Install dependencies
+      run: |
+        make install
+
     - name: Log in to GitHub Container Registry
       uses: docker/login-action@v3
       with:
@@ -111,115 +131,34 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Pull Docker image for integration tests
+    - name: Pull Docker image for testing
       run: |
         docker pull ${{ needs.docker-build.outputs.image_tag }}
 
-    - name: Run comprehensive Docker integration tests
+    - name: Run Docker tests using make targets
       run: |
-        echo "🧪 Running comprehensive Docker integration tests..."
+        # Use the actual image tag that was built and pulled
+        IMAGE_TAG="${{ needs.docker-build.outputs.image_tag }}"
         
-        # Test 1: Basic functionality
-        echo "📋 Test 1: Basic functionality"
-        docker run --rm ${{ needs.docker-build.outputs.image_tag }} repomap-tool --help
+        # Extract the image name and tag for make targets
+        # IMAGE_TAG format: ghcr.io/xynova/repomap-tool:20250831-152053-8a819625
+        export DOCKER_IMAGE_NAME=$(echo "$IMAGE_TAG" | cut -d: -f1)
+        export DOCKER_TAG=$(echo "$IMAGE_TAG" | cut -d: -f2)
         
-        # Test 2: Small test project (make test-docker equivalent)
-        echo "📋 Test 2: Small test project analysis"
-        docker run --rm ${{ needs.docker-build.outputs.image_tag }} bash -c "
-          mkdir -p /tmp/test-project
-          echo 'def hello_world():' > /tmp/test-project/test.py
-          echo '    print(\"Hello, World!\")' >> /tmp/test-project/test.py
-          echo 'class TestClass:' >> /tmp/test-project/test.py
-          echo '    def __init__(self):' >> /tmp/test-project/test.py
-          echo '        self.value = 42' >> /tmp/test-project/test.py
-          cd /tmp/test-project
-          repomap-tool analyze . --output json
-        "
+        echo "Using image: $IMAGE_TAG"
+        echo "DOCKER_IMAGE_NAME: $DOCKER_IMAGE_NAME"
+        echo "DOCKER_TAG: $DOCKER_TAG"
         
-        # Test 3: Real codebase analysis (make test-docker-real equivalent)
-        echo "📋 Test 3: Real codebase analysis"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool analyze /project --output json
-        
-        # Test 4: Search functionality
-        echo "📋 Test 4: Search functionality"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "analyze_project" --output json
-        
-        # Test 5: Fuzzy matching
-        echo "📋 Test 5: Fuzzy matching"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "FuzzyMatcher" --output json
-        
-        # Test 6: Semantic matching
-        echo "📋 Test 6: Semantic matching"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "semantic" --output json
-        
-        echo "✅ All Docker integration tests completed successfully!"
+        # Run the comprehensive Docker tests
+        make docker-test-ci
 
-    - name: Run full Docker test suite
-      run: |
-        echo "🧪 Running full Docker test suite..."
-        
-        # Test 7: Comprehensive real codebase analysis
-        echo "📋 Test 7: Comprehensive real codebase analysis"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json
-        
-        # Test 8: Comprehensive search tests
-        echo "📋 Test 8: Comprehensive search tests"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
-        
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
-        
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
-        
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool search /project "SemanticMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
-        
-        # Test 9: Advanced analysis modes
-        echo "📋 Test 9: Advanced analysis modes"
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool analyze /project --fuzzy --threshold 0.6 --verbose --output json
-        
-        docker run --rm \
-          -v $(pwd):/project \
-          ${{ needs.docker-build.outputs.image_tag }} \
-          repomap-tool analyze /project --fuzzy --semantic --threshold 0.1 --verbose --output json
-        
-        echo "✅ Full Docker test suite completed successfully!"
-
-    - name: Cleanup
+    - name: Cleanup Docker image
       run: |
         docker rmi ${{ needs.docker-build.outputs.image_tag }} || true
 
   cleanup-old-images:
     runs-on: ubuntu-latest
-    needs: [docker-build, docker-integration-test]
+    needs: [docker-build, docker-test]
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     permissions:
       contents: read

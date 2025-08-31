@@ -23,7 +23,7 @@ The project includes four main GitHub Actions workflows:
 
 #### Test Job
 - **Purpose:** Run unit tests across multiple Python versions
-- **Python Versions:** 3.9, 3.10, 3.11
+- **Python Versions:** 3.11
 - **Features:**
   - Caches pip dependencies for faster builds
   - Runs pytest with coverage reporting
@@ -114,7 +114,7 @@ The project includes four main GitHub Actions workflows:
 
 #### Nightly Test Job
 - **Purpose:** Comprehensive testing on schedule
-- **Python Versions:** 3.9, 3.11
+- **Python Versions:** 3.11
 - **Features:**
   - Extended test duration reporting
   - Coverage artifact generation

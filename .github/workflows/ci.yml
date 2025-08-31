@@ -2,35 +2,28 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - 'setup.py'
-      - '.github/workflows/ci.yml'
-      - '.github/scripts/**'
-      - 'Makefile'
-      - 'docker/**'
+    branches: [ main, develop, unittests ]
   pull_request:
     branches: [ main, develop ]
-    paths:
-      - 'src/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - 'setup.py'
-      - '.github/workflows/ci.yml'
-      - '.github/scripts/**'
-      - 'Makefile'
-      - 'docker/**'
-  workflow_dispatch: # Allow manual triggering
+
+# Concurrency control - cancel in-progress workflows from the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 jobs:
   test:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: [3.11]
+        include:
+          - python-version: 3.11
+            cache-key: "3.11"
 
     steps:
     - uses: actions/checkout@v4
@@ -41,259 +34,146 @@ jobs:
         python-version: ${{ matrix.python-version }}
 
     - name: Cache pip dependencies
-      uses: actions/cache@v4
+      uses: actions/cache@v3
       with:
         path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+        key: ${{ runner.os }}-pip-${{ matrix.cache-key }}-${{ hashFiles('**/pyproject.toml') }}
         restore-keys: |
-          ${{ runner.os }}-pip-${{ matrix.python-version }}-
+          ${{ runner.os }}-pip-${{ matrix.cache-key }}-
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
+        make install
 
-    - name: Run tests with pytest
+    - name: Run tests with coverage
       run: |
-        # Run all tests: unit tests, integration tests, and self-integration tests
-        # This includes our comprehensive test suite that tests repomap-tool against itself
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10
+        make test
 
     - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v4
+      uses: codecov/codecov-action@v3
       with:
         file: ./coverage.xml
         flags: unittests
         name: codecov-umbrella
-        fail_ci_if_error: false
 
   lint:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: 3.11
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
+        make install
 
-    - name: Run flake8
+    - name: Run linting and type checking
       run: |
-        flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/ tests/ --count --exit-zero --max-complexity=10 --max-line-length=88 --statistics
+        make lint
+        make mypy
 
-    - name: Run black (format check)
-      run: |
-        black --check src/ tests/ --line-length=88
-
-  type-check:
+  performance:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: 3.11
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
+        make install
 
-    - name: Run mypy
+    - name: Run performance tests
       run: |
-        mypy src/ --config-file pyproject.toml
+        make performance
 
-  docker-integration-test:
+  integration:
     runs-on: ubuntu-latest
-    needs: [test, lint, type-check]
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-
-    - name: Build Docker image for testing
-      run: |
-        docker build -f docker/Dockerfile -t repomap-tool-test .
-
-    - name: Run comprehensive Docker integration tests
-      run: |
-        echo "🧪 Running comprehensive Docker integration tests..."
-        
-        # Test 1: Basic functionality
-        echo "📋 Test 1: Basic functionality"
-        docker run --rm repomap-tool-test repomap-tool --help
-        
-        # Test 2: Small test project (make test-docker equivalent)
-        echo "📋 Test 2: Small test project analysis"
-        docker run --rm repomap-tool-test bash -c "
-          mkdir -p /tmp/test-project
-          echo 'def hello_world():' > /tmp/test-project/test.py
-          echo '    print(\"Hello, World!\")' >> /tmp/test-project/test.py
-          echo 'class TestClass:' >> /tmp/test-project/test.py
-          echo '    def __init__(self):' >> /tmp/test-project/test.py
-          echo '        self.value = 42' >> /tmp/test-project/test.py
-          cd /tmp/test-project
-          repomap-tool analyze . --output json
-        "
-        
-        # Test 3: Real codebase analysis (make test-docker-real equivalent)
-        echo "📋 Test 3: Real codebase analysis"
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool analyze /project --output json
-        
-        # Test 4: Search functionality
-        echo "📋 Test 4: Search functionality"
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool search /project "analyze_project" --output json
-        
-        # Test 5: Fuzzy matching
-        echo "📋 Test 5: Fuzzy matching"
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool search /project "FuzzyMatcher" --output json
-        
-        echo "✅ All Docker integration tests completed successfully!"
-
-    - name: Run full Docker test suite
-      run: |
-        echo "🧪 Running full Docker test suite..."
-        
-        # Make the test scripts executable
-        chmod +x tests/integration/test_integrated_adaptive.sh
-        chmod +x tests/integration/test_docker_real_codebase.sh
-        
-        # Test 7: Comprehensive real codebase analysis
-        echo "📋 Test 7: Comprehensive real codebase analysis"
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool analyze /project --semantic --threshold 0.05 --verbose --output json
-        
-        # Test 8: Comprehensive search tests
-        echo "📋 Test 8: Comprehensive search tests"
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool search /project "DockerRepoMap" --match-type hybrid --threshold 0.5 --verbose --output json
-        
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool search /project "analyze_project" --match-type fuzzy --threshold 0.6 --verbose --output json
-        
-        docker run --rm \
-          -v $(pwd):/project \
-          repomap-tool-test \
-          repomap-tool search /project "FuzzyMatcher" --match-type fuzzy --threshold 0.5 --verbose --output json
-        
-        echo "✅ Full Docker test suite completed successfully!"
-
-    - name: Cleanup Docker image
-      run: |
-        docker rmi repomap-tool-test || true
-
-  integration-test:
-    runs-on: ubuntu-latest
-    needs: [test, lint, type-check]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: 3.11
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
+        make install
 
     - name: Run integration tests
       run: |
-        # Run all integration tests including self-integration tests
-        pytest tests/integration/ -v --cov=src --cov-report=xml --cov-report=html --durations=10
-        
-        # Also run the legacy integration test script for compatibility
-        bash tests/integration/test_integrated_adaptive.sh
-
-  self-integration-test:
-    runs-on: ubuntu-latest
-    needs: [test, lint, type-check]
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.11"]
-
-    steps:
-    - uses: actions/checkout@v4
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ matrix.python-version }}
-
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
-
-    - name: Run self-integration tests (repomap-tool testing itself)
-      run: |
-        pytest tests/integration/test_self_integration.py -v --cov=src --cov-report=xml --cov-report=html --durations=10
-
-    - name: Upload self-integration test coverage
-      uses: codecov/codecov-action@v4
-      with:
-        file: ./coverage.xml
-        flags: self-integration-tests
-        name: self-integration-coverage-${{ matrix.python-version }}
-        fail_ci_if_error: false
+        make test-integration
 
   security:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v4
 
-    - name: Set up Python
+    - name: Set up Python 3.11
       uses: actions/setup-python@v4
       with:
-        python-version: "3.11"
+        python-version: 3.11
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip setuptools wheel
-        pip install -e ".[dev]"
-        pip install bandit safety
+        make install
 
-    - name: Run bandit security check
+    - name: Run security checks
       run: |
-        bandit -r src/ -f json -o bandit-report.json || true
+        make security
 
-    - name: Run safety check
-      run: |
-        safety check --json --output safety-report.json || true
+  build:
+    runs-on: ubuntu-latest
+    needs: [test, lint, performance, integration, security]
+    steps:
+    - uses: actions/checkout@v4
 
-    - name: Upload security reports
-      uses: actions/upload-artifact@v4
+    - name: Set up Python 3.11
+      uses: actions/setup-python@v4
       with:
-        name: security-reports
-        path: |
-          bandit-report.json
-          safety-report.json
+        python-version: 3.11
+
+    - name: Install uv
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "$HOME/.cargo/bin" >> $GITHUB_PATH
+
+    - name: Install dependencies
+      run: |
+        make install
+
+    - name: Build package
+      run: |
+        make build

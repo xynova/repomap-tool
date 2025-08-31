@@ -15,6 +15,37 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class PerformanceConfig(BaseModel):
+    """Configuration for performance optimizations."""
+
+    max_workers: int = Field(
+        default=4,
+        ge=1,
+        le=16,
+        description="Maximum number of worker threads for parallel processing",
+    )
+    cache_size: int = Field(
+        default=1000, ge=100, le=10000, description="Maximum number of cache entries"
+    )
+    max_memory_mb: int = Field(
+        default=100, ge=10, le=1000, description="Maximum memory usage in MB"
+    )
+    enable_progress: bool = Field(
+        default=True, description="Enable progress bars for long-running operations"
+    )
+    enable_monitoring: bool = Field(
+        default=True, description="Enable performance monitoring"
+    )
+    parallel_threshold: int = Field(
+        default=10, description="Minimum number of files to trigger parallel processing"
+    )
+    cache_ttl: int = Field(default=3600, description="Cache time-to-live in seconds")
+    allow_fallback: bool = Field(
+        default=False,
+        description="Allow fallback to sequential processing on parallel errors (not recommended for development)",
+    )
+
+
 class FuzzyMatchConfig(BaseModel):
     """Configuration for fuzzy matching."""
 
@@ -63,15 +94,18 @@ class RepoMapConfig(BaseModel):
         default=4096, ge=1, le=8192, description="Maximum tokens for map generation"
     )
     cache_dir: Optional[Union[str, Path]] = None
-    verbose: bool = True
+    verbose: bool = Field(default=True, description="Verbose output")
     log_level: str = Field(default="INFO", description="Logging level")
+
+    # Performance configuration
+    performance: PerformanceConfig = Field(default_factory=PerformanceConfig)
 
     # Matching configurations
     fuzzy_match: FuzzyMatchConfig = Field(default_factory=FuzzyMatchConfig)
     semantic_match: SemanticMatchConfig = Field(default_factory=SemanticMatchConfig)
 
     # Advanced options
-    refresh_cache: bool = False
+    refresh_cache: bool = Field(default=False, description="Refresh cache")
     output_format: Literal["json", "text", "markdown"] = "json"
     max_results: int = Field(
         default=50, ge=1, le=1000, description="Maximum results to return"
@@ -81,7 +115,25 @@ class RepoMapConfig(BaseModel):
     @classmethod
     def validate_project_root(cls, v: Union[str, Path]) -> Path:
         """Convert to Path and validate it exists."""
-        path = Path(v).resolve()
+        # Handle empty strings explicitly
+        if isinstance(v, str) and not v.strip():
+            raise ValueError("Project root cannot be empty or whitespace only")
+
+        # Handle null bytes
+        if isinstance(v, str) and "\x00" in v:
+            raise ValueError("Project root cannot contain null bytes")
+
+        # Check path length before resolving
+        if isinstance(v, str) and len(v) > 4096:  # Reasonable limit
+            raise ValueError("Project root path too long (max 4096 characters)")
+
+        try:
+            path = Path(v).resolve()
+        except (OSError, ValueError) as e:
+            if "File name too long" in str(e):
+                raise ValueError("Project root path too long") from e
+            raise ValueError(f"Invalid project root path: {e}") from e
+
         if not path.exists():
             raise ValueError(f"Project root does not exist: {path}")
         if not path.is_dir():
@@ -94,7 +146,21 @@ class RepoMapConfig(BaseModel):
         """Convert cache_dir to Path if provided."""
         if v is None:
             return None
-        return Path(v).resolve()
+
+        # Handle null bytes
+        if isinstance(v, str) and "\x00" in v:
+            raise ValueError("Cache directory cannot contain null bytes")
+
+        # Check path length
+        if isinstance(v, str) and len(v) > 4096:
+            raise ValueError("Cache directory path too long (max 4096 characters)")
+
+        try:
+            return Path(v).resolve()
+        except (OSError, ValueError) as e:
+            if "File name too long" in str(e):
+                raise ValueError("Cache directory path too long")
+            raise ValueError(f"Invalid cache directory: {e}")
 
     @field_validator("log_level")
     @classmethod
@@ -130,7 +196,13 @@ class MatchResult(BaseModel):
     @classmethod
     def normalize_score(cls, v: float) -> float:
         """Ensure score is between 0.0 and 1.0."""
-        return max(0.0, min(1.0, v))
+        # Handle negative values by clamping to 0
+        if v < 0.0:
+            return 0.0
+        # Handle values > 1.0 by clamping to 1
+        if v > 1.0:
+            return 1.0
+        return v
 
 
 class SearchRequest(BaseModel):
@@ -228,8 +300,12 @@ class ErrorResponse(BaseModel):
 
 
 # Utility functions for working with models
-def create_config_from_dict(config_dict: Dict[str, Any]) -> RepoMapConfig:
+def create_config_from_dict(config_dict: Optional[Dict[str, Any]]) -> RepoMapConfig:
     """Create a RepoMapConfig from a dictionary."""
+    if config_dict is None:
+        raise ValueError("Configuration dictionary cannot be None")
+    if not isinstance(config_dict, dict):
+        raise ValueError("Configuration must be a dictionary")
     return RepoMapConfig(**config_dict)
 
 
@@ -238,8 +314,12 @@ def config_to_dict(config: RepoMapConfig) -> Dict[str, Any]:
     return config.model_dump()
 
 
-def validate_search_request(data: Dict[str, Any]) -> SearchRequest:
+def validate_search_request(data: Optional[Dict[str, Any]]) -> SearchRequest:
     """Validate and create a SearchRequest from dictionary data."""
+    if data is None:
+        raise ValueError("Search request data cannot be None")
+    if not isinstance(data, dict):
+        raise ValueError("Search request data must be a dictionary")
     return SearchRequest(**data)
 
 

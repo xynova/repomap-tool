@@ -7,8 +7,9 @@ This module provides intelligent identifier discovery using multiple fuzzy match
 
 import re
 import logging
-from typing import List, Set, Tuple, Dict, Optional
+from typing import List, Set, Tuple, Dict, Optional, Any
 from fuzzywuzzy import fuzz
+from ..core.cache_manager import CacheManager
 
 
 # Configure logging
@@ -33,6 +34,8 @@ class FuzzyMatcher:
         strategies: Optional[List[str]] = None,
         cache_results: bool = True,
         verbose: bool = True,
+        cache_max_size: int = 1000,
+        cache_ttl: int = 3600,
     ):
         """
         Initialize the fuzzy matcher.
@@ -42,12 +45,22 @@ class FuzzyMatcher:
             strategies: List of matching strategies to use
             cache_results: Whether to cache match results
             verbose: Whether to log matching details
+            cache_max_size: Maximum number of cache entries
+            cache_ttl: Time to live for cache entries in seconds
         """
         self.threshold = max(0, min(100, threshold))  # Clamp to 0-100
         self.strategies = strategies or ["prefix", "substring", "levenshtein"]
         self.cache_results = cache_results
         self.verbose = verbose
-        self.match_cache: Dict[str, List[Tuple[str, int]]] = {}
+
+        # Initialize cache manager with bounded memory
+        self.cache_manager: Optional[CacheManager]
+        if self.cache_results:
+            self.cache_manager = CacheManager(
+                max_size=cache_max_size, ttl=cache_ttl, enable_memory_monitoring=True
+            )
+        else:
+            self.cache_manager = None
 
         # Validate strategies
         valid_strategies = {"prefix", "suffix", "substring", "levenshtein", "word"}
@@ -59,7 +72,7 @@ class FuzzyMatcher:
 
         if self.verbose:
             logger.info(
-                f"FuzzyMatcher initialized with threshold={self.threshold}, strategies={self.strategies}"
+                f"FuzzyMatcher initialized with threshold={self.threshold}, strategies={self.strategies}, cache_max_size={cache_max_size}"
             )
 
     def match_identifiers(
@@ -80,10 +93,12 @@ class FuzzyMatcher:
 
         # Check cache first
         cache_key = f"{query}_{self.threshold}_{','.join(sorted(self.strategies))}"
-        if self.cache_results and cache_key in self.match_cache:
-            if self.verbose:
-                logger.debug(f"Cache hit for query: {query}")
-            return self.match_cache[cache_key]
+        if self.cache_results and self.cache_manager:
+            cached_result = self.cache_manager.get(cache_key)
+            if cached_result is not None:
+                if self.verbose:
+                    logger.debug(f"Cache hit for query: {query}")
+                return cached_result  # type: ignore
 
         matches = []
         query_lower = query.lower()
@@ -149,8 +164,8 @@ class FuzzyMatcher:
         matches.sort(key=lambda x: (-x[1], x[0]))
 
         # Cache the result
-        if self.cache_results:
-            self.match_cache[cache_key] = matches
+        if self.cache_results and self.cache_manager:
+            self.cache_manager.set(cache_key, matches)
 
         if self.verbose:
             logger.debug(f"Query '{query}' matched {len(matches)} identifiers")
@@ -205,13 +220,25 @@ class FuzzyMatcher:
 
     def clear_cache(self) -> None:
         """Clear the match cache."""
-        self.match_cache.clear()
+        if self.cache_manager:
+            self.cache_manager.clear()
         if self.verbose:
             logger.debug("Fuzzy matching cache cleared")
 
-    def get_cache_stats(self) -> Dict[str, int]:
+    def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""
-        return {
-            "cache_size": len(self.match_cache),
-            "total_queries": sum(len(matches) for matches in self.match_cache.values()),
-        }
+        if self.cache_manager:
+            return self.cache_manager.get_stats()
+        else:
+            return {
+                "cache_size": 0,
+                "max_size": 0,
+                "ttl": 0,
+                "hits": 0,
+                "misses": 0,
+                "hit_rate_percent": 0.0,
+                "evictions": 0,
+                "expirations": 0,
+                "total_requests": 0,
+                "estimated_memory_mb": 0.0,
+            }
