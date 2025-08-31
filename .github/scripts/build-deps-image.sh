@@ -32,21 +32,31 @@ print('deps-' + hash_obj.hexdigest()[:12])
 
 echo "📦 Dependencies hash: $REQUIREMENTS_HASH"
 
-# Build base image with dependencies only
-echo "🐳 Building base image..."
-docker build \
-    --target base \
-    --tag "${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}" \
-    --tag "${REGISTRY}/${IMAGE_NAME}:deps-latest" \
-    --file docker/Dockerfile \
-    .
+# Check if the base image already exists
+echo "🔍 Checking if base image already exists..."
+if docker pull "${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}" 2>/dev/null; then
+    echo "✅ Base image already exists: ${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}"
+    echo "   Skipping build - using existing image"
+else
+    echo "📦 Base image not found - building new one..."
+    
+    # Build base image with dependencies only
+    echo "🐳 Building base image..."
+    docker build \
+        --target base \
+        --tag "${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}" \
+        --tag "${REGISTRY}/${IMAGE_NAME}:deps-latest" \
+        --file docker/Dockerfile \
+        .
 
-# Push base image to registry
-echo "📤 Pushing base image to registry..."
-docker push "${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}"
-docker push "${REGISTRY}/${IMAGE_NAME}:deps-latest"
+    # Push base image to registry
+    echo "📤 Pushing base image to registry..."
+    docker push "${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}"
+    docker push "${REGISTRY}/${IMAGE_NAME}:deps-latest"
 
-echo "✅ Base image built and pushed successfully!"
+    echo "✅ Base image built and pushed successfully!"
+fi
+
 echo "   Image: ${REGISTRY}/${IMAGE_NAME}:${REQUIREMENTS_HASH}"
 echo "   Latest: ${REGISTRY}/${IMAGE_NAME}:deps-latest"
 
