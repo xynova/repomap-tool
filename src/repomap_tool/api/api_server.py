@@ -145,7 +145,7 @@ class EnhancedRepoMapAPI:
             
             chat_abs_files = [sanitize_filename(f) for f in chat_abs_files]
             mentioned_abs_files = [sanitize_filename(f) for f in mentioned_abs_files]
-            mentioned_idents = [sanitize_filename(ident) for ident in mentioned_idents]
+            mentioned_idents_sanitized = [sanitize_filename(ident) for ident in mentioned_idents]
             
             # Build Docker command with context
             cmd = [
@@ -165,7 +165,7 @@ class EnhancedRepoMapAPI:
                 "--mentioned-files",
                 ",".join(mentioned_abs_files),
                 "--mentioned-idents",
-                ",".join(mentioned_idents),
+                ",".join(mentioned_idents_sanitized),
             ]
 
             if force_refresh:

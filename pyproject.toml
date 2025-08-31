@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Portable code analysis tool using aider libraries"
 authors = [{name = "Your Name", email = "your.email@example.com"}]
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = [
     "aider-chat>=0.82.0",
     "networkx>=3.0",
@@ -60,13 +60,13 @@ addopts = [
 
 [tool.black]
 line-length = 88
-target-version = ['py38']
+target-version = ['py311']
 include = '\.pyi?$'
 
 
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.11"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = true
