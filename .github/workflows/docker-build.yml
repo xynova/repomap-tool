@@ -91,6 +91,10 @@ jobs:
         restore-keys: |
           ${{ runner.os }}-buildx-
 
+    - name: Install Python dependencies for scripts
+      run: |
+        python3 -m pip install toml
+
     - name: Build and push base image with dependencies
       id: deps-build
       run: |
