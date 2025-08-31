@@ -137,9 +137,17 @@ jobs:
 
     - name: Run Docker tests using make targets
       run: |
-        # Set the Docker image tag for make targets
-        export DOCKER_IMAGE_NAME="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}"
-        export DOCKER_TAG="${{ needs.docker-build.outputs.date_tag }}-${{ needs.docker-build.outputs.commit_tag }}"
+        # Use the actual image tag that was built and pulled
+        IMAGE_TAG="${{ needs.docker-build.outputs.image_tag }}"
+        
+        # Extract the image name and tag for make targets
+        # IMAGE_TAG format: ghcr.io/xynova/repomap-tool:20250831-152053-8a819625
+        DOCKER_IMAGE_NAME=$(echo "$IMAGE_TAG" | cut -d: -f1)
+        DOCKER_TAG=$(echo "$IMAGE_TAG" | cut -d: -f2)
+        
+        echo "Using image: $IMAGE_TAG"
+        echo "DOCKER_IMAGE_NAME: $DOCKER_IMAGE_NAME"
+        echo "DOCKER_TAG: $DOCKER_TAG"
         
         # Run the comprehensive Docker tests
         make docker-test-ci
