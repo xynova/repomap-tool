@@ -1,12 +1,13 @@
 # Multi-stage Dockerfile for optimal caching
 # Stage 1: Base image with dependencies only
 ARG BASE_IMAGE=python:3.11-slim
-FROM ${BASE_IMAGE} as base
+FROM ${BASE_IMAGE} AS base
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     git \
     build-essential \
+    bash \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -25,7 +26,7 @@ RUN echo "deps-$(sha256sum requirements.txt | cut -d' ' -f1 | head -c 12)" > .de
 RUN pip install -r requirements.txt
 
 # Stage 2: Final image with package
-FROM base as final
+FROM base AS final
 
 # Copy source code (this layer will be cached unless source changes)
 COPY src/ ./src/
@@ -40,5 +41,10 @@ VOLUME ["/app/cache"]
 ENV PYTHONPATH=/app
 ENV CACHE_DIR=/app/cache
 
-# Set entrypoint to the Python module
-ENTRYPOINT ["python", "-m", "repomap_tool.cli"]
+# Copy and set up the entrypoint script
+COPY docker/entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Set entrypoint to the shell wrapper
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD ["--help"]
