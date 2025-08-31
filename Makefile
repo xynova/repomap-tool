@@ -1,58 +1,142 @@
-.PHONY: help setup test lint mypy format clean build docker-build docker-run check ci test-docker test-docker-real
+.PHONY: help venv install test lint format type-check security build clean ci
 
-help: ## Show this help message
+# Virtual environment
+VENV_NAME = venv
+VENV_BIN = $(VENV_NAME)/bin
+VENV_PYTHON = $(VENV_BIN)/python
+VENV_PIP = $(VENV_BIN)/pip
+
+# Default target
+help:
 	@echo "Available commands:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+	@echo "  venv        - Create virtual environment"
+	@echo "  install     - Install dependencies in venv"
+	@echo "  test        - Run tests with coverage"
+	@echo "  lint        - Run linting checks"
+	@echo "  format      - Format code with black"
+	@echo "  type-check  - Run type checking with mypy"
+	@echo "  security    - Run security checks"
+	@echo "  build       - Build package"
+	@echo "  clean       - Clean build artifacts and venv"
+	@echo "  ci          - Run all CI checks"
+	@echo "  performance - Run performance tests"
+	@echo "  demo        - Run performance demo"
 
-setup: ## Setup development environment
-	./scripts/setup/setup_venv.sh
+# Create virtual environment
+venv:
+	@if [ ! -d "$(VENV_NAME)" ]; then \
+		echo "Creating virtual environment..."; \
+		python3 -m venv $(VENV_NAME); \
+		echo "Virtual environment created at $(VENV_NAME)"; \
+		echo "Activate it with: source $(VENV_NAME)/bin/activate"; \
+	else \
+		echo "Virtual environment already exists at $(VENV_NAME)"; \
+	fi
 
-test: ## Run functionality tests only
-	venv/bin/pytest tests/ -v
+# Install dependencies
+install: venv
+	@echo "Checking dependencies in virtual environment..."
+	@if ! $(VENV_PYTHON) -c "import repomap_tool" 2>/dev/null; then \
+		echo "Installing dependencies..."; \
+		$(VENV_PIP) install --upgrade pip; \
+		$(VENV_PIP) install -e ".[dev]"; \
+		echo "Dependencies installed successfully!"; \
+	else \
+		echo "Dependencies already installed."; \
+	fi
+	@echo "Activate virtual environment with: source $(VENV_NAME)/bin/activate"
 
-lint: ## Run linting
-	venv/bin/flake8 src/ tests/
+# Run tests with coverage
+test: install
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
 
-mypy: ## Run mypy type checking
-	venv/bin/mypy src/ --config-file pyproject.toml
+# Run only unit tests
+test-unit: install
+	$(VENV_PYTHON) -m pytest tests/unit/ -v
 
-format: ## Format code
-	venv/bin/black src/ tests/
+# Run only integration tests
+test-integration: install
+	$(VENV_PYTHON) -m pytest tests/integration/ -v
 
-check: ## Run all quality checks (lint + mypy + format check)
-	venv/bin/flake8 src/ tests/
-	venv/bin/mypy src/ --config-file pyproject.toml
-	venv/bin/black --check src/ tests/ --line-length=88
+# Run performance tests
+performance: install
+	PYTHONPATH=src $(VENV_PYTHON) -m pytest tests/unit/test_performance.py -v
 
-ci: ## Run comprehensive checks (test + lint + mypy + format check)
-	venv/bin/pytest tests/ -v
-	venv/bin/flake8 src/ tests/
-	venv/bin/mypy src/ --config-file pyproject.toml
-	venv/bin/black --check src/ tests/ --line-length=88
+# Run linting checks
+lint: install
+	$(VENV_PYTHON) -m flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503
+	$(VENV_PYTHON) -m black --check --diff src/ tests/ examples/
 
-clean: ## Clean build artifacts
-	rm -rf build/ dist/ *.egg-info/ __pycache__/ .pytest_cache/ htmlcov/
+# Format code
+format: install
+	$(VENV_PYTHON) -m black src/ tests/ examples/
 
-build: ## Build package
-	venv/bin/python setup.py sdist bdist_wheel
+# Run type checking
+type-check: install
+	$(VENV_PYTHON) -m mypy src/ --ignore-missing-imports
 
-docker-build: ## Build Docker image
-	docker build -f docker/Dockerfile -t repomap-tool .
+# Run security checks
+security: install
+	$(VENV_PYTHON) -m bandit -r src/ -f json -o bandit-report.json || true
+	$(VENV_PYTHON) -m safety check
 
-install-dev: ## Install in development mode
-	venv/bin/pip install -e .
+# Build package
+build: install
+	$(VENV_PYTHON) -m build
 
-uninstall: ## Uninstall package
-	venv/bin/pip uninstall repomap-tool -y
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts and virtual environment..."
+	rm -rf build/
+	rm -rf dist/
+	rm -rf *.egg-info/
+	rm -rf htmlcov/
+	rm -f .coverage
+	rm -f coverage.xml
+	rm -f bandit-report.json
+	rm -rf $(VENV_NAME)/
+	@echo "Cleanup complete!"
 
-test-docker: ## Run Docker-based integration tests (small test project)
-	bash tests/integration/test_integrated_adaptive.sh
+# Run all CI checks
+ci: lint type-check test security build
 
-test-docker-real: ## Run Docker tests against real codebase
-	bash tests/integration/test_docker_real_codebase.sh
+# Run performance demo
+demo: install
+	cd examples && $(shell pwd)/$(VENV_PYTHON) performance_demo.py
 
-test-self-integration: ## Run self-integration tests (repomap-tool testing itself)
-	venv/bin/pytest tests/integration/test_self_integration.py -v
+# Quick development setup
+dev-setup: install format lint type-check test
 
-test-integration: ## Run all integration tests
-	venv/bin/pytest tests/integration/ -v
+# Run tests with specific Python version
+test-python39:
+	python3.9 -m pip install -e ".[dev]"
+	python3.9 -m pytest tests/ -v
+
+test-python310:
+	python3.10 -m pip install -e ".[dev]"
+	python3.10 -m pytest tests/ -v
+
+test-python311:
+	python3.11 -m pip install -e ".[dev]"
+	python3.11 -m pytest tests/ -v
+
+# Test CLI functionality
+test-cli: install
+	$(VENV_PYTHON) -m repomap_tool.cli --help
+	$(VENV_PYTHON) -m repomap_tool.cli version
+
+# Run with different performance configurations
+test-performance-configs:
+	@echo "Testing different performance configurations..."
+	@echo "1. Default configuration (fail fast):"
+	PYTHONPATH=src python3 -c "from repomap_tool.models import RepoMapConfig; print('✅ Default config works')"
+	@echo "2. Parallel processing enabled:"
+	PYTHONPATH=src python3 -c "from repomap_tool.models import RepoMapConfig, PerformanceConfig; config = RepoMapConfig(project_root='.', performance=PerformanceConfig(max_workers=4)); print('✅ Parallel config works')"
+	@echo "3. Fallback enabled:"
+	PYTHONPATH=src python3 -c "from repomap_tool.models import RepoMapConfig, PerformanceConfig; config = RepoMapConfig(project_root='.', performance=PerformanceConfig(allow_fallback=True)); print('✅ Fallback config works')"
+
+# Development workflow
+dev: dev-setup test-performance-configs test-cli
+
+# Full CI simulation
+full-ci: clean install ci test-performance-configs test-cli demo

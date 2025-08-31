@@ -66,6 +66,11 @@ def cli() -> None:
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option("--max-workers", type=int, default=4, help="Maximum worker threads for parallel processing")
+@click.option("--parallel-threshold", type=int, default=10, help="Minimum files to trigger parallel processing")
+@click.option("--no-progress", is_flag=True, help="Disable progress bars")
+@click.option("--no-monitoring", is_flag=True, help="Disable performance monitoring")
+@click.option("--allow-fallback", is_flag=True, help="Allow fallback to sequential processing on errors (not recommended)")
 def analyze(
     project_path: str,
     config: Optional[str],
@@ -75,6 +80,11 @@ def analyze(
     max_results: int,
     output: str,
     verbose: bool,
+    max_workers: int,
+    parallel_threshold: int,
+    no_progress: bool,
+    no_monitoring: bool,
+    allow_fallback: bool,
 ) -> None:
     """Analyze a project and generate a code map."""
 
@@ -83,7 +93,10 @@ def analyze(
         if config:
             config_obj = load_config_file(config)
         else:
-            config_obj = create_default_config(project_path, fuzzy, semantic, threshold, max_results, output, verbose)  # type: ignore
+            config_obj = create_default_config(
+                project_path, fuzzy, semantic, threshold, max_results, output, verbose,
+                max_workers, parallel_threshold, no_progress, no_monitoring, allow_fallback
+            )  # type: ignore
 
         # Initialize RepoMap
         with Progress(
@@ -96,8 +109,8 @@ def analyze(
             repomap = DockerRepoMap(config_obj)
             progress.update(task, description="Analyzing project...")
 
-            # Analyze project
-            project_info = repomap.analyze_project()
+            # Analyze project with progress tracking
+            project_info = repomap.analyze_project_with_progress()
 
             progress.update(task, description="Analysis complete!")
 
@@ -231,6 +244,95 @@ def config(project_path: str, output: Optional[str]) -> None:
 
 
 @cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
+@click.option("--max-workers", type=int, default=4, help="Maximum worker threads for parallel processing")
+@click.option("--parallel-threshold", type=int, default=10, help="Minimum files to trigger parallel processing")
+@click.option("--no-progress", is_flag=True, help="Disable progress bars")
+@click.option("--no-monitoring", is_flag=True, help="Disable performance monitoring")
+@click.option("--allow-fallback", is_flag=True, help="Allow fallback to sequential processing on errors (not recommended)")
+def performance(
+    project_path: str,
+    max_workers: int,
+    parallel_threshold: int,
+    no_progress: bool,
+    no_monitoring: bool,
+    allow_fallback: bool,
+) -> None:
+    """Show performance metrics for the project."""
+    
+    try:
+        # Create performance-focused configuration
+        from .models import PerformanceConfig, RepoMapConfig
+        
+        performance_config = PerformanceConfig(
+            max_workers=max_workers,
+            parallel_threshold=parallel_threshold,
+            enable_progress=not no_progress,
+            enable_monitoring=not no_monitoring,
+            allow_fallback=allow_fallback,
+        )
+        
+        config = RepoMapConfig(
+            project_root=project_path,
+            performance=performance_config,
+            verbose=True,
+        )
+        
+        # Initialize RepoMap
+        repomap = DockerRepoMap(config)
+        
+        # Get performance metrics
+        metrics = repomap.get_performance_metrics()
+        
+        # Display metrics
+        if metrics.get("monitoring_disabled"):
+            console.print("[yellow]Performance monitoring is disabled[/yellow]")
+            return
+        
+        if "error" in metrics:
+            console.print(f"[red]Error getting metrics: {metrics['error']}[/red]")
+            return
+        
+        # Create rich table for display
+        table = Table(title="Performance Metrics")
+        table.add_column("Metric", style="cyan")
+        table.add_column("Value", style="green")
+        
+        # Configuration
+        config_metrics = metrics.get("configuration", {})
+        table.add_row("Max Workers", str(config_metrics.get("max_workers", "N/A")))
+        table.add_row("Parallel Threshold", str(config_metrics.get("parallel_threshold", "N/A")))
+        table.add_row("Progress Enabled", str(config_metrics.get("enable_progress", "N/A")))
+        table.add_row("Monitoring Enabled", str(config_metrics.get("enable_monitoring", "N/A")))
+        
+        # Processing stats
+        processing_stats = metrics.get("processing_stats", {})
+        if processing_stats:
+            table.add_row("Total Files", str(processing_stats.get("total_files", 0)))
+            table.add_row("Successful Files", str(processing_stats.get("successful_files", 0)))
+            table.add_row("Failed Files", str(processing_stats.get("failed_files", 0)))
+            table.add_row("Success Rate", f"{processing_stats.get('success_rate', 0):.1f}%")
+            table.add_row("Total Identifiers", str(processing_stats.get("total_identifiers", 0)))
+            table.add_row("Processing Time", f"{processing_stats.get('processing_time', 0):.2f}s")
+            table.add_row("Files per Second", f"{processing_stats.get('files_per_second', 0):.1f}")
+        
+        # File size stats
+        file_size_stats = metrics.get("file_size_stats", {})
+        if file_size_stats:
+            table.add_row("Total Size (MB)", f"{file_size_stats.get('total_size_mb', 0):.2f}")
+            table.add_row("Average Size (KB)", f"{file_size_stats.get('avg_size_kb', 0):.1f}")
+            table.add_row("Largest File (KB)", f"{file_size_stats.get('largest_file_kb', 0):.1f}")
+        
+        console.print(table)
+        
+    except Exception as e:
+        console.print(f"[red]Error: {e}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
 def version() -> None:
     """Show version information."""
     console.print(
@@ -263,6 +365,11 @@ def create_default_config(
     max_results: int,
     output: Literal["json", "text", "markdown"],
     verbose: bool,
+    max_workers: int = 4,
+    parallel_threshold: int = 10,
+    no_progress: bool = False,
+    no_monitoring: bool = False,
+    allow_fallback: bool = False,
 ) -> RepoMapConfig:
     """Create default configuration."""
 
@@ -278,11 +385,22 @@ def create_default_config(
         enabled=semantic, threshold=threshold, use_tfidf=True
     )
 
+    # Create performance config
+    from .models import PerformanceConfig
+    performance_config = PerformanceConfig(
+        max_workers=max_workers,
+        parallel_threshold=parallel_threshold,
+        enable_progress=not no_progress,
+        enable_monitoring=not no_monitoring,
+        allow_fallback=allow_fallback,
+    )
+
     # Create main config
     config = RepoMapConfig(
         project_root=project_path,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
+        performance=performance_config,
         max_results=max_results,
         output_format=output,
         verbose=verbose,

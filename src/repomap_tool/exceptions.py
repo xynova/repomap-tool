@@ -91,6 +91,12 @@ class RepoMapTimeoutError(RepoMapError):
     pass
 
 
+class ParallelProcessingError(RepoMapError):
+    """Raised when parallel processing encounters an error."""
+
+    pass
+
+
 # Utility functions for error handling
 def safe_operation(
     operation_name: str, context: Optional[Dict[str, Any]] = None

@@ -42,10 +42,15 @@ The repomap-tool codebase received a **Grade B+** assessment, indicating good en
 
 ### 🔄 **FUTURE OPTIMIZATION PLANS**
 
-#### 7. [Performance Improvements](./performance-improvements.md) 🔄 **NOT STARTED**
-- **Status**: Future optimization opportunities
-- **Focus**: Parallel processing for very large codebases
-- **Priority**: Low (current performance is good)
+#### 7. [Performance Improvements](./performance-improvements.md) ✅ **IMPLEMENTING**
+- **Status**: Simple file-by-file parallel processing being implemented
+- **Focus**: 4x performance improvement with minimal complexity
+- **Priority**: Medium (significant user experience improvement)
+
+#### 8. [Future Optimizations](./future-optimizations.md) 🔄 **FUTURE CONSIDERATIONS**
+- **Status**: Advanced optimization opportunities for future releases
+- **Focus**: Batch processing, adaptive workers, distributed caching
+- **Priority**: Low (current performance is adequate)
 
 ## 🎯 Success Metrics
 
