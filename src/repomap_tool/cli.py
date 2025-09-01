@@ -586,7 +586,10 @@ def create_search_config(
     return config
 
 
-def display_project_info(project_info: ProjectInfo, output_format: Literal["json", "text", "markdown", "table"]) -> None:
+def display_project_info(
+    project_info: ProjectInfo,
+    output_format: Literal["json", "text", "markdown", "table"],
+) -> None:
     """Display project analysis results."""
 
     if output_format == "json":
@@ -638,7 +641,10 @@ def display_project_info(project_info: ProjectInfo, output_format: Literal["json
         console.print(id_table)
 
 
-def display_search_results(response: SearchResponse, output_format: Literal["json", "text", "markdown", "table"]) -> None:
+def display_search_results(
+    response: SearchResponse,
+    output_format: Literal["json", "text", "markdown", "table"],
+) -> None:
     """Display search results."""
 
     if output_format == "json":
