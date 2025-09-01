@@ -413,21 +413,21 @@ def performance(
         )
 
         from .models import FuzzyMatchConfig, SemanticMatchConfig
-        
+
         fuzzy_config = FuzzyMatchConfig(
-            enabled=True, 
-            threshold=70, 
-            strategies=["prefix", "substring", "levenshtein"], 
-            cache_results=True
+            enabled=True,
+            threshold=70,
+            strategies=["prefix", "substring", "levenshtein"],
+            cache_results=True,
         )
         semantic_config = SemanticMatchConfig(
-            enabled=True, 
-            threshold=0.7, 
-            use_tfidf=True, 
-            min_word_length=3, 
-            cache_results=True
+            enabled=True,
+            threshold=0.7,
+            use_tfidf=True,
+            min_word_length=3,
+            cache_results=True,
         )
-        
+
         config = RepoMapConfig(
             project_root=project_path,
             performance=performance_config,
@@ -612,7 +612,7 @@ def create_search_config(
     # Default to hybrid if invalid match type is provided
     if match_type not in ["fuzzy", "semantic", "hybrid"]:
         match_type = "hybrid"
-    
+
     fuzzy_enabled = match_type in ["fuzzy", "hybrid"]
     semantic_enabled = match_type in ["semantic", "hybrid"]
 
