@@ -134,7 +134,7 @@ def analyze(
                 semantic,
                 threshold,
                 max_results,
-                output,
+                output,  # type: ignore[arg-type]
                 verbose,
                 max_workers,
                 parallel_threshold,
@@ -163,7 +163,7 @@ def analyze(
             progress.update(task, description="Analysis complete!")
 
         # Display results
-        display_project_info(project_info, output)
+        display_project_info(project_info, output)  # type: ignore[arg-type]
 
     except Exception as e:
         error_response = create_error_response(str(e), "AnalysisError")
@@ -255,7 +255,7 @@ def search(
             progress.update(task, description="Search complete!")
 
         # Display results
-        display_search_results(response, output)
+        display_search_results(response, output)  # type: ignore[arg-type]
 
     except Exception as e:
         error_response = create_error_response(str(e), "SearchError")
@@ -498,7 +498,7 @@ def create_default_config(
     semantic: bool,
     threshold: float,
     max_results: int,
-    output: str,
+    output: Literal["json", "text", "markdown", "table"],
     verbose: bool,
     max_workers: int = 4,
     parallel_threshold: int = 10,
@@ -586,7 +586,7 @@ def create_search_config(
     return config
 
 
-def display_project_info(project_info: ProjectInfo, output_format: str) -> None:
+def display_project_info(project_info: ProjectInfo, output_format: Literal["json", "text", "markdown", "table"]) -> None:
     """Display project analysis results."""
 
     if output_format == "json":
@@ -638,7 +638,7 @@ def display_project_info(project_info: ProjectInfo, output_format: str) -> None:
         console.print(id_table)
 
 
-def display_search_results(response: SearchResponse, output_format: str) -> None:
+def display_search_results(response: SearchResponse, output_format: Literal["json", "text", "markdown", "table"]) -> None:
     """Display search results."""
 
     if output_format == "json":

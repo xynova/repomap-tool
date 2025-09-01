@@ -173,7 +173,7 @@ class RepoMapConfig(BaseModel):
 
     @field_validator("fuzzy_match", "semantic_match", mode="after")
     @classmethod
-    def validate_matching_config(cls, values):
+    def validate_matching_config(cls, values: Any) -> Any:
         """Validate that at least one matching method is enabled."""
         # This validator runs after both fields are set, so we can access them directly
         if hasattr(values, "fuzzy_match") and hasattr(values, "semantic_match"):
