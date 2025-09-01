@@ -26,7 +26,7 @@ from src.repomap_tool.models import (
 class TestDisplayFunctions:
     """Test the display functions."""
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_project_info_json(self, mock_console):
         """Test display_project_info with JSON output."""
         # Create a mock project info
@@ -38,16 +38,16 @@ class TestDisplayFunctions:
             identifier_types={"functions": 500, "classes": 300, "variables": 200},
             analysis_time_ms=1500.0,
             cache_size_bytes=1024,
-            last_updated="2025-01-01T12:00:00"
+            last_updated="2025-01-01T12:00:00",
         )
-        
+
         # Call the display function
         display_project_info(project_info, "json")
-        
+
         # Verify JSON output was called
         mock_console.print.assert_called_once()
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_project_info_text(self, mock_console):
         """Test display_project_info with text output."""
         # Create a mock project info
@@ -59,16 +59,16 @@ class TestDisplayFunctions:
             identifier_types={"functions": 500, "classes": 300, "variables": 200},
             analysis_time_ms=1500.0,
             cache_size_bytes=1024,
-            last_updated="2025-01-01T12:00:00"
+            last_updated="2025-01-01T12:00:00",
         )
-        
+
         # Call the display function
         display_project_info(project_info, "text")
-        
+
         # Verify console.print was called multiple times for tables
         assert mock_console.print.call_count >= 1
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_project_info_table(self, mock_console):
         """Test display_project_info with table output."""
         # Create a mock project info
@@ -80,16 +80,16 @@ class TestDisplayFunctions:
             identifier_types={"functions": 500, "classes": 300, "variables": 200},
             analysis_time_ms=1500.0,
             cache_size_bytes=1024,
-            last_updated="2025-01-01T12:00:00"
+            last_updated="2025-01-01T12:00:00",
         )
-        
+
         # Call the display function
         display_project_info(project_info, "table")
-        
+
         # Verify console.print was called multiple times for tables
         assert mock_console.print.call_count >= 1
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_project_info_markdown(self, mock_console):
         """Test display_project_info with markdown output."""
         # Create a mock project info
@@ -101,16 +101,16 @@ class TestDisplayFunctions:
             identifier_types={"functions": 500, "classes": 300, "variables": 200},
             analysis_time_ms=1500.0,
             cache_size_bytes=1024,
-            last_updated="2025-01-01T12:00:00"
+            last_updated="2025-01-01T12:00:00",
         )
-        
+
         # Call the display function
         display_project_info(project_info, "markdown")
-        
+
         # Verify console.print was called multiple times for markdown
         assert mock_console.print.call_count >= 1
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_search_results_json(self, mock_console):
         """Test display_search_results with JSON output."""
         # Create mock search results
@@ -119,32 +119,32 @@ class TestDisplayFunctions:
                 identifier="test_function",
                 score=0.95,
                 strategy="fuzzy_match",
-                match_type="fuzzy"
+                match_type="fuzzy",
             ),
             MatchResult(
                 identifier="test_class",
                 score=0.85,
                 strategy="semantic_match",
-                match_type="semantic"
-            )
+                match_type="semantic",
+            ),
         ]
-        
+
         search_response = SearchResponse(
             query="test",
             results=results,
             total_results=2,
             match_type="hybrid",
             threshold=0.7,
-            search_time_ms=100.0
+            search_time_ms=100.0,
         )
-        
+
         # Call the display function
         display_search_results(search_response, "json")
-        
+
         # Verify JSON output was called
         mock_console.print.assert_called_once()
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_search_results_table(self, mock_console):
         """Test display_search_results with table output."""
         # Create mock search results
@@ -153,32 +153,32 @@ class TestDisplayFunctions:
                 identifier="test_function",
                 score=0.95,
                 strategy="fuzzy_match",
-                match_type="fuzzy"
+                match_type="fuzzy",
             ),
             MatchResult(
                 identifier="test_class",
                 score=0.85,
                 strategy="semantic_match",
-                match_type="semantic"
-            )
+                match_type="semantic",
+            ),
         ]
-        
+
         search_response = SearchResponse(
             query="test",
             results=results,
             total_results=2,
             match_type="hybrid",
             threshold=0.7,
-            search_time_ms=100.0
+            search_time_ms=100.0,
         )
-        
+
         # Call the display function
         display_search_results(search_response, "table")
-        
+
         # Verify console.print was called multiple times for table and summary
         assert mock_console.print.call_count >= 2
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_search_results_text(self, mock_console):
         """Test display_search_results with text output."""
         # Create mock search results
@@ -187,26 +187,26 @@ class TestDisplayFunctions:
                 identifier="test_function",
                 score=0.95,
                 strategy="fuzzy_match",
-                match_type="fuzzy"
+                match_type="fuzzy",
             )
         ]
-        
+
         search_response = SearchResponse(
             query="test",
             results=results,
             total_results=1,
             match_type="fuzzy",
             threshold=0.7,
-            search_time_ms=50.0
+            search_time_ms=50.0,
         )
-        
+
         # Call the display function
         display_search_results(search_response, "text")
-        
+
         # Verify console.print was called
         assert mock_console.print.call_count >= 1
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_display_search_results_empty(self, mock_console):
         """Test display_search_results with empty results."""
         # Create empty search results
@@ -216,12 +216,12 @@ class TestDisplayFunctions:
             total_results=0,
             match_type="fuzzy",
             threshold=0.7,
-            search_time_ms=10.0
+            search_time_ms=10.0,
         )
-        
+
         # Call the display function
         display_search_results(search_response, "table")
-        
+
         # Verify console.print was called for no results message
         assert mock_console.print.call_count >= 1
 
@@ -229,29 +229,33 @@ class TestDisplayFunctions:
 class TestCLIHelperFunctions:
     """Test CLI helper functions that are called by the commands."""
 
-    @patch('src.repomap_tool.cli.create_default_config')
-    @patch('src.repomap_tool.cli.DockerRepoMap')
-    @patch('src.repomap_tool.cli.Progress')
-    @patch('src.repomap_tool.cli.display_project_info')
-    def test_analyze_command_logic(self, mock_display, mock_progress, mock_repo_map, mock_create_config):
+    @patch("src.repomap_tool.cli.create_default_config")
+    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.Progress")
+    @patch("src.repomap_tool.cli.display_project_info")
+    def test_analyze_command_logic(
+        self, mock_display, mock_progress, mock_repo_map, mock_create_config
+    ):
         """Test the logic that would be executed by the analyze command."""
         # Mock the configuration
         mock_config = Mock()
         mock_create_config.return_value = mock_config
-        
+
         # Mock the RepoMap
         mock_repomap_instance = Mock()
         mock_repo_map.return_value = mock_repomap_instance
-        
+
         # Mock project info
         mock_project_info = Mock()
-        mock_repomap_instance.analyze_project_with_progress.return_value = mock_project_info
-        
+        mock_repomap_instance.analyze_project_with_progress.return_value = (
+            mock_project_info
+        )
+
         # Mock progress context
         mock_progress_context = Mock()
         mock_progress.return_value.__enter__.return_value = mock_progress_context
         mock_progress.return_value.__exit__.return_value = None
-        
+
         # This simulates what the analyze command would do
         config_obj = mock_create_config(
             project_path=".",
@@ -270,45 +274,52 @@ class TestCLIHelperFunctions:
             log_level="INFO",
             refresh_cache=False,
         )
-        
+
         repomap = mock_repo_map(config_obj)
         project_info = repomap.analyze_project_with_progress()
         mock_display(project_info, "json")
-        
+
         # Verify the function calls
         mock_create_config.assert_called_once()
         mock_repo_map.assert_called_once_with(mock_config)
         mock_repomap_instance.analyze_project_with_progress.assert_called_once()
         mock_display.assert_called_once_with(mock_project_info, "json")
 
-    @patch('src.repomap_tool.cli.create_search_config')
-    @patch('src.repomap_tool.cli.DockerRepoMap')
-    @patch('src.repomap_tool.cli.Progress')
-    @patch('src.repomap_tool.cli.display_search_results')
-    @patch('src.repomap_tool.cli.SearchRequest')
-    def test_search_command_logic(self, mock_search_request, mock_display, mock_progress, mock_repo_map, mock_create_search_config):
+    @patch("src.repomap_tool.cli.create_search_config")
+    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.Progress")
+    @patch("src.repomap_tool.cli.display_search_results")
+    @patch("src.repomap_tool.cli.SearchRequest")
+    def test_search_command_logic(
+        self,
+        mock_search_request,
+        mock_display,
+        mock_progress,
+        mock_repo_map,
+        mock_create_search_config,
+    ):
         """Test the logic that would be executed by the search command."""
         # Mock the configuration
         mock_config = Mock()
         mock_create_search_config.return_value = mock_config
-        
+
         # Mock the RepoMap
         mock_repomap_instance = Mock()
         mock_repo_map.return_value = mock_repomap_instance
-        
+
         # Mock search request
         mock_request = Mock()
         mock_search_request.return_value = mock_request
-        
+
         # Mock search response
         mock_response = Mock()
         mock_repomap_instance.search_identifiers.return_value = mock_response
-        
+
         # Mock progress context
         mock_progress_context = Mock()
         mock_progress.return_value.__enter__.return_value = mock_progress_context
         mock_progress.return_value.__exit__.return_value = None
-        
+
         # This simulates what the search command would do
         config = mock_create_search_config(
             project_path=".",
@@ -317,7 +328,7 @@ class TestCLIHelperFunctions:
             log_level="INFO",
             cache_size=1000,
         )
-        
+
         request = mock_search_request(
             query="test query",
             match_type="fuzzy",
@@ -325,11 +336,11 @@ class TestCLIHelperFunctions:
             max_results=10,
             strategies=None,
         )
-        
+
         repomap = mock_repo_map(config)
         response = repomap.search_identifiers(request)
         mock_display(response, "table")
-        
+
         # Verify the function calls
         mock_create_search_config.assert_called_once()
         mock_search_request.assert_called_once()
@@ -337,19 +348,19 @@ class TestCLIHelperFunctions:
         mock_repomap_instance.search_identifiers.assert_called_once_with(mock_request)
         mock_display.assert_called_once_with(mock_response, "table")
 
-    @patch('src.repomap_tool.cli.create_default_config')
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.create_default_config")
+    @patch("src.repomap_tool.cli.console")
     def test_config_command_logic_with_output(self, mock_console, mock_create_config):
         """Test the logic that would be executed by the config command with output file."""
         # Mock the configuration
         mock_config = Mock()
         mock_config.model_dump.return_value = {"test": "config"}
         mock_create_config.return_value = mock_config
-        
+
         # Create a temporary file
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             temp_file = f.name
-        
+
         try:
             # This simulates what the config command would do
             config_obj = mock_create_config(
@@ -362,35 +373,37 @@ class TestCLIHelperFunctions:
                 verbose=True,
                 cache_size=1000,
             )
-            
-            config_dict = config_obj.model_dump(mode='json')
-            
+
+            config_dict = config_obj.model_dump(mode="json")
+
             # Write to file
             with open(temp_file, "w") as f:
                 json.dump(config_dict, f, indent=2)
-            
+
             mock_console.print(f"Configuration saved to: {temp_file}")
-            
+
             # Verify the function calls
             mock_create_config.assert_called_once()
-            mock_config.model_dump.assert_called_once_with(mode='json')
+            mock_config.model_dump.assert_called_once_with(mode="json")
             mock_console.print.assert_called_once()
-            
+
             # Verify the file was created
             assert Path(temp_file).exists()
-            
+
         finally:
             Path(temp_file).unlink(missing_ok=True)
 
-    @patch('src.repomap_tool.cli.create_default_config')
-    @patch('src.repomap_tool.cli.console')
-    def test_config_command_logic_without_output(self, mock_console, mock_create_config):
+    @patch("src.repomap_tool.cli.create_default_config")
+    @patch("src.repomap_tool.cli.console")
+    def test_config_command_logic_without_output(
+        self, mock_console, mock_create_config
+    ):
         """Test the logic that would be executed by the config command without output file."""
         # Mock the configuration
         mock_config = Mock()
         mock_config.model_dump.return_value = {"test": "config"}
         mock_create_config.return_value = mock_config
-        
+
         # This simulates what the config command would do
         config_obj = mock_create_config(
             project_path=".",
@@ -402,35 +415,37 @@ class TestCLIHelperFunctions:
             verbose=True,
             cache_size=1000,
         )
-        
-        config_dict = config_obj.model_dump(mode='json')
-        
+
+        config_dict = config_obj.model_dump(mode="json")
+
         # Display configuration
         mock_console.print("Configuration:")
         mock_console.print(json.dumps(config_dict, indent=2))
-        
+
         # Verify the function calls
         mock_create_config.assert_called_once()
-        mock_config.model_dump.assert_called_once_with(mode='json')
+        mock_config.model_dump.assert_called_once_with(mode="json")
         assert mock_console.print.call_count >= 2
 
-    @patch('src.repomap_tool.cli.DockerRepoMap')
-    @patch('src.repomap_tool.cli.console')
-    @patch('src.repomap_tool.models.PerformanceConfig')
-    @patch('src.repomap_tool.models.RepoMapConfig')
-    def test_performance_command_logic(self, mock_repo_map_config, mock_perf_config, mock_console, mock_repo_map):
+    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.console")
+    @patch("src.repomap_tool.models.PerformanceConfig")
+    @patch("src.repomap_tool.models.RepoMapConfig")
+    def test_performance_command_logic(
+        self, mock_repo_map_config, mock_perf_config, mock_console, mock_repo_map
+    ):
         """Test the logic that would be executed by the performance command."""
         # Mock the RepoMap
         mock_repomap_instance = Mock()
         mock_repo_map.return_value = mock_repomap_instance
-        
+
         # Mock performance metrics
         mock_metrics = {
             "configuration": {
                 "max_workers": 4,
                 "parallel_threshold": 10,
                 "enable_progress": True,
-                "enable_monitoring": True
+                "enable_monitoring": True,
             },
             "processing_stats": {
                 "total_files": 100,
@@ -439,23 +454,23 @@ class TestCLIHelperFunctions:
                 "success_rate": 95.0,
                 "total_identifiers": 1000,
                 "processing_time": 1.5,
-                "files_per_second": 66.7
+                "files_per_second": 66.7,
             },
             "file_size_stats": {
                 "total_size_mb": 10.5,
                 "avg_size_kb": 105.0,
-                "largest_file_kb": 500.0
-            }
+                "largest_file_kb": 500.0,
+            },
         }
         mock_repomap_instance.get_performance_metrics.return_value = mock_metrics
-        
+
         # Mock config objects
         mock_perf_config_instance = Mock()
         mock_perf_config.return_value = mock_perf_config_instance
-        
+
         mock_repo_map_config_instance = Mock()
         mock_repo_map_config.return_value = mock_repo_map_config_instance
-        
+
         # This simulates what the performance command would do
         performance_config = mock_perf_config(
             max_workers=4,
@@ -464,28 +479,28 @@ class TestCLIHelperFunctions:
             enable_monitoring=True,
             allow_fallback=False,
         )
-        
+
         config = mock_repo_map_config(
             project_root=".",
             performance=performance_config,
             verbose=True,
         )
-        
+
         repomap = mock_repo_map(config)
         metrics = repomap.get_performance_metrics()
-        
+
         # Verify the function calls
         mock_perf_config.assert_called_once()
         mock_repo_map_config.assert_called_once()
         mock_repo_map.assert_called_once_with(mock_repo_map_config_instance)
         mock_repomap_instance.get_performance_metrics.assert_called_once()
-        
+
         # Verify metrics structure
         assert "configuration" in metrics
         assert "processing_stats" in metrics
         assert "file_size_stats" in metrics
 
-    @patch('src.repomap_tool.cli.console')
+    @patch("src.repomap_tool.cli.console")
     def test_version_command_logic(self, mock_console):
         """Test the logic that would be executed by the version command."""
         # This simulates what the version command would do
@@ -494,9 +509,9 @@ class TestCLIHelperFunctions:
             "Version: 0.1.0\n"
             "A portable code analysis tool using aider libraries"
         )
-        
+
         mock_console.print(version_info)
-        
+
         # Verify the function call
         mock_console.print.assert_called_once_with(version_info)
 

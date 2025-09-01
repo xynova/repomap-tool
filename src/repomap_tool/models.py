@@ -176,10 +176,12 @@ class RepoMapConfig(BaseModel):
     def validate_matching_config(cls, values):
         """Validate that at least one matching method is enabled."""
         # This validator runs after both fields are set, so we can access them directly
-        if hasattr(values, 'fuzzy_match') and hasattr(values, 'semantic_match'):
+        if hasattr(values, "fuzzy_match") and hasattr(values, "semantic_match"):
             if not values.fuzzy_match.enabled and not values.semantic_match.enabled:
-                raise ValueError("At least one matching method (fuzzy or semantic) must be enabled")
-        
+                raise ValueError(
+                    "At least one matching method (fuzzy or semantic) must be enabled"
+                )
+
         return values
 
 

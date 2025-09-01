@@ -40,10 +40,10 @@ class TestCLIConnections:
             output="json",
             verbose=True,
         )
-        
+
         assert config.fuzzy_match.enabled is True
         assert config.semantic_match.enabled is False
-        
+
         # Test fuzzy disabled
         config = create_default_config(
             project_path=".",
@@ -54,7 +54,7 @@ class TestCLIConnections:
             output="json",
             verbose=True,
         )
-        
+
         assert config.fuzzy_match.enabled is False
         assert config.semantic_match.enabled is True
 
@@ -70,10 +70,10 @@ class TestCLIConnections:
             output="json",
             verbose=True,
         )
-        
+
         assert config.semantic_match.enabled is True
         assert config.fuzzy_match.enabled is False
-        
+
         # Test semantic disabled
         config = create_default_config(
             project_path=".",
@@ -84,7 +84,7 @@ class TestCLIConnections:
             output="json",
             verbose=True,
         )
-        
+
         assert config.semantic_match.enabled is False
         assert config.fuzzy_match.enabled is True
 
@@ -99,9 +99,9 @@ class TestCLIConnections:
             output="table",
             verbose=True,
         )
-        
+
         assert config.output_format == "table"
-        
+
         config = create_default_config(
             project_path=".",
             fuzzy=True,
@@ -111,7 +111,7 @@ class TestCLIConnections:
             output="markdown",
             verbose=True,
         )
-        
+
         assert config.output_format == "markdown"
 
     def test_no_progress_connection(self):
@@ -127,9 +127,9 @@ class TestCLIConnections:
             verbose=True,
             no_progress=False,
         )
-        
+
         assert config.performance.enable_progress is True
-        
+
         # Test progress disabled
         config = create_default_config(
             project_path=".",
@@ -141,7 +141,7 @@ class TestCLIConnections:
             verbose=True,
             no_progress=True,
         )
-        
+
         assert config.performance.enable_progress is False
 
     def test_no_monitoring_connection(self):
@@ -157,9 +157,9 @@ class TestCLIConnections:
             verbose=True,
             no_monitoring=False,
         )
-        
+
         assert config.performance.enable_monitoring is True
-        
+
         # Test monitoring disabled
         config = create_default_config(
             project_path=".",
@@ -171,7 +171,7 @@ class TestCLIConnections:
             verbose=True,
             no_monitoring=True,
         )
-        
+
         assert config.performance.enable_monitoring is False
 
     def test_cache_size_connection(self):
@@ -186,7 +186,7 @@ class TestCLIConnections:
             verbose=True,
             cache_size=2000,
         )
-        
+
         assert config.performance.cache_size == 2000
 
     def test_log_level_connection(self):
@@ -201,9 +201,9 @@ class TestCLIConnections:
             verbose=True,
             log_level="DEBUG",
         )
-        
+
         assert config.log_level == "DEBUG"
-        
+
         config = create_default_config(
             project_path=".",
             fuzzy=True,
@@ -214,7 +214,7 @@ class TestCLIConnections:
             verbose=True,
             log_level="ERROR",
         )
-        
+
         assert config.log_level == "ERROR"
 
     def test_refresh_cache_connection(self):
@@ -229,9 +229,9 @@ class TestCLIConnections:
             verbose=True,
             refresh_cache=True,
         )
-        
+
         assert config.refresh_cache is True
-        
+
         config = create_default_config(
             project_path=".",
             fuzzy=True,
@@ -242,7 +242,7 @@ class TestCLIConnections:
             verbose=True,
             refresh_cache=False,
         )
-        
+
         assert config.refresh_cache is False
 
     def test_threshold_conversion(self):
@@ -256,7 +256,7 @@ class TestCLIConnections:
             output="json",
             verbose=True,
         )
-        
+
         # Fuzzy threshold should be converted to percentage
         assert config.fuzzy_match.threshold == 75
         # Semantic threshold should remain as float
@@ -272,29 +272,29 @@ class TestCLIConnections:
             log_level="DEBUG",
             cache_size=1500,
         )
-        
+
         assert config.fuzzy_match.enabled is True
         assert config.semantic_match.enabled is False
         assert config.log_level == "DEBUG"
         assert config.performance.cache_size == 1500
-        
+
         # Test semantic match type
         config = create_search_config(
             project_path=".",
             match_type="semantic",
             verbose=True,
         )
-        
+
         assert config.fuzzy_match.enabled is False
         assert config.semantic_match.enabled is True
-        
+
         # Test hybrid match type
         config = create_search_config(
             project_path=".",
             match_type="hybrid",
             verbose=True,
         )
-        
+
         assert config.fuzzy_match.enabled is True
         assert config.semantic_match.enabled is True
 
@@ -304,36 +304,36 @@ class TestConfigFileLoading:
 
     def test_load_valid_config_file(self):
         """Test loading a valid configuration file."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_data = {
                 "project_root": ".",
                 "fuzzy_match": {
                     "enabled": True,
                     "threshold": 70,
-                    "strategies": ["prefix", "substring"]
+                    "strategies": ["prefix", "substring"],
                 },
                 "semantic_match": {
                     "enabled": False,
                     "threshold": 0.5,
-                    "use_tfidf": True
+                    "use_tfidf": True,
                 },
                 "performance": {
                     "max_workers": 8,
                     "cache_size": 2000,
                     "enable_progress": True,
-                    "enable_monitoring": True
+                    "enable_monitoring": True,
                 },
                 "max_results": 100,
                 "output_format": "table",
                 "verbose": True,
-                "log_level": "DEBUG"
+                "log_level": "DEBUG",
             }
             json.dump(config_data, f)
             config_path = f.name
-        
+
         try:
             config = load_config_file(config_path)
-            
+
             assert isinstance(config, RepoMapConfig)
             assert config.project_root == Path(".").resolve()
             assert config.fuzzy_match.enabled is True
@@ -345,22 +345,20 @@ class TestConfigFileLoading:
             assert config.output_format == "table"
             assert config.verbose is True
             assert config.log_level == "DEBUG"
-            
+
         finally:
             Path(config_path).unlink()
 
     def test_load_invalid_config_file(self):
         """Test loading an invalid configuration file raises appropriate error."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_data = {
                 "project_root": "/nonexistent/project",  # Invalid path
-                "fuzzy_match": {
-                    "enabled": "not_a_boolean"  # Invalid type
-                }
+                "fuzzy_match": {"enabled": "not_a_boolean"},  # Invalid type
             }
             json.dump(config_data, f)
             config_path = f.name
-        
+
         try:
             with pytest.raises(ValueError, match="Invalid configuration file"):
                 load_config_file(config_path)
@@ -374,10 +372,10 @@ class TestConfigFileLoading:
 
     def test_load_malformed_json_config_file(self):
         """Test loading a malformed JSON configuration file raises appropriate error."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write('{"invalid": json}')  # Malformed JSON
             config_path = f.name
-        
+
         try:
             with pytest.raises(ValueError, match="Failed to load configuration file"):
                 load_config_file(config_path)
@@ -400,7 +398,7 @@ class TestConfigurationValidation:
             output="json",
             verbose=True,
         )
-        
+
         # This should also work (semantic enabled)
         config = create_default_config(
             project_path=".",
@@ -411,7 +409,7 @@ class TestConfigurationValidation:
             output="json",
             verbose=True,
         )
-        
+
         # This should also work (both enabled)
         config = create_default_config(
             project_path=".",
@@ -426,7 +424,7 @@ class TestConfigurationValidation:
     def test_output_format_validation(self):
         """Test that output format validation works."""
         valid_formats = ["json", "text", "markdown", "table"]
-        
+
         for fmt in valid_formats:
             config = create_default_config(
                 project_path=".",
@@ -442,7 +440,7 @@ class TestConfigurationValidation:
     def test_log_level_validation(self):
         """Test that log level validation works."""
         valid_levels = ["DEBUG", "INFO", "WARNING", "ERROR"]
-        
+
         for level in valid_levels:
             config = create_default_config(
                 project_path=".",
@@ -463,7 +461,7 @@ class TestCLIOverrides:
     def test_cli_overrides_config_file(self):
         """Test that CLI options override config file settings."""
         # Create a config file with specific settings
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_data = {
                 "project_root": ".",
                 "fuzzy_match": {"enabled": False, "threshold": 50},
@@ -472,15 +470,15 @@ class TestCLIOverrides:
                 "max_results": 25,
                 "output_format": "json",
                 "verbose": False,
-                "log_level": "WARNING"
+                "log_level": "WARNING",
             }
             json.dump(config_data, f)
             config_path = f.name
-        
+
         try:
             # Load config file
             config = load_config_file(config_path)
-            
+
             # Verify original settings
             assert config.fuzzy_match.enabled is False
             assert config.semantic_match.enabled is True
@@ -489,7 +487,7 @@ class TestCLIOverrides:
             assert config.output_format == "json"
             assert config.verbose is False
             assert config.log_level == "WARNING"
-            
+
         finally:
             Path(config_path).unlink()
 
@@ -523,7 +521,7 @@ class TestEdgeCases:
                 output="json",
                 verbose=True,
             )
-        
+
         # Test threshold > 1.0
         with pytest.raises(ValueError):
             create_default_config(

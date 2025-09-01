@@ -225,7 +225,9 @@ def search(
 
     try:
         # Create configuration
-        config = create_search_config(project_path, match_type, verbose, log_level, cache_size)
+        config = create_search_config(
+            project_path, match_type, verbose, log_level, cache_size
+        )
 
         # Create search request
         request = SearchRequest(
@@ -289,10 +291,10 @@ def search(
     help="Cache size for generated config",
 )
 def config(
-    project_path: str, 
-    output: Optional[str], 
-    fuzzy: bool, 
-    semantic: bool, 
+    project_path: str,
+    output: Optional[str],
+    fuzzy: bool,
+    semantic: bool,
     threshold: float,
     cache_size: int,
 ) -> None:
@@ -312,7 +314,7 @@ def config(
         )
 
         # Convert to dictionary with proper serialization
-        config_dict = config_obj.model_dump(mode='json')
+        config_dict = config_obj.model_dump(mode="json")
 
         if output:
             # Write to file
@@ -480,7 +482,7 @@ def load_config_file(config_path: str) -> RepoMapConfig:
     try:
         with open(config_path, "r") as f:
             config_dict = json.load(f)
-        
+
         # Validate against RepoMapConfig model
         config = RepoMapConfig(**config_dict)
         return config
@@ -550,7 +552,11 @@ def create_default_config(
 
 
 def create_search_config(
-    project_path: str, match_type: str, verbose: bool, log_level: str = "INFO", cache_size: int = 1000
+    project_path: str,
+    match_type: str,
+    verbose: bool,
+    log_level: str = "INFO",
+    cache_size: int = 1000,
 ) -> RepoMapConfig:
     """Create configuration for search operations."""
 
@@ -563,11 +569,11 @@ def create_search_config(
 
     # Create performance config with cache settings
     from .models import PerformanceConfig
-    
+
     performance_config = PerformanceConfig(
         cache_size=cache_size,
     )
-    
+
     config = RepoMapConfig(
         project_root=project_path,
         fuzzy_match=fuzzy_config,
