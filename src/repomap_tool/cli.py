@@ -26,6 +26,7 @@ from .models import (
     ProjectInfo,
     create_error_response,
 )
+from pydantic import ValidationError
 from .core import DockerRepoMap
 
 console = Console()
@@ -61,7 +62,7 @@ def cli() -> None:
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "text", "markdown"]),
+    type=click.Choice(["json", "text", "markdown", "table"]),
     default="json",
     help="Output format",
 )
@@ -85,6 +86,23 @@ def cli() -> None:
     is_flag=True,
     help="Allow fallback to sequential processing on errors (not recommended)",
 )
+@click.option(
+    "--cache-size",
+    type=int,
+    default=1000,
+    help="Maximum cache entries (100-10000)",
+)
+@click.option(
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
+    default="INFO",
+    help="Logging level",
+)
+@click.option(
+    "--refresh-cache",
+    is_flag=True,
+    help="Refresh cache before analysis",
+)
 def analyze(
     project_path: str,
     config: Optional[str],
@@ -99,6 +117,9 @@ def analyze(
     no_progress: bool,
     no_monitoring: bool,
     allow_fallback: bool,
+    cache_size: int,
+    log_level: str,
+    refresh_cache: bool,
 ) -> None:
     """Analyze a project and generate a code map."""
 
@@ -106,6 +127,36 @@ def analyze(
         # Load configuration
         if config:
             config_obj = load_config_file(config)
+            # Apply CLI overrides to loaded config
+            if fuzzy is not None:
+                config_obj.fuzzy_match.enabled = fuzzy
+            if semantic is not None:
+                config_obj.semantic_match.enabled = semantic
+            if threshold is not None:
+                config_obj.fuzzy_match.threshold = int(threshold * 100)
+                config_obj.semantic_match.threshold = threshold
+            if max_results is not None:
+                config_obj.max_results = max_results
+            if output is not None:
+                config_obj.output_format = output  # type: ignore[assignment]
+            if verbose is not None:
+                config_obj.verbose = verbose
+            if max_workers is not None:
+                config_obj.performance.max_workers = max_workers
+            if parallel_threshold is not None:
+                config_obj.performance.parallel_threshold = parallel_threshold
+            if no_progress is not None:
+                config_obj.performance.enable_progress = not no_progress
+            if no_monitoring is not None:
+                config_obj.performance.enable_monitoring = not no_monitoring
+            if allow_fallback is not None:
+                config_obj.performance.allow_fallback = allow_fallback
+            if cache_size is not None:
+                config_obj.performance.cache_size = cache_size
+            if log_level is not None:
+                config_obj.log_level = log_level
+            if refresh_cache is not None:
+                config_obj.refresh_cache = refresh_cache
         else:
             config_obj = create_default_config(
                 project_path,
@@ -113,13 +164,16 @@ def analyze(
                 semantic,
                 threshold,
                 max_results,
-                output,
+                output,  # type: ignore[arg-type]
                 verbose,
                 max_workers,
                 parallel_threshold,
                 no_progress,
                 no_monitoring,
                 allow_fallback,
+                cache_size,
+                log_level,
+                refresh_cache,
             )
 
         # Initialize RepoMap
@@ -139,7 +193,7 @@ def analyze(
             progress.update(task, description="Analysis complete!")
 
         # Display results
-        display_project_info(project_info, output)
+        display_project_info(project_info, output)  # type: ignore[arg-type]
 
     except Exception as e:
         error_response = create_error_response(str(e), "AnalysisError")
@@ -173,6 +227,18 @@ def analyze(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option(
+    "--log-level",
+    type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
+    default="INFO",
+    help="Logging level",
+)
+@click.option(
+    "--cache-size",
+    type=int,
+    default=1000,
+    help="Maximum cache entries (100-10000)",
+)
 def search(
     project_path: str,
     query: str,
@@ -182,12 +248,16 @@ def search(
     strategies: tuple,
     output: str,
     verbose: bool,
+    log_level: str,
+    cache_size: int,
 ) -> None:
     """Search for identifiers in a project."""
 
     try:
         # Create configuration
-        config = create_search_config(project_path, match_type, verbose)
+        config = create_search_config(
+            project_path, match_type, verbose, log_level, cache_size
+        )
 
         # Create search request
         request = SearchRequest(
@@ -215,7 +285,7 @@ def search(
             progress.update(task, description="Search complete!")
 
         # Display results
-        display_search_results(response, output)
+        display_search_results(response, output)  # type: ignore[arg-type]
 
     except Exception as e:
         error_response = create_error_response(str(e), "SearchError")
@@ -228,23 +298,53 @@ def search(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
 @click.option("--output", "-o", type=click.Path(), help="Output file for configuration")
-def config(project_path: str, output: Optional[str]) -> None:
+@click.option(
+    "--fuzzy/--no-fuzzy",
+    default=True,
+    help="Enable fuzzy matching in generated config",
+)
+@click.option(
+    "--semantic/--no-semantic",
+    default=True,
+    help="Enable semantic matching in generated config",
+)
+@click.option(
+    "--threshold",
+    type=float,
+    default=0.7,
+    help="Match threshold for generated config",
+)
+@click.option(
+    "--cache-size",
+    type=int,
+    default=1000,
+    help="Cache size for generated config",
+)
+def config(
+    project_path: str,
+    output: Optional[str],
+    fuzzy: bool,
+    semantic: bool,
+    threshold: float,
+    cache_size: int,
+) -> None:
     """Generate a configuration file for the project."""
 
     try:
         # Create default configuration
         config_obj = create_default_config(
             project_path,
-            fuzzy=True,
-            semantic=True,
-            threshold=0.7,
+            fuzzy=fuzzy,
+            semantic=semantic,
+            threshold=threshold,
             max_results=50,
             output="json",
             verbose=True,
+            cache_size=cache_size,
         )
 
-        # Convert to dictionary
-        config_dict = config_obj.model_dump()
+        # Convert to dictionary with proper serialization
+        config_dict = config_obj.model_dump(mode="json")
 
         if output:
             # Write to file
@@ -312,9 +412,27 @@ def performance(
             allow_fallback=allow_fallback,
         )
 
+        from .models import FuzzyMatchConfig, SemanticMatchConfig
+
+        fuzzy_config = FuzzyMatchConfig(
+            enabled=True,
+            threshold=70,
+            strategies=["prefix", "substring", "levenshtein"],
+            cache_results=True,
+        )
+        semantic_config = SemanticMatchConfig(
+            enabled=True,
+            threshold=0.7,
+            use_tfidf=True,
+            min_word_length=3,
+            cache_results=True,
+        )
+
         config = RepoMapConfig(
             project_root=project_path,
             performance=performance_config,
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
             verbose=True,
         )
 
@@ -408,11 +526,16 @@ def version() -> None:
 
 
 def load_config_file(config_path: str) -> RepoMapConfig:
-    """Load configuration from file."""
+    """Load and validate configuration from file."""
     try:
         with open(config_path, "r") as f:
             config_dict = json.load(f)
-        return RepoMapConfig(**config_dict)
+
+        # Validate against RepoMapConfig model
+        config = RepoMapConfig(**config_dict)
+        return config
+    except ValidationError as e:
+        raise ValueError(f"Invalid configuration file: {e}")
     except Exception as e:
         raise ValueError(f"Failed to load configuration file: {e}")
 
@@ -423,13 +546,16 @@ def create_default_config(
     semantic: bool,
     threshold: float,
     max_results: int,
-    output: str,
+    output: Literal["json", "text", "markdown", "table"],
     verbose: bool,
     max_workers: int = 4,
     parallel_threshold: int = 10,
     no_progress: bool = False,
     no_monitoring: bool = False,
     allow_fallback: bool = False,
+    cache_size: int = 1000,
+    log_level: str = "INFO",
+    refresh_cache: bool = False,
 ) -> RepoMapConfig:
     """Create default configuration."""
 
@@ -454,6 +580,7 @@ def create_default_config(
         enable_progress=not no_progress,
         enable_monitoring=not no_monitoring,
         allow_fallback=allow_fallback,
+        cache_size=cache_size,
     )
 
     # Create main config
@@ -463,36 +590,58 @@ def create_default_config(
         semantic_match=semantic_config,
         performance=performance_config,
         max_results=max_results,
-        output_format=output,  # type: ignore[arg-type]
+        output_format=output,
         verbose=verbose,
+        log_level=log_level,
+        refresh_cache=refresh_cache,
     )
 
     return config
 
 
 def create_search_config(
-    project_path: str, match_type: str, verbose: bool
+    project_path: str,
+    match_type: str,
+    verbose: bool,
+    log_level: str = "INFO",
+    cache_size: int = 1000,
 ) -> RepoMapConfig:
     """Create configuration for search operations."""
 
     # Enable appropriate matchers based on match type
+    # Default to hybrid if invalid match type is provided
+    if match_type not in ["fuzzy", "semantic", "hybrid"]:
+        match_type = "hybrid"
+
     fuzzy_enabled = match_type in ["fuzzy", "hybrid"]
     semantic_enabled = match_type in ["semantic", "hybrid"]
 
     fuzzy_config = FuzzyMatchConfig(enabled=fuzzy_enabled)
     semantic_config = SemanticMatchConfig(enabled=semantic_enabled)
 
+    # Create performance config with cache settings
+    from .models import PerformanceConfig
+
+    performance_config = PerformanceConfig(
+        cache_size=cache_size,
+    )
+
     config = RepoMapConfig(
         project_root=project_path,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
+        performance=performance_config,
         verbose=verbose,
+        log_level=log_level,
     )
 
     return config
 
 
-def display_project_info(project_info: ProjectInfo, output_format: str) -> None:
+def display_project_info(
+    project_info: ProjectInfo,
+    output_format: Literal["json", "text", "markdown", "table"],
+) -> None:
     """Display project analysis results."""
 
     if output_format == "json":
@@ -544,7 +693,10 @@ def display_project_info(project_info: ProjectInfo, output_format: str) -> None:
         console.print(id_table)
 
 
-def display_search_results(response: SearchResponse, output_format: str) -> None:
+def display_search_results(
+    response: SearchResponse,
+    output_format: Literal["json", "text", "markdown", "table"],
+) -> None:
     """Display search results."""
 
     if output_format == "json":
