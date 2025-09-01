@@ -106,7 +106,7 @@ class RepoMapConfig(BaseModel):
 
     # Advanced options
     refresh_cache: bool = Field(default=False, description="Refresh cache")
-    output_format: Literal["json", "text", "markdown"] = "json"
+    output_format: Literal["json", "text", "markdown", "table"] = "json"
     max_results: int = Field(
         default=50, ge=1, le=1000, description="Maximum results to return"
     )
@@ -170,6 +170,17 @@ class RepoMapConfig(BaseModel):
         if v.upper() not in valid_levels:
             raise ValueError(f"Invalid log level: {v}. Valid: {valid_levels}")
         return v.upper()
+
+    @field_validator("fuzzy_match", "semantic_match", mode="after")
+    @classmethod
+    def validate_matching_config(cls, values):
+        """Validate that at least one matching method is enabled."""
+        # This validator runs after both fields are set, so we can access them directly
+        if hasattr(values, 'fuzzy_match') and hasattr(values, 'semantic_match'):
+            if not values.fuzzy_match.enabled and not values.semantic_match.enabled:
+                raise ValueError("At least one matching method (fuzzy or semantic) must be enabled")
+        
+        return values
 
 
 class MatchResult(BaseModel):
