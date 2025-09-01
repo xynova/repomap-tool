@@ -458,8 +458,8 @@ class TestConfigurationValidation:
 class TestCLIOverrides:
     """Test that CLI options properly override config file settings."""
 
-    def test_cli_overrides_config_file(self):
-        """Test that CLI options override config file settings."""
+    def test_load_config_file_with_various_settings(self):
+        """Test loading configuration file with various settings."""
         # Create a config file with specific settings
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_data = {

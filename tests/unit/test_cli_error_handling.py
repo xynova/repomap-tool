@@ -104,9 +104,9 @@ class TestErrorHandling:
             verbose=True,
         )
 
-        # Should default to both disabled
-        assert config.fuzzy_match.enabled is False
-        assert config.semantic_match.enabled is False
+        # Should default to hybrid (both enabled) for invalid match type
+        assert config.fuzzy_match.enabled is True
+        assert config.semantic_match.enabled is True
 
 
 class TestDisplayFunctionsErrorHandling:

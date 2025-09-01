@@ -8,7 +8,7 @@ and match results using Pydantic for validation and serialization.
 
 from pathlib import Path
 from typing import List, Dict, Optional, Any, Literal, Union
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
 import logging
 
@@ -49,7 +49,7 @@ class PerformanceConfig(BaseModel):
 class FuzzyMatchConfig(BaseModel):
     """Configuration for fuzzy matching."""
 
-    enabled: bool = False
+    enabled: bool = True
     threshold: int = Field(
         default=70, ge=0, le=100, description="Similarity threshold (0-100)"
     )
@@ -171,18 +171,14 @@ class RepoMapConfig(BaseModel):
             raise ValueError(f"Invalid log level: {v}. Valid: {valid_levels}")
         return v.upper()
 
-    @field_validator("fuzzy_match", "semantic_match", mode="after")
-    @classmethod
-    def validate_matching_config(cls, values: Any) -> Any:
+    @model_validator(mode="after")
+    def validate_matching_config(self) -> "RepoMapConfig":
         """Validate that at least one matching method is enabled."""
-        # This validator runs after both fields are set, so we can access them directly
-        if hasattr(values, "fuzzy_match") and hasattr(values, "semantic_match"):
-            if not values.fuzzy_match.enabled and not values.semantic_match.enabled:
-                raise ValueError(
-                    "At least one matching method (fuzzy or semantic) must be enabled"
-                )
-
-        return values
+        if not self.fuzzy_match.enabled and not self.semantic_match.enabled:
+            raise ValueError(
+                "At least one matching method (fuzzy or semantic) must be enabled"
+            )
+        return self
 
 
 class MatchResult(BaseModel):

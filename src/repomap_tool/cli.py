@@ -127,6 +127,36 @@ def analyze(
         # Load configuration
         if config:
             config_obj = load_config_file(config)
+            # Apply CLI overrides to loaded config
+            if fuzzy is not None:
+                config_obj.fuzzy_match.enabled = fuzzy
+            if semantic is not None:
+                config_obj.semantic_match.enabled = semantic
+            if threshold is not None:
+                config_obj.fuzzy_match.threshold = int(threshold * 100)
+                config_obj.semantic_match.threshold = threshold
+            if max_results is not None:
+                config_obj.max_results = max_results
+            if output is not None:
+                config_obj.output_format = output  # type: ignore[assignment]
+            if verbose is not None:
+                config_obj.verbose = verbose
+            if max_workers is not None:
+                config_obj.performance.max_workers = max_workers
+            if parallel_threshold is not None:
+                config_obj.performance.parallel_threshold = parallel_threshold
+            if no_progress is not None:
+                config_obj.performance.enable_progress = not no_progress
+            if no_monitoring is not None:
+                config_obj.performance.enable_monitoring = not no_monitoring
+            if allow_fallback is not None:
+                config_obj.performance.allow_fallback = allow_fallback
+            if cache_size is not None:
+                config_obj.performance.cache_size = cache_size
+            if log_level is not None:
+                config_obj.log_level = log_level
+            if refresh_cache is not None:
+                config_obj.refresh_cache = refresh_cache
         else:
             config_obj = create_default_config(
                 project_path,
@@ -382,9 +412,27 @@ def performance(
             allow_fallback=allow_fallback,
         )
 
+        from .models import FuzzyMatchConfig, SemanticMatchConfig
+        
+        fuzzy_config = FuzzyMatchConfig(
+            enabled=True, 
+            threshold=70, 
+            strategies=["prefix", "substring", "levenshtein"], 
+            cache_results=True
+        )
+        semantic_config = SemanticMatchConfig(
+            enabled=True, 
+            threshold=0.7, 
+            use_tfidf=True, 
+            min_word_length=3, 
+            cache_results=True
+        )
+        
         config = RepoMapConfig(
             project_root=project_path,
             performance=performance_config,
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
             verbose=True,
         )
 
@@ -561,6 +609,10 @@ def create_search_config(
     """Create configuration for search operations."""
 
     # Enable appropriate matchers based on match type
+    # Default to hybrid if invalid match type is provided
+    if match_type not in ["fuzzy", "semantic", "hybrid"]:
+        match_type = "hybrid"
+    
     fuzzy_enabled = match_type in ["fuzzy", "hybrid"]
     semantic_enabled = match_type in ["semantic", "hybrid"]
 
