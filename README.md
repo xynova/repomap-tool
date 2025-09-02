@@ -2,7 +2,10 @@
 
 *A Tool to Help AI Assistants Navigate and Understand Codebases*
 
-
+[![CI](https://github.com/{username}/repomap-tool/workflows/CI/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3ACI)
+[![Docker Build](https://github.com/{username}/repomap-tool/workflows/Docker%20Build/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3A%22Docker+Build%22)
+[![Release](https://github.com/{username}/repomap-tool/workflows/Release/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3ARelease)
+[![Nightly Build](https://github.com/{username}/repomap-tool/workflows/Nightly%20Build/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3A%22Nightly+Build%22)
 
 > "Code archaeology isn't just about finding what works, but understanding why it was written that way in the first place." 
 > `James Wilson`
