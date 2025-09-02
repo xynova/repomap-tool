@@ -731,6 +731,440 @@ def display_search_results(
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
+@click.argument("intent", type=str)
+@click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
+@click.option("--max-depth", default=3, help="Maximum tree depth")
+def explore(project_path: str, intent: str, session: Optional[str], max_depth: int):
+    """Discover exploration trees from intent."""
+    
+    try:
+        import os
+        import time
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            session_id = f"explore_{int(time.time())}"
+            console.print(f"💡 Using session: {session_id}")
+            console.print(f"Set: export REPOMAP_SESSION={session_id}")
+        
+        # Create configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig(max_depth=max_depth, entrypoint_threshold=0.6)
+        
+        config = RepoMapConfig(
+            project_root=project_path,
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config,
+            verbose=True
+        )
+        
+        # Initialize RepoMap
+        repomap = DockerRepoMap(config)
+        
+        # Import tree components
+        from .trees import EntrypointDiscoverer, TreeClusterer, TreeBuilder, SessionManager
+        
+        # Discover entrypoints
+        discoverer = EntrypointDiscoverer(repomap)
+        entrypoints = discoverer.discover_entrypoints(project_path, intent)
+        
+        if not entrypoints:
+            console.print(f"⚠️  No high-confidence entrypoints found for intent: \"{intent}\"")
+            console.print("\n💡 Suggestions:")
+            console.print(f"  • Try broader terms: \"{intent.split()[0]}\", \"{intent.split()[-1] if len(intent.split()) > 1 else 'code'}\"")
+            console.print(f"  • Use semantic search: repomap-tool search \"{intent}\"")
+            console.print("\n🔧 Alternative approaches:")
+            console.print(f"  repomap-tool analyze {project_path}               # Get general overview")
+            console.print(f"  repomap-tool search \"{intent}\" --fuzzy          # Fuzzy search")
+            return
+        
+        # Cluster into trees
+        clusterer = TreeClusterer()
+        clusters = clusterer.cluster_entrypoints(entrypoints)
+        
+        # Build exploration trees
+        tree_builder = TreeBuilder(repomap)
+        session_manager = SessionManager()
+        session = session_manager.get_or_create_session(session_id, project_path)
+        
+        console.print(f"🔍 Found {len(clusters)} exploration contexts:")
+        
+        for cluster in clusters:
+            # Build tree from cluster
+            tree = tree_builder.build_exploration_tree(cluster.entrypoints[0], max_depth)
+            tree.context_name = cluster.context_name
+            tree.confidence = cluster.confidence
+            
+            # Store in session
+            session.exploration_trees[tree.tree_id] = tree
+            
+            console.print(f"  • {tree.context_name} [id: {tree.tree_id}] (confidence: {tree.confidence:.2f})")
+        
+        session_manager.persist_session(session)
+        
+        console.print(f"\n💡 Next steps:")
+        console.print(f"  repomap-tool focus <tree_id>    # Focus on specific tree")
+        console.print(f"  repomap-tool map                # View current tree")
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "ExplorationError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("tree_id", type=str)
+@click.option("--session", "-s", help="Session ID")
+def focus(tree_id: str, session: Optional[str]):
+    """Focus on specific exploration tree (stateful)."""
+    
+    try:
+        import os
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            console.print("❌ No session specified")
+            console.print("💡 Use: export REPOMAP_SESSION=<session_id>")
+            console.print("   Or: repomap-tool focus <tree_id> --session <session_id>")
+            return
+        
+        # Create minimal configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig()
+        
+        config = RepoMapConfig(
+            project_root=".",  # Project path from session
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config
+        )
+        
+        # Initialize RepoMap and TreeManager
+        repomap = DockerRepoMap(config)
+        from .trees import TreeManager
+        
+        tree_manager = TreeManager(repomap)
+        
+        if tree_manager.focus_tree(session_id, tree_id):
+            console.print(f"✅ Focused on tree: {tree_id}")
+        else:
+            console.print(f"❌ Failed to focus on tree: {tree_id}")
+            console.print("💡 Check that the tree exists in your session")
+            
+    except Exception as e:
+        error_response = create_error_response(str(e), "FocusError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("expansion_area", type=str)
+@click.option("--session", "-s", help="Session ID")
+@click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
+def expand(expansion_area: str, session: Optional[str], tree: Optional[str]):
+    """Expand tree in specific area."""
+    
+    try:
+        import os
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            console.print("❌ No session specified")
+            console.print("💡 Use: export REPOMAP_SESSION=<session_id>")
+            console.print("   Or: repomap-tool expand <area> --session <session_id>")
+            return
+        
+        # Create minimal configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig()
+        
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config
+        )
+        
+        # Initialize RepoMap and TreeManager
+        repomap = DockerRepoMap(config)
+        from .trees import TreeManager
+        
+        tree_manager = TreeManager(repomap)
+        
+        if tree_manager.expand_tree(session_id, expansion_area, tree):
+            console.print(f"✅ Expanded tree in area: {expansion_area}")
+        else:
+            console.print(f"❌ Failed to expand tree in area: {expansion_area}")
+            console.print("💡 Check that the area exists in your focused tree")
+            
+    except Exception as e:
+        error_response = create_error_response(str(e), "ExpansionError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument("prune_area", type=str)
+@click.option("--session", "-s", help="Session ID")
+@click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
+def prune(prune_area: str, session: Optional[str], tree: Optional[str]):
+    """Prune branch from tree."""
+    
+    try:
+        import os
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            console.print("❌ No session specified")
+            console.print("💡 Use: export REPOMAP_SESSION=<session_id>")
+            console.print("   Or: repomap-tool prune <area> --session <session_id>")
+            return
+        
+        # Create minimal configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig()
+        
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config
+        )
+        
+        # Initialize RepoMap and TreeManager
+        repomap = DockerRepoMap(config)
+        from .trees import TreeManager
+        
+        tree_manager = TreeManager(repomap)
+        
+        if tree_manager.prune_tree(session_id, prune_area, tree):
+            console.print(f"✅ Pruned tree in area: {prune_area}")
+        else:
+            console.print(f"❌ Failed to prune tree in area: {prune_area}")
+            console.print("💡 Check that the area exists in your focused tree")
+            
+    except Exception as e:
+        error_response = create_error_response(str(e), "PruningError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--session", "-s", help="Session ID")
+@click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
+@click.option("--include-code", is_flag=True, help="Include code snippets")
+def map(session: Optional[str], tree: Optional[str], include_code: bool):
+    """Generate repomap from current tree state."""
+    
+    try:
+        import os
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            console.print("❌ No session specified")
+            console.print("💡 Use: export REPOMAP_SESSION=<session_id>")
+            console.print("   Or: repomap-tool map --session <session_id>")
+            return
+        
+        # Create minimal configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig()
+        
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config
+        )
+        
+        # Initialize RepoMap, TreeManager, and TreeMapper
+        repomap = DockerRepoMap(config)
+        from .trees import TreeManager, TreeMapper
+        
+        tree_manager = TreeManager(repomap)
+        tree_mapper = TreeMapper(repomap)
+        
+        current_tree = tree_manager.get_tree_state(session_id, tree)
+        if not current_tree:
+            console.print("❌ No tree found. Use 'repomap-tool focus <tree_id>' first")
+            return
+        
+        tree_map = tree_mapper.generate_tree_map(current_tree, include_code)
+        console.print(tree_map)
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "MappingError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--session", "-s", help="Session ID")
+def list_trees(session: Optional[str]):
+    """List all trees in a session."""
+    
+    try:
+        import os
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            console.print("❌ No session specified")
+            console.print("💡 Use: export REPOMAP_SESSION=<session_id>")
+            console.print("   Or: repomap-tool list-trees --session <session_id>")
+            return
+        
+        # Create minimal configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig()
+        
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config
+        )
+        
+        # Initialize RepoMap and TreeManager
+        repomap = DockerRepoMap(config)
+        from .trees import TreeManager
+        
+        tree_manager = TreeManager(repomap)
+        
+        trees_info = tree_manager.list_trees(session_id)
+        
+        if not trees_info:
+            console.print(f"📋 No trees found in session '{session_id}'")
+            console.print("💡 Use 'repomap-tool explore <project> <intent>' to create trees")
+            return
+        
+        console.print(f"📋 Trees in session '{session_id}':")
+        
+        for tree_info in trees_info:
+            focus_indicator = " [FOCUSED]" if tree_info['is_focused'] else ""
+            console.print(f"  • {tree_info['tree_id']}{focus_indicator} - {tree_info['context_name']}")
+            console.print(f"    Root: {tree_info['root_entrypoint']}")
+            console.print(f"    Confidence: {tree_info['confidence']:.2f}, Nodes: {tree_info['node_count']}")
+            
+            if tree_info['expanded_areas']:
+                console.print(f"    Expanded: {', '.join(tree_info['expanded_areas'])}")
+            
+            if tree_info['pruned_areas']:
+                console.print(f"    Pruned: {', '.join(tree_info['pruned_areas'])}")
+            
+            console.print("")
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "ListTreesError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.option("--session", "-s", help="Session ID")
+def status(session: Optional[str]):
+    """Show session status and current tree information."""
+    
+    try:
+        import os
+        
+        session_id = session or os.environ.get('REPOMAP_SESSION')
+        if not session_id:
+            console.print("❌ No session specified")
+            console.print("💡 Use: export REPOMAP_SESSION=<session_id>")
+            console.print("   Or: repomap-tool status --session <session_id>")
+            return
+        
+        # Create minimal configuration
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, TreeConfig
+        
+        fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+        semantic_config = SemanticMatchConfig(enabled=True, threshold=0.7, cache_results=True)
+        tree_config = TreeConfig()
+        
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            trees=tree_config
+        )
+        
+        # Initialize RepoMap and TreeManager
+        repomap = DockerRepoMap(config)
+        from .trees import TreeManager, SessionManager
+        
+        tree_manager = TreeManager(repomap)
+        session_manager = SessionManager()
+        
+        # Get session info
+        current_session = session_manager.get_session(session_id)
+        if not current_session:
+            console.print(f"❌ Session '{session_id}' not found")
+            return
+        
+        # Get current tree info
+        current_tree = None
+        if current_session.current_focus:
+            current_tree = tree_manager.get_tree_state(session_id, current_session.current_focus)
+        
+        # Display status
+        console.print(f"📊 Session Status: {session_id}")
+        console.print("═══════════════════════════════════════")
+        console.print("")
+        
+        if current_session.current_focus:
+            console.print(f"🎯 Current Focus: {current_session.current_focus}")
+        else:
+            console.print("🎯 Current Focus: None")
+        
+        console.print(f"📅 Session Started: {current_session.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        console.print(f"🕐 Last Activity: {current_session.last_activity.strftime('%Y-%m-%d %H:%M:%S')}")
+        console.print("")
+        
+        # Tree information
+        trees_info = tree_manager.list_trees(session_id)
+        console.print(f"🌳 Exploration Trees ({len(trees_info)} total):")
+        
+        for i, tree_info in enumerate(trees_info, 1):
+            focus_indicator = "🎯" if tree_info['is_focused'] else "📋"
+            console.print(f"  {i}. {focus_indicator} {tree_info['tree_id']} - {tree_info['context_name']}")
+        
+        console.print("")
+        
+        if current_tree:
+            console.print("💡 Quick Actions:")
+            console.print("  repomap-tool map                          # View current focused tree")
+            console.print(f"  repomap-tool expand <area>               # Expand current tree")
+            console.print(f"  repomap-tool prune <area>                # Prune current tree")
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "StatusError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
 @click.option(
     "--refresh",
     is_flag=True,

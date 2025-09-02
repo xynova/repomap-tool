@@ -7,7 +7,7 @@ and match results using Pydantic for validation and serialization.
 """
 
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Literal, Union
+from typing import List, Dict, Optional, Any, Literal, Union, Set
 from pydantic import BaseModel, Field, field_validator, model_validator
 from datetime import datetime
 import logging
@@ -86,6 +86,17 @@ class SemanticMatchConfig(BaseModel):
     cache_results: bool = True
 
 
+class TreeConfig(BaseModel):
+    """Configuration for tree exploration functionality."""
+    
+    enabled: bool = Field(default=True, description="Enable tree exploration")
+    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum tree depth")
+    max_trees_per_session: int = Field(default=10, ge=1, le=100, description="Maximum trees per session")
+    entrypoint_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Entrypoint discovery threshold")
+    enable_code_snippets: bool = Field(default=True, description="Include code snippets in tree output")
+    cache_tree_structures: bool = Field(default=True, description="Cache tree structures for performance")
+
+
 class RepoMapConfig(BaseModel):
     """Main configuration for Docker RepoMap."""
 
@@ -103,6 +114,9 @@ class RepoMapConfig(BaseModel):
     # Matching configurations
     fuzzy_match: FuzzyMatchConfig = Field(default_factory=FuzzyMatchConfig)
     semantic_match: SemanticMatchConfig = Field(default_factory=SemanticMatchConfig)
+
+    # Tree exploration configuration
+    trees: TreeConfig = Field(default_factory=TreeConfig)
 
     # Advanced options
     refresh_cache: bool = Field(default=False, description="Refresh cache")
@@ -342,3 +356,68 @@ def create_error_response(
     return ErrorResponse(
         error=error, error_type=error_type, details=details, request_id=request_id
     )
+
+
+# Tree Exploration Models
+class TreeNode(BaseModel):
+    """Represents a node in the exploration tree."""
+    
+    identifier: str = Field(description="Function/class name or symbol identifier")
+    location: str = Field(description="File path and line number (file:line)")
+    node_type: str = Field(description="Type of node: entrypoint, function, class, import")
+    depth: int = Field(description="Depth in the tree (0 = root)")
+    children: List["TreeNode"] = Field(default_factory=list, description="Child nodes")
+    parent: Optional["TreeNode"] = Field(default=None, description="Parent node")
+    expanded: bool = Field(default=False, description="Whether this node has been expanded")
+    structural_info: Dict[str, Any] = Field(default_factory=dict, description="Dependencies, calls, etc.")
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class Entrypoint(BaseModel):
+    """Represents a discovered code entry point."""
+    
+    identifier: str = Field(description="Function/class name")
+    location: str = Field(description="File path and line number")
+    score: float = Field(ge=0.0, le=1.0, description="Relevance score from discovery")
+    structural_context: Dict[str, Any] = Field(default_factory=dict, description="Dependencies, complexity, etc.")
+    categories: List[str] = Field(default_factory=list, description="Semantic categories")
+
+
+class TreeCluster(BaseModel):
+    """Represents a cluster of related entrypoints."""
+    
+    context_name: str = Field(description="Human-readable context name like 'Auth Error Handling'")
+    entrypoints: List[Entrypoint] = Field(description="Entrypoints in this cluster")
+    confidence: float = Field(ge=0.0, le=1.0, description="Cluster confidence score")
+    tree_id: str = Field(description="Unique identifier for the tree built from this cluster")
+
+
+class ExplorationTree(BaseModel):
+    """Represents an exploration tree starting from entrypoints."""
+    
+    tree_id: str = Field(description="Unique tree identifier")
+    root_entrypoint: Entrypoint = Field(description="Root entrypoint of the tree")
+    max_depth: int = Field(default=3, description="Maximum tree depth")
+    tree_structure: Optional[TreeNode] = Field(default=None, description="Tree structure")
+    expanded_areas: Set[str] = Field(default_factory=set, description="Areas that have been expanded")
+    pruned_areas: Set[str] = Field(default_factory=set, description="Areas that have been pruned")
+    context_name: str = Field(default="", description="Human-readable context name")
+    confidence: float = Field(default=0.0, description="Tree confidence score")
+    created_at: datetime = Field(default_factory=datetime.now, description="Tree creation timestamp")
+    last_modified: datetime = Field(default_factory=datetime.now, description="Last modification timestamp")
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+
+class ExplorationSession(BaseModel):
+    """Represents an exploration session with multiple trees."""
+    
+    session_id: str = Field(description="Unique session identifier")
+    project_path: str = Field(description="Project path being explored")
+    exploration_trees: Dict[str, ExplorationTree] = Field(default_factory=dict, description="Trees in this session")
+    current_focus: Optional[str] = Field(default=None, description="Currently focused tree ID")
+    created_at: datetime = Field(default_factory=datetime.now, description="Session creation timestamp")
+    last_activity: datetime = Field(default_factory=datetime.now, description="Last activity timestamp")

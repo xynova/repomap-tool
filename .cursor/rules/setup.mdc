@@ -1,3 +1,9 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
 # AI Instructions: Use Existing Setup - NO NEW VENVS
 
 ## 🚫 FORBIDDEN ACTIONS:
@@ -53,25 +59,3 @@ source venv/bin/activate && make test-unit
 ```bash
 python3 -m venv test_venv  # NEVER DO THIS
 ```
-
-## 🧪 TESTING REQUIREMENTS:
-- **ALWAYS** write comprehensive tests for new functionality
-- **NEVER** claim tests pass without actually running them
-- **NEVER** provide fake test solutions or incomplete test coverage
-- **ALWAYS** verify tests run successfully with `make test-unit`
-- **ALWAYS** fix failing tests before claiming success
-- **ALWAYS** test edge cases and error conditions
-- **ALWAYS** ensure test coverage for new code paths
-
-## 🔍 TESTING WORKFLOW:
-1. **Write tests first** for new functionality
-2. **Run tests immediately** after any code changes
-3. **Fix all failures** before proceeding
-4. **Verify end-to-end** functionality works
-5. **Never skip testing** - it's mandatory, not optional
-
-## ⚠️ TESTING RULES:
-- **NO FAKE SOLUTIONS**: Every test must actually pass
-- **NO SKIPPED TESTS**: All tests must run and pass
-- **NO PARTIAL COVERAGE**: Test all new code paths
-- **NO ASSUMPTIONS**: Verify everything works, don't guess

@@ -1,0 +1,43 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+
+## 🧪 TESTING REQUIREMENTS:
+- **ALWAYS** write comprehensive tests for new functionality
+- **NEVER** claim tests pass without actually running them
+- **NEVER** provide fake test solutions or incomplete test coverage
+- **ALWAYS** verify tests run successfully with `make test-unit`
+- **ALWAYS** fix failing tests before claiming success
+- **ALWAYS** test edge cases and error conditions
+- **ALWAYS** ensure test coverage for new code paths
+
+## 🔍 TESTING WORKFLOW:
+1. **Write tests first** for new functionality
+2. **Run tests immediately** after any code changes
+3. **Fix all failures** before proceeding
+4. **Verify end-to-end** functionality works
+5. **Never skip testing** - it's mandatory, not optional
+
+## ⚠️ TESTING RULES:
+- **NO FAKE SOLUTIONS**: Every test must actually pass
+- **NO SKIPPED TESTS**: All tests must run and pass
+- **NO PARTIAL COVERAGE**: Test all new code paths
+- **NO ASSUMPTIONS**: Verify everything works, don't guess
+
+## 🚀 FINAL VALIDATION REQUIREMENTS:
+- **ALWAYS** run `make ci` before finishing work
+- **ALWAYS** fix any CI errors before claiming completion
+- **ALWAYS** ensure good real coverage for all updates (>80% for new code)
+- **ALWAYS** verify integration tests pass (not just unit tests)
+- **ALWAYS** check that new functionality works end-to-end
+- **NEVER** finish work with failing CI or poor coverage
+
+## 📊 COVERAGE REQUIREMENTS:
+- **New functionality**: Must have >70% test coverage
+- **Modified code**: Must maintain or improve existing coverage
+- **Integration points**: Must be tested with real scenarios
+- **Edge cases**: Must be covered for all new features
+- **Error conditions**: Must be tested for robustness
