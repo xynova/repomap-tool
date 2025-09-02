@@ -78,6 +78,9 @@ class DockerRepoMap:
         self._initialize_components()
 
         self.logger.info(f"Initialized DockerRepoMap for {self.config.project_root}")
+        
+        # Invalidate stale caches on initialization
+        self._invalidate_stale_caches()
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging based on configuration."""
@@ -157,6 +160,52 @@ class DockerRepoMap:
                 verbose=self.config.verbose,
             )
             self.logger.info("Initialized HybridMatcher")
+
+    def _invalidate_stale_caches(self) -> None:
+        """Invalidate cache entries for files that have been modified since caching."""
+        try:
+            # Get current project files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            
+            # Check and invalidate stale caches in fuzzy matcher
+            if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, 'cache_manager'):
+                cache_manager = self.fuzzy_matcher.cache_manager
+                if cache_manager:
+                    invalidated_files = cache_manager.invalidate_stale_files(project_files)
+                    if invalidated_files > 0:
+                        self.logger.info(f"Invalidated caches for {invalidated_files} modified files")
+                        
+        except Exception as e:
+            self.logger.warning(f"Error during cache invalidation: {e}")
+            
+    def get_cache_status(self) -> Dict[str, Any]:
+        """Get comprehensive cache status information."""
+        status = {
+            "project_root": str(self.config.project_root),
+            "fuzzy_matcher_cache": None,
+            "tracked_files": [],
+            "cache_enabled": False
+        }
+        
+        # Get fuzzy matcher cache status
+        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, 'cache_manager'):
+            cache_manager = self.fuzzy_matcher.cache_manager
+            if cache_manager:
+                status["fuzzy_matcher_cache"] = cache_manager.get_stats()
+                status["tracked_files"] = cache_manager.get_tracked_files()
+                status["cache_enabled"] = True
+                
+        return status
+        
+    def refresh_all_caches(self) -> None:
+        """Force refresh of all caches by clearing them."""
+        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, 'cache_manager'):
+            cache_manager = self.fuzzy_matcher.cache_manager
+            if cache_manager:
+                cache_manager.clear()
+                self.logger.info("Cleared fuzzy matcher cache")
 
     def analyze_project(self) -> ProjectInfo:
         """Get comprehensive project information."""

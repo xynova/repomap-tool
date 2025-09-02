@@ -727,5 +727,109 @@ def display_search_results(
     console.print(summary)
 
 
+@cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
+@click.option(
+    "--refresh",
+    is_flag=True,
+    help="Refresh/clear all caches before showing status",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["json", "table"]),
+    default="table",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def cache(
+    project_path: str,
+    refresh: bool,
+    output: str,
+    verbose: bool,
+) -> None:
+    """Show cache status and optionally refresh caches."""
+    
+    try:
+        # Create minimal configuration for cache operations
+        from .models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig
+        
+        fuzzy_config = FuzzyMatchConfig(
+            enabled=True,
+            threshold=70,
+            cache_results=True,
+        )
+        semantic_config = SemanticMatchConfig(
+            enabled=True,
+            threshold=0.7,
+            cache_results=True,
+        )
+        
+        config = RepoMapConfig(
+            project_root=project_path,
+            fuzzy_match=fuzzy_config,
+            semantic_match=semantic_config,
+            verbose=verbose,
+        )
+        
+        # Initialize RepoMap
+        repomap = DockerRepoMap(config)
+        
+        # Refresh caches if requested
+        if refresh:
+            console.print("[yellow]Refreshing all caches...[/yellow]")
+            repomap.refresh_all_caches()
+            console.print("[green]✓ All caches cleared[/green]")
+        
+        # Get cache status
+        status = repomap.get_cache_status()
+        
+        # Display results
+        if output == "json":
+            import json
+            console.print(json.dumps(status, indent=2, default=str))
+        else:
+            # Create table display
+            table = Table(title="Cache Status")
+            table.add_column("Component", style="cyan")
+            table.add_column("Status", style="green")
+            table.add_column("Details", style="yellow")
+            
+            # Cache enabled status
+            cache_enabled = "✓ Enabled" if status["cache_enabled"] else "✗ Disabled"
+            table.add_row("Cache System", cache_enabled, f"Project: {status['project_root']}")
+            
+            # Fuzzy matcher cache details
+            if status["fuzzy_matcher_cache"]:
+                cache_stats = status["fuzzy_matcher_cache"]
+                cache_details = (
+                    f"Size: {cache_stats['cache_size']}/{cache_stats['max_size']} entries\n"
+                    f"Hit rate: {cache_stats['hit_rate_percent']}%\n"
+                    f"Files tracked: {cache_stats['tracked_files']}"
+                )
+                table.add_row("Fuzzy Matcher", "✓ Active", cache_details)
+            else:
+                table.add_row("Fuzzy Matcher", "✗ No cache", "Cache disabled or not initialized")
+            
+            console.print(table)
+            
+            # Show tracked files if verbose
+            if verbose and status["tracked_files"]:
+                files_table = Table(title="Tracked Files")
+                files_table.add_column("File Path", style="cyan")
+                
+                for file_path in status["tracked_files"]:
+                    files_table.add_row(file_path)
+                
+                console.print(files_table)
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "CacheError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()

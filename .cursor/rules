@@ -1,0 +1,77 @@
+# AI Instructions: Use Existing Setup - NO NEW VENVS
+
+## 🚫 FORBIDDEN ACTIONS:
+- **DO NOT** create new virtual environments
+- **DO NOT** use `python3 -m venv` 
+- **DO NOT** use `pip install --user`
+- **DO NOT** create `test_venv` or similar
+- **DO NOT** override existing dependencies
+
+## ✅ REQUIRED ACTIONS:
+- **ALWAYS** use the existing `venv/` directory
+- **ALWAYS** use `source venv/bin/activate` 
+- **ALWAYS** use `make install` if dependencies are missing
+- **ALWAYS** use `make test-unit` to run tests
+- **ALWAYS** work with the current setup
+
+## 🔧 EXISTING TOOLS:
+- **Makefile**: Contains all setup commands
+- **venv/**: Existing virtual environment
+- **make install**: Installs dependencies properly
+- **make test-unit**: Runs unit tests
+- **make clean**: Cleans up properly
+
+## 📋 WORKFLOW:
+1. **Check existing setup**: `ls venv/`
+2. **Activate existing venv**: `source venv/bin/activate`
+3. **Install if needed**: `make install`
+4. **Test**: `make test-unit`
+5. **Fix issues in existing code, don't rebuild infrastructure**
+
+## 🎯 GOAL:
+**Working software using current setup, not rebuilding from scratch.**
+
+## ⚠️ REMEMBER:
+- The user wants **working software**
+- The user wants you to use the **current setup**
+- The user does **NOT** want new virtual environments
+- The user does **NOT** want dependency management changes
+- **FIX THE ACTUAL PROBLEMS, don't change the environment**
+
+## 🔍 WHEN TESTING:
+- Use `source venv/bin/activate && make test-unit`
+- If tests fail, fix the test logic, not the environment
+- If dependencies missing, use `make install`
+- **NEVER** create new venvs or change Python paths
+
+## 💡 EXAMPLE CORRECT COMMAND:
+```bash
+source venv/bin/activate && make test-unit
+```
+
+## ❌ EXAMPLE WRONG COMMAND:
+```bash
+python3 -m venv test_venv  # NEVER DO THIS
+```
+
+## 🧪 TESTING REQUIREMENTS:
+- **ALWAYS** write comprehensive tests for new functionality
+- **NEVER** claim tests pass without actually running them
+- **NEVER** provide fake test solutions or incomplete test coverage
+- **ALWAYS** verify tests run successfully with `make test-unit`
+- **ALWAYS** fix failing tests before claiming success
+- **ALWAYS** test edge cases and error conditions
+- **ALWAYS** ensure test coverage for new code paths
+
+## 🔍 TESTING WORKFLOW:
+1. **Write tests first** for new functionality
+2. **Run tests immediately** after any code changes
+3. **Fix all failures** before proceeding
+4. **Verify end-to-end** functionality works
+5. **Never skip testing** - it's mandatory, not optional
+
+## ⚠️ TESTING RULES:
+- **NO FAKE SOLUTIONS**: Every test must actually pass
+- **NO SKIPPED TESTS**: All tests must run and pass
+- **NO PARTIAL COVERAGE**: Test all new code paths
+- **NO ASSUMPTIONS**: Verify everything works, don't guess
