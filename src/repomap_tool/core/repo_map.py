@@ -67,6 +67,11 @@ class DockerRepoMap:
         self.semantic_matcher: Optional[SemanticMatcherProtocol] = None
         self.hybrid_matcher: Optional[HybridMatcherProtocol] = None
 
+        # Phase 2: Initialize dependency analysis components
+        self.dependency_graph = None
+        self.impact_analyzer = None
+        self.centrality_calculator = None
+
         # Initialize parallel processing
         self.parallel_extractor = ParallelTagExtractor(
             max_workers=self.config.performance.max_workers,
@@ -160,6 +165,39 @@ class DockerRepoMap:
                 verbose=self.config.verbose,
             )
             self.logger.info("Initialized HybridMatcher")
+
+        # Phase 2: Initialize dependency analysis components
+        if self.config.dependencies.enabled:
+            self._initialize_dependency_analysis()
+            self.logger.info("Initialized dependency analysis components")
+
+    def _initialize_dependency_analysis(self) -> None:
+        """Initialize dependency analysis components."""
+        try:
+            from ..dependencies import (
+                AdvancedDependencyGraph,
+                ImpactAnalyzer,
+                CentralityCalculator
+            )
+            
+            # Initialize advanced dependency graph
+            self.dependency_graph = AdvancedDependencyGraph()
+            
+            # Initialize impact analyzer
+            if self.config.dependencies.enable_impact_analysis:
+                self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
+            
+            # Initialize centrality calculator
+            self.centrality_calculator = CentralityCalculator(self.dependency_graph)
+            
+            self.logger.info("Dependency analysis components initialized successfully")
+            
+        except ImportError as e:
+            self.logger.warning(f"Failed to import dependency analysis components: {e}")
+            self.logger.warning("Dependency analysis features will be disabled")
+        except Exception as e:
+            self.logger.error(f"Error initializing dependency analysis: {e}")
+            self.logger.warning("Dependency analysis features will be disabled")
 
     def _invalidate_stale_caches(self) -> None:
         """Invalidate cache entries for files that have been modified since caching."""
@@ -557,3 +595,134 @@ class DockerRepoMap:
                 self.logger.debug(f"Traceback: {traceback.format_exc()}")
                 continue
         return identifiers
+
+    # Phase 2: Dependency Analysis Methods
+    
+    def build_dependency_graph(self):
+        """Build dependency graph for the project."""
+        if not self.config.dependencies.enabled:
+            raise RuntimeError("Dependency analysis is not enabled")
+        
+        if self.dependency_graph is None:
+            raise RuntimeError("Dependency analysis components not initialized")
+        
+        start_time = time.time()
+        
+        try:
+            # Get project files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            
+            # Limit files if configured
+            if len(project_files) > self.config.dependencies.max_graph_size:
+                self.logger.warning(
+                    f"Project has {len(project_files)} files, limiting to "
+                    f"{self.config.dependencies.max_graph_size} for dependency analysis"
+                )
+                project_files = project_files[:self.config.dependencies.max_graph_size]
+            
+            # Build the dependency graph
+            self.dependency_graph.build_graph(project_files)
+            
+            # Add construction time to statistics
+            construction_time = time.time() - start_time
+            self.dependency_graph.construction_time = construction_time
+            
+            # Check performance threshold
+            if construction_time > self.config.dependencies.performance_threshold_seconds:
+                self.logger.warning(
+                    f"Dependency graph construction took {construction_time:.2f}s, "
+                    f"exceeding threshold of {self.config.dependencies.performance_threshold_seconds}s"
+                )
+            
+            self.logger.info(
+                f"Built dependency graph: {len(project_files)} files in {construction_time:.2f}s"
+            )
+            
+            return self.dependency_graph
+            
+        except Exception as e:
+            self.logger.error(f"Failed to build dependency graph: {e}")
+            raise
+    
+    def get_centrality_scores(self):
+        """Get centrality scores for all files in the dependency graph."""
+        if not self.config.dependencies.enabled:
+            raise RuntimeError("Dependency analysis is not enabled")
+        
+        if self.centrality_calculator is None:
+            raise RuntimeError("Centrality calculator not initialized")
+        
+        if self.dependency_graph is None or not self.dependency_graph.nodes:
+            # Build graph if not already built
+            self.build_dependency_graph()
+        
+        try:
+            return self.centrality_calculator.calculate_composite_importance()
+        except Exception as e:
+            self.logger.error(f"Failed to calculate centrality scores: {e}")
+            raise
+    
+    def analyze_change_impact(self, file_path: str):
+        """Analyze the impact of changes to a specific file."""
+        if not self.config.dependencies.enabled:
+            raise RuntimeError("Dependency analysis is not enabled")
+        
+        if not self.config.dependencies.enable_impact_analysis:
+            raise RuntimeError("Impact analysis is not enabled")
+        
+        if self.impact_analyzer is None:
+            raise RuntimeError("Impact analyzer not initialized")
+        
+        if self.dependency_graph is None or not self.dependency_graph.nodes:
+            # Build graph if not already built
+            self.build_dependency_graph()
+        
+        try:
+            return self.impact_analyzer.analyze_change_impact([file_path])
+        except Exception as e:
+            self.logger.error(f"Failed to analyze change impact: {e}")
+            raise
+    
+    def find_circular_dependencies(self):
+        """Find circular dependencies in the project."""
+        if not self.config.dependencies.enabled:
+            raise RuntimeError("Dependency analysis is not enabled")
+        
+        if self.dependency_graph is None or not self.dependency_graph.nodes:
+            # Build graph if not already built
+            self.build_dependency_graph()
+        
+        try:
+            return self.dependency_graph.find_cycles()
+        except Exception as e:
+            self.logger.error(f"Failed to find circular dependencies: {e}")
+            raise
+    
+    def get_dependency_enhanced_trees(self, session_id: str, intent: str, current_files: List[str] = None):
+        """Generate enhanced exploration trees with dependency intelligence."""
+        if not self.config.dependencies.enabled:
+            raise RuntimeError("Dependency analysis is not enabled")
+        
+        if self.dependency_graph is None or not self.dependency_graph.nodes:
+            # Build graph if not already built
+            self.build_dependency_graph()
+        
+        try:
+            # Import here to avoid circular imports
+            from ..trees.discovery_engine import EntrypointDiscoverer
+            
+            # Use enhanced entrypoint discovery (Phase 1 + Phase 2)
+            enhanced_discoverer = EntrypointDiscoverer(self)
+            entrypoints = enhanced_discoverer.discover_entrypoints(
+                str(self.config.project_root), intent
+            )
+            
+            # For now, return entrypoints with dependency information
+            # TODO: Implement full tree building with dependency intelligence
+            return entrypoints
+            
+        except Exception as e:
+            self.logger.error(f"Failed to generate dependency-enhanced trees: {e}")
+            raise

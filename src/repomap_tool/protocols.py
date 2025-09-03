@@ -37,6 +37,7 @@ class FuzzyMatcherProtocol(MatcherProtocol):
     strategies: List[str]
     cache_results: bool
     verbose: bool
+    enabled: bool
 
 
 class SemanticMatcherProtocol(MatcherProtocol):
@@ -46,6 +47,7 @@ class SemanticMatcherProtocol(MatcherProtocol):
     use_tfidf: bool
     min_word_length: int
     cache_results: bool
+    enabled: bool
 
 
 class HybridMatcherProtocol(MatcherProtocol):
@@ -54,6 +56,7 @@ class HybridMatcherProtocol(MatcherProtocol):
     fuzzy_threshold: int
     semantic_threshold: float
     verbose: bool
+    enabled: bool
 
 
 class CacheManagerProtocol(Protocol):

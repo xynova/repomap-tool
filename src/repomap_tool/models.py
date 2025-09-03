@@ -97,6 +97,28 @@ class TreeConfig(BaseModel):
     cache_tree_structures: bool = Field(default=True, description="Cache tree structures for performance")
 
 
+class DependencyConfig(BaseModel):
+    """Configuration for dependency analysis."""
+
+    enabled: bool = Field(default=True, description="Enable dependency analysis")
+    cache_graphs: bool = Field(default=True, description="Cache dependency graphs")
+    max_graph_size: int = Field(
+        default=10000, ge=100, le=100000, description="Maximum number of files in graph"
+    )
+    enable_call_graph: bool = Field(default=True, description="Enable function call graph analysis")
+    enable_impact_analysis: bool = Field(default=True, description="Enable change impact analysis")
+    centrality_algorithms: List[str] = Field(
+        default=["degree", "betweenness", "pagerank"],
+        description="Centrality algorithms to use"
+    )
+    max_centrality_cache_size: int = Field(
+        default=1000, ge=100, le=10000, description="Maximum centrality scores to cache"
+    )
+    performance_threshold_seconds: float = Field(
+        default=30.0, ge=5.0, le=300.0, description="Maximum time for graph construction (seconds)"
+    )
+
+
 class RepoMapConfig(BaseModel):
     """Main configuration for Docker RepoMap."""
 
@@ -117,6 +139,9 @@ class RepoMapConfig(BaseModel):
 
     # Tree exploration configuration
     trees: TreeConfig = Field(default_factory=TreeConfig)
+
+    # Dependency analysis configuration
+    dependencies: DependencyConfig = Field(default_factory=DependencyConfig)
 
     # Advanced options
     refresh_cache: bool = Field(default=False, description="Refresh cache")
@@ -371,6 +396,13 @@ class TreeNode(BaseModel):
     expanded: bool = Field(default=False, description="Whether this node has been expanded")
     structural_info: Dict[str, Any] = Field(default_factory=dict, description="Dependencies, calls, etc.")
     
+    # Phase 2: Dependency analysis integration
+    dependency_centrality: Optional[float] = Field(default=None, description="Dependency centrality score (0-1)")
+    import_count: Optional[int] = Field(default=None, description="Number of files that import this node")
+    dependency_count: Optional[int] = Field(default=None, description="Number of files this node depends on")
+    impact_risk: Optional[float] = Field(default=None, description="Impact risk score if this node changes (0-1)")
+    refactoring_priority: Optional[float] = Field(default=None, description="Refactoring priority score (0-1)")
+    
     class Config:
         arbitrary_types_allowed = True
 
@@ -383,6 +415,13 @@ class Entrypoint(BaseModel):
     score: float = Field(ge=0.0, le=1.0, description="Relevance score from discovery")
     structural_context: Dict[str, Any] = Field(default_factory=dict, description="Dependencies, complexity, etc.")
     categories: List[str] = Field(default_factory=list, description="Semantic categories")
+    
+    # Phase 2: Dependency analysis integration
+    dependency_centrality: Optional[float] = Field(default=None, description="Dependency centrality score (0-1)")
+    import_count: Optional[int] = Field(default=None, description="Number of files that import this entrypoint")
+    dependency_count: Optional[int] = Field(default=None, description="Number of files this entrypoint depends on")
+    impact_risk: Optional[float] = Field(default=None, description="Impact risk score if this entrypoint changes (0-1)")
+    refactoring_priority: Optional[float] = Field(default=None, description="Refactoring priority score (0-1)")
 
 
 class TreeCluster(BaseModel):

@@ -1265,5 +1265,389 @@ def cache(
         sys.exit(1)
 
 
+@cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["json", "table", "text"]),
+    default="table",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option(
+    "--max-files",
+    type=int,
+    default=1000,
+    help="Maximum files to analyze (100-10000)",
+)
+@click.option(
+    "--enable-call-graph",
+    is_flag=True,
+    default=True,
+    help="Enable function call graph analysis",
+)
+@click.option(
+    "--enable-impact-analysis",
+    is_flag=True,
+    default=True,
+    help="Enable change impact analysis",
+)
+def analyze_dependencies(
+    project_path: str,
+    output: str,
+    verbose: bool,
+    max_files: int,
+    enable_call_graph: bool,
+    enable_impact_analysis: bool,
+) -> None:
+    """Analyze project dependencies and build dependency graph."""
+    
+    try:
+        from .models import RepoMapConfig, DependencyConfig
+        
+        # Create dependency configuration
+        dependency_config = DependencyConfig(
+            enabled=True,
+            max_graph_size=max_files,
+            enable_call_graph=enable_call_graph,
+            enable_impact_analysis=enable_impact_analysis,
+        )
+        
+        # Create main configuration
+        config = RepoMapConfig(
+            project_root=project_path,
+            dependencies=dependency_config,
+            verbose=verbose,
+        )
+        
+        # Initialize RepoMap
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Building dependency graph...", total=None)
+            
+            repomap = DockerRepoMap(config)
+            progress.update(task, description="Analyzing dependencies...")
+            
+            # Build dependency graph
+            dependency_graph = repomap.build_dependency_graph()
+            progress.update(task, description="Analysis complete!")
+        
+        # Display results
+        if output == "json":
+            import json
+            graph_data = dependency_graph.get_graph_statistics()
+            console.print(json.dumps(graph_data, indent=2, default=str))
+        elif output == "table":
+            # Create table display
+            stats = dependency_graph.get_graph_statistics()
+            table = Table(title="Dependency Analysis Results")
+            table.add_column("Metric", style="cyan")
+            table.add_column("Value", style="green")
+            
+            table.add_row("Total Files", str(stats["total_nodes"]))
+            table.add_row("Total Dependencies", str(stats["total_edges"]))
+            table.add_row("Circular Dependencies", str(stats["cycles"]))
+            table.add_row("Leaf Nodes", str(stats["leaf_nodes"]))
+            table.add_row("Root Nodes", str(stats["root_nodes"]))
+            table.add_row("Graph Construction Time", f"{dependency_graph.construction_time or 0:.2f}s")
+            
+            console.print(table)
+        else:  # text output
+            stats = dependency_graph.get_graph_statistics()
+            console.print(f"[cyan]Dependency Analysis Results:[/cyan]")
+            console.print(f"  Total Files: {stats['total_nodes']}")
+            console.print(f"  Total Dependencies: {stats['total_edges']}")
+            console.print(f"  Circular Dependencies: {stats['cycles']}")
+            console.print(f"  Leaf Nodes: {stats['leaf_nodes']}")
+            console.print(f"  Root Nodes: {stats['root_nodes']}")
+            console.print(f"  Graph Construction Time: {dependency_graph.construction_time or 0:.2f}s")
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "DependencyAnalysisError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
+@click.option(
+    "--file",
+    "-f",
+    type=str,
+    help="Specific file to analyze (relative to project root)",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["json", "table", "text"]),
+    default="table",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def show_centrality(
+    project_path: str,
+    file: str,
+    output: str,
+    verbose: bool,
+) -> None:
+    """Show centrality analysis for project files."""
+    
+    try:
+        from .models import RepoMapConfig, DependencyConfig
+        
+        # Create dependency configuration
+        dependency_config = DependencyConfig(enabled=True)
+        
+        # Create main configuration
+        config = RepoMapConfig(
+            project_root=project_path,
+            dependencies=dependency_config,
+            verbose=verbose,
+        )
+        
+        # Initialize RepoMap
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Calculating centrality scores...", total=None)
+            
+            repomap = DockerRepoMap(config)
+            progress.update(task, description="Analysis complete!")
+        
+        # Get centrality scores
+        centrality_scores = repomap.get_centrality_scores()
+        
+        if file:
+            # Show centrality for specific file
+            if file in centrality_scores:
+                score = centrality_scores[file]
+                if output == "json":
+                    import json
+                    console.print(json.dumps({file: score}, indent=2))
+                elif output == "table":
+                    table = Table(title=f"Centrality Analysis: {file}")
+                    table.add_column("Metric", style="cyan")
+                    table.add_column("Value", style="green")
+                    table.add_row("Composite Score", f"{score:.4f}")
+                    table.add_row("Rank", "N/A")  # Would need to calculate rank
+                    console.print(table)
+                else:
+                    console.print(f"[cyan]Centrality Analysis: {file}[/cyan]")
+                    console.print(f"  Composite Score: {score:.4f}")
+            else:
+                console.print(f"[red]File '{file}' not found in project[/red]")
+                sys.exit(1)
+        else:
+            # Show top centrality files
+            sorted_scores = sorted(centrality_scores.items(), key=lambda x: x[1], reverse=True)
+            top_files = sorted_scores[:10]
+            
+            if output == "json":
+                import json
+                console.print(json.dumps(dict(top_files), indent=2))
+            elif output == "table":
+                table = Table(title="Top Centrality Files")
+                table.add_column("Rank", style="cyan")
+                table.add_column("File", style="green")
+                table.add_column("Score", style="yellow")
+                
+                for i, (file_path, score) in enumerate(top_files, 1):
+                    table.add_row(str(i), file_path, f"{score:.4f}")
+                
+                console.print(table)
+            else:
+                console.print(f"[cyan]Top Centrality Files:[/cyan]")
+                for i, (file_path, score) in enumerate(top_files, 1):
+                    console.print(f"  {i}. {file_path}: {score:.4f}")
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "CentralityAnalysisError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
+@click.option(
+    "--files",
+    "-f",
+    multiple=True,
+    help="Files to analyze for impact (relative to project root)",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["json", "table", "text"]),
+    default="table",
+    help="Output format",
+    )
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def impact_analysis(
+    project_path: str,
+    files: tuple,
+    output: str,
+    verbose: bool,
+) -> None:
+    """Analyze impact of changes to specific files."""
+    
+    if not files:
+        console.print("[red]Error: Must specify at least one file with --files[/red]")
+        sys.exit(1)
+    
+    try:
+        from .models import RepoMapConfig, DependencyConfig
+        
+        # Create dependency configuration
+        dependency_config = DependencyConfig(
+            enabled=True,
+            enable_impact_analysis=True,
+        )
+        
+        # Create main configuration
+        config = RepoMapConfig(
+            project_root=project_path,
+            dependencies=dependency_config,
+            verbose=verbose,
+        )
+        
+        # Initialize RepoMap
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Analyzing change impact...", total=None)
+            
+            repomap = DockerRepoMap(config)
+            progress.update(task, description="Analysis complete!")
+        
+        # Analyze impact for each file
+        impact_reports = {}
+        for file_path in files:
+            impact_report = repomap.analyze_change_impact(file_path)
+            impact_reports[file_path] = impact_report
+        
+        # Display results
+        if output == "json":
+            import json
+            console.print(json.dumps(impact_reports, indent=2, default=str))
+        elif output == "table":
+            for file_path, report in impact_reports.items():
+                table = Table(title=f"Impact Analysis: {file_path}")
+                table.add_column("Metric", style="cyan")
+                table.add_column("Value", style="green")
+                
+                table.add_row("Risk Score", f"{report.risk_score:.2f}")
+                table.add_row("Affected Files", str(len(report.affected_files)))
+                table.add_row("Breaking Change Potential", str(report.breaking_change_potential))
+                table.add_row("Suggested Tests", str(len(report.suggested_tests)))
+                
+                console.print(table)
+                console.print()  # Add spacing between tables
+        else:
+            for file_path, report in impact_reports.items():
+                console.print(f"[cyan]Impact Analysis: {file_path}[/cyan]")
+                console.print(f"  Risk Score: {report.risk_score:.2f}")
+                console.print(f"  Affected Files: {len(report.affected_files)}")
+                console.print(f"  Breaking Change Potential: {report.breaking_change_potential}")
+                console.print(f"  Suggested Tests: {len(report.suggested_tests)}")
+                console.print()  # Add spacing
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "ImpactAnalysisError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
+@cli.command()
+@click.argument(
+    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["json", "table", "text"]),
+    default="table",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+def find_cycles(
+    project_path: str,
+    output: str,
+    verbose: bool,
+) -> None:
+    """Find circular dependencies in the project."""
+    
+    try:
+        from .models import RepoMapConfig, DependencyConfig
+        
+        # Create dependency configuration
+        dependency_config = DependencyConfig(enabled=True)
+        
+        # Create main configuration
+        config = RepoMapConfig(
+            project_root=project_path,
+            dependencies=dependency_config,
+            verbose=verbose,
+        )
+        
+        # Initialize RepoMap
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Finding circular dependencies...", total=None)
+            
+            repomap = DockerRepoMap(config)
+            progress.update(task, description="Analysis complete!")
+        
+        # Find cycles
+        cycles = repomap.find_circular_dependencies()
+        
+        if not cycles:
+            console.print("[green]✓ No circular dependencies found[/green]")
+            return
+        
+        # Display results
+        if output == "json":
+            import json
+            console.print(json.dumps(cycles, indent=2, default=str))
+        elif output == "table":
+            table = Table(title="Circular Dependencies Found")
+            table.add_column("Cycle #", style="cyan")
+            table.add_column("Length", style="green")
+            table.add_column("Files", style="yellow")
+            
+            for i, cycle in enumerate(cycles, 1):
+                cycle_length = len(cycle)
+                files_str = " → ".join(cycle)
+                table.add_row(str(i), str(cycle_length), files_str)
+            
+            console.print(table)
+        else:
+            console.print(f"[red]Found {len(cycles)} circular dependencies:[/red]")
+            for i, cycle in enumerate(cycles, 1):
+                console.print(f"  Cycle {i} ({len(cycle)} files):")
+                console.print(f"    {' → '.join(cycle)}")
+        
+    except Exception as e:
+        error_response = create_error_response(str(e), "CycleDetectionError")
+        console.print(f"[red]Error: {error_response.error}[/red]")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()

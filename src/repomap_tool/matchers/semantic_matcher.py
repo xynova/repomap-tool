@@ -30,6 +30,7 @@ class DomainSemanticMatcher:
             verbose: Whether to log semantic matching details
         """
         self.verbose = verbose
+        self.enabled = True  # Add enabled attribute for compatibility
 
         # Define semantic mappings for programming concepts
         self.semantic_mappings = {

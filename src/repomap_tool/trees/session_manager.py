@@ -69,6 +69,18 @@ class SessionStore:
             for tree in session_dict["exploration_trees"].values():
                 if tree.get("tree_structure"):
                     tree["tree_structure"] = self._serialize_tree_node(tree["tree_structure"])
+                
+                # Convert sets to lists for JSON serialization
+                if "expanded_areas" in tree and isinstance(tree["expanded_areas"], set):
+                    tree["expanded_areas"] = list(tree["expanded_areas"])
+                if "pruned_areas" in tree and isinstance(tree["pruned_areas"], set):
+                    tree["pruned_areas"] = list(tree["pruned_areas"])
+                
+                # Convert datetime fields to ISO format strings
+                if "created_at" in tree and hasattr(tree["created_at"], "isoformat"):
+                    tree["created_at"] = tree["created_at"].isoformat()
+                if "last_modified" in tree and hasattr(tree["last_modified"], "isoformat"):
+                    tree["last_modified"] = tree["last_modified"].isoformat()
             
             with open(session_file, 'w') as f:
                 json.dump(session_dict, f, indent=2)
@@ -108,6 +120,18 @@ class SessionStore:
             for tree in session_dict["exploration_trees"].values():
                 if tree.get("tree_structure"):
                     tree["tree_structure"] = self._deserialize_tree_node(tree["tree_structure"])
+                
+                # Convert lists back to sets for ExplorationTree model
+                if "expanded_areas" in tree and isinstance(tree["expanded_areas"], list):
+                    tree["expanded_areas"] = set(tree["expanded_areas"])
+                if "pruned_areas" in tree and isinstance(tree["pruned_areas"], list):
+                    tree["pruned_areas"] = set(tree["pruned_areas"])
+                
+                # Convert datetime strings back to datetime objects
+                if "created_at" in tree and isinstance(tree["created_at"], str):
+                    tree["created_at"] = datetime.fromisoformat(tree["created_at"])
+                if "last_modified" in tree and isinstance(tree["last_modified"], str):
+                    tree["last_modified"] = datetime.fromisoformat(tree["last_modified"])
             
             # Create session from dict
             session = ExplorationSession(**session_dict)

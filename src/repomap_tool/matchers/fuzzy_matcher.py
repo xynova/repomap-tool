@@ -52,6 +52,7 @@ class FuzzyMatcher:
         self.strategies = strategies or ["prefix", "substring", "levenshtein"]
         self.cache_results = cache_results
         self.verbose = verbose
+        self.enabled = True  # Add enabled attribute for compatibility
 
         # Initialize cache manager with bounded memory
         self.cache_manager: Optional[CacheManager]
