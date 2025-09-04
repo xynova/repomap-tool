@@ -408,20 +408,16 @@ class TreeNode(BaseModel):
 
 
 class Entrypoint(BaseModel):
-    """Represents a discovered code entry point."""
+    """Represents a potential entrypoint for code exploration."""
+    identifier: str
+    file_path: Path
+    score: float
+    structural_context: Dict[str, Any] = Field(default_factory=dict)
+    centrality_score: Optional[float] = None
     
-    identifier: str = Field(description="Function/class name")
-    location: str = Field(description="File path and line number")
-    score: float = Field(ge=0.0, le=1.0, description="Relevance score from discovery")
-    structural_context: Dict[str, Any] = Field(default_factory=dict, description="Dependencies, complexity, etc.")
-    categories: List[str] = Field(default_factory=list, description="Semantic categories")
-    
-    # Phase 2: Dependency analysis integration
-    dependency_centrality: Optional[float] = Field(default=None, description="Dependency centrality score (0-1)")
-    import_count: Optional[int] = Field(default=None, description="Number of files that import this entrypoint")
-    dependency_count: Optional[int] = Field(default=None, description="Number of files this entrypoint depends on")
-    impact_risk: Optional[float] = Field(default=None, description="Impact risk score if this entrypoint changes (0-1)")
-    refactoring_priority: Optional[float] = Field(default=None, description="Refactoring priority score (0-1)")
+    @property
+    def location(self) -> Path:
+        return self.file_path
 
 
 class TreeCluster(BaseModel):
@@ -434,7 +430,7 @@ class TreeCluster(BaseModel):
 
 
 class ExplorationTree(BaseModel):
-    """Represents an exploration tree starting from entrypoints."""
+    """Represents a tree structure for exploring code related to an intent."""
     
     tree_id: str = Field(description="Unique tree identifier")
     root_entrypoint: Entrypoint = Field(description="Root entrypoint of the tree")

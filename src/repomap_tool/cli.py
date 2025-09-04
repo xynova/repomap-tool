@@ -9,7 +9,7 @@ for argument validation and structured output.
 import json
 import sys
 
-from typing import Optional, Literal
+from typing import Optional, Literal, Dict, Any
 
 import click
 from rich.console import Console
@@ -33,10 +33,17 @@ console = Console()
 
 
 @click.group()
+@click.option("--no-color", is_flag=True, help="Disable colored output")
+@click.pass_context
 @click.version_option(version="0.1.0")
-def cli() -> None:
+def cli(ctx: click.Context, no_color: bool) -> None:
     """Docker RepoMap - Intelligent code analysis and identifier matching."""
-    pass
+    # Configure console based on no-color option
+    global console
+    if no_color:
+        console = Console(no_color=True)
+    ctx.ensure_object(dict)
+    ctx.obj['no_color'] = no_color
 
 
 @cli.command()
@@ -103,6 +110,19 @@ def cli() -> None:
     is_flag=True,
     help="Refresh cache before analysis",
 )
+@click.option("--no-emojis", is_flag=True, help="Disable emojis in output")
+@click.option("--no-hierarchy", is_flag=True, help="Use flat structure instead of hierarchical")
+@click.option("--no-line-numbers", is_flag=True, help="Disable line numbers in output")
+@click.option("--no-centrality", is_flag=True, help="Disable centrality scores in output")
+@click.option("--no-impact-risk", is_flag=True, help="Disable impact risk analysis in output")
+@click.option("--max-critical-lines", type=int, default=3, help="Maximum critical lines to show")
+@click.option("--max-dependencies", type=int, default=3, help="Maximum dependencies to show")
+@click.option(
+    "--compression",
+    type=click.Choice(["low", "medium", "high"]),
+    default="medium",
+    help="Output compression level"
+)
 def analyze(
     project_path: str,
     config: Optional[str],
@@ -120,6 +140,14 @@ def analyze(
     cache_size: int,
     log_level: str,
     refresh_cache: bool,
+    no_emojis: bool,
+    no_hierarchy: bool,
+    no_line_numbers: bool,
+    no_centrality: bool,
+    no_impact_risk: bool,
+    max_critical_lines: int,
+    max_dependencies: int,
+    compression: str,
 ) -> None:
     """Analyze a project and generate a code map."""
 
@@ -193,7 +221,17 @@ def analyze(
             progress.update(task, description="Analysis complete!")
 
         # Display results
-        display_project_info(project_info, output)  # type: ignore[arg-type]
+        template_config = {
+            "no_emojis": no_emojis,
+            "no_hierarchy": no_hierarchy,
+            "no_line_numbers": no_line_numbers,
+            "no_centrality": no_centrality,
+            "no_impact_risk": no_impact_risk,
+            "max_critical_lines": max_critical_lines,
+            "max_dependencies": max_dependencies,
+            "compression": compression,
+        }
+        display_project_info(project_info, output, template_config)  # type: ignore[arg-type]
 
     except Exception as e:
         error_response = create_error_response(str(e), "AnalysisError")
@@ -641,6 +679,7 @@ def create_search_config(
 def display_project_info(
     project_info: ProjectInfo,
     output_format: Literal["json", "text", "markdown", "table"],
+    template_config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Display project analysis results."""
 
@@ -648,7 +687,41 @@ def display_project_info(
         console.print(project_info.model_dump_json(indent=2))
         return
 
-    # Create rich table for display
+    # Use OutputTemplates for markdown and text formats
+    if output_format in ["markdown", "text"]:
+        from .llm.output_templates import OutputTemplates, TemplateConfig
+        
+        # Create template config from CLI options
+        if template_config:
+            config = TemplateConfig(
+                use_emojis=not template_config.get("no_emojis", False),
+                use_hierarchical_structure=not template_config.get("no_hierarchy", False),
+                include_line_numbers=not template_config.get("no_line_numbers", False),
+                include_centrality_scores=not template_config.get("no_centrality", False),
+                include_impact_risk=not template_config.get("no_impact_risk", False),
+                max_critical_lines=template_config.get("max_critical_lines", 3),
+                max_dependencies=template_config.get("max_dependencies", 3),
+                compression_level=template_config.get("compression", "medium"),
+            )
+        else:
+            config = TemplateConfig()
+        
+        templates = OutputTemplates(config)
+        
+        # Convert ProjectInfo to dict for template processing
+        project_data = {
+            "project_root": str(project_info.project_root),
+            "total_files": project_info.total_files,
+            "total_identifiers": project_info.total_identifiers,
+            "file_types": project_info.file_types,
+            "identifier_types": project_info.identifier_types,
+        }
+        
+        formatted_output = templates.format_project_summary(project_data)
+        console.print(formatted_output)
+        return
+
+    # Fallback to rich tables for "table" format
     table = Table(title="Project Analysis Results")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="green")

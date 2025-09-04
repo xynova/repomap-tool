@@ -30,30 +30,46 @@ class DependencyGraph:
         
         logger.info("DependencyGraph initialized")
     
-    def build_graph(self, project_files: List[str], project_path: Optional[str] = None) -> None:
-        """Build the complete dependency graph for a project.
+    def build_graph(self, project_imports: ProjectImports) -> None:
+        """Build the dependency graph from a ProjectImports object."""
+        logger.info(f"Building dependency graph from ProjectImports for {project_imports.project_path}")
         
-        Args:
-            project_files: List of file paths to analyze
-            project_path: Optional project root path
-        """
-        logger.info(f"Building dependency graph for {len(project_files)} files")
+        # Clear existing graph
+        self.graph.clear()
+        self.nodes.clear()
         
-        if not project_files:
-            logger.warning("No project files provided")
-            return
-        
-        self.project_path = project_path or str(Path(project_files[0]).parent)
-        
-        # Validate files before processing
-        self._validate_files(project_files)
-        
-        # Build graph in stages
-        self._add_nodes(project_files)
-        self._add_edges()
-        self._validate_graph_integrity()
+        # Add nodes
+        for file_path in project_imports.file_imports.keys():
+            self._add_node(file_path)
+            
+        # Add edges
+        for file_path, file_imports in project_imports.file_imports.items():
+            if file_path not in self.nodes:
+                continue
+                
+            node = self.nodes[file_path]
+            node.imports = [imp.module for imp in file_imports.imports if imp.resolved_path]
+            node.language = file_imports.language
+            
+            for imp in file_imports.imports:
+                if imp.resolved_path and imp.resolved_path in self.nodes:
+                    self.graph.add_edge(file_path, imp.resolved_path)
+                    if imp.resolved_path in self.nodes:
+                        self.nodes[imp.resolved_path].imported_by.append(file_path)
         
         logger.info(f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges")
+        
+    def _add_node(self, file_path: str):
+        """Add a single node to the graph."""
+        try:
+            node = DependencyNode(
+                file_path=file_path,
+                language=Path(file_path).suffix.lstrip('.')
+            )
+            self.nodes[file_path] = node
+            self.graph.add_node(file_path, **node.model_dump())
+        except Exception as e:
+            logger.error(f"Error adding node for {file_path}: {e}")
     
     def _validate_files(self, project_files: List[str]) -> None:
         """Validate that all files exist and are accessible."""
@@ -73,27 +89,6 @@ class DependencyGraph:
         
         # Update project files to only valid ones
         project_files[:] = valid_files
-    
-    def _add_nodes(self, project_files: List[str]) -> None:
-        """Add all project files as nodes to the graph."""
-        logger.info("Adding nodes to dependency graph")
-        
-        for file_path in project_files:
-            try:
-                # Create dependency node
-                node = DependencyNode(
-                    file_path=file_path,
-                    language=Path(file_path).suffix.lstrip('.')
-                )
-                
-                # Add to our node collection
-                self.nodes[file_path] = node
-                
-                # Add to NetworkX graph
-                self.graph.add_node(file_path, **node.model_dump())
-                
-            except Exception as e:
-                logger.error(f"Error adding node for {file_path}: {e}")
     
     def _add_edges(self) -> None:
         """Add dependency edges based on import analysis."""

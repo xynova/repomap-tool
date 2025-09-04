@@ -63,13 +63,30 @@ class FileImports(BaseModel):
 
 
 class ProjectImports(BaseModel):
-    """Represents all imports across an entire project."""
+    """Represents all imports found in a project."""
     
     project_path: str = Field(description="Path to the project root")
     file_imports: Dict[str, FileImports] = Field(default_factory=dict, description="Imports by file path")
     total_files: int = Field(default=0, description="Total number of files analyzed")
     total_imports: int = Field(default=0, description="Total number of import statements")
     language_stats: Dict[str, int] = Field(default_factory=dict, description="Count of files by language")
+    
+    def __len__(self) -> int:
+        """Return the number of files with imports."""
+        return len(self.file_imports)
+        
+    def __getitem__(self, key: str) -> FileImports:
+        """Allow subscripting to access file_imports."""
+        return self.file_imports[key]
+        
+    def get_files_importing(self, module_name: str) -> List[str]:
+        """Get a list of files that import a specific module."""
+        importing_files = []
+        for file_path, file_imports in self.file_imports.items():
+            for imp in file_imports.imports:
+                if imp.module == module_name:
+                    importing_files.append(file_path)
+        return importing_files
     
     def model_post_init(self, __context):
         self.total_files = len(self.file_imports)

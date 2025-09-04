@@ -49,8 +49,8 @@ class EntrypointDiscoverer:
         self.fuzzy_threshold = 0.7
         
         # Phase 2: Initialize dependency analysis components
-        self.import_analyzer = ImportAnalyzer()
-        self.dependency_graph = DependencyGraph()
+        self.import_analyzer: Optional[ImportAnalyzer] = None
+        self.dependency_graph: Optional[DependencyGraph] = None
         self.centrality_calculator = None  # Will be initialized when needed
         self.impact_analyzer = None  # Will be initialized when needed
         
@@ -67,6 +67,9 @@ class EntrypointDiscoverer:
             List of relevant entrypoints with scores
         """
         logger.info(f"Discovering entrypoints for intent: '{intent}' in {project_path}")
+        
+        # Initialize dependency components with project_path
+        self._initialize_dependency_components(project_path)
         
         # Get all project symbols using existing infrastructure
         all_symbols = self._get_project_symbols(project_path)
@@ -95,12 +98,57 @@ class EntrypointDiscoverer:
         logger.info(f"Discovered {len(unique_entrypoints)} unique entrypoints")
         
         # Phase 2: Enhance entrypoints with dependency analysis
-        if unique_entrypoints:
-            self._enhance_entrypoints_with_dependencies(unique_entrypoints, project_path)
+        if self.dependency_graph:
+            try:
+                self._build_dependency_graph(project_path)
+                unique_entrypoints = self._enhance_with_dependency_scores(unique_entrypoints)
+            except Exception as e:
+                logger.error(f"Error enhancing entrypoints with dependency scores: {e}")
         
         return unique_entrypoints
-    
-    def _get_project_symbols(self, project_path: str) -> List[str]:
+
+    def _build_dependency_graph(self, project_path: str):
+        """Build the project's dependency graph."""
+        if not self.dependency_graph or self.dependency_graph.graph.number_of_nodes() > 0:
+            return
+        
+        logger.info("Building dependency graph for entrypoint enhancement...")
+        try:
+            project_imports = self.import_analyzer.analyze_project_imports(project_path)
+            self.dependency_graph.build_graph(project_imports)
+        except Exception as e:
+            logger.error(f"Error building dependency graph: {e}")
+
+    def _enhance_with_dependency_scores(self, entrypoints: List[Entrypoint]) -> List[Entrypoint]:
+        """Enhance entrypoint scores with dependency centrality."""
+        if not self.dependency_graph or self.dependency_graph.graph.number_of_nodes() == 0:
+            return entrypoints
+
+        logger.info("Enhancing entrypoints with dependency scores...")
+        try:
+            calculator = CentralityCalculator(self.dependency_graph)
+            centrality_scores = calculator.calculate_composite_importance()
+
+            for entrypoint in entrypoints:
+                file_path = str(entrypoint.location)
+                if file_path in centrality_scores:
+                    centrality_boost = centrality_scores[file_path] * 0.2
+                    entrypoint.score = min(1.0, entrypoint.score + centrality_boost)
+
+            entrypoints.sort(key=lambda x: x.score, reverse=True)
+        except Exception as e:
+            logger.error(f"Error during dependency score enhancement: {e}")
+            
+        return entrypoints
+
+    def _initialize_dependency_components(self, project_path: str):
+        """Initialize dependency analysis components."""
+        if self.import_analyzer is None:
+            self.import_analyzer = ImportAnalyzer(project_root=project_path)
+        if self.dependency_graph is None:
+            self.dependency_graph = DependencyGraph()
+
+    def _get_project_symbols(self, project_path: str) -> List[Dict[str, Any]]:
         """Get all project symbols using existing infrastructure.
         
         Args:
@@ -144,30 +192,19 @@ class EntrypointDiscoverer:
         entrypoints = []
         
         try:
-            for symbol_id in symbols:
-                if not symbol_id:
-                    continue
-                
-                # Calculate semantic similarity
-                similarity = self.semantic_matcher.semantic_similarity(intent, symbol_id)
-                
-                if similarity >= self.semantic_threshold:
-                    # Get semantic categories for this symbol
-                    categories = self._get_semantic_categories(symbol_id)
-                    
-                    # Create entrypoint
-                    entrypoint = Entrypoint(
-                        identifier=symbol_id,
-                        location=self._get_symbol_location_from_string(symbol_id, project_path),
-                        score=similarity,
-                        categories=categories,
-                        structural_context=self._get_structural_context_from_string(symbol_id)
-                    )
-                    entrypoints.append(entrypoint)
-                    
+            # Get semantic matches from the repo_map instance
+            semantic_matches = self.repo_map.semantic_search(intent)
+
+            for match in semantic_matches:
+                if match['score'] > self.semantic_threshold:
+                    entrypoints.append(self._create_entrypoint_from_symbol(
+                        symbol_info=match['symbol'],
+                        score=match['score'],
+                        file_path=match['symbol']['file_path'] 
+                    ))
         except Exception as e:
             logger.error(f"Error in semantic entrypoint discovery: {e}")
-        
+            
         return entrypoints
     
     def _discover_fuzzy_entrypoints(self, intent: str, symbols: List[str], project_path: str) -> List[Entrypoint]:
@@ -184,223 +221,32 @@ class EntrypointDiscoverer:
         entrypoints = []
         
         try:
-            # Use existing fuzzy matcher to find similar symbols
-            if not symbols:
-                return []
+            fuzzy_matches = self.repo_map.fuzzy_search(intent)
             
-            # Find fuzzy matches
-            fuzzy_matches = self.fuzzy_matcher.match_identifiers(intent, set(symbols))
-            
-            for identifier, score in fuzzy_matches:
-                if score >= self.fuzzy_threshold:
-                    # Create entrypoint
-                    entrypoint = Entrypoint(
-                        identifier=identifier,
-                        location=self._get_symbol_location_from_string(identifier, project_path),
-                        score=score / 100.0,  # Convert percentage to 0-1 scale
-                        categories=[],  # Fuzzy matching doesn't provide categories
-                        structural_context=self._get_structural_context_from_string(identifier)
-                    )
-                    entrypoints.append(entrypoint)
-                        
+            for match in fuzzy_matches:
+                if match.score > self.fuzzy_threshold:
+                    entrypoints.append(self._create_entrypoint_from_symbol(
+                        symbol_info=match.symbol,
+                        score=match.score,
+                        file_path=match.symbol['file_path']
+                    ))
         except Exception as e:
             logger.error(f"Error in fuzzy entrypoint discovery: {e}")
-        
-        return entrypoints
-    
-    def _extract_symbol_identifier(self, symbol: Dict[str, Any]) -> Optional[str]:
-        """Extract identifier from symbol data.
-        
-        Args:
-            symbol: Symbol dictionary from repo_map
-            
-        Returns:
-            Symbol identifier or None
-        """
-        # Try different possible keys for symbol identifier
-        for key in ['name', 'identifier', 'symbol', 'function', 'class']:
-            if key in symbol and symbol[key]:
-                return str(symbol[key])
-        
-        # If symbol is a string, use it directly
-        if isinstance(symbol, str):
-            return symbol
-        
-        logger.debug(f"Could not extract identifier from symbol: {symbol}")
-        return None
-    
-    def _get_symbol_location(self, symbol: Dict[str, Any], project_path: str) -> str:
-        """Get file location for symbol.
-        
-        Args:
-            symbol: Symbol dictionary
-            project_path: Project path
-            
-        Returns:
-            File path and line number (file:line)
-        """
-        try:
-            # Try to get file path and line number
-            file_path = symbol.get('file_path', '')
-            line_number = symbol.get('line_number', '')
-            
-            if file_path and line_number:
-                # Make path relative to project
-                rel_path = os.path.relpath(file_path, project_path)
-                return f"{rel_path}:{line_number}"
-            elif file_path:
-                rel_path = os.path.relpath(file_path, project_path)
-                return rel_path
-            else:
-                return "unknown:0"
-                
-        except Exception as e:
-            logger.debug(f"Error getting symbol location: {e}")
-            return "unknown:0"
-    
-    def _get_symbol_location_from_string(self, identifier: str, project_path: str) -> str:
-        """Get file location for a string identifier.
-        
-        Args:
-            identifier: String identifier (e.g., "src/file.py")
-            project_path: Project path
-            
-        Returns:
-            File path and line number (file:line)
-        """
-        try:
-            # Attempt to find the file in the project_path
-            for root, _, files in os.walk(project_path):
-                for file in files:
-                    if file.endswith(identifier):
-                        # Construct a dummy line number if not available
-                        return f"{os.path.join(root, file)}:0"
-            return "unknown:0"
-        except Exception as e:
-            logger.debug(f"Error getting symbol location from string '{identifier}': {e}")
-            return "unknown:0"
 
-    def _get_semantic_categories(self, symbol_id: str) -> List[str]:
-        """Get semantic categories for symbol using existing semantic matcher.
+        return entrypoints
+
+    def _create_entrypoint_from_symbol(self, symbol_info: Dict[str, Any], score: float, file_path: Path) -> Entrypoint:
+        """Create an Entrypoint from a symbol dictionary."""
+        return Entrypoint(
+            identifier=symbol_info.get('identifier', 'Unknown'),
+            file_path=file_path,
+            score=score,
+            structural_context={
+                'line_number': symbol_info.get('line_number', 0),
+                'type': symbol_info.get('type', 'Unknown'),
+            }
+        )
         
-        Args:
-            symbol_id: Symbol identifier
-            
-        Returns:
-            List of semantic categories
-        """
-        try:
-            if hasattr(self.semantic_matcher, 'get_semantic_categories'):
-                categories = self.semantic_matcher.get_semantic_categories(symbol_id)
-                if categories:
-                    return categories
-        except Exception as e:
-            logger.debug(f"Error getting semantic categories for {symbol_id}: {e}")
-        
-        # Fallback: extract categories from symbol name
-        return self._extract_categories_from_name(symbol_id)
-    
-    def _extract_categories_from_name(self, symbol_id: str) -> List[str]:
-        """Extract semantic categories from symbol name as fallback.
-        
-        Args:
-            symbol_id: Symbol identifier
-            
-        Returns:
-            List of inferred categories
-        """
-        categories = []
-        symbol_lower = symbol_id.lower()
-        
-        # Simple pattern matching for common categories
-        if any(word in symbol_lower for word in ['auth', 'login', 'user', 'password']):
-            categories.append('authentication')
-        
-        if any(word in symbol_lower for word in ['error', 'exception', 'fail', 'invalid']):
-            categories.append('error_handling')
-        
-        if any(word in symbol_lower for word in ['db', 'database', 'query', 'model']):
-            categories.append('database')
-        
-        if any(word in symbol_lower for word in ['api', 'endpoint', 'route', 'controller']):
-            categories.append('api_development')
-        
-        if any(word in symbol_lower for word in ['validate', 'check', 'verify']):
-            categories.append('validation')
-        
-        if any(word in symbol_lower for word in ['cache', 'redis', 'memcached']):
-            categories.append('caching')
-        
-        if any(word in symbol_lower for word in ['security', 'encrypt', 'hash']):
-            categories.append('security')
-        
-        if any(word in symbol_lower for word in ['file', 'upload', 'download']):
-            categories.append('file_operations')
-        
-        if any(word in symbol_lower for word in ['network', 'http', 'socket']):
-            categories.append('network')
-        
-        if any(word in symbol_lower for word in ['performance', 'optimize', 'speed']):
-            categories.append('performance')
-        
-        return categories
-    
-    def _get_structural_context(self, symbol: Dict[str, Any]) -> Dict[str, Any]:
-        """Get structural context information for symbol.
-        
-        Args:
-            symbol: Symbol dictionary
-            
-        Returns:
-            Structural context dictionary
-        """
-        context = {}
-        
-        try:
-            # Extract available structural information
-            if 'kind' in symbol:
-                context['type'] = symbol['kind']
-            
-            if 'scope' in symbol:
-                context['scope'] = symbol['scope']
-            
-            if 'dependencies' in symbol:
-                context['dependencies'] = symbol['dependencies']
-            
-            if 'complexity' in symbol:
-                context['complexity'] = symbol['complexity']
-            
-            if 'lines' in symbol:
-                context['line_count'] = symbol['lines']
-                
-        except Exception as e:
-            logger.debug(f"Error getting structural context: {e}")
-        
-        return context
-    
-    def _get_structural_context_from_string(self, identifier: str) -> Dict[str, Any]:
-        """Get structural context information for a string identifier.
-        
-        Args:
-            identifier: String identifier (e.g., "src/file.py")
-            
-        Returns:
-            Structural context dictionary
-        """
-        context = {}
-        try:
-            # Attempt to find the file in a dummy project path
-            dummy_project_path = "." # Use current directory as a placeholder
-            for root, _, files in os.walk(dummy_project_path):
-                for file in files:
-                    if file.endswith(identifier):
-                        # Construct a dummy line number if not available
-                        return {"file_path": os.path.join(root, file), "line_number": "0"}
-            return {"file_path": "unknown", "line_number": "0"}
-        except Exception as e:
-            logger.debug(f"Error getting structural context from string '{identifier}': {e}")
-            return {"file_path": "unknown", "line_number": "0"}
-    
     def _deduplicate_entrypoints(self, entrypoints: List[Entrypoint]) -> List[Entrypoint]:
         """Remove duplicate entrypoints based on identifier and location.
         

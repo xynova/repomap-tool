@@ -248,8 +248,9 @@ class GoImportParser(ImportParser):
 class ImportAnalyzer:
     """Main import analyzer that coordinates multi-language parsing."""
     
-    def __init__(self):
+    def __init__(self, project_root: Optional[str] = None):
         """Initialize the import analyzer with language parsers."""
+        self.project_root = project_root
         self.language_parsers: Dict[str, ImportParser] = {
             'py': PythonImportParser(),
             'js': JavaScriptImportParser(),
@@ -263,35 +264,24 @@ class ImportAnalyzer:
         # File extensions that should be analyzed
         self.analyzable_extensions = set(self.language_parsers.keys())
         
-        logger.info(f"ImportAnalyzer initialized with {len(self.language_parsers)} language parsers")
+        logger.info(f"ImportAnalyzer initialized with {len(self.language_parsers)} language parsers for project: {self.project_root}")
     
     def analyze_file_imports(self, file_path: str) -> FileImports:
-        """Analyze imports in a single file.
+        """Analyze a single file for imports."""
         
-        Args:
-            file_path: Path to the file to analyze
+        full_path = file_path
+        if self.project_root and not os.path.isabs(file_path):
+            full_path = os.path.join(self.project_root, file_path)
             
-        Returns:
-            FileImports object with all imports found
-        """
-        file_path = str(file_path)
-        file_ext = Path(file_path).suffix.lstrip('.')
-        
-        # Check if we have a parser for this file type
-        if file_ext not in self.language_parsers:
-            logger.debug(f"No parser for {file_ext}, skipping {file_path}")
-            return FileImports(
-                file_path=file_path,
-                imports=[],
-                language=file_ext
-            )
-        
+        if not os.path.exists(full_path):
+            raise FileNotFoundError(f"File not found: {full_path}")
+            
         try:
-            with open(file_path, 'r', encoding='utf-8') as f:
+            with open(full_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             
             # Get the appropriate parser
-            parser = self.language_parsers[file_ext]
+            parser = self.language_parsers[Path(file_path).suffix.lstrip('.')]
             imports = parser.extract_imports(content, file_path)
             
             # Resolve import paths
@@ -300,7 +290,7 @@ class ImportAnalyzer:
             file_imports = FileImports(
                 file_path=file_path,
                 imports=resolved_imports,
-                language=file_ext
+                language=Path(file_path).suffix.lstrip('.')
             )
             
             logger.debug(f"Analyzed {file_path}: found {len(imports)} imports")
@@ -308,30 +298,31 @@ class ImportAnalyzer:
             
         except UnicodeDecodeError:
             logger.warning(f"Could not decode {file_path} as UTF-8, skipping")
-            return FileImports(file_path=file_path, imports=[], language=file_ext)
+            return FileImports(file_path=file_path, imports=[], language=Path(file_path).suffix.lstrip('.'))
         except Exception as e:
             logger.error(f"Failed to analyze imports in {file_path}: {e}")
-            return FileImports(file_path=file_path, imports=[], language=file_ext)
+            return FileImports(file_path=file_path, imports=[], language=Path(file_path).suffix.lstrip('.'))
     
-    def analyze_project_imports(self, project_files: List[str], max_workers: int = 4) -> ProjectImports:
-        """Analyze imports across an entire project.
+    def analyze_project_imports(
+        self,
+        project_path: str,
+        max_workers: int = 4,
+        ignore_dirs: Optional[List[str]] = None,
+        file_extensions: Optional[List[str]] = None,
+    ) -> ProjectImports:
+        """Analyze all supported files in a project for imports."""
+        self.project_root = project_path # Ensure project_root is set
         
-        Args:
-            project_files: List of file paths to analyze
-            max_workers: Maximum number of parallel workers
-            
-        Returns:
-            ProjectImports object with all project imports
-        """
-        logger.info(f"Analyzing imports for {len(project_files)} files")
+        all_files = self._get_all_files(project_path, ignore_dirs, file_extensions)
+        project_imports = ProjectImports(project_path=project_path, file_imports={})
         
         # Filter to only analyzable files
         analyzable_files = [
-            f for f in project_files 
+            f for f in all_files 
             if Path(f).suffix.lstrip('.') in self.analyzable_extensions
         ]
         
-        logger.info(f"Found {len(analyzable_files)} analyzable files out of {len(project_files)} total")
+        logger.info(f"Found {len(analyzable_files)} analyzable files out of {len(all_files)} total")
         
         file_imports: Dict[str, FileImports] = {}
         
@@ -358,13 +349,34 @@ class ImportAnalyzer:
                 file_imports[file_path] = file_imports_obj
         
         project_imports = ProjectImports(
-            project_path=str(Path(project_files[0]).parent) if project_files else "",
+            project_path=project_path,
             file_imports=file_imports
         )
         
         logger.info(f"Project import analysis complete: {project_imports.total_files} files, {project_imports.total_imports} imports")
         return project_imports
     
+    def _get_all_files(
+        self,
+        project_path: str,
+        ignore_dirs: Optional[List[str]] = None,
+        file_extensions: Optional[List[str]] = None,
+    ) -> List[str]:
+        """Recursively get all files in a project directory."""
+        if ignore_dirs is None:
+            ignore_dirs = [".git", "__pycache__", "node_modules", "target"]
+        
+        if file_extensions is None:
+            file_extensions = list(self.analyzable_extensions)
+            
+        all_files = []
+        for root, dirs, files in os.walk(project_path):
+            dirs[:] = [d for d in dirs if d not in ignore_dirs]
+            for file in files:
+                if any(file.endswith(f".{ext}") for ext in file_extensions):
+                    all_files.append(os.path.join(root, file))
+        return all_files
+
     def _resolve_import_paths(self, imports: List[Import], file_path: str) -> List[Import]:
         """Resolve relative imports to absolute paths.
         
@@ -388,7 +400,7 @@ class ImportAnalyzer:
                 if resolved_path:
                     imp.resolved_path = str(resolved_path)
                     # Determine if it's external (outside project)
-                    if not self._is_in_project(resolved_path, file_dir):
+                    if not self._is_in_project(resolved_path, Path(self.project_root)):
                         imp.import_type = ImportType.EXTERNAL
                 
                 resolved_imports.append(imp)

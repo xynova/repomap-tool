@@ -1,25 +1,15 @@
 """
-Output templates for LLM optimization.
+Output templates for code analysis results.
 
-This module provides LLM-optimized output templates for different
-types of content and LLM models to maximize understanding and efficiency.
+This module provides configurable output templates for different
+types of content with user-controlled formatting options.
 """
 
 import logging
 from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
-from enum import Enum
 
 logger = logging.getLogger(__name__)
-
-
-class LLMModel(Enum):
-    """Supported LLM models for optimization."""
-    GPT4 = "gpt-4"
-    GPT35 = "gpt-3.5-turbo"
-    CLAUDE = "claude"
-    GEMINI = "gemini"
-    GENERIC = "generic"
 
 
 @dataclass
@@ -36,12 +26,11 @@ class TemplateConfig:
 
 
 class OutputTemplates:
-    """LLM-optimized output templates for different models and content types."""
+    """Configurable output templates for different content types."""
     
-    def __init__(self, model: LLMModel = LLMModel.GENERIC):
-        self.model = model
+    def __init__(self, config: Optional[TemplateConfig] = None):
+        self.config = config or TemplateConfig()
         self.templates = self._load_templates()
-        self.config = self._get_model_config(model)
     
     def apply_template(self, symbol: Dict[str, Any], template_type: str = "function") -> str:
         """Apply LLM-optimized template to symbol.
@@ -381,137 +370,89 @@ class OutputTemplates:
 {modules}
 """
     
-    def _get_model_config(self, model: LLMModel) -> TemplateConfig:
-        """Get template configuration optimized for specific LLM model."""
-        if model == LLMModel.GPT4:
-            return TemplateConfig(
-                use_emojis=True,
-                use_hierarchical_structure=True,
-                include_line_numbers=True,
-                include_centrality_scores=True,
-                include_impact_risk=True,
-                max_critical_lines=3,
-                max_dependencies=3,
-                compression_level="medium"
-            )
-        elif model == LLMModel.GPT35:
-            return TemplateConfig(
-                use_emojis=True,
-                use_hierarchical_structure=True,
-                include_line_numbers=True,
-                include_centrality_scores=True,
-                include_impact_risk=False,  # Less detail for GPT-3.5
-                max_critical_lines=2,
-                max_dependencies=2,
-                compression_level="high"
-            )
-        elif model == LLMModel.CLAUDE:
-            return TemplateConfig(
-                use_emojis=False,  # Claude works well without emojis
-                use_hierarchical_structure=True,
-                include_line_numbers=True,
-                include_centrality_scores=True,
-                include_impact_risk=True,
-                max_critical_lines=3,
-                max_dependencies=4,
-                compression_level="medium"
-            )
-        elif model == LLMModel.GEMINI:
-            return TemplateConfig(
-                use_emojis=True,
-                use_hierarchical_structure=True,
-                include_line_numbers=True,
-                include_centrality_scores=True,
-                include_impact_risk=True,
-                max_critical_lines=3,
-                max_dependencies=3,
-                compression_level="medium"
-            )
-        else:  # GENERIC
-            return TemplateConfig(
-                use_emojis=True,
-                use_hierarchical_structure=True,
-                include_line_numbers=True,
-                include_centrality_scores=True,
-                include_impact_risk=True,
-                max_critical_lines=3,
-                max_dependencies=3,
-                compression_level="medium"
-            )
+    @classmethod
+    def create_config(
+        cls,
+        use_emojis: bool = True,
+        use_hierarchical_structure: bool = True,
+        include_line_numbers: bool = True,
+        include_centrality_scores: bool = True,
+        include_impact_risk: bool = True,
+        max_critical_lines: int = 3,
+        max_dependencies: int = 3,
+        compression_level: str = "medium"
+    ) -> TemplateConfig:
+        """Create a template configuration with specified options."""
+        return TemplateConfig(
+            use_emojis=use_emojis,
+            use_hierarchical_structure=use_hierarchical_structure,
+            include_line_numbers=include_line_numbers,
+            include_centrality_scores=include_centrality_scores,
+            include_impact_risk=include_impact_risk,
+            max_critical_lines=max_critical_lines,
+            max_dependencies=max_dependencies,
+            compression_level=compression_level
+        )
     
-    def optimize_for_model(self, content: str, target_model: LLMModel) -> str:
-        """Optimize content specifically for target LLM model.
+    def format_project_summary(self, project_data: Dict[str, Any]) -> str:
+        """Format a complete project summary using the configured templates.
         
         Args:
-            content: Raw content to optimize
-            target_model: Target LLM model
+            project_data: Project analysis data
             
         Returns:
-            Model-optimized content
+            Formatted project summary
         """
-        if target_model == self.model:
-            return content  # Already optimized
+        if not self.config.use_hierarchical_structure:
+            return self._format_flat_summary(project_data)
         
-        # Update configuration for target model
-        old_config = self.config
-        self.config = self._get_model_config(target_model)
-        
-        # Re-apply templates with new configuration
-        # This is a simplified approach - in practice, you'd re-parse and re-format
-        optimized_content = content
-        
-        # Apply model-specific optimizations
-        if target_model == LLMModel.GPT35:
-            # GPT-3.5: Reduce detail, increase compression
-            optimized_content = self._compress_for_gpt35(optimized_content)
-        elif target_model == LLMModel.CLAUDE:
-            # Claude: Remove emojis, increase structure
-            optimized_content = self._optimize_for_claude(optimized_content)
-        elif target_model == LLMModel.GEMINI:
-            # Gemini: Ensure emojis and visual markers
-            optimized_content = self._optimize_for_gemini(optimized_content)
-        
-        # Restore original configuration
-        self.config = old_config
-        
-        return optimized_content
+        return self._format_hierarchical_summary(project_data)
     
-    def _compress_for_gpt35(self, content: str) -> str:
-        """Compress content for GPT-3.5 efficiency."""
-        lines = content.split('\n')
-        compressed_lines = []
+    def _format_flat_summary(self, project_data: Dict[str, Any]) -> str:
+        """Format project summary in flat structure."""
+        lines = []
         
-        for line in lines:
-            # Remove some detail for GPT-3.5
-            if any(skip_pattern in line for skip_pattern in [
-                'Impact Risk:', 'Centrality:', '... and', 'more'
-            ]):
-                continue
-            
-            compressed_lines.append(line)
+        # Project header
+        lines.append(f"Project: {project_data.get('project_root', 'Unknown')}")
+        lines.append(f"Files: {project_data.get('total_files', 0)}")
+        lines.append(f"Identifiers: {project_data.get('total_identifiers', 0)}")
         
-        return '\n'.join(compressed_lines)
+        # File types
+        if project_data.get('file_types'):
+            lines.append("\nFile Types:")
+            for ext, count in project_data['file_types'].items():
+                lines.append(f"  {ext}: {count}")
+        
+        # Identifier types
+        if project_data.get('identifier_types'):
+            lines.append("\nIdentifier Types:")
+            for id_type, count in project_data['identifier_types'].items():
+                lines.append(f"  {id_type}: {count}")
+        
+        return '\n'.join(lines)
     
-    def _optimize_for_claude(self, content: str) -> str:
-        """Optimize content for Claude."""
-        # Remove emojis
-        content = content.replace('🧠', '')
-        content = content.replace('📊', '')
-        content = content.replace('⚠️', '')
-        content = content.replace('💡', '')
-        content = content.replace('📞', '')
-        content = content.replace('🔗', '')
-        content = content.replace('📦', '')
-        content = content.replace('📁', '')
+    def _format_hierarchical_summary(self, project_data: Dict[str, Any]) -> str:
+        """Format project summary in hierarchical structure."""
+        lines = []
         
-        return content
-    
-    def _optimize_for_gemini(self, content: str) -> str:
-        """Optimize content for Gemini."""
-        # Ensure visual markers are present
-        if '💡 Critical:' not in content:
-            content = content.replace('Critical:', '💡 Critical:')
-        if '🔗 Dependencies:' not in content:
-            content = content.replace('Dependencies:', '🔗 Dependencies:')
+        # Project header with emojis if enabled
+        emoji_prefix = "📁 " if self.config.use_emojis else ""
+        lines.append(f"{emoji_prefix}Project: {project_data.get('project_root', 'Unknown')}")
+        lines.append(f"├── Files: {project_data.get('total_files', 0)}")
+        lines.append(f"└── Identifiers: {project_data.get('total_identifiers', 0)}")
         
-        return content
+        # File types
+        if project_data.get('file_types'):
+            emoji_prefix = "📄 " if self.config.use_emojis else ""
+            lines.append(f"\n{emoji_prefix}File Types:")
+            for ext, count in project_data['file_types'].items():
+                lines.append(f"  ├── {ext}: {count}")
+        
+        # Identifier types
+        if project_data.get('identifier_types'):
+            emoji_prefix = "🏷️ " if self.config.use_emojis else ""
+            lines.append(f"\n{emoji_prefix}Identifier Types:")
+            for id_type, count in project_data['identifier_types'].items():
+                lines.append(f"  ├── {id_type}: {count}")
+        
+        return '\n'.join(lines)
