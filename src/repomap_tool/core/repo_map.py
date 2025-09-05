@@ -83,7 +83,7 @@ class DockerRepoMap:
         self._initialize_components()
 
         self.logger.info(f"Initialized DockerRepoMap for {self.config.project_root}")
-        
+
         # Invalidate stale caches on initialization
         self._invalidate_stale_caches()
 
@@ -177,21 +177,21 @@ class DockerRepoMap:
             from ..dependencies import (
                 AdvancedDependencyGraph,
                 ImpactAnalyzer,
-                CentralityCalculator
+                CentralityCalculator,
             )
-            
+
             # Initialize advanced dependency graph
             self.dependency_graph = AdvancedDependencyGraph()
-            
+
             # Initialize impact analyzer
             if self.config.dependencies.enable_impact_analysis:
                 self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
-            
+
             # Initialize centrality calculator
             self.centrality_calculator = CentralityCalculator(self.dependency_graph)
-            
+
             self.logger.info("Dependency analysis components initialized successfully")
-            
+
         except ImportError as e:
             self.logger.warning(f"Failed to import dependency analysis components: {e}")
             self.logger.warning("Dependency analysis features will be disabled")
@@ -206,40 +206,44 @@ class DockerRepoMap:
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
-            
+
             # Check and invalidate stale caches in fuzzy matcher
-            if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, 'cache_manager'):
+            if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
                 cache_manager = self.fuzzy_matcher.cache_manager
                 if cache_manager:
-                    invalidated_files = cache_manager.invalidate_stale_files(project_files)
+                    invalidated_files = cache_manager.invalidate_stale_files(
+                        project_files
+                    )
                     if invalidated_files > 0:
-                        self.logger.info(f"Invalidated caches for {invalidated_files} modified files")
-                        
+                        self.logger.info(
+                            f"Invalidated caches for {invalidated_files} modified files"
+                        )
+
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
-            
+
     def get_cache_status(self) -> Dict[str, Any]:
         """Get comprehensive cache status information."""
         status = {
             "project_root": str(self.config.project_root),
             "fuzzy_matcher_cache": None,
             "tracked_files": [],
-            "cache_enabled": False
+            "cache_enabled": False,
         }
-        
+
         # Get fuzzy matcher cache status
-        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, 'cache_manager'):
+        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
             cache_manager = self.fuzzy_matcher.cache_manager
             if cache_manager:
                 status["fuzzy_matcher_cache"] = cache_manager.get_stats()
                 status["tracked_files"] = cache_manager.get_tracked_files()
                 status["cache_enabled"] = True
-                
+
         return status
-        
+
     def refresh_all_caches(self) -> None:
         """Force refresh of all caches by clearing them."""
-        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, 'cache_manager'):
+        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
             cache_manager = self.fuzzy_matcher.cache_manager
             if cache_manager:
                 cache_manager.clear()
@@ -597,27 +601,29 @@ class DockerRepoMap:
         return identifiers
 
     # Phase 2: Dependency Analysis Methods
-    
+
     def build_dependency_graph(self):
         """Build dependency graph for the project."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
-        
+
         if self.dependency_graph is None:
             raise RuntimeError("Dependency analysis components not initialized")
-        
+
         start_time = time.time()
-        
+
         try:
             # Import the ImportAnalyzer
             from ..dependencies.import_analyzer import ImportAnalyzer
-            
+
             # Initialize import analyzer with project root
             import_analyzer = ImportAnalyzer(project_root=str(self.config.project_root))
-            
+
             # Analyze project imports
-            project_imports = import_analyzer.analyze_project_imports(str(self.config.project_root))
-            
+            project_imports = import_analyzer.analyze_project_imports(
+                str(self.config.project_root)
+            )
+
             # Limit files if configured
             if len(project_imports) > self.config.dependencies.max_graph_size:
                 self.logger.warning(
@@ -625,82 +631,91 @@ class DockerRepoMap:
                     f"{self.config.dependencies.max_graph_size} for dependency analysis"
                 )
                 # Create a limited version of project_imports
-                limited_files = list(project_imports.file_imports.keys())[:self.config.dependencies.max_graph_size]
-                limited_file_imports = {k: v for k, v in project_imports.file_imports.items() if k in limited_files}
+                limited_files = list(project_imports.file_imports.keys())[
+                    : self.config.dependencies.max_graph_size
+                ]
+                limited_file_imports = {
+                    k: v
+                    for k, v in project_imports.file_imports.items()
+                    if k in limited_files
+                }
                 project_imports.file_imports = limited_file_imports
-            
+
             # Build the dependency graph
             self.dependency_graph.build_graph(project_imports)
-            
+
             # Add construction time to statistics
             construction_time = time.time() - start_time
             self.dependency_graph.construction_time = construction_time
-            
+
             # Check performance threshold
-            if construction_time > self.config.dependencies.performance_threshold_seconds:
+            if (
+                construction_time
+                > self.config.dependencies.performance_threshold_seconds
+            ):
                 self.logger.warning(
                     f"Dependency graph construction took {construction_time:.2f}s, "
                     f"exceeding threshold of {self.config.dependencies.performance_threshold_seconds}s"
                 )
-            
+
             self.logger.info(
                 f"Built dependency graph: {len(project_imports)} files in {construction_time:.2f}s"
             )
-            
+
             return self.dependency_graph
-            
+
         except Exception as e:
             self.logger.error(f"Failed to build dependency graph: {e}")
             raise
-    
+
     def get_centrality_scores(self):
         """Get centrality scores for all files in the dependency graph."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
-        
+
         if self.centrality_calculator is None:
             raise RuntimeError("Centrality calculator not initialized")
-        
+
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built
             self.build_dependency_graph()
-        
+
         try:
             return self.centrality_calculator.calculate_composite_importance()
         except Exception as e:
             self.logger.error(f"Failed to calculate centrality scores: {e}")
             raise
-    
+
     def analyze_change_impact(self, file_path: str):
         """Analyze the impact of changes to a specific file."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
-        
+
         if not self.config.dependencies.enable_impact_analysis:
             raise RuntimeError("Impact analysis is not enabled")
-        
+
         if self.impact_analyzer is None:
             raise RuntimeError("Impact analyzer not initialized")
-        
+
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built
             self.build_dependency_graph()
-        
+
         try:
             return self.impact_analyzer.analyze_change_impact([file_path])
         except Exception as e:
             self.logger.error(f"Failed to analyze change impact: {e}")
             raise
-    
+
     def find_circular_dependencies(self):
         """Find circular dependencies in the project."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
-        
+
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built
             self.build_dependency_graph()
-        
+
         try:
             return self.dependency_graph.find_cycles()
         except Exception as e:
@@ -711,76 +726,75 @@ class DockerRepoMap:
         """Get all symbols from the project."""
         if not self.analysis_results:
             self.analyze_project()
-        
+
         symbols = []
         for file_path, file_info in self.analysis_results.files.items():
             for identifier, details in file_info.identifiers.items():
-                symbols.append({
-                    'identifier': identifier,
-                    'file_path': file_path,
-                    'line_number': details.line_number,
-                    'type': details.type,
-                })
+                symbols.append(
+                    {
+                        "identifier": identifier,
+                        "file_path": file_path,
+                        "line_number": details.line_number,
+                        "type": details.type,
+                    }
+                )
         return symbols
 
     def semantic_search(self, query: str) -> List[Dict[str, Any]]:
         """Perform a semantic search for a query."""
         if not self.semantic_matcher or not self.semantic_matcher.enabled:
             return []
-        
+
         # This is a simplified search. A real implementation would be more complex.
         all_symbols = self.get_all_symbols()
         results = []
         for symbol in all_symbols:
             # A real implementation would use a more sophisticated similarity metric.
-            if query.lower() in symbol['identifier'].lower():
-                results.append({
-                    'symbol': symbol,
-                    'score': 0.8 # Dummy score
-                })
+            if query.lower() in symbol["identifier"].lower():
+                results.append({"symbol": symbol, "score": 0.8})  # Dummy score
         return results
 
     def fuzzy_search(self, query: str) -> List[Any]:
         """Perform a fuzzy search for a query."""
         if not self.fuzzy_matcher or not self.fuzzy_matcher.enabled:
             return []
-        
+
         # This is a simplified search.
         all_symbols = self.get_all_symbols()
         results = []
         for symbol in all_symbols:
-            if query.lower() in symbol['identifier'].lower():
+            if query.lower() in symbol["identifier"].lower():
                 # The real fuzzy_search returns a list of MatchResult objects
                 from repomap_tool.matchers.fuzzy_matcher import MatchResult
-                results.append(MatchResult(
-                    symbol=symbol,
-                    score=80.0 # Dummy score
-                ))
+
+                results.append(MatchResult(symbol=symbol, score=80.0))  # Dummy score
         return results
 
-    def get_dependency_enhanced_trees(self, session_id: str, intent: str, current_files: List[str] = None):
+    def get_dependency_enhanced_trees(
+        self, session_id: str, intent: str, current_files: List[str] = None
+    ):
         """Generate enhanced exploration trees with dependency intelligence."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
-        
+
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built
             self.build_dependency_graph()
-        
+
         try:
             # Import here to avoid circular imports
             from ..trees.discovery_engine import EntrypointDiscoverer
-            
+
             # Use enhanced entrypoint discovery (Phase 1 + Phase 2)
             enhanced_discoverer = EntrypointDiscoverer(self)
             entrypoints = enhanced_discoverer.discover_entrypoints(
                 str(self.config.project_root), intent
             )
-            
+
             # For now, return entrypoints with dependency information
             # TODO: Implement full tree building with dependency intelligence
             return entrypoints
-            
+
         except Exception as e:
             self.logger.error(f"Failed to generate dependency-enhanced trees: {e}")
             raise

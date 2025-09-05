@@ -55,7 +55,7 @@ class CacheManager:
 
         # File timestamp tracking: {file_path: cached_timestamp}
         self._file_timestamps: Dict[str, float] = {}
-        
+
         # File-based cache keys: {file_path: set_of_cache_keys}
         self._file_cache_keys: Dict[str, Set[str]] = {}
 
@@ -127,7 +127,7 @@ class CacheManager:
         # Add new entry
         self._cache[key] = (value, current_time)
         self._access_times[key] = current_time
-        
+
         # Track file association if provided
         if file_path:
             self._track_file_cache(key, file_path)
@@ -288,105 +288,107 @@ class CacheManager:
                 self.set(key, value)
 
         logger.info(f"Cache warmed with {len(warmup_data)} entries")
-    
+
     def _track_file_cache(self, cache_key: str, file_path: str) -> None:
         """
         Track association between cache key and file.
-        
+
         Args:
             cache_key: Cache key to associate with file
             file_path: File path to track
         """
         # Normalize file path
         normalized_path = str(Path(file_path).resolve())
-        
+
         # Track file timestamp when caching
         try:
             self._file_timestamps[normalized_path] = os.path.getmtime(normalized_path)
         except OSError:
             # File doesn't exist or can't access - don't track
             return
-            
+
         # Associate cache key with file
         if normalized_path not in self._file_cache_keys:
             self._file_cache_keys[normalized_path] = set()
         self._file_cache_keys[normalized_path].add(cache_key)
-        
+
         logger.debug(f"Tracking cache key '{cache_key}' for file '{normalized_path}'")
-    
+
     def is_file_cache_valid(self, file_path: str) -> bool:
         """
         Check if cached data for a file is still valid based on modification time.
-        
+
         Args:
             file_path: File path to check
-            
+
         Returns:
             True if cache is valid, False if file has been modified
         """
         normalized_path = str(Path(file_path).resolve())
-        
+
         # If we don't have timestamp data, consider cache invalid
         if normalized_path not in self._file_timestamps:
             return False
-            
+
         try:
             current_mtime = os.path.getmtime(normalized_path)
             cached_mtime = self._file_timestamps[normalized_path]
-            
+
             # Cache is valid if file hasn't been modified since caching
             return current_mtime <= cached_mtime
         except OSError:
             # File doesn't exist anymore - cache is invalid
             return False
-    
+
     def invalidate_file_cache(self, file_path: str) -> int:
         """
         Invalidate all cache entries associated with a specific file.
-        
+
         Args:
             file_path: File path whose cache entries should be invalidated
-            
+
         Returns:
             Number of cache entries invalidated
         """
         normalized_path = str(Path(file_path).resolve())
         invalidated_count = 0
-        
+
         # Get all cache keys associated with this file
         if normalized_path in self._file_cache_keys:
             cache_keys = self._file_cache_keys[normalized_path].copy()
-            
+
             for cache_key in cache_keys:
                 if cache_key in self._cache:
                     self._evict(cache_key)
                     invalidated_count += 1
                     self._invalidations += 1
-            
+
             # Clean up file tracking
             del self._file_cache_keys[normalized_path]
             if normalized_path in self._file_timestamps:
                 del self._file_timestamps[normalized_path]
-                
-            logger.debug(f"Invalidated {invalidated_count} cache entries for file '{normalized_path}'")
-        
+
+            logger.debug(
+                f"Invalidated {invalidated_count} cache entries for file '{normalized_path}'"
+            )
+
         return invalidated_count
-    
+
     def invalidate_stale_files(self, project_files: List[str]) -> int:
         """
         Check all tracked files and invalidate caches for any that have been modified.
-        
+
         Args:
             project_files: List of project file paths to check
-            
+
         Returns:
             Number of files whose caches were invalidated
         """
         invalidated_files = 0
-        
+
         for file_path in project_files:
             normalized_path = str(Path(file_path).resolve())
-            
+
             # Only check files we're actually tracking
             if normalized_path in self._file_timestamps:
                 if not self.is_file_cache_valid(file_path):
@@ -394,16 +396,16 @@ class CacheManager:
                     if cache_count > 0:
                         invalidated_files += 1
                         logger.info(f"Invalidated cache for modified file: {file_path}")
-        
+
         if invalidated_files > 0:
             logger.info(f"Invalidated caches for {invalidated_files} modified files")
-            
+
         return invalidated_files
-    
+
     def get_tracked_files(self) -> List[str]:
         """
         Get list of files currently being tracked for cache invalidation.
-        
+
         Returns:
             List of file paths being tracked
         """

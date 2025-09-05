@@ -5,24 +5,24 @@ Test multi-language support for LLM optimization components.
 
 import unittest
 from src.repomap_tool.llm.critical_line_extractor import (
-    CriticalLineExtractor, 
+    CriticalLineExtractor,
     CriticalLine,
     GoCriticalAnalyzer,
     JavaCriticalAnalyzer,
     CSharpCriticalAnalyzer,
-    RustCriticalAnalyzer
+    RustCriticalAnalyzer,
 )
 
 
 class TestMultiLanguageSupport(unittest.TestCase):
     """Test critical line extraction for multiple programming languages."""
-    
+
     def setUp(self):
         """Set up test fixtures."""
         self.extractor = CriticalLineExtractor()
-        
+
         # Test code samples for different languages
-        self.go_code = '''
+        self.go_code = """
 package main
 
 import (
@@ -60,9 +60,9 @@ func cleanup() {
 func asyncTask() {
     fmt.Println("Async task running...")
 }
-'''
-        
-        self.java_code = '''
+"""
+
+        self.java_code = """
 package com.example;
 
 import java.util.List;
@@ -95,9 +95,9 @@ public class DataProcessor {
         boolean isValid(String data);
     }
 }
-'''
-        
-        self.csharp_code = '''
+"""
+
+        self.csharp_code = """
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -149,9 +149,9 @@ namespace ExampleApp
         }
     }
 }
-'''
-        
-        self.rust_code = '''
+"""
+
+        self.rust_code = """
 use std::collections::HashMap;
 use std::error::Error;
 
@@ -207,25 +207,31 @@ impl ApiResponse {
         ApiResponse::Error { message }
     }
 }
-'''
+"""
 
     def test_go_critical_analyzer(self):
         """Test Go language critical line extraction."""
         analyzer = GoCriticalAnalyzer()
         tree = analyzer.parse_code(self.go_code)
         critical_nodes = analyzer.find_critical_nodes(tree)
-        
+
         # Should extract critical nodes
         self.assertGreater(len(critical_nodes), 0)
-        
+
         # Check for Go-specific patterns
-        go_patterns = ['func main()', 'func processData', 'panic(err)', 'defer cleanup()', 'go asyncTask()']
-        found_patterns = [node['content'] for node in critical_nodes]
-        
+        go_patterns = [
+            "func main()",
+            "func processData",
+            "panic(err)",
+            "defer cleanup()",
+            "go asyncTask()",
+        ]
+        found_patterns = [node["content"] for node in critical_nodes]
+
         for pattern in go_patterns:
             self.assertTrue(
                 any(pattern in content for content in found_patterns),
-                f"Go pattern '{pattern}' not found in critical nodes"
+                f"Go pattern '{pattern}' not found in critical nodes",
             )
 
     def test_java_critical_analyzer(self):
@@ -233,18 +239,25 @@ impl ApiResponse {
         analyzer = JavaCriticalAnalyzer()
         tree = analyzer.parse_code(self.java_code)
         critical_nodes = analyzer.find_critical_nodes(tree)
-        
+
         # Should extract critical nodes
         self.assertGreater(len(critical_nodes), 0)
-        
+
         # Check for Java-specific patterns
-        java_patterns = ['public class', 'public void', 'throw new', 'try {', 'catch (', 'interface']
-        found_patterns = [node['content'] for node in critical_nodes]
-        
+        java_patterns = [
+            "public class",
+            "public void",
+            "throw new",
+            "try {",
+            "catch (",
+            "interface",
+        ]
+        found_patterns = [node["content"] for node in critical_nodes]
+
         for pattern in java_patterns:
             self.assertTrue(
                 any(pattern in content for content in found_patterns),
-                f"Java pattern '{pattern}' not found in critical nodes"
+                f"Java pattern '{pattern}' not found in critical nodes",
             )
 
     def test_csharp_critical_analyzer(self):
@@ -252,14 +265,22 @@ impl ApiResponse {
         analyzer = CSharpCriticalAnalyzer()
         tree = analyzer.parse_code(self.csharp_code)
         critical_nodes = analyzer.find_critical_nodes(tree)
-        
+
         # Should extract critical lines
         self.assertGreater(len(critical_nodes), 0)
-        
+
         # Check for C#-specific patterns
-        csharp_patterns = ['public class', 'public async Task', 'throw new', 'try {', 'catch (', 'struct', 'namespace']
-        found_patterns = [node['content'] for node in critical_nodes]
-        
+        csharp_patterns = [
+            "public class",
+            "public async Task",
+            "throw new",
+            "try {",
+            "catch (",
+            "struct",
+            "namespace",
+        ]
+        found_patterns = [node["content"] for node in critical_nodes]
+
         # Note: Some patterns might not match exactly due to regex complexity
         # Let's check that we get some critical nodes
         self.assertGreater(len(found_patterns), 0)
@@ -269,14 +290,24 @@ impl ApiResponse {
         analyzer = RustCriticalAnalyzer()
         tree = analyzer.parse_code(self.rust_code)
         critical_nodes = analyzer.find_critical_nodes(tree)
-        
+
         # Should extract critical nodes
         self.assertGreater(len(critical_nodes), 0)
-        
+
         # Check for Rust-specific patterns
-        rust_patterns = ['pub struct', 'pub fn', 'impl', 'trait', 'match', 'Some(', 'None', 'Ok(', 'Err(']
-        found_patterns = [node['content'] for node in critical_nodes]
-        
+        rust_patterns = [
+            "pub struct",
+            "pub fn",
+            "impl",
+            "trait",
+            "match",
+            "Some(",
+            "None",
+            "Ok(",
+            "Err(",
+        ]
+        found_patterns = [node["content"] for node in critical_nodes]
+
         # Note: Some patterns might not match exactly due to regex complexity
         # Let's check that we get some critical nodes
         self.assertGreater(len(found_patterns), 0)
@@ -284,29 +315,41 @@ impl ApiResponse {
     def test_extractor_language_mapping(self):
         """Test that the extractor correctly maps language extensions to analyzers."""
         # Test Go
-        go_lines = self.extractor.extract_critical_lines(self.go_code, language='go')
+        go_lines = self.extractor.extract_critical_lines(self.go_code, language="go")
         self.assertGreater(len(go_lines), 0)
-        
+
         # Test Java
-        java_lines = self.extractor.extract_critical_lines(self.java_code, language='java')
+        java_lines = self.extractor.extract_critical_lines(
+            self.java_code, language="java"
+        )
         self.assertGreater(len(java_lines), 0)
-        
+
         # Test C#
-        csharp_lines = self.extractor.extract_critical_lines(self.csharp_code, language='csharp')
+        csharp_lines = self.extractor.extract_critical_lines(
+            self.csharp_code, language="csharp"
+        )
         self.assertGreater(len(csharp_lines), 0)
-        
+
         # Test Rust
-        rust_lines = self.extractor.extract_critical_lines(self.rust_code, language='rust')
+        rust_lines = self.extractor.extract_critical_lines(
+            self.rust_code, language="rust"
+        )
         self.assertGreater(len(rust_lines), 0)
 
     def test_fallback_extraction_multi_language(self):
         """Test fallback extraction works for all supported languages."""
         # Test with language=None to trigger fallback
         go_fallback = self.extractor.extract_critical_lines(self.go_code, language=None)
-        java_fallback = self.extractor.extract_critical_lines(self.java_code, language=None)
-        csharp_fallback = self.extractor.extract_critical_lines(self.csharp_code, language=None)
-        rust_fallback = self.extractor.extract_critical_lines(self.rust_code, language=None)
-        
+        java_fallback = self.extractor.extract_critical_lines(
+            self.java_code, language=None
+        )
+        csharp_fallback = self.extractor.extract_critical_lines(
+            self.csharp_code, language=None
+        )
+        rust_fallback = self.extractor.extract_critical_lines(
+            self.rust_code, language=None
+        )
+
         # All should have some critical lines
         self.assertGreater(len(go_fallback), 0)
         self.assertGreater(len(java_fallback), 0)
@@ -318,20 +361,20 @@ impl ApiResponse {
         analyzer = GoCriticalAnalyzer()
         tree = analyzer.parse_code(self.go_code)
         critical_nodes = analyzer.find_critical_nodes(tree)
-        
+
         for node in critical_nodes:
             self.assertIsInstance(node, dict)
-            self.assertIsInstance(node['line_number'], int)
-            self.assertIsInstance(node['content'], str)
-            self.assertIsInstance(node['importance'], float)
-            self.assertIsInstance(node['pattern_type'], str)
-            
+            self.assertIsInstance(node["line_number"], int)
+            self.assertIsInstance(node["content"], str)
+            self.assertIsInstance(node["importance"], float)
+            self.assertIsInstance(node["pattern_type"], str)
+
             # Validate ranges
-            self.assertGreaterEqual(node['line_number'], 1)
-            self.assertGreater(node['importance'], 0.0)
-            self.assertLessEqual(node['importance'], 1.0)
-            self.assertGreater(len(node['content']), 0)
+            self.assertGreaterEqual(node["line_number"], 1)
+            self.assertGreater(node["importance"], 0.0)
+            self.assertLessEqual(node["importance"], 1.0)
+            self.assertGreater(len(node["content"]), 0)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

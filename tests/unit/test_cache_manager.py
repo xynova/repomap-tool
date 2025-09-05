@@ -197,28 +197,30 @@ class TestCacheManager:
     def test_file_timestamp_tracking(self):
         """Test file timestamp tracking functionality."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         # Create a temporary file for testing
         import tempfile
         import os
         from pathlib import Path
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def test_function(): pass")
             temp_file = f.name
-        
+
         try:
             # Set cache with file association
             cache.set("test_key", "test_value", temp_file)
-            
+
             # Check that file is being tracked
             tracked_files = cache.get_tracked_files()
             assert len(tracked_files) == 1
-            assert Path(temp_file).resolve() in [Path(f).resolve() for f in tracked_files]
-            
+            assert Path(temp_file).resolve() in [
+                Path(f).resolve() for f in tracked_files
+            ]
+
             # Check cache validity
             assert cache.is_file_cache_valid(temp_file) == True
-            
+
         finally:
             # Cleanup
             os.unlink(temp_file)
@@ -226,47 +228,47 @@ class TestCacheManager:
     def test_file_cache_invalidation(self):
         """Test cache invalidation when files are modified."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         import tempfile
         import os
         import time
         from pathlib import Path
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def test_function(): pass")
             temp_file = f.name
-        
+
         try:
             # Set cache with file association
             cache.set("test_key", "test_value", temp_file)
             cache.set("another_key", "another_value", temp_file)
-            
+
             # Verify cache is working
             assert cache.get("test_key") == "test_value"
             assert cache.get("another_key") == "another_value"
-            
+
             # Wait a bit to ensure different timestamp
             time.sleep(0.1)
-            
+
             # Modify the file
-            with open(temp_file, 'w') as f:
+            with open(temp_file, "w") as f:
                 f.write("def test_function_modified(): pass")
-            
+
             # Check that cache is now invalid
             assert cache.is_file_cache_valid(temp_file) == False
-            
+
             # Invalidate stale files
             invalidated_count = cache.invalidate_stale_files([temp_file])
             assert invalidated_count == 1
-            
+
             # Check that cache entries are gone
             assert cache.get("test_key") is None
             assert cache.get("another_key") is None
-            
+
             # Check that file is no longer tracked
             tracked_files = cache.get_tracked_files()
             assert len(tracked_files) == 0
-            
+
         finally:
             # Cleanup
             os.unlink(temp_file)
@@ -274,48 +276,50 @@ class TestCacheManager:
     def test_multiple_file_tracking(self):
         """Test tracking multiple files independently."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         import tempfile
         import os
         import time
         from pathlib import Path
-        
+
         # Create two temporary files
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f1:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f1:
             f1.write("def file1_function(): pass")
             temp_file1 = f1.name
-            
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f2:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f2:
             f2.write("def file2_function(): pass")
             temp_file2 = f2.name
-        
+
         try:
             # Set cache entries for different files
             cache.set("key1", "value1", temp_file1)
             cache.set("key2", "value2", temp_file2)
-            
+
             # Check both files are tracked
             tracked_files = cache.get_tracked_files()
             assert len(tracked_files) == 2
-            
+
             # Modify only one file
             time.sleep(0.1)
-            with open(temp_file1, 'w') as f:
+            with open(temp_file1, "w") as f:
                 f.write("def file1_function_modified(): pass")
-            
+
             # Invalidate stale files
             invalidated_count = cache.invalidate_stale_files([temp_file1, temp_file2])
             assert invalidated_count == 1
-            
+
             # Only key1 should be invalidated, key2 should remain
             assert cache.get("key1") is None
             assert cache.get("key2") == "value2"
-            
+
             # Only file1 should be removed from tracking
             tracked_files = cache.get_tracked_files()
             assert len(tracked_files) == 1
-            assert Path(temp_file2).resolve() in [Path(f).resolve() for f in tracked_files]
-            
+            assert Path(temp_file2).resolve() in [
+                Path(f).resolve() for f in tracked_files
+            ]
+
         finally:
             # Cleanup
             os.unlink(temp_file1)
@@ -324,40 +328,40 @@ class TestCacheManager:
     def test_file_cache_invalidation_statistics(self):
         """Test that file cache invalidation is properly tracked in statistics."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         import tempfile
         import os
         import time
         from pathlib import Path
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def test_function(): pass")
             temp_file = f.name
-        
+
         try:
             # Set multiple cache entries
             cache.set("key1", "value1", temp_file)
             cache.set("key2", "value2", temp_file)
             cache.set("key3", "value3", temp_file)
-            
+
             # Check initial stats
             stats = cache.get_stats()
             assert stats["invalidations"] == 0
             assert stats["tracked_files"] == 1
-            
+
             # Modify file and invalidate
             time.sleep(0.1)
-            with open(temp_file, 'w') as f:
+            with open(temp_file, "w") as f:
                 f.write("def test_function_modified(): pass")
-            
+
             invalidated_count = cache.invalidate_stale_files([temp_file])
             assert invalidated_count == 1
-            
+
             # Check final stats
             stats = cache.get_stats()
             assert stats["invalidations"] == 3  # 3 keys were invalidated
             assert stats["tracked_files"] == 0  # No files tracked anymore
-            
+
         finally:
             # Cleanup
             os.unlink(temp_file)
@@ -365,18 +369,18 @@ class TestCacheManager:
     def test_file_cache_invalidation_edge_cases(self):
         """Test edge cases for file cache invalidation."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         # Test with non-existent file
         assert cache.is_file_cache_valid("/nonexistent/file.py") == False
-        
+
         # Test with None file path
         cache.set("key1", "value1", None)
         assert cache.get("key1") == "value1"  # Should still work
-        
+
         # Test invalidate_stale_files with empty list
         invalidated_count = cache.invalidate_stale_files([])
         assert invalidated_count == 0
-        
+
         # Test invalidate_stale_files with non-existent files
         invalidated_count = cache.invalidate_stale_files(["/nonexistent/file.py"])
         assert invalidated_count == 0
@@ -384,31 +388,31 @@ class TestCacheManager:
     def test_file_path_normalization(self):
         """Test that file paths are properly normalized for tracking."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         import tempfile
         import os
         from pathlib import Path
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def test_function(): pass")
             temp_file = f.name
-        
+
         try:
             # Get absolute path
             abs_path = str(Path(temp_file).resolve())
-            
+
             # Set cache with relative path (should be normalized)
             cache.set("test_key", "test_value", temp_file)
-            
+
             # Check that absolute path is tracked
             tracked_files = cache.get_tracked_files()
             assert len(tracked_files) == 1
             assert abs_path in tracked_files
-            
+
             # Check validity with different path representations
             assert cache.is_file_cache_valid(temp_file) == True
             assert cache.is_file_cache_valid(abs_path) == True
-            
+
         finally:
             # Cleanup
             os.unlink(temp_file)
@@ -416,33 +420,33 @@ class TestCacheManager:
     def test_file_cache_invalidation_with_errors(self):
         """Test file cache invalidation handles file access errors gracefully."""
         cache = CacheManager(max_size=10, ttl=3600)
-        
+
         import tempfile
         import os
         import time
         from pathlib import Path
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
             f.write("def test_function(): pass")
             temp_file = f.name
-        
+
         try:
             # Set cache with file association
             cache.set("test_key", "test_value", temp_file)
-            
+
             # Verify file is tracked
             assert len(cache.get_tracked_files()) == 1
-            
+
             # Delete the file (simulate file access error)
             os.unlink(temp_file)
-            
+
             # Check that cache is considered invalid for deleted file
             assert cache.is_file_cache_valid(temp_file) == False
-            
+
             # Invalidation should handle this gracefully
             invalidated_count = cache.invalidate_stale_files([temp_file])
             assert invalidated_count == 1
-            
+
         except Exception:
             # Cleanup in case of error
             if os.path.exists(temp_file):

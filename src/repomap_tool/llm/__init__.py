@@ -24,7 +24,7 @@ from .output_templates import OutputTemplates
 __all__ = [
     # Core classes
     "CriticalLineExtractor",
-    "HierarchicalFormatter", 
+    "HierarchicalFormatter",
     "TokenOptimizer",
     "SignatureEnhancer",
     "ContextSelector",

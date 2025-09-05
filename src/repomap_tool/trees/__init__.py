@@ -14,10 +14,10 @@ from .tree_mapper import TreeMapper
 
 __all__ = [
     "SessionManager",
-    "ExplorationSession", 
+    "ExplorationSession",
     "EntrypointDiscoverer",
     "TreeBuilder",
     "TreeClusterer",
     "TreeManager",
-    "TreeMapper"
+    "TreeMapper",
 ]

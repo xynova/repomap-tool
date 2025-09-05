@@ -12,7 +12,15 @@ from datetime import datetime
 from unittest.mock import patch, MagicMock
 from click.testing import CliRunner
 from repomap_tool.cli import cli
-from repomap_tool.models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, ProjectInfo, SearchResponse, MatchResult, TreeConfig
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    ProjectInfo,
+    SearchResponse,
+    MatchResult,
+    TreeConfig,
+)
 
 
 @pytest.fixture
@@ -41,7 +49,7 @@ class TestCLICore:
 
     def test_analyze_basic_usage(self, cli_runner, temp_project):
         """Test basic analyze command usage."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -50,9 +58,9 @@ class TestCLICore:
                 file_types={"py": 1},
                 identifier_types={"function": 1},
                 analysis_time_ms=100.0,
-                last_updated=datetime.now()
+                last_updated=datetime.now(),
             )
-            
+
             result = cli_runner.invoke(cli, ["analyze", temp_project, "--fuzzy"])
             assert result.exit_code == 0
             assert "Analysis complete" in result.output
@@ -66,13 +74,13 @@ class TestCLICore:
             "semantic_match": {{"enabled": false}}
         }}
         """
-        
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             f.write(config_content)
             config_file = f.name
-        
+
         try:
-            with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+            with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
                 mock_instance = mock_repo_map.return_value
                 mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                     project_root=temp_project,
@@ -81,11 +89,13 @@ class TestCLICore:
                     file_types={"py": 1},
                     identifier_types={"function": 1},
                     analysis_time_ms=100.0,
-                    last_updated=datetime.now()
+                    last_updated=datetime.now(),
                 )
-                
+
                 # CLI still requires project_path even with config file
-                result = cli_runner.invoke(cli, ["analyze", temp_project, "--config", config_file])
+                result = cli_runner.invoke(
+                    cli, ["analyze", temp_project, "--config", config_file]
+                )
                 assert result.exit_code == 0
                 assert "Analysis complete" in result.output
         finally:
@@ -93,7 +103,7 @@ class TestCLICore:
 
     def test_analyze_with_options(self, cli_runner, temp_project):
         """Test analyze command with various options."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -102,15 +112,20 @@ class TestCLICore:
                 file_types={"py": 1},
                 identifier_types={"function": 1},
                 analysis_time_ms=100.0,
-                last_updated=datetime.now()
+                last_updated=datetime.now(),
             )
-            
-            result = cli_runner.invoke(cli, [
-                "analyze", temp_project, 
-                "--fuzzy", 
-                "--no-progress", 
-                "--output", "json"
-            ])
+
+            result = cli_runner.invoke(
+                cli,
+                [
+                    "analyze",
+                    temp_project,
+                    "--fuzzy",
+                    "--no-progress",
+                    "--output",
+                    "json",
+                ],
+            )
             assert result.exit_code == 0
 
     def test_search_command_exists(self, cli_runner):
@@ -121,7 +136,7 @@ class TestCLICore:
 
     def test_search_basic_usage(self, cli_runner, temp_project):
         """Test basic search command usage."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.search_identifiers.return_value = SearchResponse(
                 query="test",
@@ -135,14 +150,16 @@ class TestCLICore:
                         strategy="prefix",
                         match_type="fuzzy",
                         file_path="src/main.py",
-                        line_number=1
+                        line_number=1,
                     )
                 ],
-                search_time_ms=50.0
+                search_time_ms=50.0,
             )
-            
+
             # CLI signature: search PROJECT_PATH QUERY [OPTIONS]
-            result = cli_runner.invoke(cli, ["search", temp_project, "test", "--match-type", "fuzzy"])
+            result = cli_runner.invoke(
+                cli, ["search", temp_project, "test", "--match-type", "fuzzy"]
+            )
             if result.exit_code != 0:
                 print(f"CLI Output: {result.output}")
                 print(f"CLI Exception: {result.exception}")
@@ -151,7 +168,7 @@ class TestCLICore:
 
     def test_search_with_options(self, cli_runner, temp_project):
         """Test search command with various options."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.search_identifiers.return_value = SearchResponse(
                 query="test",
@@ -159,16 +176,24 @@ class TestCLICore:
                 threshold=0.7,
                 total_results=0,
                 results=[],
-                search_time_ms=50.0
+                search_time_ms=50.0,
             )
-            
+
             # CLI signature: search PROJECT_PATH QUERY [OPTIONS]
-            result = cli_runner.invoke(cli, [
-                "search", temp_project, "test",
-                "--match-type", "fuzzy",
-                "--max-results", "10",
-                "--output", "table"
-            ])
+            result = cli_runner.invoke(
+                cli,
+                [
+                    "search",
+                    temp_project,
+                    "test",
+                    "--match-type",
+                    "fuzzy",
+                    "--max-results",
+                    "10",
+                    "--output",
+                    "table",
+                ],
+            )
             assert result.exit_code == 0
 
     def test_config_command_exists(self, cli_runner):
@@ -179,11 +204,13 @@ class TestCLICore:
 
     def test_config_basic_usage(self, cli_runner, temp_project):
         """Test basic config command usage."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_file = f.name
-        
+
         try:
-            result = cli_runner.invoke(cli, ["config", temp_project, "--output", config_file])
+            result = cli_runner.invoke(
+                cli, ["config", temp_project, "--output", config_file]
+            )
             assert result.exit_code == 0
             assert os.path.exists(config_file)
         finally:
@@ -197,14 +224,14 @@ class TestCLICore:
 
     def test_performance_basic_usage(self, cli_runner, temp_project):
         """Test basic performance command usage."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.get_performance_metrics.return_value = {
                 "processing_time": 1.0,
                 "memory_usage": "100MB",
-                "cache_hit_rate": 0.8
+                "cache_hit_rate": 0.8,
             }
-            
+
             result = cli_runner.invoke(cli, ["performance", temp_project])
             assert result.exit_code == 0
             assert "Performance Metrics" in result.output
@@ -225,12 +252,8 @@ class TestCLICore:
         """Test basic explore command usage."""
         # Explore command is complex and requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "explore", 
-            temp_project,
-            "analyze"
-        ])
-        
+        result = cli_runner.invoke(cli, ["explore", temp_project, "analyze"])
+
         # It might fail due to missing dependencies, but that's expected
         # We're just testing that the command structure is correct
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
@@ -245,11 +268,8 @@ class TestCLICore:
         """Test basic focus command usage."""
         # Focus command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "focus", 
-            "tree_123"
-        ])
-        
+        result = cli_runner.invoke(cli, ["focus", "tree_123"])
+
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -263,11 +283,8 @@ class TestCLICore:
         """Test basic expand command usage."""
         # Expand command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "expand", 
-            "src/"
-        ])
-        
+        result = cli_runner.invoke(cli, ["expand", "src/"])
+
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -281,11 +298,8 @@ class TestCLICore:
         """Test basic prune command usage."""
         # Prune command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "prune", 
-            "tests/"
-        ])
-        
+        result = cli_runner.invoke(cli, ["prune", "tests/"])
+
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -299,10 +313,8 @@ class TestCLICore:
         """Test basic map command usage."""
         # Map command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "map"
-        ])
-        
+        result = cli_runner.invoke(cli, ["map"])
+
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -316,10 +328,8 @@ class TestCLICore:
         """Test basic usage of list-trees command."""
         # List-trees command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "list-trees"
-        ])
-        
+        result = cli_runner.invoke(cli, ["list-trees"])
+
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -333,10 +343,8 @@ class TestCLICore:
         """Test basic usage of status command."""
         # Status command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "status"
-        ])
-        
+        result = cli_runner.invoke(cli, ["status"])
+
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -350,11 +358,8 @@ class TestCLICore:
         """Test basic usage of cache command."""
         # Cache command requires project path
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, [
-            "cache",
-            "/tmp"  # Use a temporary path
-        ])
-        
+        result = cli_runner.invoke(cli, ["cache", "/tmp"])  # Use a temporary path
+
         # It might fail due to missing project, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
@@ -371,17 +376,15 @@ class TestCLICore:
     def test_cli_output_format_validation(self, cli_runner, temp_project):
         """Test CLI output format validation."""
         # Test invalid output format
-        result = cli_runner.invoke(cli, [
-            "analyze", 
-            temp_project,
-            "--output", "invalid_format"
-        ])
-        
+        result = cli_runner.invoke(
+            cli, ["analyze", temp_project, "--output", "invalid_format"]
+        )
+
         assert result.exit_code == 2  # Click usage error
 
     def test_cli_verbose_output(self, cli_runner, temp_project):
         """Test CLI verbose output."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -390,15 +393,17 @@ class TestCLICore:
                 file_types={"py": 1},
                 identifier_types={"function": 1},
                 analysis_time_ms=100.0,
-                last_updated=datetime.now()
+                last_updated=datetime.now(),
             )
-            
-            result = cli_runner.invoke(cli, ["analyze", temp_project, "--fuzzy", "--verbose"])
+
+            result = cli_runner.invoke(
+                cli, ["analyze", temp_project, "--fuzzy", "--verbose"]
+            )
             assert result.exit_code == 0
 
     def test_cli_configuration_integration(self, cli_runner, temp_project):
         """Test CLI configuration integration."""
-        with patch('repomap_tool.cli.DockerRepoMap') as mock_repo_map:
+        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -407,14 +412,21 @@ class TestCLICore:
                 file_types={"py": 1},
                 identifier_types={"function": 1},
                 analysis_time_ms=100.0,
-                last_updated=datetime.now()
+                last_updated=datetime.now(),
             )
-            
-            result = cli_runner.invoke(cli, [
-                "analyze", temp_project,
-                "--fuzzy",
-                "--threshold", "0.8",
-                "--cache-size", "1000",
-                "--log-level", "DEBUG"
-            ])
+
+            result = cli_runner.invoke(
+                cli,
+                [
+                    "analyze",
+                    temp_project,
+                    "--fuzzy",
+                    "--threshold",
+                    "0.8",
+                    "--cache-size",
+                    "1000",
+                    "--log-level",
+                    "DEBUG",
+                ],
+            )
             assert result.exit_code == 0

@@ -88,13 +88,21 @@ class SemanticMatchConfig(BaseModel):
 
 class TreeConfig(BaseModel):
     """Configuration for tree exploration functionality."""
-    
+
     enabled: bool = Field(default=True, description="Enable tree exploration")
     max_depth: int = Field(default=3, ge=1, le=10, description="Maximum tree depth")
-    max_trees_per_session: int = Field(default=10, ge=1, le=100, description="Maximum trees per session")
-    entrypoint_threshold: float = Field(default=0.6, ge=0.0, le=1.0, description="Entrypoint discovery threshold")
-    enable_code_snippets: bool = Field(default=True, description="Include code snippets in tree output")
-    cache_tree_structures: bool = Field(default=True, description="Cache tree structures for performance")
+    max_trees_per_session: int = Field(
+        default=10, ge=1, le=100, description="Maximum trees per session"
+    )
+    entrypoint_threshold: float = Field(
+        default=0.6, ge=0.0, le=1.0, description="Entrypoint discovery threshold"
+    )
+    enable_code_snippets: bool = Field(
+        default=True, description="Include code snippets in tree output"
+    )
+    cache_tree_structures: bool = Field(
+        default=True, description="Cache tree structures for performance"
+    )
 
 
 class DependencyConfig(BaseModel):
@@ -105,17 +113,24 @@ class DependencyConfig(BaseModel):
     max_graph_size: int = Field(
         default=10000, ge=100, le=100000, description="Maximum number of files in graph"
     )
-    enable_call_graph: bool = Field(default=True, description="Enable function call graph analysis")
-    enable_impact_analysis: bool = Field(default=True, description="Enable change impact analysis")
+    enable_call_graph: bool = Field(
+        default=True, description="Enable function call graph analysis"
+    )
+    enable_impact_analysis: bool = Field(
+        default=True, description="Enable change impact analysis"
+    )
     centrality_algorithms: List[str] = Field(
         default=["degree", "betweenness", "pagerank"],
-        description="Centrality algorithms to use"
+        description="Centrality algorithms to use",
     )
     max_centrality_cache_size: int = Field(
         default=1000, ge=100, le=10000, description="Maximum centrality scores to cache"
     )
     performance_threshold_seconds: float = Field(
-        default=30.0, ge=5.0, le=300.0, description="Maximum time for graph construction (seconds)"
+        default=30.0,
+        ge=5.0,
+        le=300.0,
+        description="Maximum time for graph construction (seconds)",
     )
 
 
@@ -386,35 +401,52 @@ def create_error_response(
 # Tree Exploration Models
 class TreeNode(BaseModel):
     """Represents a node in the exploration tree."""
-    
+
     identifier: str = Field(description="Function/class name or symbol identifier")
     location: str = Field(description="File path and line number (file:line)")
-    node_type: str = Field(description="Type of node: entrypoint, function, class, import")
+    node_type: str = Field(
+        description="Type of node: entrypoint, function, class, import"
+    )
     depth: int = Field(description="Depth in the tree (0 = root)")
     children: List["TreeNode"] = Field(default_factory=list, description="Child nodes")
     parent: Optional["TreeNode"] = Field(default=None, description="Parent node")
-    expanded: bool = Field(default=False, description="Whether this node has been expanded")
-    structural_info: Dict[str, Any] = Field(default_factory=dict, description="Dependencies, calls, etc.")
-    
+    expanded: bool = Field(
+        default=False, description="Whether this node has been expanded"
+    )
+    structural_info: Dict[str, Any] = Field(
+        default_factory=dict, description="Dependencies, calls, etc."
+    )
+
     # Phase 2: Dependency analysis integration
-    dependency_centrality: Optional[float] = Field(default=None, description="Dependency centrality score (0-1)")
-    import_count: Optional[int] = Field(default=None, description="Number of files that import this node")
-    dependency_count: Optional[int] = Field(default=None, description="Number of files this node depends on")
-    impact_risk: Optional[float] = Field(default=None, description="Impact risk score if this node changes (0-1)")
-    refactoring_priority: Optional[float] = Field(default=None, description="Refactoring priority score (0-1)")
-    
+    dependency_centrality: Optional[float] = Field(
+        default=None, description="Dependency centrality score (0-1)"
+    )
+    import_count: Optional[int] = Field(
+        default=None, description="Number of files that import this node"
+    )
+    dependency_count: Optional[int] = Field(
+        default=None, description="Number of files this node depends on"
+    )
+    impact_risk: Optional[float] = Field(
+        default=None, description="Impact risk score if this node changes (0-1)"
+    )
+    refactoring_priority: Optional[float] = Field(
+        default=None, description="Refactoring priority score (0-1)"
+    )
+
     class Config:
         arbitrary_types_allowed = True
 
 
 class Entrypoint(BaseModel):
     """Represents a potential entrypoint for code exploration."""
+
     identifier: str
     file_path: Path
     score: float
     structural_context: Dict[str, Any] = Field(default_factory=dict)
     centrality_score: Optional[float] = None
-    
+
     @property
     def location(self) -> Path:
         return self.file_path
@@ -422,37 +454,59 @@ class Entrypoint(BaseModel):
 
 class TreeCluster(BaseModel):
     """Represents a cluster of related entrypoints."""
-    
-    context_name: str = Field(description="Human-readable context name like 'Auth Error Handling'")
+
+    context_name: str = Field(
+        description="Human-readable context name like 'Auth Error Handling'"
+    )
     entrypoints: List[Entrypoint] = Field(description="Entrypoints in this cluster")
     confidence: float = Field(ge=0.0, le=1.0, description="Cluster confidence score")
-    tree_id: str = Field(description="Unique identifier for the tree built from this cluster")
+    tree_id: str = Field(
+        description="Unique identifier for the tree built from this cluster"
+    )
 
 
 class ExplorationTree(BaseModel):
     """Represents a tree structure for exploring code related to an intent."""
-    
+
     tree_id: str = Field(description="Unique tree identifier")
     root_entrypoint: Entrypoint = Field(description="Root entrypoint of the tree")
     max_depth: int = Field(default=3, description="Maximum tree depth")
-    tree_structure: Optional[TreeNode] = Field(default=None, description="Tree structure")
-    expanded_areas: Set[str] = Field(default_factory=set, description="Areas that have been expanded")
-    pruned_areas: Set[str] = Field(default_factory=set, description="Areas that have been pruned")
+    tree_structure: Optional[TreeNode] = Field(
+        default=None, description="Tree structure"
+    )
+    expanded_areas: Set[str] = Field(
+        default_factory=set, description="Areas that have been expanded"
+    )
+    pruned_areas: Set[str] = Field(
+        default_factory=set, description="Areas that have been pruned"
+    )
     context_name: str = Field(default="", description="Human-readable context name")
     confidence: float = Field(default=0.0, description="Tree confidence score")
-    created_at: datetime = Field(default_factory=datetime.now, description="Tree creation timestamp")
-    last_modified: datetime = Field(default_factory=datetime.now, description="Last modification timestamp")
-    
+    created_at: datetime = Field(
+        default_factory=datetime.now, description="Tree creation timestamp"
+    )
+    last_modified: datetime = Field(
+        default_factory=datetime.now, description="Last modification timestamp"
+    )
+
     class Config:
         arbitrary_types_allowed = True
 
 
 class ExplorationSession(BaseModel):
     """Represents an exploration session with multiple trees."""
-    
+
     session_id: str = Field(description="Unique session identifier")
     project_path: str = Field(description="Project path being explored")
-    exploration_trees: Dict[str, ExplorationTree] = Field(default_factory=dict, description="Trees in this session")
-    current_focus: Optional[str] = Field(default=None, description="Currently focused tree ID")
-    created_at: datetime = Field(default_factory=datetime.now, description="Session creation timestamp")
-    last_activity: datetime = Field(default_factory=datetime.now, description="Last activity timestamp")
+    exploration_trees: Dict[str, ExplorationTree] = Field(
+        default_factory=dict, description="Trees in this session"
+    )
+    current_focus: Optional[str] = Field(
+        default=None, description="Currently focused tree ID"
+    )
+    created_at: datetime = Field(
+        default_factory=datetime.now, description="Session creation timestamp"
+    )
+    last_activity: datetime = Field(
+        default_factory=datetime.now, description="Last activity timestamp"
+    )

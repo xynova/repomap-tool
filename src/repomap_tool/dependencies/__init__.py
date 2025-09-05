@@ -6,7 +6,7 @@ file importance, and impact scope for better repomap generation.
 
 Core Components:
 - ImportAnalyzer: Analyzes import statements across all files
-- CallGraphBuilder: Builds function call graphs within and across files  
+- CallGraphBuilder: Builds function call graphs within and across files
 - DependencyGraph: Main dependency graph representation
 - CentralityCalculator: Calculates importance scores for files and functions
 - ImpactAnalyzer: Analyzes impact scope of potential changes
@@ -14,9 +14,16 @@ Core Components:
 """
 
 from .models import (
-    Import, FileImports, ProjectImports, ImportType,
-    FunctionCall, CallGraph, DependencyNode,
-    ImpactReport, BreakingChangeRisk, RefactoringOpportunity
+    Import,
+    FileImports,
+    ProjectImports,
+    ImportType,
+    FunctionCall,
+    CallGraph,
+    DependencyNode,
+    ImpactReport,
+    BreakingChangeRisk,
+    RefactoringOpportunity,
 )
 from .import_analyzer import ImportAnalyzer
 from .dependency_graph import DependencyGraph
@@ -28,15 +35,14 @@ from .advanced_dependency_graph import AdvancedDependencyGraph
 __all__ = [
     # Core classes
     "ImportAnalyzer",
-    "DependencyGraph", 
+    "DependencyGraph",
     "CallGraphBuilder",
     "CentralityCalculator",
     "ImpactAnalyzer",
     "AdvancedDependencyGraph",
-    
     # Data models
     "FileImports",
-    "ProjectImports", 
+    "ProjectImports",
     "Import",
     "DependencyNode",
     "CallGraph",
