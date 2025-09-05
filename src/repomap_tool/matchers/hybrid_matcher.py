@@ -49,6 +49,7 @@ class HybridMatcher:
         self.semantic_threshold = semantic_threshold
         self.use_word_embeddings = use_word_embeddings
         self.verbose = verbose
+        self.enabled = True  # Add enabled attribute for compatibility
 
         # Initialize fuzzy matcher
         self.fuzzy_matcher = FuzzyMatcher(

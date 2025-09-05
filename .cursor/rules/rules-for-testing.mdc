@@ -1,0 +1,67 @@
+---
+description:
+globs:
+alwaysApply: true
+---
+
+
+## 🧪 TESTING REQUIREMENTS:
+- **ALWAYS** write comprehensive tests for new functionality
+- **NEVER** claim tests pass without actually running them
+- **NEVER** provide fake test solutions or incomplete test coverage
+- **ALWAYS** verify tests run successfully with `make test-unit`
+- **ALWAYS** fix failing tests before claiming success
+- **ALWAYS** test edge cases and error conditions
+- **ALWAYS** ensure test coverage for new code paths
+- **CLI TESTS ARE MANDATORY** - CLI is the primary UX, must be thoroughly tested
+
+## 🔍 TESTING WORKFLOW:
+1. **Write tests first** for new functionality
+2. **Run tests immediately** after any code changes
+3. **Fix all failures** before proceeding
+4. **Verify end-to-end** functionality works
+5. **Never skip testing** - it's mandatory, not optional
+
+## ⚠️ TESTING RULES:
+- **NO FAKE SOLUTIONS**: Every test must actually pass
+- **NO SKIPPED TESTS**: All tests must run and pass
+- **NO PARTIAL COVERAGE**: Test all new code paths
+- **NO ASSUMPTIONS**: Verify everything works, don't guess
+- **NO CLI WITHOUT TESTS**: Every CLI command must have comprehensive tests
+- **NO FALSE CLAIMS**: Never claim 100% coverage without verifying actual numbers
+- **NO BS STATEMENTS**: Always be precise about what is actually tested vs. claimed
+
+## 🚀 FINAL VALIDATION REQUIREMENTS:
+- **ALWAYS** run `make ci` before finishing work
+- **ALWAYS** fix any CI errors before claiming completion
+- **ALWAYS** ensure good real coverage for all updates (>80% for new code)
+- **ALWAYS** verify integration tests pass (not just unit tests)
+- **ALWAYS** check that new functionality works end-to-end
+- **NEVER** finish work with failing CI or poor coverage
+
+## 🖥️ CLI TESTING REQUIREMENTS:
+- **CLI IS THE UX**: Every CLI command must be thoroughly tested
+- **Command existence**: Test that all commands are registered and show help
+- **Option validation**: Test all command-line options and constraints
+- **Output formats**: Verify JSON, table, and text output work correctly
+- **Error handling**: Test invalid inputs, missing files, and error conditions
+- **Configuration integration**: Ensure CLI uses configuration correctly
+- **Real execution**: Use `click.testing.CliRunner` for actual CLI testing
+- **Progress handling**: Test with progress bars and ANSI escape codes
+- **Exit codes**: Verify correct exit codes for success/error conditions
+- **Edge cases**: Test boundary conditions and user error scenarios
+
+## 📊 COVERAGE REQUIREMENTS:
+- **New functionality**: Must have >70% test coverage
+- **Modified code**: Must maintain or improve existing coverage
+- **Integration points**: Must be tested with real scenarios
+- **Edge cases**: Must be covered for all new features
+- **Error conditions**: Must be tested for robustness
+- **CLI commands**: Must have 100% test coverage - no exceptions
+
+## 🎯 COVERAGE ACCURACY RULES:
+- **ALWAYS verify actual coverage numbers** before making claims
+- **NEVER claim 100% coverage** without running coverage tools
+- **BE SPECIFIC** about what is tested vs. what is claimed
+- **DISTINGUISH** between "new functionality coverage" and "overall module coverage"
+- **USE EXACT NUMBERS** when reporting coverage (e.g., "33% overall, 100% for new features")

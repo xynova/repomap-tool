@@ -31,6 +31,7 @@ class AdaptiveSemanticMatcher:
             verbose: Whether to log matching details
         """
         self.verbose = verbose
+        self.enabled = True  # Add enabled attribute for compatibility
 
         # TF-IDF components
         self.word_frequencies: Counter[str] = Counter()

@@ -2,7 +2,10 @@
 
 *A Tool to Help AI Assistants Navigate and Understand Codebases*
 
-
+[![CI](https://github.com/{username}/repomap-tool/workflows/CI/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3ACI)
+[![Docker Build](https://github.com/{username}/repomap-tool/workflows/Docker%20Build/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3A%22Docker+Build%22)
+[![Release](https://github.com/{username}/repomap-tool/workflows/Release/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3ARelease)
+[![Nightly Build](https://github.com/{username}/repomap-tool/workflows/Nightly%20Build/badge.svg)](https://github.com/{username}/repomap-tool/actions?query=workflow%3A%22Nightly+Build%22)
 
 > "Code archaeology isn't just about finding what works, but understanding why it was written that way in the first place." 
 > `James Wilson`
@@ -24,25 +27,40 @@
 
 ## Table of Contents
 
-- [The Problem](#the-problem)
-- [The Solution](#the-solution)
-  - [🔍 Fuzzy Matching](#-fuzzy-matching)
-  - [🧠 Semantic Analysis](#-semantic-analysis) 
-  - [⚡ Hybrid Approach](#-hybrid-approach)
-  - [🔗 Dependency Awareness](#-dependency-awareness)
-  - [📊 Code Quality Intelligence](#-code-quality-intelligence)
-  - [⚡ Faster AI Response Times](#-faster-ai-response-times)
-- [When to Use RepoMap Tool](#when-to-use-repomap-tool)
-  - [Perfect for](#perfect-for)
-  - [Use Cases](#use-cases)
-- [Search Strategies](#search-strategies)
-  - [Fuzzy Matching](#fuzzy-matching)
-  - [Semantic Matching](#semantic-matching)
-  - [Hybrid Matching](#hybrid-matching)
-- [Project Analysis](#project-analysis)
-- [Getting Help](#getting-help)
-- [Contributing](#contributing)
-- [License](#license)
+- [RepoMap Tool (Inspired by Aider)](#repomap-tool-inspired-by-aider)
+  - [Overview](#overview)
+  - [Table of Contents](#table-of-contents)
+  - [The Problem](#the-problem)
+  - [The Solution](#the-solution)
+    - [🔍 **Fuzzy Matching**](#-fuzzy-matching)
+    - [🧠 **Semantic Analysis**](#-semantic-analysis)
+    - [⚡ **Hybrid Approach**](#-hybrid-approach)
+  - [Real-World Scenarios](#real-world-scenarios)
+    - [Scenario 1: AI Assistant Finding Authentication Code](#scenario-1-ai-assistant-finding-authentication-code)
+    - [Scenario 2: AI Assistant Understanding Data Flow](#scenario-2-ai-assistant-understanding-data-flow)
+    - [Scenario 3: AI Assistant Planning Refactoring](#scenario-3-ai-assistant-planning-refactoring)
+  - [Getting Started](#getting-started)
+    - [Quick Start with Docker](#quick-start-with-docker)
+    - [Basic Usage Examples](#basic-usage-examples)
+    - [Docker Images](#docker-images)
+  - [Key Benefits for AI Code Assistants](#key-benefits-for-ai-code-assistants)
+    - [🧠 **Enhanced Context Understanding**](#-enhanced-context-understanding)
+    - [🔍 **Intelligent Code Discovery**](#-intelligent-code-discovery)
+    - [🎯 **Precise Code Location**](#-precise-code-location)
+    - [🔗 **Dependency Awareness**](#-dependency-awareness)
+    - [📊 **Code Quality Intelligence**](#-code-quality-intelligence)
+    - [⚡ **Faster AI Response Times**](#-faster-ai-response-times)
+  - [When to Use RepoMap Tool](#when-to-use-repomap-tool)
+    - [Perfect for:](#perfect-for)
+    - [Use Cases:](#use-cases)
+  - [Search Strategies](#search-strategies)
+    - [Fuzzy Matching](#fuzzy-matching)
+    - [Semantic Matching](#semantic-matching)
+    - [Hybrid Matching](#hybrid-matching)
+  - [Project Analysis](#project-analysis)
+  - [Getting Help](#getting-help)
+  - [Contributing](#contributing)
+  - [License](#license)
 
 
 ## The Problem

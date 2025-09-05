@@ -117,10 +117,13 @@ clean:
 	rm -f .deps-image-tag
 	@echo "Cleanup complete!"
 
-# Run all CI checks
-ci: test security build
-	@echo "Note: Type checking and linting issues found but not blocking CI."
-	@echo "Run 'make mypy' and 'make lint' to see details."
+# Run code quality checks
+check: lint mypy
+	@echo "Code quality checks completed!"
+
+# Run all CI checks  
+ci: test security build check
+	@echo "CI pipeline completed successfully!"
 
 # Run comprehensive nightly tests
 nightly: install
