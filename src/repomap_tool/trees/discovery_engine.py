@@ -19,6 +19,7 @@ from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
+    AdvancedDependencyGraph,
     CentralityCalculator,
     ImpactAnalyzer,
 )
@@ -53,11 +54,13 @@ class EntrypointDiscoverer:
         # Phase 2: Initialize dependency analysis components
         # Initialize import analyzer and dependency graph immediately
         self.import_analyzer = ImportAnalyzer()
-        self.dependency_graph = DependencyGraph()
+        self.dependency_graph = AdvancedDependencyGraph()
 
         # Lazy initialization for more expensive components
-        self.centrality_calculator = None  # Will be initialized when needed
-        self.impact_analyzer = None  # Will be initialized when needed
+        self.centrality_calculator: Optional[Any] = (
+            None  # Will be initialized when needed
+        )
+        self.impact_analyzer: Optional[Any] = None  # Will be initialized when needed
 
         logger.debug(
             f"EntrypointDiscoverer initialized with semantic_threshold={self.semantic_threshold}, fuzzy_threshold={self.fuzzy_threshold}"
@@ -184,7 +187,9 @@ class EntrypointDiscoverer:
         try:
             # Use existing repo_map to get symbols
             if hasattr(self.repo_map, "get_tags"):
-                symbols = self.repo_map.get_tags()
+                symbol_strings = self.repo_map.get_tags()
+                # Convert strings to dictionaries for compatibility
+                symbols = [{"identifier": s, "type": "unknown"} for s in symbol_strings]
                 logger.debug(f"Retrieved {len(symbols)} symbols from repo_map")
                 return symbols
 
@@ -361,12 +366,10 @@ class EntrypointDiscoverer:
             project_files = get_project_files(project_path, verbose=False)
 
             # Analyze project imports
-            project_imports = self.import_analyzer.analyze_project_imports(
-                project_files
-            )
+            project_imports = self.import_analyzer.analyze_project_imports(project_path)
 
             # Build dependency graph
-            self.dependency_graph.build_graph(project_files)
+            self.dependency_graph.build_graph(project_imports)
 
             logger.info(
                 f"Built dependency graph with {len(self.dependency_graph.nodes)} nodes and {len(self.dependency_graph.graph.edges)} edges"
@@ -387,15 +390,18 @@ class EntrypointDiscoverer:
         try:
             # Extract file path from location
             file_path = self._extract_file_path_from_location(
-                entrypoint.location, project_path
+                str(entrypoint.location), project_path
             )
             if not file_path:
                 return
 
             # Get dependency centrality score
-            centrality_scores = (
-                self.centrality_calculator.calculate_composite_importance()
-            )
+            if self.centrality_calculator is not None:
+                centrality_scores = (
+                    self.centrality_calculator.calculate_composite_importance()
+                )
+            else:
+                centrality_scores = {}
             if file_path in centrality_scores:
                 entrypoint.dependency_centrality = centrality_scores[file_path]
 
@@ -407,7 +413,10 @@ class EntrypointDiscoverer:
             entrypoint.dependency_count = len(dependencies)
 
             # Calculate impact risk
-            impact_report = self.impact_analyzer.analyze_change_impact(file_path)
+            if self.impact_analyzer is not None:
+                impact_report = self.impact_analyzer.analyze_change_impact(file_path)
+            else:
+                impact_report = None
             if impact_report:
                 entrypoint.impact_risk = impact_report.overall_risk_score
 

@@ -302,9 +302,9 @@ class TreeMapper:
         Returns:
             Dictionary mapping node types to counts
         """
-        node_types = {}
+        node_types: Dict[str, int] = {}
 
-        def count_types(n: TreeNode):
+        def count_types(n: TreeNode) -> None:
             node_type = n.node_type
             node_types[node_type] = node_types.get(node_type, 0) + 1
 

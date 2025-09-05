@@ -26,8 +26,8 @@ class TreeBuilder:
             repo_map: DockerRepoMap instance with aider infrastructure
         """
         self.repo_map = repo_map
-        self.entrypoint_cache = {}  # Cache discovered entrypoints
-        self.tree_cache = {}  # Cache built trees
+        self.entrypoint_cache: Dict[str, Any] = {}  # Cache discovered entrypoints
+        self.tree_cache: Dict[str, Any] = {}  # Cache built trees
 
         logger.debug("TreeBuilder initialized")
 
@@ -46,7 +46,7 @@ class TreeBuilder:
         cache_key = f"{entrypoint.identifier}_{max_depth}"
         if cache_key in self.tree_cache:
             logger.debug(f"Using cached tree for {entrypoint.identifier}")
-            return self.tree_cache[cache_key]
+            return self.tree_cache[cache_key]  # type: ignore
 
         logger.info(
             f"Building exploration tree for {entrypoint.identifier} (max_depth={max_depth})"
@@ -88,7 +88,7 @@ class TreeBuilder:
         """
         root = TreeNode(
             identifier=entrypoint.identifier,
-            location=entrypoint.location,
+            location=str(entrypoint.location),
             node_type="entrypoint",
             depth=0,
         )
@@ -100,7 +100,7 @@ class TreeBuilder:
 
     def _expand_node(
         self, node: TreeNode, entrypoint: Entrypoint, max_depth: int, current_depth: int
-    ):
+    ) -> None:
         """Expand a tree node by adding children.
 
         Args:
@@ -121,7 +121,9 @@ class TreeBuilder:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
                         identifier=symbol.get("name", "Unknown"),
-                        location=self._get_symbol_location(symbol, entrypoint.location),
+                        location=self._get_symbol_location(
+                            symbol, str(entrypoint.location)
+                        ),
                         node_type=symbol.get("kind", "symbol"),
                         depth=current_depth + 1,
                     )
@@ -269,7 +271,7 @@ class TreeBuilder:
                 else:
                     return f"{file_path}:{line_number}"
             elif file_path:
-                return file_path
+                return file_path  # type: ignore
             else:
                 # Use parent location as fallback
                 return parent_location
@@ -318,7 +320,7 @@ class TreeBuilder:
         """
         root = TreeNode(
             identifier=entrypoint.identifier,
-            location=entrypoint.location,
+            location=str(entrypoint.location),
             node_type="entrypoint",
             depth=0,
         )
@@ -327,13 +329,13 @@ class TreeBuilder:
         placeholder_children = [
             TreeNode(
                 identifier=f"{entrypoint.identifier}Helper",
-                location=entrypoint.location,
+                location=str(entrypoint.location),
                 node_type="function",
                 depth=1,
             ),
             TreeNode(
                 identifier=f"{entrypoint.identifier}Validator",
-                location=entrypoint.location,
+                location=str(entrypoint.location),
                 node_type="function",
                 depth=1,
             ),
@@ -361,7 +363,7 @@ class TreeBuilder:
 
         return count
 
-    def clear_cache(self):
+    def clear_cache(self) -> None:
         """Clear the tree cache."""
         self.entrypoint_cache.clear()
         self.tree_cache.clear()

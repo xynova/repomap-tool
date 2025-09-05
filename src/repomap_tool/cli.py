@@ -898,7 +898,9 @@ def display_search_results(
 @click.argument("intent", type=str)
 @click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
 @click.option("--max-depth", default=3, help="Maximum tree depth")
-def explore(project_path: str, intent: str, session: Optional[str], max_depth: int):
+def explore(
+    project_path: str, intent: str, session: Optional[str], max_depth: int
+) -> None:
     """Discover exploration trees from intent."""
 
     try:
@@ -954,7 +956,9 @@ def explore(project_path: str, intent: str, session: Optional[str], max_depth: i
         # Build exploration trees
         tree_builder = TreeBuilder(repomap)
         session_manager = SessionManager()
-        session = session_manager.get_or_create_session(session_id, project_path)
+        exploration_session = session_manager.get_or_create_session(
+            session_id, project_path
+        )
 
         console.print(f"🔍 Found {len(clusters)} exploration contexts:")
 
@@ -967,13 +971,13 @@ def explore(project_path: str, intent: str, session: Optional[str], max_depth: i
             tree.confidence = cluster.confidence
 
             # Store in session
-            session.exploration_trees[tree.tree_id] = tree
+            exploration_session.exploration_trees[tree.tree_id] = tree
 
             console.print(
                 f"  • {tree.context_name} [id: {tree.tree_id}] (confidence: {tree.confidence:.2f})"
             )
 
-        session_manager.persist_session(session)
+        session_manager.persist_session(exploration_session)
 
         console.print(f"\n💡 Next steps:")
         console.print(f"  repomap-tool focus <tree_id>    # Focus on specific tree")
@@ -988,7 +992,7 @@ def explore(project_path: str, intent: str, session: Optional[str], max_depth: i
 @cli.command()
 @click.argument("tree_id", type=str)
 @click.option("--session", "-s", help="Session ID")
-def focus(tree_id: str, session: Optional[str]):
+def focus(tree_id: str, session: Optional[str]) -> None:
     """Focus on specific exploration tree (stateful)."""
 
     try:
@@ -1034,7 +1038,7 @@ def focus(tree_id: str, session: Optional[str]):
 @click.argument("expansion_area", type=str)
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
-def expand(expansion_area: str, session: Optional[str], tree: Optional[str]):
+def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> None:
     """Expand tree in specific area."""
 
     try:
@@ -1080,7 +1084,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]):
 @click.argument("prune_area", type=str)
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
-def prune(prune_area: str, session: Optional[str], tree: Optional[str]):
+def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
     """Prune branch from tree."""
 
     try:
@@ -1126,7 +1130,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]):
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
 @click.option("--include-code", is_flag=True, help="Include code snippets")
-def map(session: Optional[str], tree: Optional[str], include_code: bool):
+def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None:
     """Generate repomap from current tree state."""
 
     try:
@@ -1173,7 +1177,7 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool):
 
 @cli.command()
 @click.option("--session", "-s", help="Session ID")
-def list_trees(session: Optional[str]):
+def list_trees(session: Optional[str]) -> None:
     """List all trees in a session."""
 
     try:
@@ -1240,7 +1244,7 @@ def list_trees(session: Optional[str]):
 
 @cli.command()
 @click.option("--session", "-s", help="Session ID")
-def status(session: Optional[str]):
+def status(session: Optional[str]) -> None:
     """Show session status and current tree information."""
 
     try:
@@ -1710,24 +1714,33 @@ def impact_analysis(
                 table.add_column("Metric", style="cyan")
                 table.add_column("Value", style="green")
 
-                table.add_row("Risk Score", f"{report.risk_score:.2f}")
-                table.add_row("Affected Files", str(len(report.affected_files)))
+                table.add_row("Risk Score", f"{report.get('risk_score', 0):.2f}")
                 table.add_row(
-                    "Breaking Change Potential", str(report.breaking_change_potential)
+                    "Affected Files", str(len(report.get("affected_files", [])))
                 )
-                table.add_row("Suggested Tests", str(len(report.suggested_tests)))
+                table.add_row(
+                    "Breaking Change Potential",
+                    str(report.get("breaking_change_potential", 0)),
+                )
+                table.add_row(
+                    "Suggested Tests", str(len(report.get("suggested_tests", [])))
+                )
 
                 console.print(table)
                 console.print()  # Add spacing between tables
         else:
             for file_path, report in impact_reports.items():
                 console.print(f"[cyan]Impact Analysis: {file_path}[/cyan]")
-                console.print(f"  Risk Score: {report.risk_score:.2f}")
-                console.print(f"  Affected Files: {len(report.affected_files)}")
+                console.print(f"  Risk Score: {report.get('risk_score', 0):.2f}")
                 console.print(
-                    f"  Breaking Change Potential: {report.breaking_change_potential}"
+                    f"  Affected Files: {len(report.get('affected_files', []))}"
                 )
-                console.print(f"  Suggested Tests: {len(report.suggested_tests)}")
+                console.print(
+                    f"  Breaking Change Potential: {report.get('breaking_change_potential', 0)}"
+                )
+                console.print(
+                    f"  Suggested Tests: {len(report.get('suggested_tests', []))}"
+                )
                 console.print()  # Add spacing
 
     except Exception as e:

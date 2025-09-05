@@ -261,12 +261,13 @@ class TestCLIDependencies:
     def test_impact_analysis_basic_usage(self, cli_runner, temp_project):
         """Test basic usage of impact-analysis command."""
         with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
-            # Mock impact report
-            mock_report = Mock()
-            mock_report.risk_score = 0.7
-            mock_report.affected_files = ["file1.py", "file2.py"]
-            mock_report.breaking_change_potential = {"main.py": "MEDIUM"}
-            mock_report.suggested_tests = ["test_main.py"]
+            # Mock impact report as dictionary
+            mock_report = {
+                "risk_score": 0.7,
+                "affected_files": ["file1.py", "file2.py"],
+                "breaking_change_potential": {"main.py": "MEDIUM"},
+                "suggested_tests": ["test_main.py"],
+            }
 
             mock_instance = Mock()
             mock_instance.analyze_change_impact.return_value = mock_report
@@ -299,18 +300,20 @@ class TestCLIDependencies:
     def test_impact_analysis_multiple_files(self, cli_runner, temp_project):
         """Test impact-analysis with multiple files."""
         with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
-            # Mock multiple impact reports
-            mock_report1 = Mock()
-            mock_report1.risk_score = 0.5
-            mock_report1.affected_files = ["file1.py"]
-            mock_report1.breaking_change_potential = {"file1.py": "LOW"}
-            mock_report1.suggested_tests = []
+            # Mock multiple impact reports as dictionaries
+            mock_report1 = {
+                "risk_score": 0.5,
+                "affected_files": ["file1.py"],
+                "breaking_change_potential": {"file1.py": "LOW"},
+                "suggested_tests": [],
+            }
 
-            mock_report2 = Mock()
-            mock_report2.risk_score = 0.8
-            mock_report2.affected_files = ["file2.py", "file3.py"]
-            mock_report2.breaking_change_potential = {"file2.py": "HIGH"}
-            mock_report2.suggested_tests = ["test_file2.py"]
+            mock_report2 = {
+                "risk_score": 0.8,
+                "affected_files": ["file2.py", "file3.py"],
+                "breaking_change_potential": {"file2.py": "HIGH"},
+                "suggested_tests": ["test_file2.py"],
+            }
 
             mock_instance = Mock()
             mock_instance.analyze_change_impact.side_effect = [

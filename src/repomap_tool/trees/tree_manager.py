@@ -320,7 +320,7 @@ class TreeManager:
 
         return False
 
-    def _expand_tree_node(self, node: TreeNode, tree: ExplorationTree):
+    def _expand_tree_node(self, node: TreeNode, tree: ExplorationTree) -> None:
         """Expand a specific tree node using aider infrastructure.
 
         Args:

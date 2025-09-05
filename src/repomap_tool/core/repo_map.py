@@ -683,7 +683,7 @@ class DockerRepoMap:
 
         try:
             assert self.centrality_calculator is not None  # For mypy
-            return self.centrality_calculator.calculate_composite_importance()
+            return self.centrality_calculator.calculate_composite_importance()  # type: ignore
         except Exception as e:
             self.logger.error(f"Failed to calculate centrality scores: {e}")
             raise
@@ -705,7 +705,7 @@ class DockerRepoMap:
 
         try:
             assert self.impact_analyzer is not None  # For mypy
-            return self.impact_analyzer.analyze_change_impact([file_path])
+            return self.impact_analyzer.analyze_change_impact([file_path])  # type: ignore
         except Exception as e:
             self.logger.error(f"Failed to analyze change impact: {e}")
             raise
@@ -721,7 +721,7 @@ class DockerRepoMap:
 
         try:
             assert self.dependency_graph is not None  # For mypy
-            return self.dependency_graph.find_cycles()
+            return self.dependency_graph.find_cycles()  # type: ignore
         except Exception as e:
             self.logger.error(f"Failed to find circular dependencies: {e}")
             raise
@@ -774,13 +774,15 @@ class DockerRepoMap:
                 # The real fuzzy_search returns a list of MatchResult objects
                 from repomap_tool.models import MatchResult
 
-                results.append(MatchResult(
-                    identifier=symbol["identifier"], 
-                    score=0.8, 
-                    strategy="substring",
-                    match_type="fuzzy",
-                    file_path=symbol.get("file_path")
-                ))
+                results.append(
+                    MatchResult(
+                        identifier=symbol["identifier"],
+                        score=0.8,
+                        strategy="substring",
+                        match_type="fuzzy",
+                        file_path=symbol.get("file_path"),
+                    )
+                )
         return results
 
     def get_dependency_enhanced_trees(
