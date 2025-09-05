@@ -124,7 +124,7 @@ class PythonCriticalAnalyzer(LanguageAnalyzer):
 class JavaScriptCriticalAnalyzer(LanguageAnalyzer):
     """JavaScript/TypeScript critical line analyzer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = ""
 
     def parse_code(self, code: str) -> ast.AST:
@@ -166,7 +166,7 @@ class JavaScriptCriticalAnalyzer(LanguageAnalyzer):
 class GoCriticalAnalyzer(LanguageAnalyzer):
     """Go language critical line analyzer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = ""
 
     def parse_code(self, code: str) -> ast.AST:
@@ -213,7 +213,7 @@ class GoCriticalAnalyzer(LanguageAnalyzer):
 class JavaCriticalAnalyzer(LanguageAnalyzer):
     """Java language critical line analyzer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = ""
 
     def parse_code(self, code: str) -> ast.AST:
@@ -270,7 +270,7 @@ class JavaCriticalAnalyzer(LanguageAnalyzer):
 class CSharpCriticalAnalyzer(LanguageAnalyzer):
     """C# language critical line analyzer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = ""
 
     def parse_code(self, code: str) -> ast.AST:
@@ -331,7 +331,7 @@ class CSharpCriticalAnalyzer(LanguageAnalyzer):
 class RustCriticalAnalyzer(LanguageAnalyzer):
     """Rust language critical line analyzer."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.code = ""
 
     def parse_code(self, code: str) -> ast.AST:
@@ -385,7 +385,7 @@ class RustCriticalAnalyzer(LanguageAnalyzer):
 class CriticalLineExtractor:
     """Extracts critical lines from code symbols for LLM optimization."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.language_analyzers = {
             "python": PythonCriticalAnalyzer(),
             "javascript": JavaScriptCriticalAnalyzer(),

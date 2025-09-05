@@ -63,7 +63,7 @@ class FileImports(BaseModel):
         default=0, description="Total number of import statements"
     )
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context: Any) -> None:
         self.total_imports = len(self.imports)
 
     def get_absolute_imports(self) -> List[Import]:
@@ -111,7 +111,7 @@ class ProjectImports(BaseModel):
                     importing_files.append(file_path)
         return importing_files
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context: Any) -> None:
         self.total_files = len(self.file_imports)
         self.total_imports = sum(len(fi.imports) for fi in self.file_imports.values())
 
@@ -172,7 +172,7 @@ class CallGraph(BaseModel):
     )
     total_calls: int = Field(default=0, description="Total number of function calls")
 
-    def model_post_init(self, __context):
+    def model_post_init(self, __context: Any) -> None:
         self.total_calls = len(self.function_calls)
 
         # Build call relationships

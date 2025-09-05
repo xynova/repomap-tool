@@ -68,9 +68,10 @@ class DockerRepoMap:
         self.hybrid_matcher: Optional[HybridMatcherProtocol] = None
 
         # Phase 2: Initialize dependency analysis components
-        self.dependency_graph = None
-        self.impact_analyzer = None
-        self.centrality_calculator = None
+        self.dependency_graph: Optional[Any] = None
+        self.impact_analyzer: Optional[Any] = None
+        self.centrality_calculator: Optional[Any] = None
+        self.analysis_results: Optional[Any] = None
 
         # Initialize parallel processing
         self.parallel_extractor = ParallelTagExtractor(
@@ -224,7 +225,7 @@ class DockerRepoMap:
 
     def get_cache_status(self) -> Dict[str, Any]:
         """Get comprehensive cache status information."""
-        status = {
+        status: Dict[str, Any] = {
             "project_root": str(self.config.project_root),
             "fuzzy_matcher_cache": None,
             "tracked_files": [],
@@ -602,7 +603,7 @@ class DockerRepoMap:
 
     # Phase 2: Dependency Analysis Methods
 
-    def build_dependency_graph(self):
+    def build_dependency_graph(self) -> Any:
         """Build dependency graph for the project."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
@@ -668,7 +669,7 @@ class DockerRepoMap:
             self.logger.error(f"Failed to build dependency graph: {e}")
             raise
 
-    def get_centrality_scores(self):
+    def get_centrality_scores(self) -> Dict[str, float]:
         """Get centrality scores for all files in the dependency graph."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
@@ -681,12 +682,13 @@ class DockerRepoMap:
             self.build_dependency_graph()
 
         try:
+            assert self.centrality_calculator is not None  # For mypy
             return self.centrality_calculator.calculate_composite_importance()
         except Exception as e:
             self.logger.error(f"Failed to calculate centrality scores: {e}")
             raise
 
-    def analyze_change_impact(self, file_path: str):
+    def analyze_change_impact(self, file_path: str) -> Dict[str, Any]:
         """Analyze the impact of changes to a specific file."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
@@ -702,12 +704,13 @@ class DockerRepoMap:
             self.build_dependency_graph()
 
         try:
+            assert self.impact_analyzer is not None  # For mypy
             return self.impact_analyzer.analyze_change_impact([file_path])
         except Exception as e:
             self.logger.error(f"Failed to analyze change impact: {e}")
             raise
 
-    def find_circular_dependencies(self):
+    def find_circular_dependencies(self) -> List[List[str]]:
         """Find circular dependencies in the project."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")
@@ -717,6 +720,7 @@ class DockerRepoMap:
             self.build_dependency_graph()
 
         try:
+            assert self.dependency_graph is not None  # For mypy
             return self.dependency_graph.find_cycles()
         except Exception as e:
             self.logger.error(f"Failed to find circular dependencies: {e}")
@@ -726,6 +730,9 @@ class DockerRepoMap:
         """Get all symbols from the project."""
         if not self.analysis_results:
             self.analyze_project()
+
+        if self.analysis_results is None:
+            return []
 
         symbols = []
         for file_path, file_info in self.analysis_results.files.items():
@@ -765,14 +772,20 @@ class DockerRepoMap:
         for symbol in all_symbols:
             if query.lower() in symbol["identifier"].lower():
                 # The real fuzzy_search returns a list of MatchResult objects
-                from repomap_tool.matchers.fuzzy_matcher import MatchResult
+                from repomap_tool.models import MatchResult
 
-                results.append(MatchResult(symbol=symbol, score=80.0))  # Dummy score
+                results.append(MatchResult(
+                    identifier=symbol["identifier"], 
+                    score=0.8, 
+                    strategy="substring",
+                    match_type="fuzzy",
+                    file_path=symbol.get("file_path")
+                ))
         return results
 
     def get_dependency_enhanced_trees(
-        self, session_id: str, intent: str, current_files: List[str] = None
-    ):
+        self, session_id: str, intent: str, current_files: Optional[List[str]] = None
+    ) -> List[Any]:
         """Generate enhanced exploration trees with dependency intelligence."""
         if not self.config.dependencies.enabled:
             raise RuntimeError("Dependency analysis is not enabled")

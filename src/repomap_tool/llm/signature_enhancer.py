@@ -29,7 +29,7 @@ class EnhancedSignature:
 class TypeInferenceEngine:
     """Infers types for function parameters and return values."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.common_patterns = self._load_common_patterns()
         self.type_hints = self._load_type_hints()
 
@@ -227,7 +227,7 @@ class TypeInferenceEngine:
 class SignatureEnhancer:
     """Enhances function signatures with type information and usage patterns."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.type_inference = TypeInferenceEngine()
         self.signature_patterns = self._load_signature_patterns()
 
@@ -533,20 +533,20 @@ class SignatureEnhancer:
                 if re.search(pattern, content):
                     if "[\"']" in pattern:
                         return "str"
-                    elif "\d+" in pattern:
+                    elif r"\d+" in pattern:
                         return "int"
                     elif "True|False" in pattern:
                         return "bool"
-                    elif "\[" in pattern:
+                    elif r"\[" in pattern:
                         return "list"
-                    elif "\{" in pattern:
+                    elif r"\{" in pattern:
                         return "dict"
 
         return None
 
     def add_call_patterns(self, symbol_content: str) -> List[str]:
         """Add common call patterns for this function."""
-        patterns = []
+        patterns: List[str] = []
 
         # Extract function name
         function_name = self._extract_function_name(symbol_content)

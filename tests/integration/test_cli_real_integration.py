@@ -7,14 +7,13 @@ the actual integration between CLI arguments, configuration, and core components
 
 import pytest
 import tempfile
+import json
 import os
+import re
 from pathlib import Path
 from click.testing import CliRunner
 from repomap_tool.cli import cli
 from repomap_tool.models import RepoMapConfig
-
-import json
-import re
 
 
 def extract_session_id_from_output(output: str) -> str:
@@ -108,8 +107,6 @@ def handle_authentication_request():
 
         # Verify initial exploration tree is built (by checking session file content)
         if "Found" in result.output and "exploration contexts" in result.output:
-            import json
-
             session_file = Path(".repomap_sessions") / f"{session_id}.json"
             with open(session_file, "r") as f:
                 session_data = json.load(f)
@@ -175,9 +172,6 @@ def my_function():
         # Should have found some identifiers
         assert '"total_identifiers":' in output
         # Extract the JSON part from the output (may include logs and progress)
-        import json
-        import re
-
         # Find the JSON object in the output
         json_match = re.search(r"\{.*\}", output, re.DOTALL)
         assert json_match, "No JSON found in output"
@@ -332,8 +326,6 @@ def my_function():
         assert result2.exit_code == 0
 
         # Results should be identical (except for timing fields)
-        import json
-        import re
 
         # Extract JSON from both outputs
         json1_match = re.search(r"\{.*\}", result1.output, re.DOTALL)
@@ -528,8 +520,6 @@ def utility_function():
         assert "Top Centrality Files" in output or "Centrality Analysis" in output
 
         # Test with specific file - use a simple approach
-        import os
-
         main_file = os.path.join(temp_project_with_dependencies, "src/main.py")
 
         # Test with the file path (should work even if not found)
@@ -560,8 +550,6 @@ def utility_function():
         self, cli_runner, temp_project_with_dependencies
     ):
         """Test impact-analysis command with real dependency analysis."""
-        import os
-
         main_file = os.path.join(temp_project_with_dependencies, "src/main.py")
         auth_file = os.path.join(temp_project_with_dependencies, "src/auth.py")
 

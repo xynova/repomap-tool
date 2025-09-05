@@ -129,26 +129,21 @@ import('./dynamic-module');
         """Test project-wide import analysis."""
         analyzer = ImportAnalyzer()
 
-        # Create temporary project files
-        temp_files = []
-        try:
+        # Create temporary project directory with files
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+
             # Python file
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
-                f.write("import os\nimport sys")
-                temp_files.append(f.name)
+            python_file = temp_path / "test.py"
+            python_file.write_text("import os\nimport sys")
 
             # JavaScript file
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".js", delete=False) as f:
-                f.write("import React from 'react'")
-                temp_files.append(f.name)
+            js_file = temp_path / "test.js"
+            js_file.write_text("import React from 'react'")
 
-            project_imports = analyzer.analyze_project_imports(temp_files)
+            project_imports = analyzer.analyze_project_imports(str(temp_path))
             assert project_imports.total_files == 2
             assert project_imports.total_imports >= 3  # os, sys, React
-
-        finally:
-            for temp_file in temp_files:
-                os.unlink(temp_file)
 
 
 class TestDependencyGraph:
@@ -178,7 +173,24 @@ class TestDependencyGraph:
                 f.write("import os")
                 temp_files.append(f.name)
 
-            graph.build_graph(temp_files)
+            # Create ProjectImports object from the files
+            from repomap_tool.dependencies.models import FileImports, Import, ImportType
+
+            project_imports = ProjectImports(
+                project_path=str(Path(temp_files[0]).parent),
+                file_imports={},
+                total_files=len(temp_files),
+                total_imports=0,
+            )
+
+            # Add file imports for each file
+            for file_path in temp_files:
+                file_imports = FileImports(
+                    file_path=file_path, imports=[], language="python"
+                )
+                project_imports.file_imports[file_path] = file_imports
+
+            graph.build_graph(project_imports)
             assert len(graph.nodes) == 2
             assert len(graph.graph.edges) >= 0  # May have edges if imports resolve
 

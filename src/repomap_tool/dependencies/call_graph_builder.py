@@ -85,7 +85,7 @@ class PythonCallAnalyzer(CallAnalyzer):
                 caller=caller or "unknown",
                 callee=callee,
                 file_path=file_path,
-                line_number=getattr(node, "lineno", None),
+                line_number=getattr(node, "lineno", 0),
                 is_method_call=is_method_call,
                 object_name=object_name,
             )
@@ -154,12 +154,13 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
             for match in re.finditer(function_decl_pattern, file_content):
                 func_name = match.group(1)
                 line_num = self._get_line_number(file_content, match.start())
-                function_lines[line_num] = func_name
+                if line_num is not None:
+                    function_lines[line_num] = func_name
 
             # Find function calls
             for match in re.finditer(function_call_pattern, file_content):
                 callee = match.group(1)
-                line_num = self._get_line_number(file_content, match.start())
+                line_num = self._get_line_number(file_content, match.start()) or 0
 
                 # Find the calling function
                 caller = self._find_calling_function(function_lines, line_num)
@@ -177,7 +178,7 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
             for match in re.finditer(method_call_pattern, file_content):
                 object_name = match.group(1)
                 method_name = match.group(2)
-                line_num = self._get_line_number(file_content, match.start())
+                line_num = self._get_line_number(file_content, match.start()) or 0
 
                 # Find the calling function
                 caller = self._find_calling_function(function_lines, line_num)
@@ -229,7 +230,7 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
 class CallGraphBuilder:
     """Main call graph builder that coordinates multi-language analysis."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the call graph builder with language analyzers."""
         self.language_analyzers: Dict[str, CallAnalyzer] = {
             "py": PythonCallAnalyzer(),
@@ -395,7 +396,7 @@ class CallGraphBuilder:
             Dictionary with call graph statistics
         """
         try:
-            stats = {
+            stats: Dict[str, Any] = {
                 "total_calls": len(call_graph.function_calls),
                 "total_functions": len(call_graph.function_locations),
                 "unique_callers": len(
@@ -417,29 +418,31 @@ class CallGraphBuilder:
             }
 
             # Call frequency analysis
-            callee_counts = {}
+            callee_counts: Dict[str, int] = {}
             for call in call_graph.function_calls:
                 callee_counts[call.callee] = callee_counts.get(call.callee, 0) + 1
 
             if callee_counts:
-                stats["most_called_function"] = max(
-                    callee_counts.items(), key=lambda x: x[1]
-                )
+                most_called = max(callee_counts.items(), key=lambda x: x[1])
+                stats["most_called_function"] = most_called[0]  # Get the function name
                 stats["average_calls_per_function"] = sum(callee_counts.values()) / len(
                     callee_counts
                 )
 
             # File distribution
-            file_call_counts = {}
+            file_call_counts: Dict[str, int] = {}
             for call in call_graph.function_calls:
                 file_call_counts[call.file_path] = (
                     file_call_counts.get(call.file_path, 0) + 1
                 )
 
             if file_call_counts:
-                stats["files_with_most_calls"] = sorted(
+                top_files = sorted(
                     file_call_counts.items(), key=lambda x: x[1], reverse=True
                 )[:5]
+                stats["files_with_most_calls"] = [
+                    file_name for file_name, _ in top_files
+                ]
 
             return stats
 
@@ -503,7 +506,7 @@ class CallGraphBuilder:
         """Get list of supported programming languages."""
         return list(self.language_analyzers.keys())
 
-    def add_language_analyzer(self, extension: str, analyzer: CallAnalyzer):
+    def add_language_analyzer(self, extension: str, analyzer: CallAnalyzer) -> None:
         """Add support for a new programming language.
 
         Args:

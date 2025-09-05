@@ -446,6 +446,14 @@ class Entrypoint(BaseModel):
     score: float
     structural_context: Dict[str, Any] = Field(default_factory=dict)
     centrality_score: Optional[float] = None
+    categories: List[str] = Field(default_factory=list)
+
+    # Dependency analysis fields
+    dependency_centrality: Optional[float] = None
+    import_count: Optional[int] = None
+    dependency_count: Optional[int] = None
+    impact_risk: Optional[float] = None
+    refactoring_priority: Optional[float] = None
 
     @property
     def location(self) -> Path:

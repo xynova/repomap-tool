@@ -51,8 +51,11 @@ class EntrypointDiscoverer:
         self.fuzzy_threshold = 0.7
 
         # Phase 2: Initialize dependency analysis components
-        self.import_analyzer: Optional[ImportAnalyzer] = None
-        self.dependency_graph: Optional[DependencyGraph] = None
+        # Initialize import analyzer and dependency graph immediately
+        self.import_analyzer = ImportAnalyzer()
+        self.dependency_graph = DependencyGraph()
+
+        # Lazy initialization for more expensive components
         self.centrality_calculator = None  # Will be initialized when needed
         self.impact_analyzer = None  # Will be initialized when needed
 
@@ -121,7 +124,7 @@ class EntrypointDiscoverer:
 
         return unique_entrypoints
 
-    def _build_dependency_graph(self, project_path: str):
+    def _build_dependency_graph(self, project_path: str) -> None:
         """Build the project's dependency graph."""
         if (
             not self.dependency_graph
@@ -163,12 +166,11 @@ class EntrypointDiscoverer:
 
         return entrypoints
 
-    def _initialize_dependency_components(self, project_path: str):
+    def _initialize_dependency_components(self, project_path: str) -> None:
         """Initialize dependency analysis components."""
-        if self.import_analyzer is None:
-            self.import_analyzer = ImportAnalyzer(project_root=project_path)
-        if self.dependency_graph is None:
-            self.dependency_graph = DependencyGraph()
+        # Components are now initialized in __init__, but we can set project_root if needed
+        if hasattr(self.import_analyzer, "project_root"):
+            self.import_analyzer.project_root = project_path
 
     def _get_project_symbols(self, project_path: str) -> List[Dict[str, Any]]:
         """Get all project symbols using existing infrastructure.
@@ -201,7 +203,7 @@ class EntrypointDiscoverer:
             return []
 
     def _discover_semantic_entrypoints(
-        self, intent: str, symbols: List[str], project_path: str
+        self, intent: str, symbols: List[Dict[str, Any]], project_path: str
     ) -> List[Entrypoint]:
         """Discover entrypoints using semantic matching.
 
@@ -234,7 +236,7 @@ class EntrypointDiscoverer:
         return entrypoints
 
     def _discover_fuzzy_entrypoints(
-        self, intent: str, symbols: List[str], project_path: str
+        self, intent: str, symbols: List[Dict[str, Any]], project_path: str
     ) -> List[Entrypoint]:
         """Discover entrypoints using fuzzy matching.
 

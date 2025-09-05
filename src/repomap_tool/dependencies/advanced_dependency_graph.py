@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 class AdvancedDependencyGraph(DependencyGraph):
     """Enhanced dependency graph with call graph integration and advanced metrics."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the advanced dependency graph."""
         super().__init__()
         self.call_graph: Optional[CallGraph] = None
@@ -533,7 +533,7 @@ class AdvancedDependencyGraph(DependencyGraph):
             # Sort by priority
             priority_order = {"HIGH": 3, "MEDIUM": 2, "LOW": 1}
             opportunities.sort(
-                key=lambda x: priority_order.get(x["priority"], 0), reverse=True
+                key=lambda x: priority_order.get(str(x["priority"]), 0), reverse=True
             )
 
             logger.info(f"Identified {len(opportunities)} refactoring opportunities")

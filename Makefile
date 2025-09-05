@@ -117,7 +117,11 @@ clean:
 	rm -f .deps-image-tag
 	@echo "Cleanup complete!"
 
-# Run all CI checks
+# Run code quality checks
+check: lint mypy
+	@echo "Code quality checks completed!"
+
+# Run all CI checks  
 ci: test security build check
 	@echo "CI pipeline completed successfully!"
 

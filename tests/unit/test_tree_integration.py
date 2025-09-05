@@ -55,17 +55,15 @@ class TestTreeDependencyIntegration:
         # Create test entrypoints
         entrypoint1 = Entrypoint(
             identifier="test_function",
-            location="src/test.py:10",
+            file_path=Path("src/test.py"),
             score=0.8,
-            categories=["test"],
             structural_context={},
         )
 
         entrypoint2 = Entrypoint(
             identifier="another_function",
-            location="src/another.py:20",
+            file_path=Path("src/another.py"),
             score=0.7,
-            categories=["utility"],
             structural_context={},
         )
 
@@ -181,9 +179,8 @@ class TestTreeDependencyIntegration:
         # Create a test entrypoint
         entrypoint = Entrypoint(
             identifier="test_function",
-            location="src/test.py:10",
+            file_path=Path("src/test.py"),
             score=0.8,
-            categories=["test"],
             structural_context={},
         )
 
@@ -207,9 +204,8 @@ class TestEntrypointEnhancement:
         """Test that Entrypoint model includes dependency analysis fields."""
         entrypoint = Entrypoint(
             identifier="test_function",
-            location="src/test.py:10",
+            file_path=Path("src/test.py"),
             score=0.8,
-            categories=["test"],
             structural_context={},
         )
 
@@ -233,9 +229,8 @@ class TestEntrypointEnhancement:
         """Test that Entrypoint model can store dependency analysis values."""
         entrypoint = Entrypoint(
             identifier="test_function",
-            location="src/test.py:10",
+            file_path=Path("src/test.py"),
             score=0.8,
-            categories=["test"],
             structural_context={},
             dependency_centrality=0.75,
             import_count=5,

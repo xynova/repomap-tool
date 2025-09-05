@@ -36,7 +36,11 @@ class ContextSelection:
 class ContextSelector:
     """Selects optimal context based on token budget and user intent."""
 
-    def __init__(self, dependency_graph=None, context_manager=None):
+    def __init__(
+        self,
+        dependency_graph: Optional[Any] = None,
+        context_manager: Optional[Any] = None,
+    ) -> None:
         self.dependency_graph = dependency_graph
         self.context_manager = context_manager
         self.default_strategy = SelectionStrategy.HYBRID

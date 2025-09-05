@@ -444,7 +444,13 @@ class ImportAnalyzer:
                 if resolved_path:
                     imp.resolved_path = str(resolved_path)
                     # Determine if it's external (outside project)
-                    if not self._is_in_project(resolved_path, Path(self.project_root)):
+                    if (
+                        resolved_path
+                        and self.project_root
+                        and not self._is_in_project(
+                            resolved_path, Path(self.project_root)
+                        )
+                    ):
                         imp.import_type = ImportType.EXTERNAL
 
                 resolved_imports.append(imp)
@@ -530,7 +536,7 @@ class ImportAnalyzer:
         """Get list of supported programming languages."""
         return list(self.language_parsers.keys())
 
-    def add_language_parser(self, extension: str, parser: ImportParser):
+    def add_language_parser(self, extension: str, parser: ImportParser) -> None:
         """Add support for a new programming language.
 
         Args:

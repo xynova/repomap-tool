@@ -7,7 +7,7 @@ within token budget constraints for different LLM models.
 
 import re
 import logging
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Dict, Any, Optional, Tuple, Callable
 from dataclasses import dataclass
 from enum import Enum
 
@@ -44,7 +44,7 @@ class BudgetAllocation:
 class TokenEstimator:
     """Estimates token count for different LLM models."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Rough token estimation (words + punctuation)
         # In production, would use tiktoken for accurate counting
         self.words_per_token = 0.75  # Average words per token
@@ -264,7 +264,7 @@ class TokenOptimizer:
 
     def _load_compression_strategies(self) -> Dict[str, Any]:
         """Load compression strategies based on compression level."""
-        base_strategies = {
+        base_strategies: Dict[str, Any] = {
             "abbreviations": {
                 "function": "fn",
                 "parameter": "param",
@@ -286,7 +286,7 @@ class TokenOptimizer:
 
         return base_strategies
 
-    def _get_compression_strategies(self) -> List[Tuple[str, callable]]:
+    def _get_compression_strategies(self) -> List[Tuple[str, Callable]]:
         """Get ordered list of compression strategies to apply."""
         strategies = [
             ("whitespace_compression", self._remove_extra_whitespace),

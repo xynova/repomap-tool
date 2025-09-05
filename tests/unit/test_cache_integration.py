@@ -141,7 +141,7 @@ class TestCacheIntegration:
                 )
 
                 # Verify cache enabled status
-                assert status["cache_enabled"] == True
+                assert status["cache_enabled"] is True
 
     def test_refresh_all_caches(self):
         """Test refreshing all caches functionality."""
@@ -347,7 +347,7 @@ class TestCacheIntegration:
                 status = repomap.get_cache_status()
 
                 # Verify cache is disabled
-                assert status["cache_enabled"] == False
+                assert status["cache_enabled"] is False
                 assert status["fuzzy_matcher_cache"] is None
                 assert status["tracked_files"] == []
 
@@ -400,7 +400,7 @@ class TestCacheIntegration:
 
                 # Get initial cache status
                 initial_status = repomap.get_cache_status()
-                assert initial_status["cache_enabled"] == True
+                assert initial_status["cache_enabled"] is True
 
                 # Modify files
                 time.sleep(0.1)
@@ -418,4 +418,4 @@ class TestCacheIntegration:
 
                     # Get final cache status
                     final_status = repomap.get_cache_status()
-                    assert final_status["cache_enabled"] == True
+                    assert final_status["cache_enabled"] is True

@@ -219,7 +219,7 @@ class TestCacheManager:
             ]
 
             # Check cache validity
-            assert cache.is_file_cache_valid(temp_file) == True
+            assert cache.is_file_cache_valid(temp_file) is True
 
         finally:
             # Cleanup
@@ -255,7 +255,7 @@ class TestCacheManager:
                 f.write("def test_function_modified(): pass")
 
             # Check that cache is now invalid
-            assert cache.is_file_cache_valid(temp_file) == False
+            assert cache.is_file_cache_valid(temp_file) is False
 
             # Invalidate stale files
             invalidated_count = cache.invalidate_stale_files([temp_file])
@@ -371,7 +371,7 @@ class TestCacheManager:
         cache = CacheManager(max_size=10, ttl=3600)
 
         # Test with non-existent file
-        assert cache.is_file_cache_valid("/nonexistent/file.py") == False
+        assert cache.is_file_cache_valid("/nonexistent/file.py") is False
 
         # Test with None file path
         cache.set("key1", "value1", None)
@@ -410,8 +410,8 @@ class TestCacheManager:
             assert abs_path in tracked_files
 
             # Check validity with different path representations
-            assert cache.is_file_cache_valid(temp_file) == True
-            assert cache.is_file_cache_valid(abs_path) == True
+            assert cache.is_file_cache_valid(temp_file) is True
+            assert cache.is_file_cache_valid(abs_path) is True
 
         finally:
             # Cleanup
@@ -441,7 +441,7 @@ class TestCacheManager:
             os.unlink(temp_file)
 
             # Check that cache is considered invalid for deleted file
-            assert cache.is_file_cache_valid(temp_file) == False
+            assert cache.is_file_cache_valid(temp_file) is False
 
             # Invalidation should handle this gracefully
             invalidated_count = cache.invalidate_stale_files([temp_file])

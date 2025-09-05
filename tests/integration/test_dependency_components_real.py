@@ -180,22 +180,18 @@ class ComplexProcessor:
     def test_dependency_graph_real(self, temp_project_with_dependencies):
         """Test dependency graph construction with real files."""
         from repomap_tool.dependencies.dependency_graph import DependencyGraph
+        from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
 
         graph = DependencyGraph()
 
-        # Add real files to the graph
-        files = [
-            str(Path(temp_project_with_dependencies) / "main.py"),
-            str(Path(temp_project_with_dependencies) / "utils.py"),
-            str(Path(temp_project_with_dependencies) / "submodule" / "module.py"),
-            str(Path(temp_project_with_dependencies) / "complex.py"),
-        ]
+        # Use ImportAnalyzer to get ProjectImports
+        analyzer = ImportAnalyzer()
+        project_imports = analyzer.analyze_project_imports(
+            str(temp_project_with_dependencies)
+        )
 
-        # Filter to only existing files
-        existing_files = [f for f in files if Path(f).exists()]
-
-        # Build graph with real files
-        graph.build_graph(existing_files, str(temp_project_with_dependencies))
+        # Build graph with ProjectImports
+        graph.build_graph(project_imports)
 
         # Should be able to get graph statistics
         stats = graph.get_graph_statistics()

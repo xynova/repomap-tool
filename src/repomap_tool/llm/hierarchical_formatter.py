@@ -30,7 +30,7 @@ class SymbolInfo:
 class HierarchicalFormatter:
     """Formats output in LLM-friendly hierarchical structure."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.indentation_level = 0
         self.max_depth = 4
         self.use_unicode = True  # Use Unicode symbols for better visual hierarchy
@@ -96,7 +96,7 @@ class HierarchicalFormatter:
 
         return "\n".join(output)
 
-    def _format_symbol(self, symbol: Dict[str, Any], is_last: bool) -> List[str]:
+    def _format_symbol(self, symbol: SymbolInfo, is_last: bool) -> List[str]:
         """Format a single symbol with proper hierarchy.
 
         Args:
@@ -110,20 +110,20 @@ class HierarchicalFormatter:
 
         # Symbol header
         prefix = "└──" if is_last else "├──"
-        name = symbol.get("name", "unknown")
+        name = getattr(symbol, "name", "unknown")
         header = f"{prefix} {name}"
 
         # Add signature if available
-        signature = symbol.get("signature", "")
+        signature = getattr(symbol, "signature", "")
         if signature:
             header += f": {signature}"
 
         # Add centrality and impact information
-        centrality_score = symbol.get("centrality_score")
+        centrality_score = getattr(symbol, "centrality_score", None)
         if centrality_score is not None:
             header += f" [Centrality: {centrality_score:.2f}]"
 
-        impact_risk = symbol.get("impact_risk")
+        impact_risk = getattr(symbol, "impact_risk", None)
         if impact_risk is not None:
             risk_level = (
                 "HIGH"
@@ -135,7 +135,7 @@ class HierarchicalFormatter:
         output.append(header)
 
         # Critical lines
-        critical_lines = symbol.get("critical_lines", [])
+        critical_lines = getattr(symbol, "critical_lines", [])
         if critical_lines:
             for j, line in enumerate(critical_lines[:3]):  # Limit to top 3
                 is_last_line = j == len(critical_lines[:3]) - 1
@@ -143,7 +143,7 @@ class HierarchicalFormatter:
                 output.append(f"{line_prefix} Critical: {line.strip()}")
 
         # Dependencies
-        dependencies = symbol.get("dependencies", [])
+        dependencies = getattr(symbol, "dependencies", [])
         if dependencies:
             deps = ", ".join(dependencies[:3])  # Limit dependencies
             if len(dependencies) > 3:
@@ -244,7 +244,7 @@ class HierarchicalFormatter:
             return content
 
         # Truncate while preserving hierarchy
-        truncated_lines = []
+        truncated_lines: List[str] = []
         current_depth = 0
 
         for line in lines:

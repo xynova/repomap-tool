@@ -87,8 +87,8 @@ class TestCLICacheCommand:
                 assert (
                     Path(call_args.project_root).resolve() == Path(temp_path).resolve()
                 )
-                assert call_args.fuzzy_match.enabled == True
-                assert call_args.fuzzy_match.cache_results == True
+                assert call_args.fuzzy_match.enabled is True
+                assert call_args.fuzzy_match.cache_results is True
 
     def test_cache_command_with_refresh(self):
         """Test cache command with refresh flag."""

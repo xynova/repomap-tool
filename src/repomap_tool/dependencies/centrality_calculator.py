@@ -7,7 +7,7 @@ to determine their importance and influence within the codebase.
 
 import logging
 import networkx as nx
-from typing import Dict, List, Tuple, Optional, Any
+from typing import Dict, List, Tuple, Optional, Any, Set
 from collections import defaultdict
 
 from .dependency_graph import DependencyGraph
@@ -25,7 +25,7 @@ class CentralityCalculator:
             dependency_graph: DependencyGraph instance to analyze
         """
         self.graph = dependency_graph
-        self.cache: Dict[str, Dict[str, float]] = {}
+        self.cache: Dict[str, Any] = {}
         self.cache_enabled = True
 
         logger.info("CentralityCalculator initialized")
@@ -42,11 +42,11 @@ class CentralityCalculator:
         cache_key = "degree_centrality"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached degree centrality scores")
-            return self.cache[cache_key]
+            return self.cache[cache_key]  # type: ignore
 
         try:
             # Use NetworkX's degree centrality
-            degree_scores = nx.degree_centrality(self.graph.graph)
+            degree_scores: Dict[str, float] = nx.degree_centrality(self.graph.graph)
 
             # Validate scores
             self._validate_centrality_scores(degree_scores)
@@ -74,11 +74,13 @@ class CentralityCalculator:
         cache_key = "betweenness_centrality"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached betweenness centrality scores")
-            return self.cache[cache_key]
+            return self.cache[cache_key]  # type: ignore
 
         try:
             # Use NetworkX's betweenness centrality
-            betweenness_scores = nx.betweenness_centrality(self.graph.graph)
+            betweenness_scores: Dict[str, float] = nx.betweenness_centrality(
+                self.graph.graph
+            )
 
             # Validate scores
             self._validate_centrality_scores(betweenness_scores)
@@ -114,11 +116,11 @@ class CentralityCalculator:
         cache_key = f"pagerank_centrality_{alpha}_{max_iter}"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached PageRank centrality scores")
-            return self.cache[cache_key]
+            return self.cache[cache_key]  # type: ignore
 
         try:
             # Use NetworkX's PageRank
-            pagerank_scores = nx.pagerank(
+            pagerank_scores: Dict[str, float] = nx.pagerank(
                 self.graph.graph, alpha=alpha, max_iter=max_iter
             )
 
@@ -153,11 +155,13 @@ class CentralityCalculator:
         cache_key = "hits_scores"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached HITS scores")
-            cached = self.cache[cache_key]
+            cached: Dict[str, Dict[str, float]] = self.cache[cache_key]
             return cached["hub"], cached["authority"]
 
         try:
             # Use NetworkX's HITS algorithm
+            hub_scores: Dict[str, float]
+            authority_scores: Dict[str, float]
             hub_scores, authority_scores = nx.hits(self.graph.graph)
 
             # Validate scores
@@ -166,10 +170,11 @@ class CentralityCalculator:
 
             # Cache results
             if self.cache_enabled:
-                self.cache[cache_key] = {
+                cache_data: Dict[str, Dict[str, float]] = {
                     "hub": hub_scores,
                     "authority": authority_scores,
                 }
+                self.cache[cache_key] = cache_data
 
             logger.info(f"Calculated HITS scores for {len(hub_scores)} files")
             return hub_scores, authority_scores
@@ -190,11 +195,11 @@ class CentralityCalculator:
         cache_key = "eigenvector_centrality"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached eigenvector centrality scores")
-            return self.cache[cache_key]
+            return self.cache[cache_key]  # type: ignore
 
         try:
             # Use NetworkX's eigenvector centrality
-            eigenvector_scores = nx.eigenvector_centrality(
+            eigenvector_scores: Dict[str, float] = nx.eigenvector_centrality(
                 self.graph.graph, max_iter=1000
             )
 
@@ -226,11 +231,13 @@ class CentralityCalculator:
         cache_key = "closeness_centrality"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached closeness centrality scores")
-            return self.cache[cache_key]
+            return self.cache[cache_key]  # type: ignore
 
         try:
             # Use NetworkX's closeness centrality
-            closeness_scores = nx.closeness_centrality(self.graph.graph)
+            closeness_scores: Dict[str, float] = nx.closeness_centrality(
+                self.graph.graph
+            )
 
             # Validate scores
             self._validate_centrality_scores(closeness_scores)
@@ -302,7 +309,7 @@ class CentralityCalculator:
 
             # Calculate composite scores
             composite_scores = {}
-            all_files = set()
+            all_files: Set[str] = set()
             for scores in centrality_scores.values():
                 all_files.update(scores.keys())
 

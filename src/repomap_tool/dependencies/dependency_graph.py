@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 class DependencyGraph:
     """Main dependency graph representation using NetworkX."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize an empty dependency graph."""
         self.graph = nx.DiGraph()
         self.nodes: Dict[str, DependencyNode] = {}
@@ -65,7 +65,7 @@ class DependencyGraph:
             f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"
         )
 
-    def _add_node(self, file_path: str):
+    def _add_node(self, file_path: str) -> None:
         """Add a single node to the graph."""
         try:
             node = DependencyNode(
@@ -97,14 +97,9 @@ class DependencyGraph:
         # Update project files to only valid ones
         project_files[:] = valid_files
 
-    def _add_edges(self) -> None:
+    def _add_edges(self, project_imports: ProjectImports) -> None:
         """Add dependency edges based on import analysis."""
         logger.info("Adding dependency edges to graph")
-
-        # Analyze imports for all files
-        project_imports = self.import_analyzer.analyze_project_imports(
-            list(self.nodes.keys())
-        )
 
         # Build edges from import relationships
         for file_path, file_imports in project_imports.file_imports.items():
@@ -416,7 +411,7 @@ class DependencyGraph:
             if total_degree == 0:
                 return 0.5  # Neutral stability for isolated files
 
-            return in_degree / total_degree
+            return float(in_degree / total_degree)
 
         except Exception as e:
             logger.debug(f"Error calculating stability for {file_path}: {e}")
@@ -449,7 +444,7 @@ class DependencyGraph:
             }
 
             # Language distribution
-            language_counts = defaultdict(int)
+            language_counts: Dict[str, int] = defaultdict(int)
             for node in self.nodes.values():
                 lang = node.language or "unknown"
                 language_counts[lang] += 1

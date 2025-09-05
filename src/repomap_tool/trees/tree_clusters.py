@@ -76,7 +76,7 @@ class TreeClusterer:
         Returns:
             Dictionary mapping categories to entrypoint lists
         """
-        clusters = {}
+        clusters: Dict[str, List[Entrypoint]] = {}
 
         for entrypoint in entrypoints:
             # Get primary category from entrypoint
@@ -103,7 +103,7 @@ class TreeClusterer:
             return entrypoint.categories[0]
 
         # Fallback to path-based classification
-        return self._classify_from_path(entrypoint.location)
+        return self._classify_from_path(str(entrypoint.location))
 
     def _classify_from_path(self, file_path: str) -> str:
         """Classify entrypoint based on file path.
@@ -167,7 +167,7 @@ class TreeClusterer:
                 all_categories.extend(entrypoint.categories)
 
             # Add path-based context
-            path_context = self._extract_path_context(entrypoint.location)
+            path_context = self._extract_path_context(str(entrypoint.location))
             if path_context:
                 all_categories.append(path_context)
 
