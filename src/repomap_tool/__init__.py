@@ -10,9 +10,9 @@ __email__ = "your.email@example.com"
 
 # Import core functionality
 try:
-    from .core import DockerRepoMap
+    from .core import RepoMapService
 except ImportError:
-    DockerRepoMap = None  # type: ignore
+    RepoMapService = None  # type: ignore
 
 # Import CLI - removed to prevent circular import issues
 # CLI should be imported directly when needed, not at package level
@@ -116,7 +116,7 @@ except ImportError:
     handle_errors = None  # type: ignore
 
 __all__ = [
-    "DockerRepoMap",
+    "RepoMapService",
     "cli",
     "RepoMapConfig",
     "FuzzyMatchConfig",

@@ -24,10 +24,10 @@ class TestCLIIntegration:
         self.runner = CliRunner()
         self.test_project = Path(".")
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     def test_analyze_command_exception_handling(self, mock_repo_map):
         """Test analyze command with real exception handling."""
-        # Mock DockerRepoMap to raise an exception
+        # Mock RepoMapService to raise an exception
         mock_repo_map.side_effect = Exception("Test analysis error")
 
         # Test the actual CLI command with valid options
@@ -37,10 +37,10 @@ class TestCLIIntegration:
         assert result.exit_code == 1
         assert "Error: Test analysis error" in result.output
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     def test_search_command_exception_handling(self, mock_repo_map):
         """Test search command with real exception handling."""
-        # Mock DockerRepoMap to raise an exception
+        # Mock RepoMapService to raise an exception
         mock_repo_map.side_effect = Exception("Test search error")
 
         # Test the actual CLI command
@@ -65,10 +65,10 @@ class TestCLIIntegration:
         assert result.exit_code == 1
         assert "Error: Test config error" in result.output
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     def test_performance_command_exception_handling(self, mock_repo_map):
         """Test performance command with real exception handling."""
-        # Mock DockerRepoMap to raise an exception
+        # Mock RepoMapService to raise an exception
         mock_repo_map.side_effect = Exception("Test performance error")
 
         # Test the actual CLI command
@@ -78,7 +78,7 @@ class TestCLIIntegration:
         assert result.exit_code == 1
         assert "Error: Test performance error" in result.output
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     def test_performance_command_monitoring_disabled(self, mock_repo_map):
         """Test performance command when monitoring is disabled."""
         # Mock the RepoMap instance
@@ -95,7 +95,7 @@ class TestCLIIntegration:
         assert result.exit_code == 0
         assert "Performance monitoring is disabled" in result.output
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     def test_performance_command_with_error_metrics(self, mock_repo_map):
         """Test performance command when metrics contain an error."""
         # Mock the RepoMap instance
@@ -112,7 +112,7 @@ class TestCLIIntegration:
         assert result.exit_code == 0
         assert "Error getting metrics: Test metrics error" in result.output
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     def test_performance_command_with_full_metrics(self, mock_repo_map):
         """Test performance command with complete metrics data."""
         # Mock realistic performance metrics
@@ -215,8 +215,8 @@ class TestCLIIntegration:
             config_path = f.name
 
         try:
-            # Mock DockerRepoMap to avoid actual analysis
-            with patch("src.repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+            # Mock RepoMapService to avoid actual analysis
+            with patch("src.repomap_tool.cli.RepoMapService") as mock_repo_map:
                 mock_instance = Mock()
                 # Create a proper ProjectInfo mock
                 from src.repomap_tool.models import ProjectInfo
@@ -263,7 +263,7 @@ class TestCLIIntegration:
                 # Verify the command executed successfully
                 assert result.exit_code == 0
 
-                # Verify that DockerRepoMap was called with the overridden config
+                # Verify that RepoMapService was called with the overridden config
                 mock_repo_map.assert_called_once()
                 call_args = mock_repo_map.call_args[0][0]  # First positional argument
 

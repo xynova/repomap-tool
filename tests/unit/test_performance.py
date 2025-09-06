@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from repomap_tool.models import RepoMapConfig, PerformanceConfig
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 from repomap_tool.core.parallel_processor import ParallelTagExtractor, ProcessingStats
 
 
@@ -161,7 +161,7 @@ class TestParallelTagExtractor:
         )
 
         # This should raise an exception with helpful error message
-        # (We can't easily test the full DockerRepoMap without mocking aider)
+        # (We can't easily test the full RepoMapService without mocking aider)
         assert config.performance.allow_fallback is False
 
     def test_get_performance_metrics(self):
@@ -252,8 +252,8 @@ class TestProcessingStats:
         assert stats.end_time > stats.start_time
 
 
-class TestDockerRepoMapPerformance:
-    """Test DockerRepoMap performance features."""
+class TestRepoMapServicePerformance:
+    """Test RepoMapService performance features."""
 
     @pytest.fixture
     def temp_project(self):
@@ -277,7 +277,7 @@ class TestDockerRepoMapPerformance:
 
     @patch("aider.repomap.RepoMap")
     def test_parallel_processing_integration(self, mock_repo_map_class, temp_project):
-        """Test parallel processing integration in DockerRepoMap."""
+        """Test parallel processing integration in RepoMapService."""
         # Mock the RepoMap class
         mock_repo_map = Mock()
         mock_tag = Mock()
@@ -296,8 +296,8 @@ class TestDockerRepoMapPerformance:
             ),
         )
 
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
+        # Initialize RepoMapService
+        repomap = RepoMapService(config)
 
         # Test that parallel processing is used for multiple files
         project_files = ["main.py", "utils.py", "config.py"]
@@ -328,8 +328,8 @@ class TestDockerRepoMapPerformance:
             ),
         )
 
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
+        # Initialize RepoMapService
+        repomap = RepoMapService(config)
 
         # Test that sequential processing is used for few files
         project_files = ["main.py", "utils.py"]  # Only 2 files
@@ -355,8 +355,8 @@ class TestDockerRepoMapPerformance:
             performance=PerformanceConfig(max_workers=2, enable_monitoring=True),
         )
 
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
+        # Initialize RepoMapService
+        repomap = RepoMapService(config)
 
         # Get performance metrics
         metrics = repomap.get_performance_metrics()
@@ -383,8 +383,8 @@ class TestDockerRepoMapPerformance:
             performance=PerformanceConfig(enable_monitoring=False),
         )
 
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
+        # Initialize RepoMapService
+        repomap = RepoMapService(config)
 
         # Get performance metrics
         metrics = repomap.get_performance_metrics()

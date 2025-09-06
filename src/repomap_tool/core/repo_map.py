@@ -1,7 +1,7 @@
 """
-Main DockerRepoMap class.
+Main RepoMapService class.
 
-This module contains the core DockerRepoMap class that orchestrates
+This module contains the core RepoMapService class that orchestrates
 code analysis and search functionality.
 """
 
@@ -42,17 +42,17 @@ except ImportError as e:
     MATCHERS_AVAILABLE = False
 
 
-class DockerRepoMap:
+class RepoMapService:
     """
-    Enhanced Docker RepoMap with Pydantic configuration and structured data handling.
+    Repository analysis service with Pydantic configuration and structured data handling.
 
-    This class provides code analysis and identifier matching capabilities
+    This service orchestrates code analysis and identifier matching capabilities
     with improved configuration management using Pydantic models.
     """
 
     def __init__(self, config: RepoMapConfig):
         """
-        Initialize Docker RepoMap with validated configuration.
+        Initialize RepoMapService with validated configuration.
 
         Args:
             config: Validated RepoMapConfig instance
@@ -83,7 +83,7 @@ class DockerRepoMap:
         # Initialize the system
         self._initialize_components()
 
-        self.logger.info(f"Initialized DockerRepoMap for {self.config.project_root}")
+        self.logger.info(f"Initialized RepoMapService for {self.config.project_root}")
 
         # Invalidate stale caches on initialization
         self._invalidate_stale_caches()
@@ -113,6 +113,8 @@ class DockerRepoMap:
         try:
             from aider.repomap import RepoMap
             from aider.io import InputOutput
+            from pathlib import Path
+            from diskcache import Cache
         except ImportError as e:
             raise ImportError(
                 f"aider-chat is required but not installed: {e}\n"
@@ -122,8 +124,37 @@ class DockerRepoMap:
         # Create real components without LLM model to avoid unnecessary initialization
         io = InputOutput()
 
+        # Create custom RepoMap that can use absolute cache directory
+        class CustomRepoMap(RepoMap):
+            def __init__(self, cache_dir=None, *args, **kwargs):
+                # Set cache directory BEFORE calling parent __init__ to ensure
+                # load_tags_cache() uses the correct directory
+                if cache_dir:
+                    self.TAGS_CACHE_DIR = cache_dir
+                super().__init__(*args, **kwargs)
+            
+            def load_tags_cache(self):
+                # Override to use absolute path if cache_dir is absolute
+                if hasattr(self, 'TAGS_CACHE_DIR') and os.path.isabs(self.TAGS_CACHE_DIR):
+                    path = Path(self.TAGS_CACHE_DIR)
+                else:
+                    path = Path(self.root) / self.TAGS_CACHE_DIR
+                
+                try:
+                    self.TAGS_CACHE = Cache(path)
+                except Exception as e:
+                    self.tags_cache_error(e)
+
+        # Determine cache directory
+        cache_dir = None
+        if self.config.cache_dir:
+            cache_dir = str(self.config.cache_dir)
+        elif os.environ.get("CACHE_DIR"):
+            cache_dir = os.environ.get("CACHE_DIR")
+
         # Initialize RepoMap without LLM model since we use our own semantic analysis
-        self.repo_map = RepoMap(
+        self.repo_map = CustomRepoMap(
+            cache_dir=cache_dir,
             map_tokens=self.config.map_tokens,
             root=str(self.config.project_root),
             main_model=None,  # No LLM model needed - we use our own matchers

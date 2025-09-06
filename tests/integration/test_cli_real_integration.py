@@ -1,7 +1,7 @@
 """
 Real CLI Integration Tests - No Mocking
 
-This module tests CLI commands with real DockerRepoMap instances to ensure
+This module tests CLI commands with real RepoMapService instances to ensure
 the actual integration between CLI arguments, configuration, and core components works.
 """
 
@@ -144,7 +144,7 @@ def my_function():
             yield temp_dir
 
     def test_analyze_command_real_integration(self, cli_runner, temp_project):
-        """Test analyze command with real DockerRepoMap integration."""
+        """Test analyze command with real RepoMapService integration."""
         result = cli_runner.invoke(
             cli,
             [

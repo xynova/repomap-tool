@@ -8,7 +8,7 @@ VENV_PIP = $(VENV_BIN)/pip
 
 # Docker configuration
 DOCKER_IMAGE_NAME ?= repomap-tool
-DOCKER_TAG ?= latest
+DOCKER_TAG ?= local
 
 # Default target
 help:

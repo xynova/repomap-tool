@@ -27,7 +27,7 @@ from .models import (
     create_error_response,
 )
 from pydantic import ValidationError
-from .core import DockerRepoMap
+from .core import RepoMapService
 
 console = Console()
 
@@ -250,7 +250,7 @@ def analyze(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = DockerRepoMap(config_obj)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analyzing project...")
 
             # Analyze project with progress tracking
@@ -352,7 +352,7 @@ def search(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
             progress.update(task, description="Searching identifiers...")
 
             # Perform search
@@ -513,7 +513,7 @@ def performance(
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Get performance metrics
         metrics = repomap.get_performance_metrics()
@@ -919,7 +919,7 @@ def explore(
         config = create_tree_config(project_path, max_depth, verbose=True)
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Import tree components
         from .trees import (
@@ -1023,7 +1023,7 @@ def focus(tree_id: str, session: Optional[str]) -> None:
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1069,7 +1069,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1115,7 +1115,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1161,7 +1161,7 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap, TreeManager, and TreeMapper
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager, TreeMapper
 
         tree_manager = TreeManager(repomap)
@@ -1208,7 +1208,7 @@ def list_trees(session: Optional[str]) -> None:
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1267,7 +1267,7 @@ def status(session: Optional[str]) -> None:
         config = create_tree_config(".", verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager, SessionManager
 
         tree_manager = TreeManager(repomap)
@@ -1368,7 +1368,7 @@ def cache(
         config = create_basic_config(project_path, verbose)
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Refresh caches if requested
         if refresh:
@@ -1495,7 +1495,7 @@ def analyze_dependencies(
         ) as progress:
             task = progress.add_task("Building dependency graph...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
             progress.update(task, description="Analyzing dependencies...")
 
             # Build dependency graph
@@ -1591,7 +1591,7 @@ def show_centrality(
         ) as progress:
             task = progress.add_task("Calculating centrality scores...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
             progress.update(task, description="Analysis complete!")
 
         # Get centrality scores
@@ -1704,7 +1704,7 @@ def impact_analysis(
         ) as progress:
             task = progress.add_task("Analyzing change impact...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
             progress.update(task, description="Analysis complete!")
 
         # Analyze impact for each file
@@ -1799,7 +1799,7 @@ def find_cycles(
         ) as progress:
             task = progress.add_task("Finding circular dependencies...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
             progress.update(task, description="Analysis complete!")
 
         # Find cycles

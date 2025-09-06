@@ -1,7 +1,7 @@
 """
-Unit tests for cache integration functionality in DockerRepoMap.
+Unit tests for cache integration functionality in RepoMapService.
 
-Tests the integration between cache manager and DockerRepoMap for file-based cache invalidation.
+Tests the integration between cache manager and RepoMapService for file-based cache invalidation.
 """
 
 import pytest
@@ -32,8 +32,8 @@ class TestCacheIntegration:
     """Test cases for cache integration functionality."""
 
     def test_cache_invalidation_on_initialization(self):
-        """Test that stale caches are invalidated when DockerRepoMap is initialized."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        """Test that stale caches are invalidated when RepoMapService is initialized."""
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -76,8 +76,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.return_value = [str(test_file1), str(test_file2)]
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Check that cache invalidation was called
                 # Since we're mocking external dependencies, we can't fully test the actual invalidation
@@ -86,8 +86,8 @@ class TestCacheIntegration:
                 assert callable(repomap._invalidate_stale_caches)
 
     def test_get_cache_status(self):
-        """Test getting cache status from DockerRepoMap."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        """Test getting cache status from RepoMapService."""
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -122,8 +122,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.return_value = []
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Get cache status
                 status = repomap.get_cache_status()
@@ -145,7 +145,7 @@ class TestCacheIntegration:
 
     def test_refresh_all_caches(self):
         """Test refreshing all caches functionality."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -180,8 +180,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.return_value = []
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Mock the logger to capture log messages
                 with patch.object(repomap.logger, "info") as mock_logger:
@@ -193,7 +193,7 @@ class TestCacheIntegration:
 
     def test_cache_invalidation_with_modified_files(self):
         """Test cache invalidation when files are modified."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -235,8 +235,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.return_value = [str(test_file1), str(test_file2)]
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Modify one of the files
                 time.sleep(0.1)  # Ensure different timestamp
@@ -254,7 +254,7 @@ class TestCacheIntegration:
 
     def test_cache_invalidation_error_handling(self):
         """Test that cache invalidation handles errors gracefully."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -289,8 +289,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.side_effect = Exception("File system error")
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Mock the logger to capture warning messages
                 with patch.object(repomap.logger, "warning") as mock_logger:
@@ -305,7 +305,7 @@ class TestCacheIntegration:
 
     def test_cache_status_with_disabled_cache(self):
         """Test cache status when caching is disabled."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -340,8 +340,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.return_value = []
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Get cache status
                 status = repomap.get_cache_status()
@@ -353,7 +353,7 @@ class TestCacheIntegration:
 
     def test_cache_integration_with_file_changes(self):
         """Test the complete flow of cache integration with file changes."""
-        from repomap_tool.core.repo_map import DockerRepoMap
+        from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -395,8 +395,8 @@ class TestCacheIntegration:
             ) as mock_get_files:
                 mock_get_files.return_value = [str(test_file1), str(test_file2)]
 
-                # Initialize DockerRepoMap
-                repomap = DockerRepoMap(config)
+                # Initialize RepoMapService
+                repomap = RepoMapService(config)
 
                 # Get initial cache status
                 initial_status = repomap.get_cache_status()

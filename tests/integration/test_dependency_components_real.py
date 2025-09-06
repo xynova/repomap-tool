@@ -14,7 +14,7 @@ from repomap_tool.models import (
     SemanticMatchConfig,
     DependencyConfig,
 )
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 
 
 class TestDependencyComponentsReal:
@@ -136,7 +136,7 @@ class ComplexProcessor:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test dependency graph building
         try:

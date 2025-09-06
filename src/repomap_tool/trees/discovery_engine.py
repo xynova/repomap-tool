@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from repomap_tool.models import Entrypoint
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 from repomap_tool.matchers.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
 
@@ -30,11 +30,11 @@ logger = logging.getLogger(__name__)
 class EntrypointDiscoverer:
     """Discovers relevant entrypoints using existing semantic/fuzzy matching."""
 
-    def __init__(self, repo_map: DockerRepoMap):
+    def __init__(self, repo_map: RepoMapService):
         """Initialize entrypoint discoverer.
 
         Args:
-            repo_map: DockerRepoMap instance with semantic/fuzzy matchers
+            repo_map: RepoMapService instance with semantic/fuzzy matchers
         """
         self.repo_map = repo_map
         self.semantic_matcher = getattr(repo_map, "semantic_matcher", None) or getattr(

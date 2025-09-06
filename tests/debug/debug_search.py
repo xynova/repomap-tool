@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 
-from src.repomap_tool.core import DockerRepoMap
+from src.repomap_tool.core import RepoMapService
 from src.repomap_tool.models import RepoMapConfig
 from pathlib import Path
 
 # Initialize the tool
 config = RepoMapConfig(project_root=".", verbose=True)
-dm = DockerRepoMap(config)
+dm = RepoMapService(config)
 
 # Get project files
 project_files = dm._get_project_files()
@@ -34,7 +34,7 @@ for tag in all_tags:
 print("Extracted {} unique identifiers".format(len(identifiers)))
 
 # Check if specific identifiers exist
-test_identifiers = ["DockerRepoMap", "parse_gitignore", "should_ignore_file"]
+test_identifiers = ["RepoMapService", "parse_gitignore", "should_ignore_file"]
 for identifier in test_identifiers:
     if identifier in identifiers:
         print(f"✅ Found: {identifier}")

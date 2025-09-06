@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from repomap_tool.core.parallel_processor import ParallelTagExtractor
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 from repomap_tool.models import RepoMapConfig
 from rich.console import Console
 from rich.panel import Panel
@@ -43,7 +43,7 @@ def demo_parallel_processing():
 
     # Initialize RepoMap
     console.print("🔧 [yellow]Initializing RepoMap...[/yellow]")
-    repomap = DockerRepoMap(config)
+    repomap = RepoMapService(config)
 
     # Get project files
     console.print("📁 [yellow]Scanning project files...[/yellow]")
@@ -155,7 +155,7 @@ def compare_sequential_vs_parallel():
 
     # Initialize
     config = RepoMapConfig(project_root=".", verbose=False)
-    repomap = DockerRepoMap(config)
+    repomap = RepoMapService(config)
     project_files = repomap._get_project_files()
 
     # Sequential processing

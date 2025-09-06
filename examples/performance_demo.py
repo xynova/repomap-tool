@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from repomap_tool.models import RepoMapConfig, PerformanceConfig
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -88,7 +88,7 @@ def benchmark_analysis(project_path: Path, config: RepoMapConfig, label: str) ->
 
     try:
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Analyze project
         if config.performance.enable_progress:

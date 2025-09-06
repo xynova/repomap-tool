@@ -11,7 +11,7 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 class TreeBuilder:
     """Builds exploration trees from entrypoints using existing aider infrastructure."""
 
-    def __init__(self, repo_map: DockerRepoMap):
+    def __init__(self, repo_map: RepoMapService):
         """Initialize tree builder.
 
         Args:
-            repo_map: DockerRepoMap instance with aider infrastructure
+            repo_map: RepoMapService instance with aider infrastructure
         """
         self.repo_map = repo_map
         self.entrypoint_cache: Dict[str, Any] = {}  # Cache discovered entrypoints

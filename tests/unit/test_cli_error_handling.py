@@ -205,7 +205,7 @@ class TestDisplayFunctionsErrorHandling:
 class TestCLICommandErrorScenarios:
     """Test CLI command error scenarios using mocks."""
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.create_default_config")
     @patch("src.repomap_tool.cli.display_project_info")
@@ -245,7 +245,7 @@ class TestCLICommandErrorScenarios:
             error_message = str(e)
             assert "Test error" in error_message
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.create_search_config")
     @patch("src.repomap_tool.cli.display_search_results")
@@ -299,11 +299,11 @@ class TestCLICommandErrorScenarios:
             error_message = str(e)
             assert "Config error" in error_message
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.console")
     def test_performance_command_exception_handling(self, mock_console, mock_repo_map):
         """Test performance command exception handling."""
-        # Mock an exception in DockerRepoMap
+        # Mock an exception in RepoMapService
         mock_repo_map.side_effect = Exception("Performance error")
 
         # This simulates the exception path in performance command
@@ -318,7 +318,7 @@ class TestCLICommandErrorScenarios:
 class TestPerformanceCommandPaths:
     """Test specific paths in the performance command."""
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.console")
     @patch("src.repomap_tool.models.PerformanceConfig")
     @patch("src.repomap_tool.models.RepoMapConfig")
@@ -372,7 +372,7 @@ class TestPerformanceCommandPaths:
             "[yellow]Performance monitoring is disabled[/yellow]"
         )
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.console")
     @patch("src.repomap_tool.models.PerformanceConfig")
     @patch("src.repomap_tool.models.RepoMapConfig")

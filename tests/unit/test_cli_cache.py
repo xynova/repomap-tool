@@ -57,8 +57,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap to avoid external dependencies
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService to avoid external dependencies
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 # Mock the instance
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
@@ -80,7 +80,7 @@ class TestCLICacheCommand:
                 # Verify the command executed successfully
                 assert result.exit_code == 0
 
-                # Verify that DockerRepoMap was called with correct config
+                # Verify that RepoMapService was called with correct config
                 mock_docker_repomap.assert_called_once()
                 call_args = mock_docker_repomap.call_args[0][0]
                 # Handle path normalization for comparison
@@ -103,8 +103,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
                     "project_root": str(temp_path),
@@ -136,8 +136,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
                     "project_root": str(temp_path),
@@ -185,8 +185,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
                     "project_root": str(temp_path),
@@ -225,8 +225,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap to raise an exception
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService to raise an exception
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_docker_repomap.side_effect = Exception("Configuration error")
 
                 # Run the cache command
@@ -261,8 +261,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
                     "project_root": str(temp_path),
@@ -294,8 +294,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap with complex cache data
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService with complex cache data
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
                     "project_root": str(temp_path),
@@ -339,8 +339,8 @@ class TestCLICacheCommand:
 
             runner = CliRunner()
 
-            # Mock the DockerRepoMap
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_docker_repomap:
+            # Mock the RepoMapService
+            with patch("repomap_tool.cli.RepoMapService") as mock_docker_repomap:
                 mock_instance = Mock()
                 mock_instance.get_cache_status.return_value = {
                     "project_root": str(temp_path),

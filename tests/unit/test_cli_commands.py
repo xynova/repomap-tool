@@ -230,7 +230,7 @@ class TestCLIHelperFunctions:
     """Test CLI helper functions that are called by the commands."""
 
     @patch("src.repomap_tool.cli.create_default_config")
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.display_project_info")
     def test_analyze_command_logic(
@@ -286,7 +286,7 @@ class TestCLIHelperFunctions:
         mock_display.assert_called_once_with(mock_project_info, "json")
 
     @patch("src.repomap_tool.cli.create_search_config")
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.display_search_results")
     @patch("src.repomap_tool.cli.SearchRequest")
@@ -427,7 +427,7 @@ class TestCLIHelperFunctions:
         mock_config.model_dump.assert_called_once_with(mode="json")
         assert mock_console.print.call_count >= 2
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.console")
     @patch("src.repomap_tool.models.PerformanceConfig")
     @patch("src.repomap_tool.models.RepoMapConfig")

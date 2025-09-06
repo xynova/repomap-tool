@@ -11,7 +11,7 @@ from datetime import datetime
 import os
 
 from repomap_tool.models import ExplorationTree, TreeNode, ExplorationSession
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 from repomap_tool.trees.session_manager import SessionManager
 from repomap_tool.trees.tree_builder import TreeBuilder
 
@@ -21,11 +21,11 @@ logger = logging.getLogger(__name__)
 class TreeManager:
     """Manages tree state, expansion, pruning, and focus operations."""
 
-    def __init__(self, repo_map: DockerRepoMap):
+    def __init__(self, repo_map: RepoMapService):
         """Initialize tree manager.
 
         Args:
-            repo_map: DockerRepoMap instance
+            repo_map: RepoMapService instance
         """
         self.repo_map = repo_map
         self.session_manager = SessionManager()

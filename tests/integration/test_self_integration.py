@@ -24,7 +24,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 # flake8: noqa: E402
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 from repomap_tool.models import (
     RepoMapConfig,
     FuzzyMatchConfig,
@@ -73,7 +73,7 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Analyze the project
         project_info = repomap.analyze_project()
@@ -137,11 +137,11 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test fuzzy search for various terms
         test_queries = [
-            "RepoMap",  # Should find DockerRepoMap, RepoMapConfig, etc.
+            "RepoMap",  # Should find RepoMapService, RepoMapConfig, etc.
             "matcher",  # Should find FuzzyMatcher, SemanticMatcher, etc.
             "config",  # Should find RepoMapConfig, FuzzyMatchConfig, etc.
             "search",  # Should find search_identifiers, etc.
@@ -193,7 +193,7 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test semantic search for various concepts
         # Note: Semantic search works best with natural language that matches actual content
@@ -253,7 +253,7 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test that both individual matchers work
         # First test fuzzy search
@@ -316,11 +316,11 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test for specific known identifiers
         specific_queries = [
-            "DockerRepoMap",  # Main class
+            "RepoMapService",  # Main class
             "RepoMapConfig",  # Configuration class
             "analyze_project",  # Core function
             "search_identifiers",  # Search function
@@ -372,10 +372,10 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         search_request = SearchRequest(
-            query="DockerRepoMap",
+            query="RepoMapService",
             match_type="hybrid",
             max_results=3,
             include_context=True,
@@ -403,7 +403,7 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         search_request = SearchRequest(
             query="RepoMap", match_type="hybrid", max_results=10, include_context=True
@@ -432,7 +432,7 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test with empty query - should raise validation error
         try:
@@ -466,7 +466,7 @@ class TestSelfIntegration:
             verbose=False,  # Disable verbose for performance test
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         test_queries = ["RepoMap", "matcher", "config", "search", "analyze"]
 
@@ -477,7 +477,7 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=False,
         )
-        fuzzy_repomap = DockerRepoMap(fuzzy_config)
+        fuzzy_repomap = RepoMapService(fuzzy_config)
 
         start_time = time.time()
         for query in test_queries:
@@ -494,7 +494,7 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,
         )
-        semantic_repomap = DockerRepoMap(semantic_config)
+        semantic_repomap = RepoMapService(semantic_config)
 
         start_time = time.time()
         for query in test_queries:

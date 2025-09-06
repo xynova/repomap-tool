@@ -25,7 +25,7 @@ from repomap_tool.models import (
     SearchRequest,
     FuzzyMatchConfig,
 )
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 
 
 class TestEasiestWaysToBreakIt:
@@ -199,7 +199,7 @@ class TestEasiestWaysToBreakIt:
             try:
                 with pytest.raises((ValueError, IsADirectoryError)):
                     config = RepoMapConfig(project_root=temp_file.name)
-                    DockerRepoMap(config)
+                    RepoMapService(config)
             except Exception as e:
                 pytest.fail(
                     f"File as project root didn't raise expected exception: {e}"
@@ -210,7 +210,7 @@ class TestEasiestWaysToBreakIt:
         # Arrange
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act & Assert - Should handle empty directory gracefully
             try:
@@ -235,7 +235,7 @@ class TestEasiestWaysToBreakIt:
                 file_path.write_bytes(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act & Assert - Should handle corrupted files gracefully
             try:
@@ -400,7 +400,7 @@ class TestEasiestWaysToBreakIt:
                 file_path.write_text(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act & Assert - Should handle integration edge cases gracefully
             try:
@@ -431,7 +431,7 @@ class TestRealWorldBreakScenarios:
 
             # Act & Assert - Should handle network timeout gracefully
             try:
-                repomap = DockerRepoMap(config)
+                repomap = RepoMapService(config)
                 project_info = repomap.analyze_project()
                 assert isinstance(project_info.total_files, int)
             except Exception as e:

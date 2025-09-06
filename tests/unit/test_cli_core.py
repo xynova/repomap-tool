@@ -49,7 +49,7 @@ class TestCLICore:
 
     def test_analyze_basic_usage(self, cli_runner, temp_project):
         """Test basic analyze command usage."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -80,7 +80,7 @@ class TestCLICore:
             config_file = f.name
 
         try:
-            with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+            with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
                 mock_instance = mock_repo_map.return_value
                 mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                     project_root=temp_project,
@@ -103,7 +103,7 @@ class TestCLICore:
 
     def test_analyze_with_options(self, cli_runner, temp_project):
         """Test analyze command with various options."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -136,7 +136,7 @@ class TestCLICore:
 
     def test_search_basic_usage(self, cli_runner, temp_project):
         """Test basic search command usage."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.search_identifiers.return_value = SearchResponse(
                 query="test",
@@ -168,7 +168,7 @@ class TestCLICore:
 
     def test_search_with_options(self, cli_runner, temp_project):
         """Test search command with various options."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.search_identifiers.return_value = SearchResponse(
                 query="test",
@@ -224,7 +224,7 @@ class TestCLICore:
 
     def test_performance_basic_usage(self, cli_runner, temp_project):
         """Test basic performance command usage."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.get_performance_metrics.return_value = {
                 "processing_time": 1.0,
@@ -384,7 +384,7 @@ class TestCLICore:
 
     def test_cli_verbose_output(self, cli_runner, temp_project):
         """Test CLI verbose output."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -403,7 +403,7 @@ class TestCLICore:
 
     def test_cli_configuration_integration(self, cli_runner, temp_project):
         """Test CLI configuration integration."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
