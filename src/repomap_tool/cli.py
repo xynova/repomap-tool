@@ -8,7 +8,7 @@ for argument validation and structured output.
 
 import json
 import sys
-
+import os
 from typing import Optional, Literal, Dict, Any
 
 import click
@@ -45,8 +45,6 @@ def get_project_path_from_session(session_id: str) -> Optional[str]:
         from .trees import SessionManager
 
         # Initialize session manager with storage directory from environment
-        import os
-
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")
         session_manager = SessionManager(storage_dir=session_storage_dir)
         session = session_manager.get_session(session_id)
