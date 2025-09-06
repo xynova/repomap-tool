@@ -14,11 +14,9 @@ try:
 except ImportError:
     DockerRepoMap = None  # type: ignore
 
-# Import CLI
-try:
-    from .cli import cli
-except ImportError:
-    cli = None  # type: ignore
+# Import CLI - removed to prevent circular import issues
+# CLI should be imported directly when needed, not at package level
+cli = None  # type: ignore
 
 # Import models
 try:
