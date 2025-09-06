@@ -407,6 +407,37 @@ class AdaptiveSemanticMatcher:
 
         return clusters
 
+    def match_identifiers(
+        self, query: str, all_identifiers: Set[str]
+    ) -> List[Tuple[str, int]]:
+        """
+        Match a query against all identifiers using semantic similarity.
+
+        This method provides a consistent interface with other matchers
+        by returning (identifier, score) tuples where score is an integer (0-100).
+
+        Args:
+            query: The search query
+            all_identifiers: Set of all available identifiers
+
+        Returns:
+            List of (identifier, score) tuples, sorted by score (highest first)
+        """
+        # Use a lower threshold for match_identifiers to be more inclusive
+        threshold = 0.1
+
+        # Get semantic matches
+        semantic_matches = self.find_semantic_matches(query, all_identifiers, threshold)
+
+        # Convert to the expected format: (identifier, score) where score is 0-100
+        matches = []
+        for identifier, similarity_score in semantic_matches:
+            # Convert float score (0.0-1.0) to integer score (0-100)
+            score = int(similarity_score * 100)
+            matches.append((identifier, score))
+
+        return matches
+
     def clear_cache(self) -> None:
         """Clear the similarity cache."""
         self.similarity_cache.clear()
