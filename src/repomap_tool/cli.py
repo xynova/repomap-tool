@@ -46,6 +46,7 @@ def get_project_path_from_session(session_id: str) -> Optional[str]:
 
         # Initialize session manager with storage directory from environment
         import os
+
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")
         session_manager = SessionManager(storage_dir=session_storage_dir)
         session = session_manager.get_session(session_id)
@@ -960,6 +961,7 @@ def explore(
         tree_builder = TreeBuilder(repomap)
         # Initialize session manager with storage directory from environment
         import os
+
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")
         session_manager = SessionManager(storage_dir=session_storage_dir)
         exploration_session = session_manager.get_or_create_session(
@@ -1273,6 +1275,7 @@ def status(session: Optional[str]) -> None:
         tree_manager = TreeManager(repomap)
         # Initialize session manager with storage directory from environment
         import os
+
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")
         session_manager = SessionManager(storage_dir=session_storage_dir)
 
