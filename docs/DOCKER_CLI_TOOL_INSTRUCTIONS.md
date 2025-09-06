@@ -105,10 +105,7 @@ docker run --rm -v $(pwd)/.repomap:/app/cache -v /path/to/project:/workspace ghc
 ### 4. `explore` - Tree Exploration
 **Purpose**: Discover exploration trees from your intent description for intelligent code navigation.
 
-**Basic Usage**:
-```bash
-docker run --rm -v $(pwd)/.repomap:/app/cache -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "intent description"
-```
+docker run --rm -v $(pwd)/.repomap/sessions:/app/sessions -v $(pwd)/.repomap:/app/cache -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "intent description"
 
 **Options**:
 - `--session, -s` - Session ID (or use REPOMAP_SESSION env var)
