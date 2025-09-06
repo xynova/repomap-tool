@@ -269,7 +269,7 @@ Always mount a cache directory to improve performance across runs:
 ### Session Persistence
 Mount a session directory to persist tree exploration sessions across container restarts:
 ```bash
--v $(pwd)/.repomap-sessions:/app/sessions
+-v $(pwd)/.repomap/sessions:/app/sessions
 ```
 
 ### Project Access
@@ -282,7 +282,7 @@ Mount your project directory as `/workspace`:
 ```bash
 docker run --rm \
   -v $(pwd)/.repomap:/app/cache \
-  -v $(pwd)/.repomap-sessions:/app/sessions \
+  -v $(pwd)/.repomap/sessions:/app/sessions \
   -v /path/to/your/project:/workspace \
   ghcr.io/xynova/repomap-tool:latest \
   search /workspace "authentication"
@@ -338,16 +338,16 @@ When an LLM needs to understand complex, interconnected code:
 
 ```bash
 # Start exploration session for authentication issues
-docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "authentication login errors"
+docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "authentication login errors"
 
 # Focus on the most relevant tree
-docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus auth_errors_abc123
+docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus auth_errors_abc123
 
 # View the tree structure
-docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
+docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
 
 # Expand in specific areas
-docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "password_validation"
+docker run --rm -e REPOMAP_SESSION=auth_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "password_validation"
 ```
 
 ### 2. Bug Investigation
@@ -355,16 +355,16 @@ When an LLM needs to trace through code to find the root cause:
 
 ```bash
 # Start investigation session
-docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "database connection timeout errors"
+docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "database connection timeout errors"
 
 # Check session status
-docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest status
+docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest status
 
 # Focus on the most relevant tree
-docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus db_timeout_xyz789
+docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus db_timeout_xyz789
 
 # Expand error handling areas
-docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "error_handling"
+docker run --rm -e REPOMAP_SESSION=bug_investigation -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "error_handling"
 ```
 
 ### 3. Feature Implementation Planning
@@ -372,16 +372,16 @@ When an LLM needs to understand existing patterns before implementing new featur
 
 ```bash
 # Explore existing patterns
-docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "user management CRUD operations"
+docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "user management CRUD operations"
 
 # List all discovered trees
-docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest list-trees
+docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest list-trees
 
 # Focus on the most relevant pattern
-docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus user_crud_abc123
+docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus user_crud_abc123
 
 # Expand to see implementation details
-docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "validation"
+docker run --rm -e REPOMAP_SESSION=feature_planning -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "validation"
 ```
 
 ### 4. Code Review and Quality Assessment
@@ -389,16 +389,16 @@ When an LLM needs to understand code quality and patterns:
 
 ```bash
 # Explore code quality patterns
-docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "error handling logging patterns"
+docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "error handling logging patterns"
 
 # Focus on the most comprehensive tree
-docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus error_patterns_def456
+docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus error_patterns_def456
 
 # View with code snippets
-docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
+docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
 
 # Prune irrelevant areas
-docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest prune "debug_code"
+docker run --rm -e REPOMAP_SESSION=code_review -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest prune "debug_code"
 ```
 
 ## Search Strategies Explained
@@ -542,64 +542,64 @@ docker run --rm -v $(pwd)/.repomap:/app/cache -v /path/to/project:/workspace ghc
 ### Workflow 4: Deep Bug Investigation
 ```bash
 # 1. Start exploration session
-docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "authentication timeout errors"
+docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "authentication timeout errors"
 
 # 2. Check what trees were discovered
-docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest list-trees
+docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest list-trees
 
 # 3. Focus on the most relevant tree
-docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus auth_timeout_abc123
+docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus auth_timeout_abc123
 
 # 4. View the tree structure
-docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
+docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
 
 # 5. Expand in error handling areas
-docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "error_handling"
+docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "error_handling"
 
 # 6. Check session status
-docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest status
+docker run --rm -e REPOMAP_SESSION=bug_debug -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest status
 ```
 
 ### Workflow 5: Feature Implementation Planning
 ```bash
 # 1. Explore existing patterns
-docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "user management CRUD operations"
+docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "user management CRUD operations"
 
 # 2. List all discovered trees
-docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest list-trees
+docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest list-trees
 
 # 3. Focus on the most comprehensive pattern
-docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus user_crud_xyz789
+docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus user_crud_xyz789
 
 # 4. View with code snippets
-docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
+docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
 
 # 5. Expand validation patterns
-docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "validation"
+docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "validation"
 
 # 6. Prune irrelevant areas
-docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest prune "debug_code"
+docker run --rm -e REPOMAP_SESSION=feature_plan -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest prune "debug_code"
 ```
 
 ### Workflow 6: Code Quality Assessment
 ```bash
 # 1. Start quality assessment session
-docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "error handling logging patterns"
+docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace ghcr.io/xynova/repomap-tool:latest explore /workspace "error handling logging patterns"
 
 # 2. Focus on the most comprehensive tree
-docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus error_patterns_def456
+docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest focus error_patterns_def456
 
 # 3. View tree structure
-docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map
+docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map
 
 # 4. Expand logging areas
-docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "logging"
+docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "logging"
 
 # 5. Expand error handling
-docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "error_handling"
+docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest expand "error_handling"
 
 # 6. Final view with code
-docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap-sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
+docker run --rm -e REPOMAP_SESSION=quality_check -v $(pwd)/.repomap:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions ghcr.io/xynova/repomap-tool:latest map --include-code
 ```
 
 ## Tree Exploration Best Practices
