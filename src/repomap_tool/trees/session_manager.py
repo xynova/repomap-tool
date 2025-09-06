@@ -39,12 +39,17 @@ class SessionStore:
         """Initialize session store.
 
         Args:
-            storage_dir: Directory to store sessions. Defaults to temp directory.
+            storage_dir: Directory to store sessions. Defaults to environment variable or temp directory.
         """
         if storage_dir:
             self.storage_dir = Path(storage_dir)
         else:
-            self.storage_dir = Path(tempfile.gettempdir()) / "repomap_sessions"
+            # Check environment variable first (for Docker compatibility)
+            env_session_dir = os.environ.get("REPOMAP_SESSION_DIR")
+            if env_session_dir:
+                self.storage_dir = Path(env_session_dir)
+            else:
+                self.storage_dir = Path(tempfile.gettempdir()) / "repomap_sessions"
 
         # Ensure storage directory exists
         self.storage_dir.mkdir(parents=True, exist_ok=True)

@@ -34,12 +34,13 @@ COPY src/ ./src/
 # Install the package in editable mode (without reinstalling dependencies)
 RUN pip install -e . --no-deps
 
-# Create a volume for persistent cache
-VOLUME ["/app/cache"]
+# Create volumes for persistent cache and sessions
+VOLUME ["/app/cache", "/app/sessions"]
 
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV CACHE_DIR=/app/cache
+ENV REPOMAP_SESSION_DIR=/app/sessions
 
 # Copy and set up the entrypoint script
 COPY docker/entrypoint.sh /app/entrypoint.sh
