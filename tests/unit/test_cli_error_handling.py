@@ -299,5 +299,6 @@ class TestCLICommandErrorScenarios:
             error_message = str(e)
             assert "Config error" in error_message
 
+
 if __name__ == "__main__":
     pytest.main([__file__])

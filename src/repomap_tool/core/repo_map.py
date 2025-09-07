@@ -126,20 +126,24 @@ class RepoMapService:
 
         # Create custom RepoMap that can use absolute cache directory
         class CustomRepoMap(RepoMap):
-            def __init__(self, cache_dir=None, *args, **kwargs):
+            def __init__(
+                self, cache_dir: str | None = None, *args: object, **kwargs: object
+            ) -> None:
                 # Set cache directory BEFORE calling parent __init__ to ensure
                 # load_tags_cache() uses the correct directory
                 if cache_dir:
                     self.TAGS_CACHE_DIR = cache_dir
                 super().__init__(*args, **kwargs)
-            
-            def load_tags_cache(self):
+
+            def load_tags_cache(self) -> None:
                 # Override to use absolute path if cache_dir is absolute
-                if hasattr(self, 'TAGS_CACHE_DIR') and os.path.isabs(self.TAGS_CACHE_DIR):
+                if hasattr(self, "TAGS_CACHE_DIR") and os.path.isabs(
+                    self.TAGS_CACHE_DIR
+                ):
                     path = Path(self.TAGS_CACHE_DIR)
                 else:
                     path = Path(self.root) / self.TAGS_CACHE_DIR
-                
+
                 try:
                     self.TAGS_CACHE = Cache(path)
                 except Exception as e:
@@ -254,7 +258,6 @@ class RepoMapService:
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
 
-
     def analyze_project(self) -> ProjectInfo:
         """Get comprehensive project information."""
         start_time = time.time()
@@ -366,7 +369,6 @@ class RepoMapService:
         )
 
         return project_info
-
 
     def search_identifiers(self, request: SearchRequest) -> SearchResponse:
         """Perform search based on request configuration."""

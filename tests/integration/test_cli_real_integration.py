@@ -78,6 +78,7 @@ def handle_authentication_request():
             [
                 "--no-color",
                 "explore",
+                "start",
                 temp_project,
                 "user authentication",  # More specific intent
             ],
@@ -149,7 +150,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--fuzzy",
                 "--max-results",
@@ -186,6 +188,7 @@ def my_function():
             [
                 "--no-color",
                 "search",
+                "identifiers",
                 temp_project,
                 "main",
                 "--match-type",
@@ -211,7 +214,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze-dependencies",
+                "search",
+                "dependencies",
                 temp_project,
                 "--max-files",
                 "100",
@@ -236,7 +240,7 @@ def my_function():
         """Test CLI error handling with real validation."""
         # Test with non-existent directory
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", "/non/existent/directory"]
+            cli, ["--no-color", "index", "create", "/non/existent/directory"]
         )
 
         # Should fail with proper error
@@ -250,7 +254,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--threshold",
                 "1.5",  # Invalid: should be 0.0-1.0
@@ -270,7 +275,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--max-workers",
                 "2",
@@ -300,7 +306,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--fuzzy",
                 "--output",
@@ -315,7 +322,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--fuzzy",
                 "--output",
@@ -348,7 +356,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--fuzzy",
                 "--output",
@@ -373,7 +382,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--fuzzy",
                 "--output",
@@ -397,6 +407,7 @@ def my_function():
             cli,
             [
                 "--no-color",
+                "index",
                 "config",
                 temp_project,
                 "--fuzzy",
@@ -505,7 +516,8 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "show-centrality",
+                "analyze",
+                "centrality",
                 temp_project_with_dependencies,
                 "--output",
                 "table",
@@ -527,7 +539,8 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "show-centrality",
+                "analyze",
+                "centrality",
                 temp_project_with_dependencies,
                 "--file",
                 main_file,
@@ -557,7 +570,8 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "impact-analysis",
+                "analyze",
+                "impact",
                 temp_project_with_dependencies,
                 "--files",
                 main_file,
@@ -578,7 +592,8 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "impact-analysis",
+                "analyze",
+                "impact",
                 temp_project_with_dependencies,
                 "--files",
                 main_file,
@@ -601,7 +616,8 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "find-cycles",
+                "search",
+                "cycles",
                 temp_project_with_dependencies,
                 "--output",
                 "table",
@@ -623,7 +639,8 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "find-cycles",
+                "search",
+                "cycles",
                 temp_project_with_dependencies,
                 "--output",
                 "json",
@@ -637,12 +654,11 @@ def utility_function():
         output = result_json.output
         assert "[" in output and "]" in output
 
-
     def test_advanced_dependency_commands_error_handling(self, cli_runner):
         """Test error handling for advanced dependency commands."""
         # Test with non-existent directory
         result = cli_runner.invoke(
-            cli, ["--no-color", "show-centrality", "/non/existent/directory"]
+            cli, ["--no-color", "analyze", "centrality", "/non/existent/directory"]
         )
 
         # Should fail with proper error
@@ -651,7 +667,9 @@ def utility_function():
 
         # Test impact-analysis without files
         with tempfile.TemporaryDirectory() as temp_dir:
-            result = cli_runner.invoke(cli, ["--no-color", "impact-analysis", temp_dir])
+            result = cli_runner.invoke(
+                cli, ["--no-color", "analyze", "impact", temp_dir]
+            )
 
             # Should fail with proper error
             assert result.exit_code != 0
@@ -663,7 +681,8 @@ def utility_function():
                 cli,
                 [
                     "--no-color",
-                    "show-centrality",
+                    "analyze",
+                    "centrality",
                     temp_dir,
                     "--file",
                     "non/existent/file.py",
@@ -790,7 +809,7 @@ def handle_authentication_request():
 
         # Test with empty project
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", empty_project, "--output", "json"]
+            cli, ["--no-color", "index", "create", empty_project, "--output", "json"]
         )
         assert result.exit_code in [0, 1]  # Should handle gracefully
         assert len(result.output) > 0
@@ -800,7 +819,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 large_project,
                 "--max-results",
                 "10",  # Limit results
@@ -813,7 +833,8 @@ def handle_authentication_request():
 
         # Test with malformed project
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", malformed_project, "--output", "json"]
+            cli,
+            ["--no-color", "index", "create", malformed_project, "--output", "json"],
         )
         assert result.exit_code in [0, 1]  # Should handle syntax errors gracefully
         assert len(result.output) > 0
@@ -826,7 +847,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--threshold",
                 "2.0",  # Invalid: should be 0.0-1.0
@@ -841,7 +863,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "index",
+                "create",
                 temp_project,
                 "--max-results",
                 "-1",
@@ -853,7 +876,15 @@ def handle_authentication_request():
 
         # Test with invalid output format
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", temp_project, "--output", "invalid_format"]
+            cli,
+            [
+                "--no-color",
+                "index",
+                "create",
+                temp_project,
+                "--output",
+                "invalid_format",
+            ],
         )
         assert result.exit_code != 0  # Should fail with invalid output format
 
@@ -861,20 +892,28 @@ def handle_authentication_request():
         """Test search command with edge cases."""
 
         # Test with empty query
-        result = cli_runner.invoke(cli, ["--no-color", "search", empty_project, ""])
+        result = cli_runner.invoke(
+            cli, ["--no-color", "search", "identifiers", empty_project, ""]
+        )
         assert result.exit_code in [0, 1]
 
         # Test with very long query
         long_query = "a" * 1000
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", large_project, long_query]
+            cli, ["--no-color", "search", "identifiers", large_project, long_query]
         )
         assert result.exit_code in [0, 1]
 
         # Test with special characters
         result = cli_runner.invoke(
             cli,
-            ["--no-color", "search", large_project, "!@#$%^&*()_+-=[]{}|;':\",./<>?"],
+            [
+                "--no-color",
+                "search",
+                "identifiers",
+                large_project,
+                "!@#$%^&*()_+-=[]{}|;':\",./<>?",
+            ],
         )
         assert result.exit_code in [0, 1]
 
@@ -888,7 +927,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze-dependencies",
+                "search",
+                "dependencies",
                 empty_project,
                 "--max-files",
                 "1000",
@@ -901,7 +941,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze-dependencies",
+                "search",
+                "dependencies",
                 large_project,
                 "--max-files",
                 "5",  # Very low limit
@@ -912,7 +953,14 @@ def handle_authentication_request():
         # Test with invalid max-files
         result = cli_runner.invoke(
             cli,
-            ["--no-color", "analyze-dependencies", large_project, "--max-files", "-1"],
+            [
+                "--no-color",
+                "search",
+                "dependencies",
+                large_project,
+                "--max-files",
+                "-1",
+            ],
         )
         assert result.exit_code != 0
 
@@ -921,13 +969,13 @@ def handle_authentication_request():
 
         # Test with empty project
         result = cli_runner.invoke(
-            cli, ["--no-color", "show-centrality", empty_project]
+            cli, ["--no-color", "analyze", "centrality", empty_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner.invoke(
-            cli, ["--no-color", "show-centrality", large_project]
+            cli, ["--no-color", "analyze", "centrality", large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -936,7 +984,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "show-centrality",
+                "analyze",
+                "centrality",
                 large_project,
                 "--file",
                 "nonexistent_file.py",
@@ -951,14 +1000,21 @@ def handle_authentication_request():
         # Test with empty project
         result = cli_runner.invoke(
             cli,
-            ["--no-color", "impact-analysis", empty_project, "--files", "any_file.py"],
+            [
+                "--no-color",
+                "analyze",
+                "impact",
+                empty_project,
+                "--files",
+                "any_file.py",
+            ],
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project and many files
         files = [f"src/module_{i:02d}.py" for i in range(10)]
         result = cli_runner.invoke(
-            cli, ["--no-color", "impact-analysis", large_project, "--files"] + files
+            cli, ["--no-color", "analyze", "impact", large_project, "--files"] + files
         )
         assert result.exit_code in [0, 1, 2]  # Accept various exit codes for edge cases
 
@@ -967,7 +1023,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "impact-analysis",
+                "analyze",
+                "impact",
                 large_project,
                 "--files",
                 "nonexistent1.py",
@@ -980,33 +1037,36 @@ def handle_authentication_request():
         """Test find-cycles command with edge cases."""
 
         # Test with empty project
-        result = cli_runner.invoke(cli, ["--no-color", "find-cycles", empty_project])
+        result = cli_runner.invoke(
+            cli, ["--no-color", "search", "cycles", empty_project]
+        )
         assert result.exit_code in [0, 1]
 
         # Test with large project
-        result = cli_runner.invoke(cli, ["--no-color", "find-cycles", large_project])
+        result = cli_runner.invoke(
+            cli, ["--no-color", "search", "cycles", large_project]
+        )
         assert result.exit_code in [0, 1]
-
 
     def test_explore_command_edge_cases(self, cli_runner, empty_project, large_project):
         """Test explore command with edge cases."""
 
         # Test with empty project
         result = cli_runner.invoke(
-            cli, ["--no-color", "explore", empty_project, "test intent"]
+            cli, ["--no-color", "explore", "start", empty_project, "test intent"]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner.invoke(
-            cli, ["--no-color", "explore", large_project, "module processing"]
+            cli, ["--no-color", "explore", "start", large_project, "module processing"]
         )
         assert result.exit_code in [0, 1]
 
         # Test with very long intent
         long_intent = "a" * 1000
         result = cli_runner.invoke(
-            cli, ["--no-color", "explore", large_project, long_intent]
+            cli, ["--no-color", "explore", "start", large_project, long_intent]
         )
         assert result.exit_code in [0, 1]
 
@@ -1014,7 +1074,9 @@ def handle_authentication_request():
         """Test config command with edge cases."""
 
         # Test with empty project
-        result = cli_runner.invoke(cli, ["--no-color", "config", empty_project])
+        result = cli_runner.invoke(
+            cli, ["--no-color", "index", "config", empty_project]
+        )
         assert result.exit_code in [0, 1]
 
         # Test with invalid parameters
@@ -1022,6 +1084,7 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
+                "index",
                 "config",
                 empty_project,
                 "--threshold",
@@ -1030,10 +1093,9 @@ def handle_authentication_request():
         )
         assert result.exit_code != 0
 
-
     def test_version_command(self, cli_runner):
         """Test version command."""
-        result = cli_runner.invoke(cli, ["--no-color", "version"])
+        result = cli_runner.invoke(cli, ["--no-color", "system", "version"])
         assert result.exit_code == 0
         assert "0.1.0" in result.output
 
@@ -1053,13 +1115,17 @@ def handle_authentication_request():
         """Test commands with missing required arguments."""
 
         # Test analyze without project path
-        result = cli_runner.invoke(cli, ["--no-color", "analyze"])
+        result = cli_runner.invoke(cli, ["--no-color", "index", "create"])
         assert result.exit_code != 0
 
         # Test search without query
-        result = cli_runner.invoke(cli, ["--no-color", "search", temp_project])
+        result = cli_runner.invoke(
+            cli, ["--no-color", "search", "identifiers", temp_project]
+        )
         assert result.exit_code != 0
 
         # Test explore without intent
-        result = cli_runner.invoke(cli, ["--no-color", "explore", temp_project])
+        result = cli_runner.invoke(
+            cli, ["--no-color", "explore", "start", temp_project]
+        )
         assert result.exit_code != 0

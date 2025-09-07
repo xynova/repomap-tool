@@ -74,7 +74,38 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     ctx.obj["no_color"] = no_color
 
 
-@cli.command()
+# Create command groups
+@cli.group()
+def index() -> None:
+    """Project indexing and setup commands."""
+    pass
+
+
+@cli.group()
+def search() -> None:
+    """Search and discovery commands."""
+    pass
+
+
+@cli.group()
+def explore() -> None:
+    """Session-based exploration commands."""
+    pass
+
+
+@cli.group()
+def analyze() -> None:
+    """Advanced analysis commands."""
+    pass
+
+
+@cli.group()
+def system() -> None:
+    """System information commands."""
+    pass
+
+
+@index.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -161,7 +192,7 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     default="medium",
     help="Output compression level",
 )
-def analyze(
+def create(
     project_path: str,
     config: Optional[str],
     fuzzy: bool,
@@ -187,7 +218,7 @@ def analyze(
     max_dependencies: int,
     compression: str,
 ) -> None:
-    """Analyze a project and generate a code map."""
+    """Create project index by scanning files and extracting symbols."""
 
     try:
         # Load configuration
@@ -277,7 +308,7 @@ def analyze(
         sys.exit(1)
 
 
-@cli.command()
+@search.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -315,7 +346,7 @@ def analyze(
     default=1000,
     help="Maximum cache entries (100-10000)",
 )
-def search(
+def identifiers(
     project_path: str,
     query: str,
     match_type: Literal["fuzzy", "semantic", "hybrid"],
@@ -369,7 +400,7 @@ def search(
         sys.exit(1)
 
 
-@cli.command()
+@index.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -443,7 +474,7 @@ def config(
         sys.exit(1)
 
 
-@cli.command()
+@system.command()
 def version() -> None:
     """Show version information."""
     console.print(
@@ -750,14 +781,14 @@ def display_search_results(
     console.print(summary)
 
 
-@cli.command()
+@explore.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
 @click.argument("intent", type=str)
 @click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
 @click.option("--max-depth", default=3, help="Maximum tree depth")
-def explore(
+def start(
     project_path: str, intent: str, session: Optional[str], max_depth: int
 ) -> None:
     """Discover exploration trees from intent."""
@@ -852,7 +883,7 @@ def explore(
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.argument("tree_id", type=str)
 @click.option("--session", "-s", help="Session ID")
 def focus(tree_id: str, session: Optional[str]) -> None:
@@ -897,7 +928,7 @@ def focus(tree_id: str, session: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.argument("expansion_area", type=str)
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
@@ -943,7 +974,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.argument("prune_area", type=str)
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
@@ -989,7 +1020,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
 @click.option("--include-code", is_flag=True, help="Include code snippets")
@@ -1038,9 +1069,9 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.option("--session", "-s", help="Session ID")
-def list_trees(session: Optional[str]) -> None:
+def trees(session: Optional[str]) -> None:
     """List all trees in a session."""
 
     try:
@@ -1105,7 +1136,7 @@ def list_trees(session: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.option("--session", "-s", help="Session ID")
 def status(session: Optional[str]) -> None:
     """Show session status and current tree information."""
@@ -1195,7 +1226,7 @@ def status(session: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@search.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -1225,7 +1256,7 @@ def status(session: Optional[str]) -> None:
     default=True,
     help="Enable change impact analysis",
 )
-def analyze_dependencies(
+def dependencies(
     project_path: str,
     output: str,
     verbose: bool,
@@ -1310,7 +1341,7 @@ def analyze_dependencies(
         sys.exit(1)
 
 
-@cli.command()
+@analyze.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -1328,7 +1359,7 @@ def analyze_dependencies(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def show_centrality(
+def centrality(
     project_path: str,
     file: str,
     output: str,
@@ -1416,7 +1447,7 @@ def show_centrality(
         sys.exit(1)
 
 
-@cli.command()
+@analyze.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -1434,7 +1465,7 @@ def show_centrality(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def impact_analysis(
+def impact(
     project_path: str,
     files: tuple,
     output: str,
@@ -1525,7 +1556,7 @@ def impact_analysis(
         sys.exit(1)
 
 
-@cli.command()
+@search.command()
 @click.argument(
     "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
 )
@@ -1537,7 +1568,7 @@ def impact_analysis(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def find_cycles(
+def cycles(
     project_path: str,
     output: str,
     verbose: bool,

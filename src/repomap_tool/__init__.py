@@ -16,7 +16,7 @@ except ImportError:
 
 # Import CLI - removed to prevent circular import issues
 # CLI should be imported directly when needed, not at package level
-cli = None  # type: ignore
+cli = None
 
 # Import models
 try:

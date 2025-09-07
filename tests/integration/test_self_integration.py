@@ -143,9 +143,12 @@ class TestSelfIntegration:
         test_queries = [
             "RepoMap",  # Should find RepoMapService, RepoMapConfig, etc.
             "matcher",  # Should find FuzzyMatcher, SemanticMatcher, etc.
+            "index",
             "config",  # Should find RepoMapConfig, FuzzyMatchConfig, etc.
-            "search",  # Should find search_identifiers, etc.
-            "analyze",  # Should find analyze_project, etc.
+            "search",
+            "identifiers",  # Should find search_identifiers, etc.
+            "index",
+            "create",  # Should find analyze_project, etc.
         ]
 
         for query in test_queries:
@@ -199,7 +202,9 @@ class TestSelfIntegration:
         # Note: Semantic search works best with natural language that matches actual content
         test_queries = [
             "analysis",  # Should find analyze_project, etc.
-            "search",  # Should find search_identifiers, etc.
+            "search",
+            "identifiers",  # Should find search_identifiers, etc.
+            "index",
             "config",  # Should find RepoMapConfig, etc.
             "match",  # Should find matchers, etc.
         ]
@@ -468,7 +473,16 @@ class TestSelfIntegration:
 
         repomap = RepoMapService(config)
 
-        test_queries = ["RepoMap", "matcher", "config", "search", "analyze"]
+        test_queries = [
+            "RepoMap",
+            "matcher",
+            "index",
+            "config",
+            "search",
+            "identifiers",
+            "index",
+            "create",
+        ]
 
         # Test fuzzy only
         fuzzy_config = RepoMapConfig(

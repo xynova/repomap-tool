@@ -43,7 +43,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_command_exists(self, cli_runner):
         """Test that analyze-dependencies command exists and shows help."""
-        result = cli_runner.invoke(cli, ["analyze-dependencies", "--help"])
+        result = cli_runner.invoke(cli, ["search", "dependencies", "--help"])
         assert result.exit_code == 0
         assert (
             "Analyze project dependencies and build dependency graph" in result.output
@@ -72,7 +72,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["analyze-dependencies", temp_project, "--output", "text"]
+                cli, ["search", "dependencies", temp_project, "--output", "text"]
             )
 
             assert result.exit_code == 0
@@ -97,7 +97,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["analyze-dependencies", temp_project, "--output", "json"]
+                cli, ["search", "dependencies", temp_project, "--output", "json"]
             )
 
             assert result.exit_code == 0
@@ -134,7 +134,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["analyze-dependencies", temp_project, "--output", "table"]
+                cli, ["search", "dependencies", temp_project, "--output", "table"]
             )
 
             assert result.exit_code == 0
@@ -162,7 +162,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "analyze-dependencies",
+                    "search",
+                    "dependencies",
                     temp_project,
                     "--max-files",
                     "500",
@@ -179,7 +180,7 @@ class TestCLIDependencies:
 
     def test_show_centrality_command_exists(self, cli_runner):
         """Test that show-centrality command exists and shows help."""
-        result = cli_runner.invoke(cli, ["show-centrality", "--help"])
+        result = cli_runner.invoke(cli, ["analyze", "centrality", "--help"])
         assert result.exit_code == 0
         assert "Show centrality analysis for project files" in result.output
         assert "--file" in result.output
@@ -197,7 +198,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["show-centrality", temp_project, "--output", "table"]
+                cli, ["analyze", "centrality", temp_project, "--output", "table"]
             )
 
             assert result.exit_code == 0
@@ -215,7 +216,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "show-centrality",
+                    "analyze",
+                    "centrality",
                     temp_project,
                     "--file",
                     "src/main.py",
@@ -238,7 +240,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "show-centrality",
+                    "analyze",
+                    "centrality",
                     temp_project,
                     "--file",
                     "nonexistent.py",
@@ -252,7 +255,7 @@ class TestCLIDependencies:
 
     def test_impact_analysis_command_exists(self, cli_runner):
         """Test that impact-analysis command exists and shows help."""
-        result = cli_runner.invoke(cli, ["impact-analysis", "--help"])
+        result = cli_runner.invoke(cli, ["analyze", "impact", "--help"])
         assert result.exit_code == 0
         assert "Analyze impact of changes to specific files" in result.output
         assert "--files" in result.output
@@ -276,7 +279,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "impact-analysis",
+                    "analyze",
+                    "impact",
                     temp_project,
                     "--files",
                     "main.py",
@@ -292,7 +296,7 @@ class TestCLIDependencies:
 
     def test_impact_analysis_no_files_specified(self, cli_runner, temp_project):
         """Test impact-analysis when no files are specified."""
-        result = cli_runner.invoke(cli, ["impact-analysis", temp_project])
+        result = cli_runner.invoke(cli, ["analyze", "impact", temp_project])
 
         assert result.exit_code == 1
         assert "Must specify at least one file with --files" in result.output
@@ -325,7 +329,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "impact-analysis",
+                    "analyze",
+                    "impact",
                     temp_project,
                     "--files",
                     "file1.py",
@@ -342,7 +347,7 @@ class TestCLIDependencies:
 
     def test_find_cycles_command_exists(self, cli_runner):
         """Test that find-cycles command exists and shows help."""
-        result = cli_runner.invoke(cli, ["find-cycles", "--help"])
+        result = cli_runner.invoke(cli, ["search", "cycles", "--help"])
         assert result.exit_code == 0
         assert "Find circular dependencies in the project" in result.output
         assert "--output" in result.output
@@ -355,7 +360,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["find-cycles", temp_project, "--output", "text"]
+                cli, ["search", "cycles", temp_project, "--output", "text"]
             )
 
             assert result.exit_code == 0
@@ -372,7 +377,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["find-cycles", temp_project, "--output", "text"]
+                cli, ["search", "cycles", temp_project, "--output", "text"]
             )
 
             assert result.exit_code == 0
@@ -389,7 +394,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["find-cycles", temp_project, "--output", "json"]
+                cli, ["search", "cycles", temp_project, "--output", "json"]
             )
 
             assert result.exit_code == 0
@@ -418,14 +423,14 @@ class TestCLIDependencies:
             )
             mock_repo_map.return_value = mock_instance
 
-            result = cli_runner.invoke(cli, ["analyze-dependencies", temp_project])
+            result = cli_runner.invoke(cli, ["search", "dependencies", temp_project])
 
             assert result.exit_code == 1
             assert "Error: Dependency analysis is not enabled" in result.output
 
     def test_cli_invalid_project_path(self, cli_runner):
         """Test CLI with invalid project path."""
-        result = cli_runner.invoke(cli, ["analyze-dependencies", "/nonexistent/path"])
+        result = cli_runner.invoke(cli, ["search", "dependencies", "/nonexistent/path"])
 
         # Click returns exit code 2 for usage errors
         assert result.exit_code == 2
@@ -450,7 +455,7 @@ class TestCLIDependencies:
             # Test invalid output format
             result = cli_runner.invoke(
                 cli,
-                ["analyze-dependencies", temp_project, "--output", "invalid_format"],
+                ["search", "dependencies", temp_project, "--output", "invalid_format"],
             )
 
             assert result.exit_code == 2  # Click error for invalid choice
@@ -474,7 +479,14 @@ class TestCLIDependencies:
 
             result = cli_runner.invoke(
                 cli,
-                ["analyze-dependencies", temp_project, "--verbose", "--output", "text"],
+                [
+                    "search",
+                    "dependencies",
+                    temp_project,
+                    "--verbose",
+                    "--output",
+                    "text",
+                ],
             )
 
             assert result.exit_code == 0
@@ -501,7 +513,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "analyze-dependencies",
+                    "search",
+                    "dependencies",
                     temp_project,
                     "--max-files",
                     "500",

@@ -121,7 +121,9 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run focus command
-                    result = self.runner.invoke(cli, ["focus", "test_tree_id"])
+                    result = self.runner.invoke(
+                        cli, ["explore", "focus", "test_tree_id"]
+                    )
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
@@ -168,7 +170,7 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run expand command
-                    result = self.runner.invoke(cli, ["expand", "test_area"])
+                    result = self.runner.invoke(cli, ["explore", "expand", "test_area"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
@@ -215,7 +217,7 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run prune command
-                    result = self.runner.invoke(cli, ["prune", "test_area"])
+                    result = self.runner.invoke(cli, ["explore", "prune", "test_area"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
@@ -267,7 +269,7 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run map command
-                    result = self.runner.invoke(cli, ["map"])
+                    result = self.runner.invoke(cli, ["explore", "map"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
@@ -310,7 +312,7 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run list-trees command
-                    result = self.runner.invoke(cli, ["list-trees"])
+                    result = self.runner.invoke(cli, ["explore", "trees"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
@@ -336,29 +338,29 @@ class TestCLIProjectPathFix:
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Test focus command
-                result = self.runner.invoke(cli, ["focus", "test_tree"])
+                result = self.runner.invoke(cli, ["explore", "focus", "test_tree"])
                 assert (
                     result.exit_code == 0
                 )  # Command doesn't exit with error, just returns
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test expand command
-                result = self.runner.invoke(cli, ["expand", "test_area"])
+                result = self.runner.invoke(cli, ["explore", "expand", "test_area"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test prune command
-                result = self.runner.invoke(cli, ["prune", "test_area"])
+                result = self.runner.invoke(cli, ["explore", "prune", "test_area"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test map command
-                result = self.runner.invoke(cli, ["map"])
+                result = self.runner.invoke(cli, ["explore", "map"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test list-trees command
-                result = self.runner.invoke(cli, ["list-trees"])
+                result = self.runner.invoke(cli, ["explore", "trees"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
@@ -405,7 +407,9 @@ class TestCLIProjectPathFix:
                         os.chdir(test_dir)
 
                         # Run focus command
-                        result = self.runner.invoke(cli, ["focus", "test_tree"])
+                        result = self.runner.invoke(
+                            cli, ["explore", "focus", "test_tree"]
+                        )
 
                         # Verify the command succeeded
                         assert result.exit_code == 0

@@ -150,7 +150,6 @@ class TestParallelTagExtractor:
 
     def test_fail_fast_behavior(self):
         """Test that parallel processing fails fast with helpful errors."""
-        from repomap_tool.models import RepoMapConfig, PerformanceConfig
 
         # Create config with fail-fast behavior (default)
         config = RepoMapConfig(
@@ -274,8 +273,6 @@ class TestRepoMapServicePerformance:
                 full_path.write_text("# Test file\n\ndef test_function():\n    pass\n")
 
             yield temp_dir
-
-
 
 
 if __name__ == "__main__":

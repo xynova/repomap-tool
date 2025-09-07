@@ -43,9 +43,9 @@ class TestCLICore:
 
     def test_analyze_command_exists(self, cli_runner):
         """Test that analyze command exists and shows help."""
-        result = cli_runner.invoke(cli, ["analyze", "--help"])
+        result = cli_runner.invoke(cli, ["index", "create", "--help"])
         assert result.exit_code == 0
-        assert "analyze" in result.output.lower()
+        assert "create" in result.output.lower()
 
     def test_analyze_basic_usage(self, cli_runner, temp_project):
         """Test basic analyze command usage."""
@@ -61,7 +61,9 @@ class TestCLICore:
                 last_updated=datetime.now(),
             )
 
-            result = cli_runner.invoke(cli, ["analyze", temp_project, "--fuzzy"])
+            result = cli_runner.invoke(
+                cli, ["index", "create", temp_project, "--fuzzy"]
+            )
             assert result.exit_code == 0
             assert "Analysis complete" in result.output
 
@@ -94,7 +96,7 @@ class TestCLICore:
 
                 # CLI still requires project_path even with config file
                 result = cli_runner.invoke(
-                    cli, ["analyze", temp_project, "--config", config_file]
+                    cli, ["index", "create", temp_project, "--config", config_file]
                 )
                 assert result.exit_code == 0
                 assert "Analysis complete" in result.output
@@ -118,7 +120,8 @@ class TestCLICore:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "analyze",
+                    "index",
+                    "create",
                     temp_project,
                     "--fuzzy",
                     "--no-progress",
@@ -130,7 +133,7 @@ class TestCLICore:
 
     def test_search_command_exists(self, cli_runner):
         """Test that search command exists and shows help."""
-        result = cli_runner.invoke(cli, ["search", "--help"])
+        result = cli_runner.invoke(cli, ["search", "identifiers", "--help"])
         assert result.exit_code == 0
         assert "search" in result.output.lower()
 
@@ -158,7 +161,15 @@ class TestCLICore:
 
             # CLI signature: search PROJECT_PATH QUERY [OPTIONS]
             result = cli_runner.invoke(
-                cli, ["search", temp_project, "test", "--match-type", "fuzzy"]
+                cli,
+                [
+                    "search",
+                    "identifiers",
+                    temp_project,
+                    "test",
+                    "--match-type",
+                    "fuzzy",
+                ],
             )
             if result.exit_code != 0:
                 print(f"CLI Output: {result.output}")
@@ -184,6 +195,7 @@ class TestCLICore:
                 cli,
                 [
                     "search",
+                    "identifiers",
                     temp_project,
                     "test",
                     "--match-type",
@@ -198,7 +210,7 @@ class TestCLICore:
 
     def test_config_command_exists(self, cli_runner):
         """Test that config command exists and shows help."""
-        result = cli_runner.invoke(cli, ["config", "--help"])
+        result = cli_runner.invoke(cli, ["index", "config", "--help"])
         assert result.exit_code == 0
         assert "config" in result.output.lower()
 
@@ -209,23 +221,22 @@ class TestCLICore:
 
         try:
             result = cli_runner.invoke(
-                cli, ["config", temp_project, "--output", config_file]
+                cli, ["index", "config", temp_project, "--output", config_file]
             )
             assert result.exit_code == 0
             assert os.path.exists(config_file)
         finally:
             os.unlink(config_file)
 
-
     def test_version_command(self, cli_runner):
         """Test version command."""
-        result = cli_runner.invoke(cli, ["version"])
+        result = cli_runner.invoke(cli, ["system", "version"])
         assert result.exit_code == 0
         assert "version" in result.output.lower()
 
     def test_explore_command_exists(self, cli_runner):
         """Test that explore command exists and shows help."""
-        result = cli_runner.invoke(cli, ["explore", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "start", "--help"])
         assert result.exit_code == 0
         assert "explore" in result.output.lower()
 
@@ -233,7 +244,7 @@ class TestCLICore:
         """Test basic explore command usage."""
         # Explore command is complex and requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["explore", temp_project, "analyze"])
+        result = cli_runner.invoke(cli, ["explore", "start", temp_project, "analyze"])
 
         # It might fail due to missing dependencies, but that's expected
         # We're just testing that the command structure is correct
@@ -241,7 +252,7 @@ class TestCLICore:
 
     def test_focus_command_exists(self, cli_runner):
         """Test that focus command exists and shows help."""
-        result = cli_runner.invoke(cli, ["focus", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "focus", "--help"])
         assert result.exit_code == 0
         assert "focus" in result.output.lower()
 
@@ -249,14 +260,14 @@ class TestCLICore:
         """Test basic focus command usage."""
         # Focus command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["focus", "tree_123"])
+        result = cli_runner.invoke(cli, ["explore", "focus", "tree_123"])
 
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
     def test_expand_command_exists(self, cli_runner):
         """Test that expand command exists and shows help."""
-        result = cli_runner.invoke(cli, ["expand", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "expand", "--help"])
         assert result.exit_code == 0
         assert "expand" in result.output.lower()
 
@@ -264,14 +275,14 @@ class TestCLICore:
         """Test basic expand command usage."""
         # Expand command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["expand", "src/"])
+        result = cli_runner.invoke(cli, ["explore", "expand", "src/"])
 
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
     def test_prune_command_exists(self, cli_runner):
         """Test that prune command exists and shows help."""
-        result = cli_runner.invoke(cli, ["prune", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "prune", "--help"])
         assert result.exit_code == 0
         assert "prune" in result.output.lower()
 
@@ -279,14 +290,14 @@ class TestCLICore:
         """Test basic prune command usage."""
         # Prune command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["prune", "tests/"])
+        result = cli_runner.invoke(cli, ["explore", "prune", "tests/"])
 
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
     def test_map_command_exists(self, cli_runner):
         """Test that map command exists and shows help."""
-        result = cli_runner.invoke(cli, ["map", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "map", "--help"])
         assert result.exit_code == 0
         assert "map" in result.output.lower()
 
@@ -294,29 +305,29 @@ class TestCLICore:
         """Test basic map command usage."""
         # Map command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["map"])
+        result = cli_runner.invoke(cli, ["explore", "map"])
 
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
     def test_list_trees_command_exists(self, cli_runner):
         """Test that list-trees command exists and shows help."""
-        result = cli_runner.invoke(cli, ["list-trees", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "trees", "--help"])
         assert result.exit_code == 0
-        assert "list-trees" in result.output.lower()
+        assert "trees" in result.output.lower()
 
     def test_list_trees_basic_usage(self, cli_runner):
         """Test basic usage of list-trees command."""
         # List-trees command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["list-trees"])
+        result = cli_runner.invoke(cli, ["explore", "trees"])
 
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
     def test_status_command_exists(self, cli_runner):
         """Test that status command exists and shows help."""
-        result = cli_runner.invoke(cli, ["status", "--help"])
+        result = cli_runner.invoke(cli, ["explore", "status", "--help"])
         assert result.exit_code == 0
         assert "status" in result.output.lower()
 
@@ -324,11 +335,10 @@ class TestCLICore:
         """Test basic usage of status command."""
         # Status command requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["status"])
+        result = cli_runner.invoke(cli, ["explore", "status"])
 
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
-
 
     def test_cli_error_handling(self, cli_runner):
         """Test CLI error handling."""
@@ -337,14 +347,14 @@ class TestCLICore:
 
     def test_cli_invalid_project_path(self, cli_runner):
         """Test CLI with invalid project path."""
-        result = cli_runner.invoke(cli, ["analyze", "/nonexistent/path"])
+        result = cli_runner.invoke(cli, ["index", "create", "/nonexistent/path"])
         assert result.exit_code == 2  # Click usage error
 
     def test_cli_output_format_validation(self, cli_runner, temp_project):
         """Test CLI output format validation."""
         # Test invalid output format
         result = cli_runner.invoke(
-            cli, ["analyze", temp_project, "--output", "invalid_format"]
+            cli, ["index", "create", temp_project, "--output", "invalid_format"]
         )
 
         assert result.exit_code == 2  # Click usage error
@@ -364,7 +374,7 @@ class TestCLICore:
             )
 
             result = cli_runner.invoke(
-                cli, ["analyze", temp_project, "--fuzzy", "--verbose"]
+                cli, ["index", "create", temp_project, "--fuzzy", "--verbose"]
             )
             assert result.exit_code == 0
 
@@ -385,7 +395,8 @@ class TestCLICore:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "analyze",
+                    "index",
+                    "create",
                     temp_project,
                     "--fuzzy",
                     "--threshold",
