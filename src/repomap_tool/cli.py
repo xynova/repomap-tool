@@ -108,7 +108,9 @@ def system() -> None:
 
 @index.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--config",
@@ -194,7 +196,7 @@ def system() -> None:
     help="Output compression level",
 )
 def create(
-    project_path: str,
+    project_path: Optional[str],
     config: Optional[str],
     fuzzy: bool,
     semantic: bool,
@@ -222,6 +224,8 @@ def create(
     """Create project index by scanning files and extracting symbols."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        project_path = resolve_project_path(project_path, config)
         # Load or create config with auto-discovery
         if config:
             config_obj = load_config_file(config)
@@ -324,9 +328,9 @@ def create(
 @search.command()
 @click.argument("query", type=str)
 @click.argument(
-    "project_path", 
+    "project_path",
     type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False
+    required=False,
 )
 @click.option(
     "--config",
@@ -383,31 +387,12 @@ def identifiers(
     """Search for identifiers in a project."""
 
     try:
-        # Determine project path: use provided path or load from config
-        if project_path is None:
-            # Try to load config file to get project_root
-            if config:
-                config_obj = load_config_file(config)
-            else:
-                # Try to discover config file in current directory
-                config_obj = discover_config_file_in_current_dir()
-            
-            if config_obj is None:
-                console.print(
-                    "[red]Error: No project path provided and no configuration file found.[/red]\n"
-                    "Please either:\n"
-                    "1. Provide a project path: repomap search identifiers 'query' /path/to/project\n"
-                    "2. Create a config file first: repomap index config /path/to/project\n"
-                    "3. Specify a config file: repomap search identifiers 'query' --config /path/to/config.json"
-                )
-                sys.exit(1)
-            
-            project_path = str(config_obj.project_root)
-            console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
 
         # Create configuration
         config_obj = create_search_config(
-            project_path, match_type, verbose, log_level, cache_size
+            resolved_project_path, match_type, verbose, log_level, cache_size
         )
 
         # Create search request
@@ -446,7 +431,9 @@ def identifiers(
 
 @index.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option("--output", "-o", type=click.Path(), help="Output file for configuration")
 @click.option(
@@ -472,7 +459,7 @@ def identifiers(
     help="Cache size for generated config",
 )
 def config(
-    project_path: str,
+    project_path: Optional[str],
     output: Optional[str],
     fuzzy: bool,
     semantic: bool,
@@ -482,6 +469,8 @@ def config(
     """Generate a configuration file for the project."""
 
     try:
+        # Resolve project path from argument or discovery
+        project_path = resolve_project_path(project_path, None)
         # Create default configuration
         config_obj = create_default_config(
             project_path,
@@ -564,7 +553,7 @@ def discover_config_file(project_path: str) -> Optional[str]:
 def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
     """Discover and load config file in current directory or parent directories."""
     current_dir = Path.cwd()
-    
+
     # Check current directory and parent directories
     for directory in [current_dir] + list(current_dir.parents):
         config_path = directory / ".repomap" / "config.json"
@@ -574,8 +563,59 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
             except Exception:
                 # If we can't load this config file, continue searching
                 continue
-    
+
+    # Also check /workspace directory (for Docker usage)
+    workspace_dir = Path("/workspace")
+    if workspace_dir.exists():
+        config_path = workspace_dir / ".repomap" / "config.json"
+        if config_path.exists():
+            try:
+                return load_config_file(str(config_path))
+            except Exception:
+                pass
+
     return None
+
+
+def resolve_project_path(
+    provided_path: Optional[str], config_file: Optional[str]
+) -> str:
+    """Resolve project path from provided path, config file, or discovered config.
+
+    Args:
+        provided_path: Explicitly provided project path
+        config_file: Explicitly provided config file path
+
+    Returns:
+        Resolved project path
+
+    Raises:
+        SystemExit: If no project path can be resolved
+    """
+    if provided_path:
+        return provided_path
+
+    # Try to load config file to get project_root
+    config_obj = None
+    if config_file:
+        config_obj = load_config_file(config_file)
+    else:
+        # Try to discover config file
+        config_obj = discover_config_file_in_current_dir()
+
+    if config_obj is None:
+        console.print(
+            "[red]Error: No project path provided and no configuration file found.[/red]\n"
+            "Please either:\n"
+            "1. Provide a project path as an argument\n"
+            "2. Create a config file first: repomap index config /path/to/project\n"
+            "3. Specify a config file: --config /path/to/config.json"
+        )
+        sys.exit(1)
+
+    project_path = str(config_obj.project_root)
+    console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+    return project_path
 
 
 def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
@@ -900,7 +940,7 @@ def apply_cli_overrides(
 
 
 def load_or_create_config(
-    project_path: str, config_file: Optional[str] = None, **overrides: Any
+    project_path: Optional[str], config_file: Optional[str] = None, **overrides: Any
 ) -> tuple[RepoMapConfig, bool]:
     """
     Load existing config or create a new one.
@@ -922,12 +962,15 @@ def load_or_create_config(
         config = load_config_file(config_file)
     else:
         # Look for existing .repomap/config.json
-        discovered_config = discover_config_file(project_path)
-        if discovered_config:
-            config = load_config_file(discovered_config)
+        if project_path is not None:
+            discovered_config = discover_config_file(project_path)
+            if discovered_config:
+                config = load_config_file(discovered_config)
 
     # 2. If no config file found, create default config
     if config is None:
+        if project_path is None:
+            raise ValueError("project_path is required when no config file is found")
         config = create_default_config(
             project_path=project_path,
             fuzzy=True,
@@ -951,7 +994,8 @@ def load_or_create_config(
             config.cache_dir = overrides["cache_dir"]
 
         # Save the new config file
-        create_default_config_file(project_path, config)
+        if project_path is not None:
+            create_default_config_file(project_path, config)
         was_created = True
 
     # 3. Apply environment variable overrides (after file loading)
@@ -964,7 +1008,7 @@ def load_or_create_config(
 
 
 def create_default_config(
-    project_path: str,
+    project_path: Optional[str],
     fuzzy: bool,
     semantic: bool,
     threshold: float,
@@ -981,6 +1025,8 @@ def create_default_config(
     refresh_cache: bool = False,
 ) -> RepoMapConfig:
     """Create default configuration."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_default_config")
 
     # Create fuzzy match config
     fuzzy_config = FuzzyMatchConfig(
@@ -1006,7 +1052,8 @@ def create_default_config(
     )
 
     # Get cache directory from environment variable if set
-    cache_dir = os.environ.get("CACHE_DIR")
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
 
     # Create main config
     config = RepoMapConfig(
@@ -1026,13 +1073,15 @@ def create_default_config(
 
 
 def create_search_config(
-    project_path: str,
+    project_path: Optional[str],
     match_type: str,
     verbose: bool,
     log_level: str = "INFO",
     cache_size: int = 1000,
 ) -> RepoMapConfig:
     """Create configuration for search operations."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_search_config")
 
     # Enable appropriate matchers based on match type
     # Default to hybrid if invalid match type is provided
@@ -1052,7 +1101,8 @@ def create_search_config(
     )
 
     # Get cache directory from environment variable if set
-    cache_dir = os.environ.get("CACHE_DIR")
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
 
     config = RepoMapConfig(
         project_root=project_path,
@@ -1068,11 +1118,14 @@ def create_search_config(
 
 
 def create_tree_config(
-    project_path: str,
+    project_path: Optional[str],
     max_depth: int = 3,
     verbose: bool = True,
 ) -> RepoMapConfig:
     """Create configuration for tree-related operations (explore, focus, expand, prune, map, list_trees, status)."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_tree_config")
+
     from .models import TreeConfig
 
     fuzzy_config = FuzzyMatchConfig(threshold=70, cache_results=True)
@@ -1082,7 +1135,8 @@ def create_tree_config(
     tree_config = TreeConfig(max_depth=max_depth, entrypoint_threshold=0.6)
 
     # Get cache directory from environment variable if set
-    cache_dir = os.environ.get("CACHE_DIR")
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
 
     config = RepoMapConfig(
         project_root=project_path,
@@ -1097,10 +1151,12 @@ def create_tree_config(
 
 
 def create_basic_config(
-    project_path: str,
+    project_path: Optional[str],
     verbose: bool = True,
 ) -> RepoMapConfig:
     """Create basic configuration for simple operations (cache)."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_basic_config")
     fuzzy_config = FuzzyMatchConfig(
         threshold=70,
         cache_results=True,
@@ -1112,7 +1168,8 @@ def create_basic_config(
     )
 
     # Get cache directory from environment variable if set
-    cache_dir = os.environ.get("CACHE_DIR")
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
 
     config = RepoMapConfig(
         project_root=project_path,
@@ -1254,18 +1311,32 @@ def display_search_results(
 
 
 @explore.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
 @click.argument("intent", type=str)
+@click.argument(
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
+)
 @click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
 @click.option("--max-depth", default=3, help="Maximum tree depth")
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
 def start(
-    project_path: str, intent: str, session: Optional[str], max_depth: int
+    intent: str,
+    project_path: Optional[str],
+    session: Optional[str],
+    max_depth: int,
+    config: Optional[str],
 ) -> None:
     """Discover exploration trees from intent."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         import os
         import time
 
@@ -1276,10 +1347,10 @@ def start(
             console.print(f"Set: export REPOMAP_SESSION={session_id}")
 
         # Create configuration
-        config = create_tree_config(project_path, max_depth, verbose=True)
+        config_obj = create_tree_config(resolved_project_path, max_depth, verbose=True)
 
         # Initialize RepoMap
-        repomap = RepoMapService(config)
+        repomap = RepoMapService(config_obj)
 
         # Import tree components
         from .trees import (
@@ -1291,7 +1362,7 @@ def start(
 
         # Discover entrypoints
         discoverer = EntrypointDiscoverer(repomap)
-        entrypoints = discoverer.discover_entrypoints(project_path, intent)
+        entrypoints = discoverer.discover_entrypoints(resolved_project_path, intent)
 
         if not entrypoints:
             console.print(
@@ -1304,7 +1375,7 @@ def start(
             console.print(f'  • Use semantic search: repomap-tool search "{intent}"')
             console.print("\n🔧 Alternative approaches:")
             console.print(
-                f"  repomap-tool analyze {project_path}               # Get general overview"
+                f"  repomap-tool analyze {resolved_project_path}               # Get general overview"
             )
             console.print(
                 f'  repomap-tool search "{intent}" --fuzzy          # Fuzzy search'
@@ -1323,7 +1394,7 @@ def start(
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")
         session_manager = SessionManager(storage_dir=session_storage_dir)
         exploration_session = session_manager.get_or_create_session(
-            session_id, project_path
+            session_id, resolved_project_path
         )
 
         console.print(f"🔍 Found {len(clusters)} exploration contexts:")
@@ -1700,7 +1771,15 @@ def status(session: Optional[str]) -> None:
 
 @search.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
 )
 @click.option(
     "--output",
@@ -1729,7 +1808,8 @@ def status(session: Optional[str]) -> None:
     help="Enable change impact analysis",
 )
 def dependencies(
-    project_path: str,
+    project_path: Optional[str],
+    config: Optional[str],
     output: str,
     verbose: bool,
     max_files: int,
@@ -1739,6 +1819,8 @@ def dependencies(
     """Analyze project dependencies and build dependency graph."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
@@ -1749,8 +1831,8 @@ def dependencies(
         )
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -1763,7 +1845,7 @@ def dependencies(
         ) as progress:
             task = progress.add_task("Building dependency graph...", total=None)
 
-            repomap = RepoMapService(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analyzing dependencies...")
 
             # Build dependency graph
@@ -1814,7 +1896,9 @@ def dependencies(
 
 @analyze.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--file",
@@ -1830,23 +1914,32 @@ def dependencies(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
 def centrality(
-    project_path: str,
+    project_path: Optional[str],
     file: str,
     output: str,
     verbose: bool,
+    config: Optional[str],
 ) -> None:
     """Show centrality analysis for project files."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
         dependency_config = DependencyConfig()
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -1859,7 +1952,7 @@ def centrality(
         ) as progress:
             task = progress.add_task("Calculating centrality scores...", total=None)
 
-            repomap = RepoMapService(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analysis complete!")
 
         # Get centrality scores
@@ -1920,7 +2013,9 @@ def centrality(
 
 @analyze.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--files",
@@ -1937,7 +2032,7 @@ def centrality(
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 def impact(
-    project_path: str,
+    project_path: Optional[str],
     files: tuple,
     output: str,
     verbose: bool,
@@ -1946,6 +2041,10 @@ def impact(
 
     if not files:
         console.print("[red]Error: Must specify at least one file with --files[/red]")
+        sys.exit(1)
+
+    if project_path is None:
+        console.print("[red]Error: project_path is required for impact analysis[/red]")
         sys.exit(1)
 
     try:
@@ -2028,7 +2127,9 @@ def impact(
 
 @search.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--output",
@@ -2039,11 +2140,15 @@ def impact(
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 def cycles(
-    project_path: str,
+    project_path: Optional[str],
     output: str,
     verbose: bool,
 ) -> None:
     """Find circular dependencies in the project."""
+
+    if project_path is None:
+        console.print("[red]Error: project_path is required for cycle analysis[/red]")
+        sys.exit(1)
 
     try:
         from .models import RepoMapConfig, DependencyConfig

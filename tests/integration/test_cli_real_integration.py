@@ -79,8 +79,8 @@ def handle_authentication_request():
                 "--no-color",
                 "explore",
                 "start",
-                temp_project,
                 "user authentication",  # More specific intent
+                temp_project,
             ],
         )
 
@@ -911,8 +911,8 @@ def handle_authentication_request():
                 "--no-color",
                 "search",
                 "identifiers",
-                large_project,
                 "!@#$%^&*()_+-=[]{}|;':\",./<>?",
+                large_project,
             ],
         )
         assert result.exit_code in [0, 1]
@@ -1053,20 +1053,20 @@ def handle_authentication_request():
 
         # Test with empty project
         result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", empty_project, "test intent"]
+            cli, ["--no-color", "explore", "start", "test intent", empty_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", large_project, "module processing"]
+            cli, ["--no-color", "explore", "start", "module processing", large_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with very long intent
         long_intent = "a" * 1000
         result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", large_project, long_intent]
+            cli, ["--no-color", "explore", "start", long_intent, large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -1114,18 +1114,14 @@ def handle_authentication_request():
     def test_missing_required_arguments(self, cli_runner, temp_project):
         """Test commands with missing required arguments."""
 
-        # Test analyze without project path
+        # Test analyze without project path (now works because project_path is optional)
         result = cli_runner.invoke(cli, ["--no-color", "index", "create"])
-        assert result.exit_code != 0
+        assert result.exit_code == 0
 
         # Test search without query (should fail because query is required)
-        result = cli_runner.invoke(
-            cli, ["--no-color", "search", "identifiers"]
-        )
+        result = cli_runner.invoke(cli, ["--no-color", "search", "identifiers"])
         assert result.exit_code != 0
 
-        # Test explore without intent
-        result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", temp_project]
-        )
+        # Test explore without intent (intent is now required as first argument)
+        result = cli_runner.invoke(cli, ["--no-color", "explore", "start"])
         assert result.exit_code != 0

@@ -244,7 +244,7 @@ class TestCLICore:
         """Test basic explore command usage."""
         # Explore command is complex and requires session management
         # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["explore", "start", temp_project, "analyze"])
+        result = cli_runner.invoke(cli, ["explore", "start", "analyze", temp_project])
 
         # It might fail due to missing dependencies, but that's expected
         # We're just testing that the command structure is correct
