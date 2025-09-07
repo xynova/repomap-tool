@@ -2132,6 +2132,12 @@ def impact(
     required=False,
 )
 @click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+@click.option(
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text"]),
@@ -2141,24 +2147,23 @@ def impact(
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 def cycles(
     project_path: Optional[str],
+    config: Optional[str],
     output: str,
     verbose: bool,
 ) -> None:
     """Find circular dependencies in the project."""
 
-    if project_path is None:
-        console.print("[red]Error: project_path is required for cycle analysis[/red]")
-        sys.exit(1)
-
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
         dependency_config = DependencyConfig()
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -2171,7 +2176,7 @@ def cycles(
         ) as progress:
             task = progress.add_task("Finding circular dependencies...", total=None)
 
-            repomap = RepoMapService(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analysis complete!")
 
         # Find cycles
