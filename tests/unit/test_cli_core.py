@@ -159,14 +159,14 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: search PROJECT_PATH QUERY [OPTIONS]
+            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
                     "search",
                     "identifiers",
-                    temp_project,
                     "test",
+                    temp_project,
                     "--match-type",
                     "fuzzy",
                 ],
@@ -190,14 +190,14 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: search PROJECT_PATH QUERY [OPTIONS]
+            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
                     "search",
                     "identifiers",
-                    temp_project,
                     "test",
+                    temp_project,
                     "--match-type",
                     "fuzzy",
                     "--max-results",

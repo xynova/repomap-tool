@@ -29,7 +29,7 @@ docker tag your-registry.com/repomap-tool:v1.2.3 repomap-tool:local
 
 ### Basic Docker Command Pattern
 ```bash
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local <command> /workspace [options]
+docker run --rm -t -v /path/to/project:/workspace repomap-tool:local <command> /workspace [options]
 ```
 
 **Note**: The `-t` environment variable eliminates terminal warnings and provides clean output.
@@ -92,7 +92,7 @@ Use the provided setup script for easy tagging:
 
 **Basic Usage**:
 ```bash
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace
+docker run --rm -t -v /path/to/project:/workspace repomap-tool:local analyze /workspace
 ```
 
 **Options**:
@@ -108,13 +108,13 @@ docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/work
 **Examples**:
 ```bash
 # Basic analysis with both fuzzy and semantic matching
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
+docker run --rm -t -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
 
 # Verbose analysis with table output
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose --output table
+docker run --rm -t -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose --output table
 
 # Fuzzy matching only
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --no-semantic
+docker run --rm -t -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --no-semantic
 ```
 
 ### 2. `search` - Code Search
@@ -122,7 +122,7 @@ docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/work
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "query"
+docker run --rm -v /path/to/project:/workspace repomap-tool:local search identifiers "query" /workspace
 ```
 
 **Options**:
@@ -136,16 +136,19 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 **Examples**:
 ```bash
 # Search for authentication-related code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "authentication" --match-type hybrid --max-results 15
+docker run --rm -v /path/to/project:/workspace repomap-tool:local search identifiers "authentication" /workspace --match-type hybrid --max-results 15
+
+# Search using config file (no need to specify project path)
+docker run --rm -v /path/to/project:/workspace repomap-tool:local search identifiers "auth" --config /workspace/.repomap/config.json
 
 # Fuzzy search with custom threshold
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "auth" --match-type fuzzy --threshold 0.6
+docker run --rm -v /path/to/project:/workspace repomap-tool:local search identifiers "auth" /workspace --match-type fuzzy --threshold 0.6
 
 # Semantic search for data processing
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "data processing" --match-type semantic
+docker run --rm -v /path/to/project:/workspace repomap-tool:local search identifiers "data processing" /workspace --match-type semantic
 
 # JSON output for programmatic use
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "error handling" --output json
+docker run --rm -v /path/to/project:/workspace repomap-tool:local search identifiers "error handling" /workspace --output json
 ```
 
 ### 3. `config` - Configuration Management
@@ -153,7 +156,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local config /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local config /workspace
 ```
 
 **Options**:
@@ -166,13 +169,13 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 **Examples**:
 ```bash
 # Generate basic configuration
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local config /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local config /workspace
 
 # Generate configuration file
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local config /workspace --output repomap.json
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local config /workspace --output repomap.json
 
 # Generate configuration with custom settings
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local config /workspace --output config.json --threshold 0.8 --cache-size 2000
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local config /workspace --output config.json --threshold 0.8 --cache-size 2000
 ```
 
 ### 4. `explore` - Tree Exploration
@@ -180,7 +183,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v $(pwd)/.repomap/sessions:/app/sessions -v /path/to/project:/workspace repomap-tool:local explore /workspace "intent description"
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local explore /workspace "intent description"
 ```
 
 **Options**:
@@ -190,13 +193,13 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v $(pwd)/.repomap/sessions:
 **Examples**:
 ```bash
 # Basic exploration
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local explore /workspace "authentication login errors"
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local explore /workspace "authentication login errors"
 
 # With custom session and depth
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local explore /workspace "database performance issues" --session debug_session --max-depth 5
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local explore /workspace "database performance issues" --session debug_session --max-depth 5
 
 # Set session via environment variable
-docker run --rm -e REPOMAP_SESSION=my_investigation -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local explore /workspace "API authentication bugs"
+docker run --rm -e REPOMAP_SESSION=my_investigation  -v /path/to/project:/workspace repomap-tool:local explore /workspace "API authentication bugs"
 ```
 
 ### 5. `focus` - Tree Focus Management
@@ -204,7 +207,7 @@ docker run --rm -e REPOMAP_SESSION=my_investigation -v $(pwd)/.repomap/cache:/ap
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local focus <tree_id>
+docker run --rm  repomap-tool:local focus <tree_id>
 ```
 
 **Options**:
@@ -213,10 +216,10 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local focus <tr
 **Examples**:
 ```bash
 # Focus on specific tree
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local focus auth_errors_abc123
+docker run --rm  repomap-tool:local focus auth_errors_abc123
 
 # With custom session
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local focus auth_errors_abc123 --session other_session
+docker run --rm  repomap-tool:local focus auth_errors_abc123 --session other_session
 ```
 
 ### 6. `expand` - Tree Expansion
@@ -224,7 +227,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local focus aut
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local expand "area"
+docker run --rm  repomap-tool:local expand "area"
 ```
 
 **Options**:
@@ -234,10 +237,10 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local expand "a
 **Examples**:
 ```bash
 # Expand current focused tree
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local expand "password_validation"
+docker run --rm  repomap-tool:local expand "password_validation"
 
 # Expand specific tree
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local expand "error_handling" --tree frontend_auth_def456
+docker run --rm  repomap-tool:local expand "error_handling" --tree frontend_auth_def456
 ```
 
 ### 7. `prune` - Tree Pruning
@@ -245,7 +248,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local expand "e
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local prune "area"
+docker run --rm  repomap-tool:local prune "area"
 ```
 
 **Options**:
@@ -255,10 +258,10 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local prune "ar
 **Examples**:
 ```bash
 # Prune current focused tree
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local prune "logging"
+docker run --rm  repomap-tool:local prune "logging"
 
 # Prune specific tree
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local prune "debug_code" --tree auth_errors_abc123
+docker run --rm  repomap-tool:local prune "debug_code" --tree auth_errors_abc123
 ```
 
 ### 8. `map` - Tree Visualization
@@ -266,7 +269,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local prune "de
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local map
+docker run --rm  repomap-tool:local map
 ```
 
 **Options**:
@@ -277,10 +280,10 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local map
 **Examples**:
 ```bash
 # View current focused tree
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local map
+docker run --rm  repomap-tool:local map
 
 # View specific tree with code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local map --tree frontend_auth_def456 --include-code
+docker run --rm  repomap-tool:local map --tree frontend_auth_def456 --include-code
 ```
 
 ### 9. `list-trees` - Tree Listing
@@ -288,7 +291,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local map --tre
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local list-trees
+docker run --rm  repomap-tool:local list-trees
 ```
 
 **Options**:
@@ -297,10 +300,10 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local list-tree
 **Examples**:
 ```bash
 # List trees in current session
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local list-trees
+docker run --rm  repomap-tool:local list-trees
 
 # List trees in specific session
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local list-trees --session debug_session
+docker run --rm  repomap-tool:local list-trees --session debug_session
 ```
 
 ### 10. `status` - Session Status
@@ -308,7 +311,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local list-tree
 
 **Basic Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local status
+docker run --rm  repomap-tool:local status
 ```
 
 **Options**:
@@ -317,10 +320,10 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local status
 **Examples**:
 ```bash
 # Show current session status
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local status
+docker run --rm  repomap-tool:local status
 
 # Show specific session status
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local status --session debug_session
+docker run --rm  repomap-tool:local status --session debug_session
 ```
 
 ### 11. `version` - Version Information
@@ -336,7 +339,7 @@ docker run --rm repomap-tool:local version
 
 **Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local performance /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local performance /workspace
 ```
 
 ### 13. `analyze-dependencies` - Dependency Analysis
@@ -352,13 +355,13 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 **Usage**:
 ```bash
 # Basic dependency analysis
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace
+docker run --rm -t  -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace
 
 # Analyze all files (up to 10,000)
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace --max-files 10000
+docker run --rm -t  -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace --max-files 10000
 
 # With call graph and impact analysis
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace --enable-call-graph --enable-impact-analysis
+docker run --rm -t  -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace --enable-call-graph --enable-impact-analysis
 ```
 
 ### 14. `find-cycles` - Circular Dependencies
@@ -366,7 +369,7 @@ docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/work
 
 **Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local find-cycles /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local find-cycles /workspace
 ```
 
 ### 15. `impact-analysis` - Impact Analysis
@@ -374,7 +377,7 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 
 **Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local impact-analysis /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local impact-analysis /workspace
 ```
 
 ### 16. `show-centrality` - Centrality Analysis
@@ -382,37 +385,39 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 
 **Usage**:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local show-centrality /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local show-centrality /workspace
 ```
 
 
 ## Volume Mounting Best Practices
 
-### Cache Persistence
-Always mount a cache directory to improve performance across runs:
-```bash
--v $(pwd)/.repomap/cache:/app/cache
-```
-
-**Note**: The `CACHE_DIR=/app/cache` environment variable is set by default in the Dockerfile. This tells the RepoMapService to store the aider cache in `/app/cache` instead of the project directory, allowing the cache to be shared across different projects and persisted between container runs.
-
-### Session Persistence
-Mount a session directory to persist tree exploration sessions across container restarts:
-```bash
--v $(pwd)/.repomap/sessions:/app/sessions
-```
-
-### Project Access
-Mount your project directory as `/workspace`:
+### Project Directory Mounting
+Mount your project directory as `/workspace` - the `.repomap` directory will be created inside your project:
 ```bash
 -v /path/to/your/project:/workspace
+```
+
+**Benefits**:
+- **Project-specific**: Each project has its own `.repomap` directory
+- **Portable**: Configuration and cache travel with the project
+- **Simplified**: No separate volume mounts needed
+- **Intuitive**: `.repomap` is part of the project structure
+- **Persistent**: Cache and sessions persist between container runs
+
+### Project Structure
+Your project will have this structure:
+```
+your-project/
+├── .repomap/           # Created automatically
+│   ├── cache/          # Analysis cache
+│   ├── sessions/       # Tree exploration sessions
+│   └── config.json     # Configuration file
+└── your-source-code/
 ```
 
 ### Complete Example
 ```bash
 docker run --rm \
-  -v $(pwd)/.repomap/cache:/app/cache \
-  -v $(pwd)/.repomap/sessions:/app/sessions \
   -v /path/to/your/project:/workspace \
   repomap-tool:local \
   search /workspace "authentication"
@@ -441,10 +446,10 @@ When an LLM needs to understand how a specific feature works:
 
 ```bash
 # Find all authentication-related code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "authentication" --match-type hybrid --max-results 15
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "authentication" --match-type hybrid --max-results 15
 
 # Find data processing functions
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "data processing" --match-type semantic
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "data processing" --match-type semantic
 ```
 
 ### 2. Refactoring Planning
@@ -452,10 +457,10 @@ When an LLM needs to understand dependencies before making changes:
 
 ```bash
 # Find all usages of a specific function
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "process_data" --match-type fuzzy --threshold 0.6
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "process_data" --match-type fuzzy --threshold 0.6
 
 # Analyze project structure first
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose
 ```
 
 ### 3. Architecture Understanding
@@ -463,10 +468,10 @@ When an LLM needs to understand the overall codebase structure:
 
 ```bash
 # Get comprehensive project analysis
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose --output table
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose --output table
 
 # Find related modules
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "database connection" --match-type hybrid
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "database connection" --match-type hybrid
 ```
 
 ### 4. Error Handling Discovery
@@ -474,7 +479,7 @@ When an LLM needs to find error handling patterns:
 
 ```bash
 # Find error handling code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "error handling exception" --match-type hybrid --max-results 20
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "error handling exception" --match-type hybrid --max-results 20
 ```
 
 ## Search Strategies Explained
@@ -524,13 +529,12 @@ docker tag ghcr.io/xynova/repomap-tool:latest repomap-tool:local
 ### 2. Use Cache Persistence
 Always mount a cache directory to avoid re-analyzing unchanged code:
 ```bash
--v $(pwd)/.repomap/cache:/app/cache
 ```
 
 ### 3. Start with Analysis
 For large projects, run analysis first to build the code map:
 ```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
 ```
 
 ### 4. Use Appropriate Limits
@@ -559,7 +563,7 @@ ls -la /path/to/your/project
 **2. "Permission denied"**
 ```bash
 # Check Docker permissions or use sudo
-sudo docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace
+sudo docker run --rm  -v /path/to/project:/workspace repomap-tool:local analyze /workspace
 ```
 
 **3. "Docker daemon not running"**
@@ -579,17 +583,16 @@ docker pull ghcr.io/xynova/repomap-tool:latest
 docker tag ghcr.io/xynova/repomap-tool:latest repomap-tool:local
 
 # Use cache persistence
--v $(pwd)/.repomap/cache:/app/cache
 
 # Run analysis first for large projects
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
+docker run --rm -t  -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
 ```
 
 
 **6. File limit warnings in dependency analysis**
 ```bash
 # Increase the file limit for large projects
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace --max-files 10000
+docker run --rm -t  -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace --max-files 10000
 ```
 
 ### Getting Help
@@ -605,45 +608,45 @@ docker run --rm repomap-tool:local search --help
 ### Workflow 1: Understanding a New Codebase
 ```bash
 # 1. Get project overview
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose
 
 # 2. Find main entry points
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "main entry point" --match-type semantic
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "main entry point" --match-type semantic
 
 # 3. Understand authentication
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "authentication login" --match-type hybrid
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "authentication login" --match-type hybrid
 ```
 
 ### Workflow 2: Planning a Refactor
 ```bash
 # 1. Find all usages of the function to refactor
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "old_function_name" --match-type fuzzy --threshold 0.6
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "old_function_name" --match-type fuzzy --threshold 0.6
 
 # 2. Find similar patterns
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "similar functionality" --match-type semantic
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "similar functionality" --match-type semantic
 
 # 3. Analyze dependencies
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local analyze-dependencies /workspace
 ```
 
 ### Workflow 3: Debugging Issues
 ```bash
 # 1. Find error handling code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "error handling exception" --match-type hybrid
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "error handling exception" --match-type hybrid
 
 # 2. Find logging code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "logging debug" --match-type semantic
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "logging debug" --match-type semantic
 
 # 3. Find validation code
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local search /workspace "validation check" --match-type hybrid
+docker run --rm  -v /path/to/project:/workspace repomap-tool:local search /workspace "validation check" --match-type hybrid
 ```
 
 ## Environment Variables
 
 The tool respects these environment variables:
 
-- `REPOMAP_CACHE_DIR` - Cache directory path (default: `/app/cache`)
-- `REPOMAP_SESSION_DIR` - Session storage directory path (default: `/app/sessions`)
+- `REPOMAP_CACHE_DIR` - Cache directory path (default: `/workspace/.repomap/cache`)
+- `REPOMAP_SESSION_DIR` - Session storage directory path (default: `/workspace/.repomap/sessions`)
 - `REPOMAP_LOG_LEVEL` - Logging level (DEBUG, INFO, WARNING, ERROR)
 - `REPOMAP_CONFIG_FILE` - Configuration file path
 - `REPOMAP_SESSION` - Session ID for tree exploration (auto-generated if not set)

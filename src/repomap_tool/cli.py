@@ -322,10 +322,18 @@ def create(
 
 
 @search.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
 @click.argument("query", type=str)
+@click.argument(
+    "project_path", 
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file (JSON/YAML)",
+)
 @click.option(
     "--match-type",
     type=click.Choice(["fuzzy", "semantic", "hybrid"]),
@@ -360,8 +368,9 @@ def create(
     help="Maximum cache entries (100-10000)",
 )
 def identifiers(
-    project_path: str,
     query: str,
+    project_path: Optional[str],
+    config: Optional[str],
     match_type: Literal["fuzzy", "semantic", "hybrid"],
     threshold: float,
     max_results: int,
@@ -374,8 +383,30 @@ def identifiers(
     """Search for identifiers in a project."""
 
     try:
+        # Determine project path: use provided path or load from config
+        if project_path is None:
+            # Try to load config file to get project_root
+            if config:
+                config_obj = load_config_file(config)
+            else:
+                # Try to discover config file in current directory
+                config_obj = discover_config_file_in_current_dir()
+            
+            if config_obj is None:
+                console.print(
+                    "[red]Error: No project path provided and no configuration file found.[/red]\n"
+                    "Please either:\n"
+                    "1. Provide a project path: repomap search identifiers 'query' /path/to/project\n"
+                    "2. Create a config file first: repomap index config /path/to/project\n"
+                    "3. Specify a config file: repomap search identifiers 'query' --config /path/to/config.json"
+                )
+                sys.exit(1)
+            
+            project_path = str(config_obj.project_root)
+            console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+
         # Create configuration
-        config = create_search_config(
+        config_obj = create_search_config(
             project_path, match_type, verbose, log_level, cache_size
         )
 
@@ -396,7 +427,7 @@ def identifiers(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = RepoMapService(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Searching identifiers...")
 
             # Perform search
@@ -527,6 +558,23 @@ def discover_config_file(project_path: str) -> Optional[str]:
     config_path = get_config_file_path(project_path)
     if config_path.exists():
         return str(config_path)
+    return None
+
+
+def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
+    """Discover and load config file in current directory or parent directories."""
+    current_dir = Path.cwd()
+    
+    # Check current directory and parent directories
+    for directory in [current_dir] + list(current_dir.parents):
+        config_path = directory / ".repomap" / "config.json"
+        if config_path.exists():
+            try:
+                return load_config_file(str(config_path))
+            except Exception:
+                # If we can't load this config file, continue searching
+                continue
+    
     return None
 
 

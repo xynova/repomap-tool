@@ -10,11 +10,30 @@ This guide covers all configuration options for the RepoMap Tool, including CLI 
 # Analyze with fuzzy matching
 repomap-tool analyze /path/to/project --fuzzy
 
-# Search with custom thresholds
-repomap-tool search /path/to/project "query" --fuzzy-threshold 70 --semantic-threshold 60
+# Search with custom thresholds (project path optional if config exists)
+repomap-tool search "query" /path/to/project --threshold 0.7
+
+# Search using config file project_root (no need to specify project path)
+repomap-tool search "query" --config config.json
 
 # Generate configuration file
 repomap-tool config /path/to/project --output config.json
+```
+
+### **🎯 Improved Usability**
+
+The search command now supports **optional project paths** when a configuration file is available:
+
+```bash
+# After creating a config file, you can search without specifying the project path
+repomap-tool index config /path/to/project --output .repomap/config.json
+repomap-tool search "my_function"  # Uses project_root from config file
+
+# Or specify a config file explicitly
+repomap-tool search "my_function" --config /path/to/config.json
+
+# Traditional usage still works
+repomap-tool search "my_function" /path/to/project
 ```
 
 ## 📋 Configuration Options
@@ -40,15 +59,19 @@ repomap-tool analyze /path/to/project [OPTIONS]
 
 #### **Search Command**
 ```bash
-repomap-tool search /path/to/project "query" [OPTIONS]
+repomap-tool search "query" [PROJECT_PATH] [OPTIONS]
 ```
 
+**Arguments:**
+- `query` - Search query (required)
+- `PROJECT_PATH` - Project directory path (optional if config file exists)
+
 **Options:**
+- `--config FILE` - Configuration file path (optional)
 - `--match-type TYPE` - Matching strategy (fuzzy, semantic, hybrid)
-- `--fuzzy-threshold N` - Fuzzy matching threshold (0-100, default: 80)
-- `--semantic-threshold N` - Semantic matching threshold (0-100, default: 70)
-- `--limit N` - Maximum number of results (default: 10)
-- `--output FORMAT` - Output format (table, json, text)
+- `--threshold N` - Match threshold (0.0-1.0, default: 0.7)
+- `--max-results N` - Maximum number of results (default: 10)
+- `--output FORMAT` - Output format (json, text, table)
 
 #### **Config Command**
 ```bash
@@ -408,6 +431,24 @@ repomap-tool search /path/to/project "query" --match-type hybrid
 ```
 
 ## 📚 Configuration Examples
+
+### **Improved Search Workflow**
+
+```bash
+# 1. Create a configuration file for your project
+repomap-tool index config /path/to/my-project --output .repomap/config.json
+
+# 2. Now you can search without specifying the project path every time
+repomap-tool search "UserService"                    # Uses project_root from config
+repomap-tool search "database" --threshold 0.8       # Uses project_root from config
+repomap-tool search "auth" --output json             # Uses project_root from config
+
+# 3. Or specify a different config file
+repomap-tool search "UserService" --config /path/to/other-config.json
+
+# 4. Traditional usage still works for one-off searches
+repomap-tool search "UserService" /path/to/different-project
+```
 
 ### **Development Setup**
 

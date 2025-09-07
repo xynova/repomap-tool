@@ -189,8 +189,8 @@ def my_function():
                 "--no-color",
                 "search",
                 "identifiers",
-                temp_project,
                 "main",
+                temp_project,
                 "--match-type",
                 "fuzzy",
                 "--max-results",
@@ -893,14 +893,14 @@ def handle_authentication_request():
 
         # Test with empty query
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "identifiers", empty_project, ""]
+            cli, ["--no-color", "search", "identifiers", "", empty_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with very long query
         long_query = "a" * 1000
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "identifiers", large_project, long_query]
+            cli, ["--no-color", "search", "identifiers", long_query, large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -1118,9 +1118,9 @@ def handle_authentication_request():
         result = cli_runner.invoke(cli, ["--no-color", "index", "create"])
         assert result.exit_code != 0
 
-        # Test search without query
+        # Test search without query (should fail because query is required)
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "identifiers", temp_project]
+            cli, ["--no-color", "search", "identifiers"]
         )
         assert result.exit_code != 0
 
