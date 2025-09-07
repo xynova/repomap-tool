@@ -105,7 +105,7 @@ class TestErrorHandling:
         )
 
         # Should default to hybrid (both enabled) for invalid match type
-        assert config.fuzzy_match.enabled is True
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is True
 
 

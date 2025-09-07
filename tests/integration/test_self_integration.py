@@ -124,11 +124,10 @@ class TestSelfIntegration:
 
     def test_fuzzy_search_independently(self):
         """Test fuzzy search functionality independently."""
-        # Create configuration with only fuzzy matching enabled
+        # Create configuration with fuzzy matching (always enabled) and semantic disabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(
-                enabled=True,
                 threshold=70,
                 strategies=["prefix", "substring", "levenshtein"],
             ),
@@ -188,7 +187,7 @@ class TestSelfIntegration:
         # Create configuration with only semantic matching enabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=False),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(
                 enabled=True, threshold=0.1, use_tfidf=True
             ),
@@ -247,13 +246,10 @@ class TestSelfIntegration:
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(
-                enabled=True,
                 threshold=70,
                 strategies=["prefix", "substring", "levenshtein"],
             ),
-            semantic_match=SemanticMatchConfig(
-                enabled=True, threshold=0.1, use_tfidf=True
-            ),
+            semantic_match=SemanticMatchConfig(threshold=0.1, use_tfidf=True),
             verbose=True,
         )
 
@@ -316,7 +312,7 @@ class TestSelfIntegration:
         """Test searching for specific known identifiers in the codebase."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
@@ -372,7 +368,7 @@ class TestSelfIntegration:
         """Test that search results include proper context."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
@@ -403,7 +399,7 @@ class TestSelfIntegration:
         """Test that search results are properly ranked by relevance."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
@@ -432,7 +428,7 @@ class TestSelfIntegration:
         """Test error handling for invalid queries and configurations."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
@@ -466,7 +462,7 @@ class TestSelfIntegration:
 
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,  # Disable verbose for performance test
         )
@@ -487,7 +483,7 @@ class TestSelfIntegration:
         # Test fuzzy only
         fuzzy_config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=False,
         )
@@ -504,7 +500,7 @@ class TestSelfIntegration:
         # Test semantic only
         semantic_config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=False),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,
         )

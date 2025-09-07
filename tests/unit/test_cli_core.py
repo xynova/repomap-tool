@@ -72,7 +72,7 @@ class TestCLICore:
         config_content = f"""
         {{
             "project_root": "{temp_project}",
-            "fuzzy_match": {{"enabled": true}},
+            "fuzzy_match": {{"threshold": 70}},
             "semantic_match": {{"enabled": false}}
         }}
         """

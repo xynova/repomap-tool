@@ -177,14 +177,13 @@ class RepoMapService:
     def _initialize_matchers(self) -> None:
         """Initialize matching components."""
         # Initialize fuzzy matcher
-        if self.config.fuzzy_match.enabled:
-            self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
-                threshold=self.config.fuzzy_match.threshold,
-                strategies=self.config.fuzzy_match.strategies,
-                cache_results=self.config.fuzzy_match.cache_results,
-                verbose=self.config.verbose,
-            )
-            self.logger.info(f"Initialized FuzzyMatcher: {self.config.fuzzy_match}")
+        self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
+            threshold=self.config.fuzzy_match.threshold,
+            strategies=self.config.fuzzy_match.strategies,
+            cache_results=self.config.fuzzy_match.cache_results,
+            verbose=self.config.verbose,
+        )
+        self.logger.info(f"Initialized FuzzyMatcher: {self.config.fuzzy_match}")
 
         # Initialize semantic matcher
         if self.config.semantic_match.enabled:
@@ -193,8 +192,8 @@ class RepoMapService:
                 f"Initialized SemanticMatcher: {self.config.semantic_match}"
             )
 
-        # Initialize hybrid matcher if both are enabled
-        if self.config.fuzzy_match.enabled and self.config.semantic_match.enabled:
+        # Initialize hybrid matcher if semantic matching is enabled
+        if self.config.semantic_match.enabled:
             self.hybrid_matcher = HybridMatcher(  # type: ignore
                 fuzzy_threshold=self.config.fuzzy_match.threshold,
                 semantic_threshold=self.config.semantic_match.threshold,
@@ -203,9 +202,8 @@ class RepoMapService:
             self.logger.info("Initialized HybridMatcher")
 
         # Phase 2: Initialize dependency analysis components
-        if self.config.dependencies.enabled:
-            self._initialize_dependency_analysis()
-            self.logger.info("Initialized dependency analysis components")
+        self._initialize_dependency_analysis()
+        self.logger.info("Initialized dependency analysis components")
 
     def _initialize_dependency_analysis(self) -> None:
         """Initialize dependency analysis components."""
@@ -590,9 +588,6 @@ class RepoMapService:
 
     def build_dependency_graph(self) -> Any:
         """Build dependency graph for the project."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
-
         if self.dependency_graph is None:
             raise RuntimeError("Dependency analysis components not initialized")
 
@@ -656,8 +651,7 @@ class RepoMapService:
 
     def get_centrality_scores(self) -> Dict[str, float]:
         """Get centrality scores for all files in the dependency graph."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if self.centrality_calculator is None:
             raise RuntimeError("Centrality calculator not initialized")
@@ -675,8 +669,7 @@ class RepoMapService:
 
     def analyze_change_impact(self, file_path: str) -> Dict[str, Any]:
         """Analyze the impact of changes to a specific file."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if not self.config.dependencies.enable_impact_analysis:
             raise RuntimeError("Impact analysis is not enabled")
@@ -697,8 +690,7 @@ class RepoMapService:
 
     def find_circular_dependencies(self) -> List[List[str]]:
         """Find circular dependencies in the project."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built
@@ -748,7 +740,7 @@ class RepoMapService:
 
     def fuzzy_search(self, query: str) -> List[Any]:
         """Perform a fuzzy search for a query."""
-        if not self.fuzzy_matcher or not self.fuzzy_matcher.enabled:
+        if not self.fuzzy_matcher:
             return []
 
         # This is a simplified search.
@@ -774,8 +766,7 @@ class RepoMapService:
         self, session_id: str, intent: str, current_files: Optional[List[str]] = None
     ) -> List[Any]:
         """Generate enhanced exploration trees with dependency intelligence."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built

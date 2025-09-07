@@ -10,6 +10,7 @@ import json
 import sys
 import os
 from typing import Optional, Literal, Dict, Any
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -221,12 +222,11 @@ def create(
     """Create project index by scanning files and extracting symbols."""
 
     try:
-        # Load configuration
+        # Load or create config with auto-discovery
         if config:
             config_obj = load_config_file(config)
             # Apply CLI overrides to loaded config
-            if fuzzy is not None:
-                config_obj.fuzzy_match.enabled = fuzzy
+            # Fuzzy matching is always enabled, no need to handle fuzzy parameter
             if semantic is not None:
                 config_obj.semantic_match.enabled = semantic
             if threshold is not None:
@@ -255,23 +255,36 @@ def create(
             if refresh_cache is not None:
                 config_obj.refresh_cache = refresh_cache
         else:
-            config_obj = create_default_config(
-                project_path,
-                fuzzy,
-                semantic,
-                threshold,
-                max_results,
-                output,  # type: ignore[arg-type]
-                verbose,
-                max_workers,
-                parallel_threshold,
-                no_progress,
-                no_monitoring,
-                allow_fallback,
-                cache_size,
-                log_level,
-                refresh_cache,
+            # Use automatic config discovery
+            config_obj, was_created = load_or_create_config(
+                project_path=project_path,
+                # Apply CLI overrides
+                cache_dir=os.environ.get("CACHE_DIR"),
+                output_format=output,
+                verbose=verbose,
+                max_results=max_results,
+                log_level=log_level,
+                refresh_cache=refresh_cache,
+                # Additional overrides based on CLI flags
+                semantic_enabled=semantic,
+                fuzzy_threshold=int(threshold * 100) if threshold else None,
+                semantic_threshold=threshold,
+                max_workers=max_workers,
+                parallel_threshold=parallel_threshold,
+                enable_progress=not no_progress,
+                enable_monitoring=not no_monitoring,
+                allow_fallback=allow_fallback,
+                cache_size=cache_size,
             )
+
+            if was_created:
+                console.print(
+                    f"[green]✓[/green] Created new config file: {get_config_file_path(project_path)}"
+                )
+            else:
+                console.print(
+                    f"[blue]ℹ[/blue] Using existing config: {get_config_file_path(project_path)}"
+                )
 
         # Initialize RepoMap
         with Progress(
@@ -504,6 +517,194 @@ def load_config_file(config_path: str) -> RepoMapConfig:
         raise ValueError(f"Failed to load configuration file: {e}")
 
 
+def get_config_file_path(project_path: str) -> Path:
+    """Get the path to the .repomap/config.json file for a project."""
+    return Path(project_path) / ".repomap" / "config.json"
+
+
+def discover_config_file(project_path: str) -> Optional[str]:
+    """Discover existing config file in the project directory."""
+    config_path = get_config_file_path(project_path)
+    if config_path.exists():
+        return str(config_path)
+    return None
+
+
+def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
+    """Create a default config file in .repomap/config.json."""
+    config_path = get_config_file_path(project_path)
+
+    # Create .repomap directory if it doesn't exist
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save config to file
+    with open(config_path, "w") as f:
+        json.dump(config.model_dump(), f, indent=2, default=str)
+
+    return str(config_path)
+
+
+def load_or_create_config(
+    project_path: str, config_file: Optional[str] = None, **overrides: Any
+) -> tuple[RepoMapConfig, bool]:
+    """
+    Load existing config or create a new one.
+
+    Returns:
+        tuple: (config, was_created)
+    """
+    # 1. If explicit config file is provided, use it
+    if config_file:
+        config = load_config_file(config_file)
+
+        # Apply any CLI overrides
+        if overrides:
+            # Handle specific override patterns
+            if (
+                "semantic_enabled" in overrides
+                and overrides["semantic_enabled"] is not None
+            ):
+                config.semantic_match.enabled = overrides["semantic_enabled"]
+            if (
+                "fuzzy_threshold" in overrides
+                and overrides["fuzzy_threshold"] is not None
+            ):
+                config.fuzzy_match.threshold = overrides["fuzzy_threshold"]
+            if (
+                "semantic_threshold" in overrides
+                and overrides["semantic_threshold"] is not None
+            ):
+                config.semantic_match.threshold = overrides["semantic_threshold"]
+            if "max_workers" in overrides and overrides["max_workers"] is not None:
+                config.performance.max_workers = overrides["max_workers"]
+            if (
+                "parallel_threshold" in overrides
+                and overrides["parallel_threshold"] is not None
+            ):
+                config.performance.parallel_threshold = overrides["parallel_threshold"]
+            if (
+                "enable_progress" in overrides
+                and overrides["enable_progress"] is not None
+            ):
+                config.performance.enable_progress = overrides["enable_progress"]
+            if (
+                "enable_monitoring" in overrides
+                and overrides["enable_monitoring"] is not None
+            ):
+                config.performance.enable_monitoring = overrides["enable_monitoring"]
+            if (
+                "allow_fallback" in overrides
+                and overrides["allow_fallback"] is not None
+            ):
+                config.performance.allow_fallback = overrides["allow_fallback"]
+            if "cache_size" in overrides and overrides["cache_size"] is not None:
+                config.performance.cache_size = overrides["cache_size"]
+            if "cache_dir" in overrides and overrides["cache_dir"] is not None:
+                config.cache_dir = overrides["cache_dir"]
+            if "output_format" in overrides and overrides["output_format"] is not None:
+                config.output_format = overrides["output_format"]
+            if "verbose" in overrides and overrides["verbose"] is not None:
+                config.verbose = overrides["verbose"]
+            if "max_results" in overrides and overrides["max_results"] is not None:
+                config.max_results = overrides["max_results"]
+            if "log_level" in overrides and overrides["log_level"] is not None:
+                config.log_level = overrides["log_level"]
+            if "refresh_cache" in overrides and overrides["refresh_cache"] is not None:
+                config.refresh_cache = overrides["refresh_cache"]
+
+        return config, False
+
+    # 2. Look for existing .repomap/config.json
+    discovered_config = discover_config_file(project_path)
+    if discovered_config:
+        config = load_config_file(discovered_config)
+
+        # Apply any CLI overrides (same as above)
+        if overrides:
+            # Handle specific override patterns
+            if (
+                "semantic_enabled" in overrides
+                and overrides["semantic_enabled"] is not None
+            ):
+                config.semantic_match.enabled = overrides["semantic_enabled"]
+            if (
+                "fuzzy_threshold" in overrides
+                and overrides["fuzzy_threshold"] is not None
+            ):
+                config.fuzzy_match.threshold = overrides["fuzzy_threshold"]
+            if (
+                "semantic_threshold" in overrides
+                and overrides["semantic_threshold"] is not None
+            ):
+                config.semantic_match.threshold = overrides["semantic_threshold"]
+            if "max_workers" in overrides and overrides["max_workers"] is not None:
+                config.performance.max_workers = overrides["max_workers"]
+            if (
+                "parallel_threshold" in overrides
+                and overrides["parallel_threshold"] is not None
+            ):
+                config.performance.parallel_threshold = overrides["parallel_threshold"]
+            if (
+                "enable_progress" in overrides
+                and overrides["enable_progress"] is not None
+            ):
+                config.performance.enable_progress = overrides["enable_progress"]
+            if (
+                "enable_monitoring" in overrides
+                and overrides["enable_monitoring"] is not None
+            ):
+                config.performance.enable_monitoring = overrides["enable_monitoring"]
+            if (
+                "allow_fallback" in overrides
+                and overrides["allow_fallback"] is not None
+            ):
+                config.performance.allow_fallback = overrides["allow_fallback"]
+            if "cache_size" in overrides and overrides["cache_size"] is not None:
+                config.performance.cache_size = overrides["cache_size"]
+            if "cache_dir" in overrides and overrides["cache_dir"] is not None:
+                config.cache_dir = overrides["cache_dir"]
+            if "output_format" in overrides and overrides["output_format"] is not None:
+                config.output_format = overrides["output_format"]
+            if "verbose" in overrides and overrides["verbose"] is not None:
+                config.verbose = overrides["verbose"]
+            if "max_results" in overrides and overrides["max_results"] is not None:
+                config.max_results = overrides["max_results"]
+            if "log_level" in overrides and overrides["log_level"] is not None:
+                config.log_level = overrides["log_level"]
+            if "refresh_cache" in overrides and overrides["refresh_cache"] is not None:
+                config.refresh_cache = overrides["refresh_cache"]
+
+        return config, False
+
+    # 3. Create new default config
+    config = create_default_config(
+        project_path=project_path,
+        fuzzy=True,
+        semantic=overrides.get("semantic_enabled", False),
+        threshold=overrides.get("semantic_threshold", 0.7),
+        max_results=overrides.get("max_results", 50),
+        output=overrides.get("output_format", "table"),
+        verbose=overrides.get("verbose", False),
+        max_workers=overrides.get("max_workers", 4),
+        parallel_threshold=overrides.get("parallel_threshold", 10),
+        no_progress=not overrides.get("enable_progress", True),
+        no_monitoring=not overrides.get("enable_monitoring", True),
+        allow_fallback=overrides.get("allow_fallback", False),
+        cache_size=overrides.get("cache_size", 1000),
+        log_level=overrides.get("log_level", "INFO"),
+        refresh_cache=overrides.get("refresh_cache", False),
+    )
+
+    # Apply cache_dir override if provided
+    if "cache_dir" in overrides and overrides["cache_dir"] is not None:
+        config.cache_dir = overrides["cache_dir"]
+
+    # Save it to .repomap/config.json
+    create_default_config_file(project_path, config)
+
+    return config, True
+
+
 def create_default_config(
     project_path: str,
     fuzzy: bool,
@@ -525,7 +726,6 @@ def create_default_config(
 
     # Create fuzzy match config
     fuzzy_config = FuzzyMatchConfig(
-        enabled=fuzzy,
         threshold=int(threshold * 100),  # Convert to percentage
         strategies=["prefix", "substring", "levenshtein"],
     )
@@ -547,9 +747,13 @@ def create_default_config(
         cache_size=cache_size,
     )
 
+    # Get cache directory from environment variable if set
+    cache_dir = os.environ.get("CACHE_DIR")
+
     # Create main config
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         performance=performance_config,
@@ -577,10 +781,9 @@ def create_search_config(
     if match_type not in ["fuzzy", "semantic", "hybrid"]:
         match_type = "hybrid"
 
-    fuzzy_enabled = match_type in ["fuzzy", "hybrid"]
     semantic_enabled = match_type in ["semantic", "hybrid"]
 
-    fuzzy_config = FuzzyMatchConfig(enabled=fuzzy_enabled)
+    fuzzy_config = FuzzyMatchConfig()
     semantic_config = SemanticMatchConfig(enabled=semantic_enabled)
 
     # Create performance config with cache settings
@@ -590,8 +793,12 @@ def create_search_config(
         cache_size=cache_size,
     )
 
+    # Get cache directory from environment variable if set
+    cache_dir = os.environ.get("CACHE_DIR")
+
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         performance=performance_config,
@@ -610,14 +817,18 @@ def create_tree_config(
     """Create configuration for tree-related operations (explore, focus, expand, prune, map, list_trees, status)."""
     from .models import TreeConfig
 
-    fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+    fuzzy_config = FuzzyMatchConfig(threshold=70, cache_results=True)
     semantic_config = SemanticMatchConfig(
         enabled=True, threshold=0.7, cache_results=True
     )
     tree_config = TreeConfig(max_depth=max_depth, entrypoint_threshold=0.6)
 
+    # Get cache directory from environment variable if set
+    cache_dir = os.environ.get("CACHE_DIR")
+
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         trees=tree_config,
@@ -633,7 +844,6 @@ def create_basic_config(
 ) -> RepoMapConfig:
     """Create basic configuration for simple operations (cache)."""
     fuzzy_config = FuzzyMatchConfig(
-        enabled=True,
         threshold=70,
         cache_results=True,
     )
@@ -643,8 +853,12 @@ def create_basic_config(
         cache_results=True,
     )
 
+    # Get cache directory from environment variable if set
+    cache_dir = os.environ.get("CACHE_DIR")
+
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         verbose=verbose,
@@ -1271,7 +1485,6 @@ def dependencies(
 
         # Create dependency configuration
         dependency_config = DependencyConfig(
-            enabled=True,
             max_graph_size=max_files,
             enable_call_graph=enable_call_graph,
             enable_impact_analysis=enable_impact_analysis,
@@ -1371,7 +1584,7 @@ def centrality(
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
-        dependency_config = DependencyConfig(enabled=True)
+        dependency_config = DependencyConfig()
 
         # Create main configuration
         config = RepoMapConfig(
@@ -1482,7 +1695,6 @@ def impact(
 
         # Create dependency configuration
         dependency_config = DependencyConfig(
-            enabled=True,
             enable_impact_analysis=True,
         )
 
@@ -1579,7 +1791,7 @@ def cycles(
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
-        dependency_config = DependencyConfig(enabled=True)
+        dependency_config = DependencyConfig()
 
         # Create main configuration
         config = RepoMapConfig(

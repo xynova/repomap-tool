@@ -759,7 +759,7 @@ class TestConfigurationIntegrationEdgeCases:
                 config = RepoMapConfig(**edge_case_config)
                 # Use resolve() to handle symlink differences on macOS
                 assert config.project_root.resolve() == Path(temp_dir).resolve()
-                assert config.fuzzy_match.enabled is True
+                # Fuzzy matching is always enabled
                 assert config.semantic_match.enabled is True
             except Exception as e:
                 pytest.fail(f"Edge case config broke the system: {e}")

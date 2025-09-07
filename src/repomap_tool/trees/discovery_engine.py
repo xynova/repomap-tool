@@ -100,7 +100,7 @@ class EntrypointDiscoverer:
             )
 
         # Use existing fuzzy matching for additional matches
-        if self.fuzzy_matcher and self.fuzzy_matcher.enabled:
+        if self.fuzzy_matcher:
             fuzzy_entrypoints = self._discover_fuzzy_entrypoints(
                 intent, all_symbols, project_path
             )

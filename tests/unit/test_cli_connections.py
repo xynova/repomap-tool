@@ -30,7 +30,7 @@ class TestCLIConnections:
 
     def test_fuzzy_option_connection(self):
         """Test that --fuzzy/--no-fuzzy properly enables/disables fuzzy matching."""
-        # Test fuzzy enabled
+        # Test fuzzy matching (always enabled)
         config = create_default_config(
             project_path=".",
             fuzzy=True,
@@ -41,7 +41,7 @@ class TestCLIConnections:
             verbose=True,
         )
 
-        assert config.fuzzy_match.enabled is True
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is False
 
         # Test fuzzy disabled
@@ -55,7 +55,7 @@ class TestCLIConnections:
             verbose=True,
         )
 
-        assert config.fuzzy_match.enabled is False
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is True
 
     def test_semantic_option_connection(self):
@@ -72,7 +72,7 @@ class TestCLIConnections:
         )
 
         assert config.semantic_match.enabled is True
-        assert config.fuzzy_match.enabled is False
+        # Fuzzy matching is always enabled
 
         # Test semantic disabled
         config = create_default_config(
@@ -86,7 +86,7 @@ class TestCLIConnections:
         )
 
         assert config.semantic_match.enabled is False
-        assert config.fuzzy_match.enabled is True
+        # Fuzzy matching is always enabled
 
     def test_output_format_connection(self):
         """Test that --output properly sets output_format."""
@@ -273,7 +273,7 @@ class TestCLIConnections:
             cache_size=1500,
         )
 
-        assert config.fuzzy_match.enabled is True
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is False
         assert config.log_level == "DEBUG"
         assert config.performance.cache_size == 1500
@@ -285,7 +285,7 @@ class TestCLIConnections:
             verbose=True,
         )
 
-        assert config.fuzzy_match.enabled is False
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is True
 
         # Test hybrid match type
@@ -295,7 +295,7 @@ class TestCLIConnections:
             verbose=True,
         )
 
-        assert config.fuzzy_match.enabled is True
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is True
 
 
@@ -336,7 +336,7 @@ class TestConfigFileLoading:
 
             assert isinstance(config, RepoMapConfig)
             assert config.project_root == Path(".").resolve()
-            assert config.fuzzy_match.enabled is True
+            # Fuzzy matching is always enabled
             assert config.fuzzy_match.threshold == 70
             assert config.semantic_match.enabled is False
             assert config.performance.max_workers == 8
@@ -354,7 +354,7 @@ class TestConfigFileLoading:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_data = {
                 "project_root": "/nonexistent/project",  # Invalid path
-                "fuzzy_match": {"enabled": "not_a_boolean"},  # Invalid type
+                "fuzzy_match": {"threshold": "not_a_number"},  # Invalid type
             }
             json.dump(config_data, f)
             config_path = f.name
@@ -388,7 +388,7 @@ class TestConfigurationValidation:
 
     def test_at_least_one_matching_method_enabled(self):
         """Test that at least one matching method must be enabled."""
-        # This should work (fuzzy enabled)
+        # This should work (fuzzy matching always enabled)
         config = create_default_config(
             project_path=".",
             fuzzy=True,
@@ -464,7 +464,7 @@ class TestCLIOverrides:
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             config_data = {
                 "project_root": ".",
-                "fuzzy_match": {"enabled": False, "threshold": 50},
+                "fuzzy_match": {"threshold": 50},
                 "semantic_match": {"enabled": True, "threshold": 0.3},
                 "performance": {"cache_size": 1000},
                 "max_results": 25,
@@ -480,7 +480,7 @@ class TestCLIOverrides:
             config = load_config_file(config_path)
 
             # Verify original settings
-            assert config.fuzzy_match.enabled is False
+            # Fuzzy matching is always enabled
             assert config.semantic_match.enabled is True
             assert config.performance.cache_size == 1000
             assert config.max_results == 25
