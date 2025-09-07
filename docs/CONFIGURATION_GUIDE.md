@@ -155,26 +155,83 @@ repomap-tool analyze /path/to/project --config .repomap.json
 
 ## 🔧 Environment Variables
 
-### **Core Environment Variables**
+Environment variables provide a powerful way to override configuration settings without modifying files. They take precedence over file-based configuration but are overridden by CLI arguments.
+
+### **Core Configuration Variables**
 
 ```bash
+# Basic settings
+export REPOMAP_VERBOSE="true"
+export REPOMAP_LOG_LEVEL="DEBUG"
+export REPOMAP_OUTPUT_FORMAT="json"
+export REPOMAP_MAX_RESULTS="100"
+export REPOMAP_REFRESH_CACHE="true"
+
 # Cache configuration
 export REPOMAP_CACHE_DIR="/path/to/cache"
-export REPOMAP_CACHE_ENABLED="true"
-export REPOMAP_CACHE_TTL="24"
+export CACHE_DIR="/path/to/cache"  # Legacy support
+```
 
-# Logging configuration
-export REPOMAP_LOG_LEVEL="INFO"
-export REPOMAP_LOG_FILE="repomap.log"
+### **Performance Configuration Variables**
 
-# Output configuration
-export REPOMAP_OUTPUT_FORMAT="table"
-export REPOMAP_OUTPUT_LIMIT="10"
+```bash
+# Parallel processing
+export REPOMAP_MAX_WORKERS="8"
+export REPOMAP_PARALLEL_THRESHOLD="20"
+export REPOMAP_ALLOW_FALLBACK="false"
 
-# Matching configuration
-export REPOMAP_FUZZY_THRESHOLD="80"
-export REPOMAP_SEMANTIC_THRESHOLD="70"
-export REPOMAP_HYBRID_WEIGHTS="0.6,0.4"
+# Memory and caching
+export REPOMAP_CACHE_SIZE="2000"
+export REPOMAP_MAX_MEMORY_MB="200"
+export REPOMAP_CACHE_TTL="7200"
+
+# Progress and monitoring
+export REPOMAP_ENABLE_PROGRESS="true"
+export REPOMAP_ENABLE_MONITORING="true"
+```
+
+### **Fuzzy Matching Configuration Variables**
+
+```bash
+# Fuzzy matching settings
+export REPOMAP_FUZZY_THRESHOLD="85"
+export REPOMAP_FUZZY_STRATEGIES="levenshtein,jaro_winkler,prefix"
+export REPOMAP_FUZZY_CACHE_RESULTS="true"
+```
+
+### **Semantic Matching Configuration Variables**
+
+```bash
+# Semantic matching settings
+export REPOMAP_SEMANTIC_ENABLED="true"
+export REPOMAP_SEMANTIC_THRESHOLD="0.8"
+export REPOMAP_SEMANTIC_USE_TFIDF="true"
+export REPOMAP_SEMANTIC_MIN_WORD_LENGTH="3"
+export REPOMAP_SEMANTIC_CACHE_RESULTS="true"
+```
+
+### **Tree Exploration Configuration Variables**
+
+```bash
+# Tree settings
+export REPOMAP_TREE_MAX_DEPTH="5"
+export REPOMAP_TREE_MAX_TREES_PER_SESSION="20"
+export REPOMAP_TREE_ENTRYPOINT_THRESHOLD="0.8"
+export REPOMAP_TREE_ENABLE_CODE_SNIPPETS="true"
+export REPOMAP_TREE_CACHE_STRUCTURES="true"
+```
+
+### **Dependency Analysis Configuration Variables**
+
+```bash
+# Dependency analysis settings
+export REPOMAP_DEP_CACHE_GRAPHS="true"
+export REPOMAP_DEP_MAX_GRAPH_SIZE="5000"
+export REPOMAP_DEP_ENABLE_CALL_GRAPH="true"
+export REPOMAP_DEP_ENABLE_IMPACT_ANALYSIS="true"
+export REPOMAP_DEP_CENTRALITY_ALGORITHMS="degree,betweenness,pagerank"
+export REPOMAP_DEP_MAX_CENTRALITY_CACHE_SIZE="500"
+export REPOMAP_DEP_PERFORMANCE_THRESHOLD_SECONDS="15.0"
 ```
 
 ### **Development Environment Variables**
@@ -269,24 +326,27 @@ export REPOMAP_DOCKER_TAG="latest"
 
 Configuration options are applied in the following order (highest to lowest priority):
 
-1. **CLI arguments** - Command-line options
-2. **Configuration file** - `repomap.json` or specified config file
-3. **Environment variables** - System environment variables
-4. **Default values** - Built-in defaults
+1. **CLI arguments** - Command-line options (highest priority)
+2. **Environment variables** - System environment variables
+3. **Configuration file** - `repomap.json` or specified config file
+4. **Default values** - Built-in defaults (lowest priority)
 
 ### **Example Precedence**
 
 ```bash
-# CLI argument overrides config file
-repomap-tool search /path/to/project "query" --fuzzy-threshold 90
-
-# Environment variable overrides default
+# Environment variable overrides config file
 export REPOMAP_FUZZY_THRESHOLD="85"
-repomap-tool search /path/to/project "query"  # Uses 85
+repomap-tool search /path/to/project "query"  # Uses 85 (env var overrides file)
 
 # CLI argument overrides environment variable
 export REPOMAP_FUZZY_THRESHOLD="85"
-repomap-tool search /path/to/project "query" --fuzzy-threshold 90  # Uses 90
+repomap-tool search /path/to/project "query" --fuzzy-threshold 90  # Uses 90 (CLI overrides env var)
+
+# Complete precedence chain example:
+# 1. Config file sets fuzzy_threshold: 70
+# 2. Environment variable REPOMAP_FUZZY_THRESHOLD="80" overrides file
+# 3. CLI argument --fuzzy-threshold 90 overrides environment variable
+# Final result: fuzzy_threshold = 90
 ```
 
 ## 🐳 Docker Configuration
