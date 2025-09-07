@@ -1,4 +1,4 @@
-# Docker RepoMap: Repository Organization Analysis
+# RepoMap-Tool: Repository Organization Analysis
 
 ## 🔍 **Current State Analysis**
 

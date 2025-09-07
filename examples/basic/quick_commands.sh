@@ -4,7 +4,7 @@
 # Set your project path here
 PROJECT_PATH="${1:-$PWD}"
 
-echo "Quick Docker RepoMap Commands"
+echo "Quick RepoMap-Tool Commands"
 echo "============================="
 echo "Project: $PROJECT_PATH"
 echo ""

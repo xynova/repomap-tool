@@ -7,7 +7,7 @@ PROJECT_PATH="${1:-$(pwd)/..}"
 # Convert to absolute path
 PROJECT_PATH=$(realpath "$PROJECT_PATH")
 
-echo "Feature Development with Docker RepoMap"
+echo "Feature Development with RepoMap-Tool"
 echo "======================================"
 echo "Project: $PROJECT_PATH"
 echo "Example: Adding 'aider export' command"

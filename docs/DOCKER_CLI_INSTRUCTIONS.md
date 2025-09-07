@@ -385,13 +385,6 @@ docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspa
 docker run --rm -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local show-centrality /workspace
 ```
 
-### 17. `cache` - Cache Management
-**Purpose**: Show cache status and optionally refresh caches.
-
-**Usage**:
-```bash
-docker run --rm -v $(pwd)/.repomap/cache:/app/cache repomap-tool:local cache
-```
 
 ## Volume Mounting Best Practices
 
@@ -592,12 +585,6 @@ docker tag ghcr.io/xynova/repomap-tool:latest repomap-tool:local
 docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic
 ```
 
-**5. Performance metrics showing zero values**
-```bash
-# The performance command runs a separate analysis
-# Run analyze command first to see actual performance metrics
-docker run --rm -t -v $(pwd)/.repomap/cache:/app/cache -v /path/to/project:/workspace repomap-tool:local analyze /workspace --fuzzy --semantic --verbose
-```
 
 **6. File limit warnings in dependency analysis**
 ```bash

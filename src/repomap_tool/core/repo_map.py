@@ -254,32 +254,6 @@ class RepoMapService:
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
 
-    def get_cache_status(self) -> Dict[str, Any]:
-        """Get comprehensive cache status information."""
-        status: Dict[str, Any] = {
-            "project_root": str(self.config.project_root),
-            "fuzzy_matcher_cache": None,
-            "tracked_files": [],
-            "cache_enabled": False,
-        }
-
-        # Get fuzzy matcher cache status
-        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
-            cache_manager = self.fuzzy_matcher.cache_manager
-            if cache_manager:
-                status["fuzzy_matcher_cache"] = cache_manager.get_stats()
-                status["tracked_files"] = cache_manager.get_tracked_files()
-                status["cache_enabled"] = True
-
-        return status
-
-    def refresh_all_caches(self) -> None:
-        """Force refresh of all caches by clearing them."""
-        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
-            cache_manager = self.fuzzy_matcher.cache_manager
-            if cache_manager:
-                cache_manager.clear()
-                self.logger.info("Cleared fuzzy matcher cache")
 
     def analyze_project(self) -> ProjectInfo:
         """Get comprehensive project information."""
@@ -393,28 +367,6 @@ class RepoMapService:
 
         return project_info
 
-    def get_performance_metrics(self) -> Dict[str, Any]:
-        """
-        Get performance metrics from the parallel processor.
-
-        Returns:
-            Dictionary containing performance metrics
-        """
-        if not self.config.performance.enable_monitoring:
-            return {"monitoring_disabled": True}
-
-        try:
-            metrics = self.parallel_extractor.get_performance_metrics()
-            metrics["configuration"] = {
-                "max_workers": self.config.performance.max_workers,
-                "parallel_threshold": self.config.performance.parallel_threshold,
-                "enable_progress": self.config.performance.enable_progress,
-                "enable_monitoring": self.config.performance.enable_monitoring,
-            }
-            return metrics
-        except Exception as e:
-            self.logger.warning(f"Failed to get performance metrics: {e}")
-            return {"error": str(e)}
 
     def search_identifiers(self, request: SearchRequest) -> SearchResponse:
         """Perform search based on request configuration."""

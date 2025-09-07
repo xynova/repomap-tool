@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-models.py - Pydantic models for Docker RepoMap
+models.py - Pydantic models for RepoMap-Tool
 
 This module defines structured data models for configuration, API requests/responses,
 and match results using Pydantic for validation and serialization.
@@ -135,7 +135,7 @@ class DependencyConfig(BaseModel):
 
 
 class RepoMapConfig(BaseModel):
-    """Main configuration for Docker RepoMap."""
+    """Main configuration for RepoMap-Tool."""
 
     project_root: Union[str, Path]
     map_tokens: int = Field(

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "🧪 Testing Docker RepoMap Tool Against Real Codebase"
+echo "🧪 Testing RepoMap-Tool Tool Against Real Codebase"
 echo "===================================================="
 
 # Check if we're in CI (DOCKER_IMAGE_NAME is set) or local development

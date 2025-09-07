@@ -637,67 +637,6 @@ def utility_function():
         output = result_json.output
         assert "[" in output and "]" in output
 
-    def test_cache_command_real(self, cli_runner, temp_project_with_dependencies):
-        """Test cache command with real cache operations."""
-        # Test cache status
-        result = cli_runner.invoke(
-            cli,
-            [
-                "--no-color",
-                "cache",
-                temp_project_with_dependencies,
-                "--output",
-                "table",
-            ],
-        )
-
-        # Should succeed
-        assert result.exit_code == 0
-
-        # Should contain cache status information
-        output = result.output
-        assert "Cache Status" in output
-        assert "Component" in output or "Status" in output
-
-        # Test cache refresh
-        result_refresh = cli_runner.invoke(
-            cli,
-            [
-                "--no-color",
-                "cache",
-                temp_project_with_dependencies,
-                "--refresh",
-                "--output",
-                "json",
-            ],
-        )
-
-        # Should succeed
-        assert result_refresh.exit_code == 0
-
-        # Should contain cache refresh confirmation
-        output = result_refresh.output
-        assert "All caches cleared" in output or "cache" in output.lower()
-
-        # Test verbose mode
-        result_verbose = cli_runner.invoke(
-            cli,
-            [
-                "--no-color",
-                "cache",
-                temp_project_with_dependencies,
-                "--verbose",
-                "--output",
-                "table",
-            ],
-        )
-
-        # Should succeed
-        assert result_verbose.exit_code == 0
-
-        # Should contain verbose cache information
-        output = result_verbose.output
-        assert "Cache Status" in output
 
     def test_advanced_dependency_commands_error_handling(self, cli_runner):
         """Test error handling for advanced dependency commands."""
@@ -1048,22 +987,6 @@ def handle_authentication_request():
         result = cli_runner.invoke(cli, ["--no-color", "find-cycles", large_project])
         assert result.exit_code in [0, 1]
 
-    def test_cache_command_edge_cases(self, cli_runner, empty_project, large_project):
-        """Test cache command with edge cases."""
-
-        # Test with empty project
-        result = cli_runner.invoke(cli, ["--no-color", "cache", empty_project])
-        assert result.exit_code in [0, 1]
-
-        # Test with large project
-        result = cli_runner.invoke(cli, ["--no-color", "cache", large_project])
-        assert result.exit_code in [0, 1]
-
-        # Test cache refresh with large project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "cache", large_project, "--refresh"]
-        )
-        assert result.exit_code in [0, 1]
 
     def test_explore_command_edge_cases(self, cli_runner, empty_project, large_project):
         """Test explore command with edge cases."""
@@ -1107,18 +1030,6 @@ def handle_authentication_request():
         )
         assert result.exit_code != 0
 
-    def test_performance_command_edge_cases(
-        self, cli_runner, empty_project, large_project
-    ):
-        """Test performance command with edge cases."""
-
-        # Test with empty project
-        result = cli_runner.invoke(cli, ["--no-color", "performance", empty_project])
-        assert result.exit_code in [0, 1]
-
-        # Test with large project
-        result = cli_runner.invoke(cli, ["--no-color", "performance", large_project])
-        assert result.exit_code in [0, 1]
 
     def test_version_command(self, cli_runner):
         """Test version command."""
@@ -1130,7 +1041,7 @@ def handle_authentication_request():
         """Test help command."""
         result = cli_runner.invoke(cli, ["--no-color", "--help"])
         assert result.exit_code == 0
-        assert "Docker RepoMap" in result.output
+        assert "RepoMap-Tool" in result.output
 
     def test_invalid_command(self, cli_runner):
         """Test invalid command."""

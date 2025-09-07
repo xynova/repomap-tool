@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Docker RepoMap Tool - A comprehensive tool for analyzing Docker repositories
+RepoMap-Tool Tool - A comprehensive tool for analyzing Docker repositories
 and finding similar identifiers across different codebases.
 """
 

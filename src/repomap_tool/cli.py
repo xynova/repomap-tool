@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-cli.py - Command Line Interface for Docker RepoMap
+cli.py - Command Line Interface for RepoMap-Tool
 
 This module provides a CLI interface using Click and Pydantic models
 for argument validation and structured output.
@@ -65,7 +65,7 @@ def get_project_path_from_session(session_id: str) -> Optional[str]:
 @click.pass_context
 @click.version_option(version="0.1.0")
 def cli(ctx: click.Context, no_color: bool) -> None:
-    """Docker RepoMap - Intelligent code analysis and identifier matching."""
+    """RepoMap-Tool - Intelligent code analysis and identifier matching."""
     # Configure console based on no-color option
     global console
     if no_color:
@@ -444,154 +444,11 @@ def config(
 
 
 @cli.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
-@click.option(
-    "--max-workers",
-    type=int,
-    default=4,
-    help="Maximum worker threads for parallel processing",
-)
-@click.option(
-    "--parallel-threshold",
-    type=int,
-    default=10,
-    help="Minimum files to trigger parallel processing",
-)
-@click.option("--no-progress", is_flag=True, help="Disable progress bars")
-@click.option("--no-monitoring", is_flag=True, help="Disable performance monitoring")
-@click.option(
-    "--allow-fallback",
-    is_flag=True,
-    help="Allow fallback to sequential processing on errors (not recommended)",
-)
-def performance(
-    project_path: str,
-    max_workers: int,
-    parallel_threshold: int,
-    no_progress: bool,
-    no_monitoring: bool,
-    allow_fallback: bool,
-) -> None:
-    """Show performance metrics for the project."""
-
-    try:
-        # Create performance-focused configuration
-        from .models import PerformanceConfig, RepoMapConfig
-
-        performance_config = PerformanceConfig(
-            max_workers=max_workers,
-            parallel_threshold=parallel_threshold,
-            enable_progress=not no_progress,
-            enable_monitoring=not no_monitoring,
-            allow_fallback=allow_fallback,
-        )
-
-        from .models import FuzzyMatchConfig, SemanticMatchConfig
-
-        fuzzy_config = FuzzyMatchConfig(
-            enabled=True,
-            threshold=70,
-            strategies=["prefix", "substring", "levenshtein"],
-            cache_results=True,
-        )
-        semantic_config = SemanticMatchConfig(
-            enabled=True,
-            threshold=0.7,
-            use_tfidf=True,
-            min_word_length=3,
-            cache_results=True,
-        )
-
-        config = RepoMapConfig(
-            project_root=project_path,
-            performance=performance_config,
-            fuzzy_match=fuzzy_config,
-            semantic_match=semantic_config,
-            verbose=True,
-        )
-
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
-
-        # Get performance metrics
-        metrics = repomap.get_performance_metrics()
-
-        # Display metrics
-        if metrics.get("monitoring_disabled"):
-            console.print("[yellow]Performance monitoring is disabled[/yellow]")
-            return
-
-        if "error" in metrics:
-            console.print(f"[red]Error getting metrics: {metrics['error']}[/red]")
-            return
-
-        # Create rich table for display
-        table = Table(title="Performance Metrics")
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
-
-        # Configuration
-        config_metrics = metrics.get("configuration", {})
-        table.add_row("Max Workers", str(config_metrics.get("max_workers", "N/A")))
-        table.add_row(
-            "Parallel Threshold", str(config_metrics.get("parallel_threshold", "N/A"))
-        )
-        table.add_row(
-            "Progress Enabled", str(config_metrics.get("enable_progress", "N/A"))
-        )
-        table.add_row(
-            "Monitoring Enabled", str(config_metrics.get("enable_monitoring", "N/A"))
-        )
-
-        # Processing stats
-        processing_stats = metrics.get("processing_stats", {})
-        if processing_stats:
-            table.add_row("Total Files", str(processing_stats.get("total_files", 0)))
-            table.add_row(
-                "Successful Files", str(processing_stats.get("successful_files", 0))
-            )
-            table.add_row("Failed Files", str(processing_stats.get("failed_files", 0)))
-            table.add_row(
-                "Success Rate", f"{processing_stats.get('success_rate', 0):.1f}%"
-            )
-            table.add_row(
-                "Total Identifiers", str(processing_stats.get("total_identifiers", 0))
-            )
-            table.add_row(
-                "Processing Time", f"{processing_stats.get('processing_time', 0):.2f}s"
-            )
-            table.add_row(
-                "Files per Second", f"{processing_stats.get('files_per_second', 0):.1f}"
-            )
-
-        # File size stats
-        file_size_stats = metrics.get("file_size_stats", {})
-        if file_size_stats:
-            table.add_row(
-                "Total Size (MB)", f"{file_size_stats.get('total_size_mb', 0):.2f}"
-            )
-            table.add_row(
-                "Average Size (KB)", f"{file_size_stats.get('avg_size_kb', 0):.1f}"
-            )
-            table.add_row(
-                "Largest File (KB)", f"{file_size_stats.get('largest_file_kb', 0):.1f}"
-            )
-
-        console.print(table)
-
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        sys.exit(1)
-
-
-@cli.command()
 def version() -> None:
     """Show version information."""
     console.print(
         Panel(
-            "[bold blue]Docker RepoMap[/bold blue]\n"
+            "[bold blue]RepoMap-Tool[/bold blue]\n"
             "Version: 0.1.0\n"
             "A portable code analysis tool using aider libraries\n"
             "with fuzzy and semantic matching capabilities.",
@@ -1334,97 +1191,6 @@ def status(session: Optional[str]) -> None:
 
     except Exception as e:
         error_response = create_error_response(str(e), "StatusError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
-        sys.exit(1)
-
-
-@cli.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
-@click.option(
-    "--refresh",
-    is_flag=True,
-    help="Refresh/clear all caches before showing status",
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Choice(["json", "table"]),
-    default="table",
-    help="Output format",
-)
-@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def cache(
-    project_path: str,
-    refresh: bool,
-    output: str,
-    verbose: bool,
-) -> None:
-    """Show cache status and optionally refresh caches."""
-
-    try:
-        # Create minimal configuration for cache operations
-        config = create_basic_config(project_path, verbose)
-
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
-
-        # Refresh caches if requested
-        if refresh:
-            console.print("[yellow]Refreshing all caches...[/yellow]")
-            repomap.refresh_all_caches()
-            console.print("[green]✓ All caches cleared[/green]")
-
-        # Get cache status
-        status = repomap.get_cache_status()
-
-        # Display results
-        if output == "json":
-            import json
-
-            console.print(json.dumps(status, indent=2, default=str))
-        else:
-            # Create table display
-            table = Table(title="Cache Status")
-            table.add_column("Component", style="cyan")
-            table.add_column("Status", style="green")
-            table.add_column("Details", style="yellow")
-
-            # Cache enabled status
-            cache_enabled = "✓ Enabled" if status["cache_enabled"] else "✗ Disabled"
-            table.add_row(
-                "Cache System", cache_enabled, f"Project: {status['project_root']}"
-            )
-
-            # Fuzzy matcher cache details
-            if status["fuzzy_matcher_cache"]:
-                cache_stats = status["fuzzy_matcher_cache"]
-                cache_details = (
-                    f"Size: {cache_stats['cache_size']}/{cache_stats['max_size']} entries\n"
-                    f"Hit rate: {cache_stats['hit_rate_percent']}%\n"
-                    f"Files tracked: {cache_stats['tracked_files']}"
-                )
-                table.add_row("Fuzzy Matcher", "✓ Active", cache_details)
-            else:
-                table.add_row(
-                    "Fuzzy Matcher", "✗ No cache", "Cache disabled or not initialized"
-                )
-
-            console.print(table)
-
-            # Show tracked files if verbose
-            if verbose and status["tracked_files"]:
-                files_table = Table(title="Tracked Files")
-                files_table.add_column("File Path", style="cyan")
-
-                for file_path in status["tracked_files"]:
-                    files_table.add_row(file_path)
-
-                console.print(files_table)
-
-    except Exception as e:
-        error_response = create_error_response(str(e), "CacheError")
         console.print(f"[red]Error: {error_response.error}[/red]")
         sys.exit(1)
 

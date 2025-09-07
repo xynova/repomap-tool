@@ -1,4 +1,4 @@
-# Semantic Matching Implementation Guide for Docker RepoMap
+# Semantic Matching Implementation Guide for RepoMap-Tool
 
 ## 🎯 **Overview**
 
@@ -271,7 +271,7 @@ class HybridSemanticMatcher:
         return weighted_similarity
 ```
 
-## 🔧 **Integration with Docker RepoMap**
+## 🔧 **Integration with RepoMap-Tool**
 
 ### **Enhanced Fuzzy Matcher with Semantic Matching**
 ```python

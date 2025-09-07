@@ -2,7 +2,7 @@
 
 ## Overview
 
-We've successfully integrated **Pydantic** into the Docker RepoMap project, providing structured data validation, configuration management, and type safety throughout the codebase.
+We've successfully integrated **Pydantic** into the RepoMap-Tool project, providing structured data validation, configuration management, and type safety throughout the codebase.
 
 ## ✅ What We've Added
 
@@ -190,7 +190,7 @@ class RepoMapConfig(BaseModel):
 
 ## 🎉 Conclusion
 
-The Pydantic integration has transformed the Docker RepoMap project from a collection of loosely-typed functions into a **well-structured, type-safe, and maintainable** codebase. The benefits are immediate and will continue to pay dividends as the project grows.
+The Pydantic integration has transformed the RepoMap-Tool project from a collection of loosely-typed functions into a **well-structured, type-safe, and maintainable** codebase. The benefits are immediate and will continue to pay dividends as the project grows.
 
 **Key achievements:**
 - 🎯 **100% type safety** with runtime validation

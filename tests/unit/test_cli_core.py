@@ -216,25 +216,6 @@ class TestCLICore:
         finally:
             os.unlink(config_file)
 
-    def test_performance_command_exists(self, cli_runner):
-        """Test that performance command exists and shows help."""
-        result = cli_runner.invoke(cli, ["performance", "--help"])
-        assert result.exit_code == 0
-        assert "performance" in result.output.lower()
-
-    def test_performance_basic_usage(self, cli_runner, temp_project):
-        """Test basic performance command usage."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.get_performance_metrics.return_value = {
-                "processing_time": 1.0,
-                "memory_usage": "100MB",
-                "cache_hit_rate": 0.8,
-            }
-
-            result = cli_runner.invoke(cli, ["performance", temp_project])
-            assert result.exit_code == 0
-            assert "Performance Metrics" in result.output
 
     def test_version_command(self, cli_runner):
         """Test version command."""
@@ -348,20 +329,6 @@ class TestCLICore:
         # It might fail due to missing session, but that's expected
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
-    def test_cache_command_exists(self, cli_runner):
-        """Test that cache command exists and shows help."""
-        result = cli_runner.invoke(cli, ["cache", "--help"])
-        assert result.exit_code == 0
-        assert "cache" in result.output.lower()
-
-    def test_cache_basic_usage(self, cli_runner):
-        """Test basic usage of cache command."""
-        # Cache command requires project path
-        # Just test that it accepts the basic arguments
-        result = cli_runner.invoke(cli, ["cache", "/tmp"])  # Use a temporary path
-
-        # It might fail due to missing project, but that's expected
-        assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
     def test_cli_error_handling(self, cli_runner):
         """Test CLI error handling."""

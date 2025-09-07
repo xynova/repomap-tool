@@ -1,8 +1,8 @@
-# Docker RepoMap Development Guide
+# RepoMap-Tool Development Guide
 
 ## 🐍 **Virtual Environment Setup**
 
-This guide explains how to set up and use the isolated development environment for Docker RepoMap.
+This guide explains how to set up and use the isolated development environment for RepoMap-Tool.
 
 ## 🚀 **Quick Start**
 
@@ -289,7 +289,7 @@ docker-compose -f docker-compose.dev.yml run repomap-test
 
 ### **GitHub Actions Example**
 ```yaml
-name: Test Docker RepoMap
+name: Test RepoMap-Tool
 
 on: [push, pull_request]
 
@@ -376,4 +376,4 @@ jobs:
 
 ---
 
-*This development environment provides a clean, isolated space for testing and developing the Docker RepoMap tool while maintaining all the benefits of the aider integration.*
+*This development environment provides a clean, isolated space for testing and developing the RepoMap-Tool tool while maintaining all the benefits of the aider integration.*

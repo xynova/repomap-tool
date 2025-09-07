@@ -427,85 +427,12 @@ class TestCLIHelperFunctions:
         mock_config.model_dump.assert_called_once_with(mode="json")
         assert mock_console.print.call_count >= 2
 
-    @patch("src.repomap_tool.cli.RepoMapService")
-    @patch("src.repomap_tool.cli.console")
-    @patch("src.repomap_tool.models.PerformanceConfig")
-    @patch("src.repomap_tool.models.RepoMapConfig")
-    def test_performance_command_logic(
-        self, mock_repo_map_config, mock_perf_config, mock_console, mock_repo_map
-    ):
-        """Test the logic that would be executed by the performance command."""
-        # Mock the RepoMap
-        mock_repomap_instance = Mock()
-        mock_repo_map.return_value = mock_repomap_instance
-
-        # Mock performance metrics
-        mock_metrics = {
-            "configuration": {
-                "max_workers": 4,
-                "parallel_threshold": 10,
-                "enable_progress": True,
-                "enable_monitoring": True,
-            },
-            "processing_stats": {
-                "total_files": 100,
-                "successful_files": 95,
-                "failed_files": 5,
-                "success_rate": 95.0,
-                "total_identifiers": 1000,
-                "processing_time": 1.5,
-                "files_per_second": 66.7,
-            },
-            "file_size_stats": {
-                "total_size_mb": 10.5,
-                "avg_size_kb": 105.0,
-                "largest_file_kb": 500.0,
-            },
-        }
-        mock_repomap_instance.get_performance_metrics.return_value = mock_metrics
-
-        # Mock config objects
-        mock_perf_config_instance = Mock()
-        mock_perf_config.return_value = mock_perf_config_instance
-
-        mock_repo_map_config_instance = Mock()
-        mock_repo_map_config.return_value = mock_repo_map_config_instance
-
-        # This simulates what the performance command would do
-        performance_config = mock_perf_config(
-            max_workers=4,
-            parallel_threshold=10,
-            enable_progress=True,
-            enable_monitoring=True,
-            allow_fallback=False,
-        )
-
-        config = mock_repo_map_config(
-            project_root=".",
-            performance=performance_config,
-            verbose=True,
-        )
-
-        repomap = mock_repo_map(config)
-        metrics = repomap.get_performance_metrics()
-
-        # Verify the function calls
-        mock_perf_config.assert_called_once()
-        mock_repo_map_config.assert_called_once()
-        mock_repo_map.assert_called_once_with(mock_repo_map_config_instance)
-        mock_repomap_instance.get_performance_metrics.assert_called_once()
-
-        # Verify metrics structure
-        assert "configuration" in metrics
-        assert "processing_stats" in metrics
-        assert "file_size_stats" in metrics
-
     @patch("src.repomap_tool.cli.console")
     def test_version_command_logic(self, mock_console):
         """Test the logic that would be executed by the version command."""
         # This simulates what the version command would do
         version_info = (
-            "[bold blue]Docker RepoMap[/bold blue]\n"
+            "[bold blue]RepoMap-Tool[/bold blue]\n"
             "Version: 0.1.0\n"
             "A portable code analysis tool using aider libraries"
         )
