@@ -528,8 +528,8 @@ docker tag ghcr.io/xynova/repomap-tool:latest repomap-tool:local
 
 ### 2. Use Cache Persistence
 Always mount a cache directory to avoid re-analyzing unchanged code:
-```bash
-```
+# Mount your project directory to persist the .repomap cache
+-v /path/to/your/project:/workspace
 
 ### 3. Start with Analysis
 For large projects, run analysis first to build the code map:
