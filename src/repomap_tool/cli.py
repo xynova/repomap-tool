@@ -606,7 +606,9 @@ def resolve_project_path(
     if config_obj is None:
         # Use current directory as fallback when no project path or config is provided
         current_dir = str(Path.cwd())
-        console.print(f"[blue]No project path provided, using current directory: {current_dir}[/blue]")
+        console.print(
+            f"[blue]No project path provided, using current directory: {current_dir}[/blue]"
+        )
         return current_dir
 
     project_path = str(config_obj.project_root)
