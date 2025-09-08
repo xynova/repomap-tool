@@ -1,4 +1,4 @@
-# Docker RepoMap - Refactoring Guide
+# RepoMap-Tool - Refactoring Guide
 
 ## 🎯 **The Problem You Identified**
 

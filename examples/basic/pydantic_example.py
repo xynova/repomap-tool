@@ -203,7 +203,7 @@ def example_error_handling():
 
 def main():
     """Run all examples."""
-    print("🚀 Docker RepoMap Pydantic Integration Examples")
+    print("🚀 RepoMap-Tool Pydantic Integration Examples")
     print("=" * 60)
 
     example_configuration_validation()

@@ -1,4 +1,4 @@
-# Docker RepoMap: Technical Architecture
+# RepoMap-Tool: Technical Architecture
 
 ## 🔧 **System Components Overview**
 
@@ -327,7 +327,7 @@ graph TB
 ```mermaid
 graph LR
     A[IDE/Editor] --> B[Plugin/Extension]
-    B --> C[Docker RepoMap API]
+    B --> C[RepoMap-Tool API]
     C --> D[Analysis Engine]
     D --> E[Results Display]
     

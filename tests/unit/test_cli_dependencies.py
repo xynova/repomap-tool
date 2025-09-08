@@ -43,7 +43,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_command_exists(self, cli_runner):
         """Test that analyze-dependencies command exists and shows help."""
-        result = cli_runner.invoke(cli, ["analyze-dependencies", "--help"])
+        result = cli_runner.invoke(cli, ["search", "dependencies", "--help"])
         assert result.exit_code == 0
         assert (
             "Analyze project dependencies and build dependency graph" in result.output
@@ -54,7 +54,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_basic_usage(self, cli_runner, temp_project):
         """Test basic usage of analyze-dependencies command."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             # Mock the dependency graph
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
@@ -72,7 +72,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["analyze-dependencies", temp_project, "--output", "text"]
+                cli, ["search", "dependencies", temp_project, "--output", "text"]
             )
 
             assert result.exit_code == 0
@@ -82,7 +82,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_json_output(self, cli_runner, temp_project):
         """Test analyze-dependencies with JSON output."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 3,
@@ -97,7 +97,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["analyze-dependencies", temp_project, "--output", "json"]
+                cli, ["search", "dependencies", temp_project, "--output", "json"]
             )
 
             assert result.exit_code == 0
@@ -118,7 +118,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_table_output(self, cli_runner, temp_project):
         """Test analyze-dependencies with table output."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 4,
@@ -134,7 +134,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["analyze-dependencies", temp_project, "--output", "table"]
+                cli, ["search", "dependencies", temp_project, "--output", "table"]
             )
 
             assert result.exit_code == 0
@@ -144,7 +144,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_with_options(self, cli_runner, temp_project):
         """Test analyze-dependencies with various options."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 10,
@@ -162,7 +162,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "analyze-dependencies",
+                    "search",
+                    "dependencies",
                     temp_project,
                     "--max-files",
                     "500",
@@ -179,7 +180,7 @@ class TestCLIDependencies:
 
     def test_show_centrality_command_exists(self, cli_runner):
         """Test that show-centrality command exists and shows help."""
-        result = cli_runner.invoke(cli, ["show-centrality", "--help"])
+        result = cli_runner.invoke(cli, ["analyze", "centrality", "--help"])
         assert result.exit_code == 0
         assert "Show centrality analysis for project files" in result.output
         assert "--file" in result.output
@@ -187,7 +188,7 @@ class TestCLIDependencies:
 
     def test_show_centrality_all_files(self, cli_runner, temp_project):
         """Test show-centrality for all files."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.get_centrality_scores.return_value = {
                 "file1.py": 0.8,
@@ -197,7 +198,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["show-centrality", temp_project, "--output", "table"]
+                cli, ["analyze", "centrality", temp_project, "--output", "table"]
             )
 
             assert result.exit_code == 0
@@ -207,7 +208,7 @@ class TestCLIDependencies:
 
     def test_show_centrality_specific_file(self, cli_runner, temp_project):
         """Test show-centrality for a specific file."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.get_centrality_scores.return_value = {"src/main.py": 0.9}
             mock_repo_map.return_value = mock_instance
@@ -215,7 +216,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "show-centrality",
+                    "analyze",
+                    "centrality",
                     temp_project,
                     "--file",
                     "src/main.py",
@@ -230,7 +232,7 @@ class TestCLIDependencies:
 
     def test_show_centrality_file_not_found(self, cli_runner, temp_project):
         """Test show-centrality when file is not found."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.get_centrality_scores.return_value = {"existing.py": 0.5}
             mock_repo_map.return_value = mock_instance
@@ -238,7 +240,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "show-centrality",
+                    "analyze",
+                    "centrality",
                     temp_project,
                     "--file",
                     "nonexistent.py",
@@ -252,7 +255,7 @@ class TestCLIDependencies:
 
     def test_impact_analysis_command_exists(self, cli_runner):
         """Test that impact-analysis command exists and shows help."""
-        result = cli_runner.invoke(cli, ["impact-analysis", "--help"])
+        result = cli_runner.invoke(cli, ["analyze", "impact", "--help"])
         assert result.exit_code == 0
         assert "Analyze impact of changes to specific files" in result.output
         assert "--files" in result.output
@@ -260,7 +263,7 @@ class TestCLIDependencies:
 
     def test_impact_analysis_basic_usage(self, cli_runner, temp_project):
         """Test basic usage of impact-analysis command."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             # Mock impact report as dictionary
             mock_report = {
                 "risk_score": 0.7,
@@ -276,7 +279,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "impact-analysis",
+                    "analyze",
+                    "impact",
                     temp_project,
                     "--files",
                     "main.py",
@@ -292,14 +296,14 @@ class TestCLIDependencies:
 
     def test_impact_analysis_no_files_specified(self, cli_runner, temp_project):
         """Test impact-analysis when no files are specified."""
-        result = cli_runner.invoke(cli, ["impact-analysis", temp_project])
+        result = cli_runner.invoke(cli, ["analyze", "impact", temp_project])
 
         assert result.exit_code == 1
         assert "Must specify at least one file with --files" in result.output
 
     def test_impact_analysis_multiple_files(self, cli_runner, temp_project):
         """Test impact-analysis with multiple files."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             # Mock multiple impact reports as dictionaries
             mock_report1 = {
                 "risk_score": 0.5,
@@ -325,7 +329,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "impact-analysis",
+                    "analyze",
+                    "impact",
                     temp_project,
                     "--files",
                     "file1.py",
@@ -342,20 +347,20 @@ class TestCLIDependencies:
 
     def test_find_cycles_command_exists(self, cli_runner):
         """Test that find-cycles command exists and shows help."""
-        result = cli_runner.invoke(cli, ["find-cycles", "--help"])
+        result = cli_runner.invoke(cli, ["search", "cycles", "--help"])
         assert result.exit_code == 0
         assert "Find circular dependencies in the project" in result.output
         assert "--output" in result.output
 
     def test_find_cycles_no_cycles(self, cli_runner, temp_project):
         """Test find-cycles when no cycles exist."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.find_circular_dependencies.return_value = []
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["find-cycles", temp_project, "--output", "text"]
+                cli, ["search", "cycles", temp_project, "--output", "text"]
             )
 
             assert result.exit_code == 0
@@ -363,7 +368,7 @@ class TestCLIDependencies:
 
     def test_find_cycles_with_cycles(self, cli_runner, temp_project):
         """Test find-cycles when cycles exist."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.find_circular_dependencies.return_value = [
                 ["file1.py", "file2.py", "file1.py"],
@@ -372,7 +377,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["find-cycles", temp_project, "--output", "text"]
+                cli, ["search", "cycles", temp_project, "--output", "text"]
             )
 
             assert result.exit_code == 0
@@ -381,7 +386,7 @@ class TestCLIDependencies:
 
     def test_find_cycles_json_output(self, cli_runner, temp_project):
         """Test find-cycles with JSON output."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.find_circular_dependencies.return_value = [
                 ["file1.py", "file2.py", "file1.py"]
@@ -389,7 +394,7 @@ class TestCLIDependencies:
             mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
-                cli, ["find-cycles", temp_project, "--output", "json"]
+                cli, ["search", "cycles", temp_project, "--output", "json"]
             )
 
             assert result.exit_code == 0
@@ -411,21 +416,21 @@ class TestCLIDependencies:
 
     def test_cli_error_handling(self, cli_runner, temp_project):
         """Test CLI error handling when dependencies are disabled."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_instance = Mock()
             mock_instance.build_dependency_graph.side_effect = RuntimeError(
                 "Dependency analysis is not enabled"
             )
             mock_repo_map.return_value = mock_instance
 
-            result = cli_runner.invoke(cli, ["analyze-dependencies", temp_project])
+            result = cli_runner.invoke(cli, ["search", "dependencies", temp_project])
 
             assert result.exit_code == 1
             assert "Error: Dependency analysis is not enabled" in result.output
 
     def test_cli_invalid_project_path(self, cli_runner):
         """Test CLI with invalid project path."""
-        result = cli_runner.invoke(cli, ["analyze-dependencies", "/nonexistent/path"])
+        result = cli_runner.invoke(cli, ["search", "dependencies", "/nonexistent/path"])
 
         # Click returns exit code 2 for usage errors
         assert result.exit_code == 2
@@ -433,7 +438,7 @@ class TestCLIDependencies:
 
     def test_cli_output_format_validation(self, cli_runner, temp_project):
         """Test CLI output format validation."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 1,
@@ -450,14 +455,14 @@ class TestCLIDependencies:
             # Test invalid output format
             result = cli_runner.invoke(
                 cli,
-                ["analyze-dependencies", temp_project, "--output", "invalid_format"],
+                ["search", "dependencies", temp_project, "--output", "invalid_format"],
             )
 
             assert result.exit_code == 2  # Click error for invalid choice
 
     def test_cli_verbose_output(self, cli_runner, temp_project):
         """Test CLI verbose output."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 2,
@@ -474,7 +479,14 @@ class TestCLIDependencies:
 
             result = cli_runner.invoke(
                 cli,
-                ["analyze-dependencies", temp_project, "--verbose", "--output", "text"],
+                [
+                    "search",
+                    "dependencies",
+                    temp_project,
+                    "--verbose",
+                    "--output",
+                    "text",
+                ],
             )
 
             assert result.exit_code == 0
@@ -483,7 +495,7 @@ class TestCLIDependencies:
 
     def test_cli_configuration_integration(self, cli_runner, temp_project):
         """Test that CLI properly creates and uses configuration."""
-        with patch("repomap_tool.cli.DockerRepoMap") as mock_repo_map:
+        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 1,
@@ -501,7 +513,8 @@ class TestCLIDependencies:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "analyze-dependencies",
+                    "search",
+                    "dependencies",
                     temp_project,
                     "--max-files",
                     "500",
@@ -514,7 +527,7 @@ class TestCLIDependencies:
 
             assert result.exit_code == 0
 
-            # Verify DockerRepoMap was called with proper configuration
+            # Verify RepoMapService was called with proper configuration
             mock_repo_map.assert_called_once()
             call_args = mock_repo_map.call_args[0][0]
             assert isinstance(call_args, RepoMapConfig)

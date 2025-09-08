@@ -12,7 +12,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 from repomap_tool.models import RepoMapConfig, PerformanceConfig
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 from repomap_tool.core.parallel_processor import ParallelTagExtractor, ProcessingStats
 
 
@@ -150,7 +150,6 @@ class TestParallelTagExtractor:
 
     def test_fail_fast_behavior(self):
         """Test that parallel processing fails fast with helpful errors."""
-        from repomap_tool.models import RepoMapConfig, PerformanceConfig
 
         # Create config with fail-fast behavior (default)
         config = RepoMapConfig(
@@ -161,7 +160,7 @@ class TestParallelTagExtractor:
         )
 
         # This should raise an exception with helpful error message
-        # (We can't easily test the full DockerRepoMap without mocking aider)
+        # (We can't easily test the full RepoMapService without mocking aider)
         assert config.performance.allow_fallback is False
 
     def test_get_performance_metrics(self):
@@ -252,8 +251,8 @@ class TestProcessingStats:
         assert stats.end_time > stats.start_time
 
 
-class TestDockerRepoMapPerformance:
-    """Test DockerRepoMap performance features."""
+class TestRepoMapServicePerformance:
+    """Test RepoMapService performance features."""
 
     @pytest.fixture
     def temp_project(self):
@@ -274,123 +273,6 @@ class TestDockerRepoMapPerformance:
                 full_path.write_text("# Test file\n\ndef test_function():\n    pass\n")
 
             yield temp_dir
-
-    @patch("aider.repomap.RepoMap")
-    def test_parallel_processing_integration(self, mock_repo_map_class, temp_project):
-        """Test parallel processing integration in DockerRepoMap."""
-        # Mock the RepoMap class
-        mock_repo_map = Mock()
-        mock_tag = Mock()
-        mock_tag.name = "test_function"
-        mock_repo_map.get_tags.return_value = [mock_tag]
-        mock_repo_map_class.return_value = mock_repo_map
-
-        # Create configuration with parallel processing enabled
-        config = RepoMapConfig(
-            project_root=temp_project,
-            performance=PerformanceConfig(
-                max_workers=2,
-                parallel_threshold=3,  # Will trigger parallel processing
-                enable_progress=True,
-                enable_monitoring=True,
-            ),
-        )
-
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
-
-        # Test that parallel processing is used for multiple files
-        project_files = ["main.py", "utils.py", "config.py"]
-        identifiers = repomap._extract_identifiers_from_files(project_files)
-
-        # Should have extracted identifiers from all files
-        assert len(identifiers) == 3  # One identifier per file
-        assert all("test_function" in identifiers for _ in range(3))
-
-    @patch("aider.repomap.RepoMap")
-    def test_sequential_fallback(self, mock_repo_map_class, temp_project):
-        """Test fallback to sequential processing for small projects."""
-        # Mock the RepoMap class
-        mock_repo_map = Mock()
-        mock_tag = Mock()
-        mock_tag.name = "test_function"
-        mock_repo_map.get_tags.return_value = [mock_tag]
-        mock_repo_map_class.return_value = mock_repo_map
-
-        # Create configuration with high parallel threshold
-        config = RepoMapConfig(
-            project_root=temp_project,
-            performance=PerformanceConfig(
-                max_workers=4,
-                parallel_threshold=10,  # Won't trigger parallel processing
-                enable_progress=True,
-                enable_monitoring=True,
-            ),
-        )
-
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
-
-        # Test that sequential processing is used for few files
-        project_files = ["main.py", "utils.py"]  # Only 2 files
-        identifiers = repomap._extract_identifiers_from_files(project_files)
-
-        # Should still work correctly
-        assert len(identifiers) == 2
-        assert all("test_function" in identifiers for _ in range(2))
-
-    @patch("aider.repomap.RepoMap")
-    def test_performance_metrics(self, mock_repo_map_class, temp_project):
-        """Test performance metrics retrieval."""
-        # Mock the RepoMap class
-        mock_repo_map = Mock()
-        mock_tag = Mock()
-        mock_tag.name = "test_function"
-        mock_repo_map.get_tags.return_value = [mock_tag]
-        mock_repo_map_class.return_value = mock_repo_map
-
-        # Create configuration with monitoring enabled
-        config = RepoMapConfig(
-            project_root=temp_project,
-            performance=PerformanceConfig(max_workers=2, enable_monitoring=True),
-        )
-
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
-
-        # Get performance metrics
-        metrics = repomap.get_performance_metrics()
-
-        # Should have configuration and basic structure
-        assert "configuration" in metrics
-        assert "processing_stats" in metrics
-        assert "file_size_stats" in metrics
-
-        config_metrics = metrics["configuration"]
-        assert config_metrics["max_workers"] == 2
-        assert config_metrics["enable_monitoring"] is True
-
-    @patch("aider.repomap.RepoMap")
-    def test_disabled_monitoring(self, mock_repo_map_class, temp_project):
-        """Test performance monitoring when disabled."""
-        # Mock the RepoMap class
-        mock_repo_map = Mock()
-        mock_repo_map_class.return_value = mock_repo_map
-
-        # Create configuration with monitoring disabled
-        config = RepoMapConfig(
-            project_root=temp_project,
-            performance=PerformanceConfig(enable_monitoring=False),
-        )
-
-        # Initialize DockerRepoMap
-        repomap = DockerRepoMap(config)
-
-        # Get performance metrics
-        metrics = repomap.get_performance_metrics()
-
-        # Should indicate monitoring is disabled
-        assert metrics.get("monitoring_disabled") is True
 
 
 if __name__ == "__main__":

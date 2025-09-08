@@ -24,7 +24,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 # flake8: noqa: E402
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 from repomap_tool.models import (
     RepoMapConfig,
     FuzzyMatchConfig,
@@ -73,7 +73,7 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Analyze the project
         project_info = repomap.analyze_project()
@@ -124,11 +124,10 @@ class TestSelfIntegration:
 
     def test_fuzzy_search_independently(self):
         """Test fuzzy search functionality independently."""
-        # Create configuration with only fuzzy matching enabled
+        # Create configuration with fuzzy matching (always enabled) and semantic disabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(
-                enabled=True,
                 threshold=70,
                 strategies=["prefix", "substring", "levenshtein"],
             ),
@@ -137,15 +136,18 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test fuzzy search for various terms
         test_queries = [
-            "RepoMap",  # Should find DockerRepoMap, RepoMapConfig, etc.
+            "RepoMap",  # Should find RepoMapService, RepoMapConfig, etc.
             "matcher",  # Should find FuzzyMatcher, SemanticMatcher, etc.
+            "index",
             "config",  # Should find RepoMapConfig, FuzzyMatchConfig, etc.
-            "search",  # Should find search_identifiers, etc.
-            "analyze",  # Should find analyze_project, etc.
+            "search",
+            "identifiers",  # Should find search_identifiers, etc.
+            "index",
+            "create",  # Should find analyze_project, etc.
         ]
 
         for query in test_queries:
@@ -185,7 +187,7 @@ class TestSelfIntegration:
         # Create configuration with only semantic matching enabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=False),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(
                 enabled=True, threshold=0.1, use_tfidf=True
             ),
@@ -193,13 +195,15 @@ class TestSelfIntegration:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test semantic search for various concepts
         # Note: Semantic search works best with natural language that matches actual content
         test_queries = [
             "analysis",  # Should find analyze_project, etc.
-            "search",  # Should find search_identifiers, etc.
+            "search",
+            "identifiers",  # Should find search_identifiers, etc.
+            "index",
             "config",  # Should find RepoMapConfig, etc.
             "match",  # Should find matchers, etc.
         ]
@@ -242,18 +246,15 @@ class TestSelfIntegration:
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(
-                enabled=True,
                 threshold=70,
                 strategies=["prefix", "substring", "levenshtein"],
             ),
-            semantic_match=SemanticMatchConfig(
-                enabled=True, threshold=0.1, use_tfidf=True
-            ),
+            semantic_match=SemanticMatchConfig(threshold=0.1, use_tfidf=True),
             verbose=True,
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test that both individual matchers work
         # First test fuzzy search
@@ -311,16 +312,16 @@ class TestSelfIntegration:
         """Test searching for specific known identifiers in the codebase."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test for specific known identifiers
         specific_queries = [
-            "DockerRepoMap",  # Main class
+            "RepoMapService",  # Main class
             "RepoMapConfig",  # Configuration class
             "analyze_project",  # Core function
             "search_identifiers",  # Search function
@@ -367,15 +368,15 @@ class TestSelfIntegration:
         """Test that search results include proper context."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         search_request = SearchRequest(
-            query="DockerRepoMap",
+            query="RepoMapService",
             match_type="hybrid",
             max_results=3,
             include_context=True,
@@ -398,12 +399,12 @@ class TestSelfIntegration:
         """Test that search results are properly ranked by relevance."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         search_request = SearchRequest(
             query="RepoMap", match_type="hybrid", max_results=10, include_context=True
@@ -427,12 +428,12 @@ class TestSelfIntegration:
         """Test error handling for invalid queries and configurations."""
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test with empty query - should raise validation error
         try:
@@ -461,23 +462,32 @@ class TestSelfIntegration:
 
         config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,  # Disable verbose for performance test
         )
 
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
-        test_queries = ["RepoMap", "matcher", "config", "search", "analyze"]
+        test_queries = [
+            "RepoMap",
+            "matcher",
+            "index",
+            "config",
+            "search",
+            "identifiers",
+            "index",
+            "create",
+        ]
 
         # Test fuzzy only
         fuzzy_config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=False,
         )
-        fuzzy_repomap = DockerRepoMap(fuzzy_config)
+        fuzzy_repomap = RepoMapService(fuzzy_config)
 
         start_time = time.time()
         for query in test_queries:
@@ -490,11 +500,11 @@ class TestSelfIntegration:
         # Test semantic only
         semantic_config = RepoMapConfig(
             project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(enabled=False),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,
         )
-        semantic_repomap = DockerRepoMap(semantic_config)
+        semantic_repomap = RepoMapService(semantic_config)
 
         start_time = time.time()
         for query in test_queries:

@@ -4,7 +4,7 @@
 PROJECT_PATH="${1:-$(pwd)/..}"
 PROJECT_PATH=$(realpath "$PROJECT_PATH")
 
-echo "🚀 Docker RepoMap - Fuzzy Matching Examples"
+echo "🚀 RepoMap-Tool - Fuzzy Matching Examples"
 echo "=========================================="
 echo "Project: $PROJECT_PATH"
 echo ""

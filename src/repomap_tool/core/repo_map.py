@@ -1,7 +1,7 @@
 """
-Main DockerRepoMap class.
+Main RepoMapService class.
 
-This module contains the core DockerRepoMap class that orchestrates
+This module contains the core RepoMapService class that orchestrates
 code analysis and search functionality.
 """
 
@@ -42,17 +42,17 @@ except ImportError as e:
     MATCHERS_AVAILABLE = False
 
 
-class DockerRepoMap:
+class RepoMapService:
     """
-    Enhanced Docker RepoMap with Pydantic configuration and structured data handling.
+    Repository analysis service with Pydantic configuration and structured data handling.
 
-    This class provides code analysis and identifier matching capabilities
+    This service orchestrates code analysis and identifier matching capabilities
     with improved configuration management using Pydantic models.
     """
 
     def __init__(self, config: RepoMapConfig):
         """
-        Initialize Docker RepoMap with validated configuration.
+        Initialize RepoMapService with validated configuration.
 
         Args:
             config: Validated RepoMapConfig instance
@@ -83,7 +83,7 @@ class DockerRepoMap:
         # Initialize the system
         self._initialize_components()
 
-        self.logger.info(f"Initialized DockerRepoMap for {self.config.project_root}")
+        self.logger.info(f"Initialized RepoMapService for {self.config.project_root}")
 
         # Invalidate stale caches on initialization
         self._invalidate_stale_caches()
@@ -113,6 +113,8 @@ class DockerRepoMap:
         try:
             from aider.repomap import RepoMap
             from aider.io import InputOutput
+            from pathlib import Path
+            from diskcache import Cache
         except ImportError as e:
             raise ImportError(
                 f"aider-chat is required but not installed: {e}\n"
@@ -122,8 +124,41 @@ class DockerRepoMap:
         # Create real components without LLM model to avoid unnecessary initialization
         io = InputOutput()
 
+        # Create custom RepoMap that can use absolute cache directory
+        class CustomRepoMap(RepoMap):
+            def __init__(
+                self, cache_dir: str | None = None, *args: object, **kwargs: object
+            ) -> None:
+                # Set cache directory BEFORE calling parent __init__ to ensure
+                # load_tags_cache() uses the correct directory
+                if cache_dir:
+                    self.TAGS_CACHE_DIR = cache_dir
+                super().__init__(*args, **kwargs)
+
+            def load_tags_cache(self) -> None:
+                # Override to use absolute path if cache_dir is absolute
+                if hasattr(self, "TAGS_CACHE_DIR") and os.path.isabs(
+                    self.TAGS_CACHE_DIR
+                ):
+                    path = Path(self.TAGS_CACHE_DIR)
+                else:
+                    path = Path(self.root) / self.TAGS_CACHE_DIR
+
+                try:
+                    self.TAGS_CACHE = Cache(path)
+                except Exception as e:
+                    self.tags_cache_error(e)
+
+        # Determine cache directory
+        cache_dir = None
+        if self.config.cache_dir:
+            cache_dir = str(self.config.cache_dir)
+        elif os.environ.get("CACHE_DIR"):
+            cache_dir = os.environ.get("CACHE_DIR")
+
         # Initialize RepoMap without LLM model since we use our own semantic analysis
-        self.repo_map = RepoMap(
+        self.repo_map = CustomRepoMap(
+            cache_dir=cache_dir,
             map_tokens=self.config.map_tokens,
             root=str(self.config.project_root),
             main_model=None,  # No LLM model needed - we use our own matchers
@@ -142,14 +177,13 @@ class DockerRepoMap:
     def _initialize_matchers(self) -> None:
         """Initialize matching components."""
         # Initialize fuzzy matcher
-        if self.config.fuzzy_match.enabled:
-            self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
-                threshold=self.config.fuzzy_match.threshold,
-                strategies=self.config.fuzzy_match.strategies,
-                cache_results=self.config.fuzzy_match.cache_results,
-                verbose=self.config.verbose,
-            )
-            self.logger.info(f"Initialized FuzzyMatcher: {self.config.fuzzy_match}")
+        self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
+            threshold=self.config.fuzzy_match.threshold,
+            strategies=self.config.fuzzy_match.strategies,
+            cache_results=self.config.fuzzy_match.cache_results,
+            verbose=self.config.verbose,
+        )
+        self.logger.info(f"Initialized FuzzyMatcher: {self.config.fuzzy_match}")
 
         # Initialize semantic matcher
         if self.config.semantic_match.enabled:
@@ -158,8 +192,8 @@ class DockerRepoMap:
                 f"Initialized SemanticMatcher: {self.config.semantic_match}"
             )
 
-        # Initialize hybrid matcher if both are enabled
-        if self.config.fuzzy_match.enabled and self.config.semantic_match.enabled:
+        # Initialize hybrid matcher if semantic matching is enabled
+        if self.config.semantic_match.enabled:
             self.hybrid_matcher = HybridMatcher(  # type: ignore
                 fuzzy_threshold=self.config.fuzzy_match.threshold,
                 semantic_threshold=self.config.semantic_match.threshold,
@@ -168,9 +202,8 @@ class DockerRepoMap:
             self.logger.info("Initialized HybridMatcher")
 
         # Phase 2: Initialize dependency analysis components
-        if self.config.dependencies.enabled:
-            self._initialize_dependency_analysis()
-            self.logger.info("Initialized dependency analysis components")
+        self._initialize_dependency_analysis()
+        self.logger.info("Initialized dependency analysis components")
 
     def _initialize_dependency_analysis(self) -> None:
         """Initialize dependency analysis components."""
@@ -222,33 +255,6 @@ class DockerRepoMap:
 
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
-
-    def get_cache_status(self) -> Dict[str, Any]:
-        """Get comprehensive cache status information."""
-        status: Dict[str, Any] = {
-            "project_root": str(self.config.project_root),
-            "fuzzy_matcher_cache": None,
-            "tracked_files": [],
-            "cache_enabled": False,
-        }
-
-        # Get fuzzy matcher cache status
-        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
-            cache_manager = self.fuzzy_matcher.cache_manager
-            if cache_manager:
-                status["fuzzy_matcher_cache"] = cache_manager.get_stats()
-                status["tracked_files"] = cache_manager.get_tracked_files()
-                status["cache_enabled"] = True
-
-        return status
-
-    def refresh_all_caches(self) -> None:
-        """Force refresh of all caches by clearing them."""
-        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "cache_manager"):
-            cache_manager = self.fuzzy_matcher.cache_manager
-            if cache_manager:
-                cache_manager.clear()
-                self.logger.info("Cleared fuzzy matcher cache")
 
     def analyze_project(self) -> ProjectInfo:
         """Get comprehensive project information."""
@@ -361,29 +367,6 @@ class DockerRepoMap:
         )
 
         return project_info
-
-    def get_performance_metrics(self) -> Dict[str, Any]:
-        """
-        Get performance metrics from the parallel processor.
-
-        Returns:
-            Dictionary containing performance metrics
-        """
-        if not self.config.performance.enable_monitoring:
-            return {"monitoring_disabled": True}
-
-        try:
-            metrics = self.parallel_extractor.get_performance_metrics()
-            metrics["configuration"] = {
-                "max_workers": self.config.performance.max_workers,
-                "parallel_threshold": self.config.performance.parallel_threshold,
-                "enable_progress": self.config.performance.enable_progress,
-                "enable_monitoring": self.config.performance.enable_monitoring,
-            }
-            return metrics
-        except Exception as e:
-            self.logger.warning(f"Failed to get performance metrics: {e}")
-            return {"error": str(e)}
 
     def search_identifiers(self, request: SearchRequest) -> SearchResponse:
         """Perform search based on request configuration."""
@@ -605,9 +588,6 @@ class DockerRepoMap:
 
     def build_dependency_graph(self) -> Any:
         """Build dependency graph for the project."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
-
         if self.dependency_graph is None:
             raise RuntimeError("Dependency analysis components not initialized")
 
@@ -671,8 +651,7 @@ class DockerRepoMap:
 
     def get_centrality_scores(self) -> Dict[str, float]:
         """Get centrality scores for all files in the dependency graph."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if self.centrality_calculator is None:
             raise RuntimeError("Centrality calculator not initialized")
@@ -690,8 +669,7 @@ class DockerRepoMap:
 
     def analyze_change_impact(self, file_path: str) -> Dict[str, Any]:
         """Analyze the impact of changes to a specific file."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if not self.config.dependencies.enable_impact_analysis:
             raise RuntimeError("Impact analysis is not enabled")
@@ -712,8 +690,7 @@ class DockerRepoMap:
 
     def find_circular_dependencies(self) -> List[List[str]]:
         """Find circular dependencies in the project."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built
@@ -763,7 +740,7 @@ class DockerRepoMap:
 
     def fuzzy_search(self, query: str) -> List[Any]:
         """Perform a fuzzy search for a query."""
-        if not self.fuzzy_matcher or not self.fuzzy_matcher.enabled:
+        if not self.fuzzy_matcher:
             return []
 
         # This is a simplified search.
@@ -789,8 +766,7 @@ class DockerRepoMap:
         self, session_id: str, intent: str, current_files: Optional[List[str]] = None
     ) -> List[Any]:
         """Generate enhanced exploration trees with dependency intelligence."""
-        if not self.config.dependencies.enabled:
-            raise RuntimeError("Dependency analysis is not enabled")
+        # Dependency analysis is always enabled
 
         if self.dependency_graph is None or not self.dependency_graph.nodes:
             # Build graph if not already built

@@ -1,8 +1,8 @@
-# Docker RepoMap - Fuzzy Matching Feature
+# RepoMap-Tool - Fuzzy Matching Feature
 
 ## 🎯 **Overview**
 
-The Docker RepoMap tool now includes intelligent fuzzy matching capabilities that enable discovery of related identifiers in codebases. This feature makes it much easier to find relevant code when you don't know the exact function or class names.
+The RepoMap-Tool tool now includes intelligent fuzzy matching capabilities that enable discovery of related identifiers in codebases. This feature makes it much easier to find relevant code when you don't know the exact function or class names.
 
 ## 🚀 **Key Features**
 
@@ -325,4 +325,4 @@ Reuse results for repeated queries.
 
 ---
 
-**Fuzzy matching makes Docker RepoMap more intelligent and user-friendly! 🎯**
+**Fuzzy matching makes RepoMap-Tool more intelligent and user-friendly! 🎯**

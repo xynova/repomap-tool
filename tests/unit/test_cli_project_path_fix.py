@@ -100,7 +100,7 @@ class TestCLIProjectPathFix:
         with (
             patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
             patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
-            patch("repomap_tool.cli.DockerRepoMap") as mock_repomap_class,
+            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
             mock_session_manager = MagicMock()
@@ -121,13 +121,15 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run focus command
-                    result = self.runner.invoke(cli, ["focus", "test_tree_id"])
+                    result = self.runner.invoke(
+                        cli, ["explore", "focus", "test_tree_id"]
+                    )
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
                     assert "✅ Focused on tree: test_tree_id" in result.output
 
-                    # Verify DockerRepoMap was initialized with correct project path
+                    # Verify RepoMapService was initialized with correct project path
                     mock_repomap_class.assert_called_once()
                     call_args = mock_repomap_class.call_args
                     config = call_args[0][0]  # First positional argument
@@ -147,7 +149,7 @@ class TestCLIProjectPathFix:
         with (
             patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
             patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
-            patch("repomap_tool.cli.DockerRepoMap") as mock_repomap_class,
+            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
             mock_session_manager = MagicMock()
@@ -168,13 +170,13 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run expand command
-                    result = self.runner.invoke(cli, ["expand", "test_area"])
+                    result = self.runner.invoke(cli, ["explore", "expand", "test_area"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
                     assert "✅ Expanded tree in area: test_area" in result.output
 
-                    # Verify DockerRepoMap was initialized with correct project path
+                    # Verify RepoMapService was initialized with correct project path
                     mock_repomap_class.assert_called_once()
                     call_args = mock_repomap_class.call_args
                     config = call_args[0][0]  # First positional argument
@@ -194,7 +196,7 @@ class TestCLIProjectPathFix:
         with (
             patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
             patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
-            patch("repomap_tool.cli.DockerRepoMap") as mock_repomap_class,
+            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
             mock_session_manager = MagicMock()
@@ -215,13 +217,13 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run prune command
-                    result = self.runner.invoke(cli, ["prune", "test_area"])
+                    result = self.runner.invoke(cli, ["explore", "prune", "test_area"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
                     assert "✅ Pruned tree in area: test_area" in result.output
 
-                    # Verify DockerRepoMap was initialized with correct project path
+                    # Verify RepoMapService was initialized with correct project path
                     mock_repomap_class.assert_called_once()
                     call_args = mock_repomap_class.call_args
                     config = call_args[0][0]  # First positional argument
@@ -242,7 +244,7 @@ class TestCLIProjectPathFix:
             patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
             patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
             patch("repomap_tool.trees.TreeMapper") as mock_tree_mapper_class,
-            patch("repomap_tool.cli.DockerRepoMap") as mock_repomap_class,
+            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
             mock_session_manager = MagicMock()
@@ -267,13 +269,13 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run map command
-                    result = self.runner.invoke(cli, ["map"])
+                    result = self.runner.invoke(cli, ["explore", "map"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
                     assert "Mock tree map" in result.output
 
-                    # Verify DockerRepoMap was initialized with correct project path
+                    # Verify RepoMapService was initialized with correct project path
                     mock_repomap_class.assert_called_once()
                     call_args = mock_repomap_class.call_args
                     config = call_args[0][0]  # First positional argument
@@ -293,7 +295,7 @@ class TestCLIProjectPathFix:
         # Mock the session manager
         with (
             patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
-            patch("repomap_tool.cli.DockerRepoMap") as mock_repomap_class,
+            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
             mock_session_manager = MagicMock()
@@ -310,12 +312,12 @@ class TestCLIProjectPathFix:
                     os.chdir(self.other_dir)
 
                     # Run list-trees command
-                    result = self.runner.invoke(cli, ["list-trees"])
+                    result = self.runner.invoke(cli, ["explore", "trees"])
 
                     # Verify the command succeeded
                     assert result.exit_code == 0
 
-                    # Verify DockerRepoMap was initialized with correct project path
+                    # Verify RepoMapService was initialized with correct project path
                     mock_repomap_class.assert_called_once()
                     call_args = mock_repomap_class.call_args
                     config = call_args[0][0]  # First positional argument
@@ -336,29 +338,29 @@ class TestCLIProjectPathFix:
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Test focus command
-                result = self.runner.invoke(cli, ["focus", "test_tree"])
+                result = self.runner.invoke(cli, ["explore", "focus", "test_tree"])
                 assert (
                     result.exit_code == 0
                 )  # Command doesn't exit with error, just returns
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test expand command
-                result = self.runner.invoke(cli, ["expand", "test_area"])
+                result = self.runner.invoke(cli, ["explore", "expand", "test_area"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test prune command
-                result = self.runner.invoke(cli, ["prune", "test_area"])
+                result = self.runner.invoke(cli, ["explore", "prune", "test_area"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test map command
-                result = self.runner.invoke(cli, ["map"])
+                result = self.runner.invoke(cli, ["explore", "map"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
                 # Test list-trees command
-                result = self.runner.invoke(cli, ["list-trees"])
+                result = self.runner.invoke(cli, ["explore", "trees"])
                 assert result.exit_code == 0
                 assert "💡 Make sure you have an active session" in result.output
 
@@ -374,7 +376,7 @@ class TestCLIProjectPathFix:
         with (
             patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
             patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
-            patch("repomap_tool.cli.DockerRepoMap") as mock_repomap_class,
+            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
             mock_session_manager = MagicMock()
@@ -405,13 +407,15 @@ class TestCLIProjectPathFix:
                         os.chdir(test_dir)
 
                         # Run focus command
-                        result = self.runner.invoke(cli, ["focus", "test_tree"])
+                        result = self.runner.invoke(
+                            cli, ["explore", "focus", "test_tree"]
+                        )
 
                         # Verify the command succeeded
                         assert result.exit_code == 0
                         assert "✅ Focused on tree: test_tree" in result.output
 
-                        # Verify DockerRepoMap was initialized with correct project path
+                        # Verify RepoMapService was initialized with correct project path
                         mock_repomap_class.assert_called_once()
                         call_args = mock_repomap_class.call_args
                         config = call_args[0][0]  # First positional argument

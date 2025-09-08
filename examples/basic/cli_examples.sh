@@ -1,7 +1,7 @@
 #!/bin/bash
 # cli_examples.sh - Command-line examples for docker-repomap
 
-echo "Docker RepoMap Command-Line Examples"
+echo "RepoMap-Tool Command-Line Examples"
 echo "===================================="
 
 # Example project path (change this to your actual project)

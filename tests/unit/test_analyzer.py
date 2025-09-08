@@ -278,7 +278,7 @@ class TestAnalyzerIntegration:
         ]
 
         identifiers = {
-            "DockerRepoMap",
+            "RepoMapService",
             "FuzzyMatcher",
             "RepoMapConfig",
             "test_fuzzy_search",
@@ -299,7 +299,7 @@ class TestAnalyzerIntegration:
 
         assert (
             identifier_types["classes"] >= 3
-        )  # DockerRepoMap, FuzzyMatcher, RepoMapConfig
+        )  # RepoMapService, FuzzyMatcher, RepoMapConfig
         assert (
             identifier_types["functions"] >= 3
         )  # test_fuzzy_search, analyze_project, search_identifiers

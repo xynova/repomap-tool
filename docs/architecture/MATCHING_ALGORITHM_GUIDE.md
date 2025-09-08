@@ -1,4 +1,4 @@
-# Docker RepoMap - Matching Algorithm Guide
+# RepoMap-Tool - Matching Algorithm Guide
 
 ## 🎯 **Is RepoMap Matching Exact?**
 

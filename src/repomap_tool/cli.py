@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-cli.py - Command Line Interface for Docker RepoMap
+cli.py - Command Line Interface for RepoMap-Tool
 
 This module provides a CLI interface using Click and Pydantic models
 for argument validation and structured output.
@@ -10,6 +10,7 @@ import json
 import sys
 import os
 from typing import Optional, Literal, Dict, Any
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -27,7 +28,7 @@ from .models import (
     create_error_response,
 )
 from pydantic import ValidationError
-from .core import DockerRepoMap
+from .core import RepoMapService
 
 console = Console()
 
@@ -65,7 +66,7 @@ def get_project_path_from_session(session_id: str) -> Optional[str]:
 @click.pass_context
 @click.version_option(version="0.1.0")
 def cli(ctx: click.Context, no_color: bool) -> None:
-    """Docker RepoMap - Intelligent code analysis and identifier matching."""
+    """RepoMap-Tool - Intelligent code analysis and identifier matching."""
     # Configure console based on no-color option
     global console
     if no_color:
@@ -74,9 +75,42 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     ctx.obj["no_color"] = no_color
 
 
-@cli.command()
+# Create command groups
+@cli.group()
+def index() -> None:
+    """Project indexing and setup commands."""
+    pass
+
+
+@cli.group()
+def search() -> None:
+    """Search and discovery commands."""
+    pass
+
+
+@cli.group()
+def explore() -> None:
+    """Session-based exploration commands."""
+    pass
+
+
+@cli.group()
+def analyze() -> None:
+    """Advanced analysis commands."""
+    pass
+
+
+@cli.group()
+def system() -> None:
+    """System information commands."""
+    pass
+
+
+@index.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--config",
@@ -161,8 +195,8 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     default="medium",
     help="Output compression level",
 )
-def analyze(
-    project_path: str,
+def create(
+    project_path: Optional[str],
     config: Optional[str],
     fuzzy: bool,
     semantic: bool,
@@ -187,15 +221,16 @@ def analyze(
     max_dependencies: int,
     compression: str,
 ) -> None:
-    """Analyze a project and generate a code map."""
+    """Create project index by scanning files and extracting symbols."""
 
     try:
-        # Load configuration
+        # Resolve project path from argument, config file, or discovery
+        project_path = resolve_project_path(project_path, config)
+        # Load or create config with auto-discovery
         if config:
             config_obj = load_config_file(config)
             # Apply CLI overrides to loaded config
-            if fuzzy is not None:
-                config_obj.fuzzy_match.enabled = fuzzy
+            # Fuzzy matching is always enabled, no need to handle fuzzy parameter
             if semantic is not None:
                 config_obj.semantic_match.enabled = semantic
             if threshold is not None:
@@ -224,23 +259,36 @@ def analyze(
             if refresh_cache is not None:
                 config_obj.refresh_cache = refresh_cache
         else:
-            config_obj = create_default_config(
-                project_path,
-                fuzzy,
-                semantic,
-                threshold,
-                max_results,
-                output,  # type: ignore[arg-type]
-                verbose,
-                max_workers,
-                parallel_threshold,
-                no_progress,
-                no_monitoring,
-                allow_fallback,
-                cache_size,
-                log_level,
-                refresh_cache,
+            # Use automatic config discovery
+            config_obj, was_created = load_or_create_config(
+                project_path=project_path,
+                # Apply CLI overrides
+                cache_dir=os.environ.get("CACHE_DIR"),
+                output_format=output,
+                verbose=verbose,
+                max_results=max_results,
+                log_level=log_level,
+                refresh_cache=refresh_cache,
+                # Additional overrides based on CLI flags
+                semantic_enabled=semantic,
+                fuzzy_threshold=int(threshold * 100) if threshold else None,
+                semantic_threshold=threshold,
+                max_workers=max_workers,
+                parallel_threshold=parallel_threshold,
+                enable_progress=not no_progress,
+                enable_monitoring=not no_monitoring,
+                allow_fallback=allow_fallback,
+                cache_size=cache_size,
             )
+
+            if was_created:
+                console.print(
+                    f"[green]✓[/green] Created new config file: {get_config_file_path(project_path)}"
+                )
+            else:
+                console.print(
+                    f"[blue]ℹ[/blue] Using existing config: {get_config_file_path(project_path)}"
+                )
 
         # Initialize RepoMap
         with Progress(
@@ -250,7 +298,7 @@ def analyze(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = DockerRepoMap(config_obj)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analyzing project...")
 
             # Analyze project with progress tracking
@@ -277,11 +325,19 @@ def analyze(
         sys.exit(1)
 
 
-@cli.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
+@search.command()
 @click.argument("query", type=str)
+@click.argument(
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file (JSON/YAML)",
+)
 @click.option(
     "--match-type",
     type=click.Choice(["fuzzy", "semantic", "hybrid"]),
@@ -315,9 +371,10 @@ def analyze(
     default=1000,
     help="Maximum cache entries (100-10000)",
 )
-def search(
-    project_path: str,
+def identifiers(
     query: str,
+    project_path: Optional[str],
+    config: Optional[str],
     match_type: Literal["fuzzy", "semantic", "hybrid"],
     threshold: float,
     max_results: int,
@@ -330,9 +387,12 @@ def search(
     """Search for identifiers in a project."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
+
         # Create configuration
-        config = create_search_config(
-            project_path, match_type, verbose, log_level, cache_size
+        config_obj = create_search_config(
+            resolved_project_path, match_type, verbose, log_level, cache_size
         )
 
         # Create search request
@@ -352,7 +412,7 @@ def search(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Searching identifiers...")
 
             # Perform search
@@ -369,9 +429,11 @@ def search(
         sys.exit(1)
 
 
-@cli.command()
+@index.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option("--output", "-o", type=click.Path(), help="Output file for configuration")
 @click.option(
@@ -397,7 +459,7 @@ def search(
     help="Cache size for generated config",
 )
 def config(
-    project_path: str,
+    project_path: Optional[str],
     output: Optional[str],
     fuzzy: bool,
     semantic: bool,
@@ -407,6 +469,8 @@ def config(
     """Generate a configuration file for the project."""
 
     try:
+        # Resolve project path from argument or discovery
+        project_path = resolve_project_path(project_path, None)
         # Create default configuration
         config_obj = create_default_config(
             project_path,
@@ -443,155 +507,12 @@ def config(
         sys.exit(1)
 
 
-@cli.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
-@click.option(
-    "--max-workers",
-    type=int,
-    default=4,
-    help="Maximum worker threads for parallel processing",
-)
-@click.option(
-    "--parallel-threshold",
-    type=int,
-    default=10,
-    help="Minimum files to trigger parallel processing",
-)
-@click.option("--no-progress", is_flag=True, help="Disable progress bars")
-@click.option("--no-monitoring", is_flag=True, help="Disable performance monitoring")
-@click.option(
-    "--allow-fallback",
-    is_flag=True,
-    help="Allow fallback to sequential processing on errors (not recommended)",
-)
-def performance(
-    project_path: str,
-    max_workers: int,
-    parallel_threshold: int,
-    no_progress: bool,
-    no_monitoring: bool,
-    allow_fallback: bool,
-) -> None:
-    """Show performance metrics for the project."""
-
-    try:
-        # Create performance-focused configuration
-        from .models import PerformanceConfig, RepoMapConfig
-
-        performance_config = PerformanceConfig(
-            max_workers=max_workers,
-            parallel_threshold=parallel_threshold,
-            enable_progress=not no_progress,
-            enable_monitoring=not no_monitoring,
-            allow_fallback=allow_fallback,
-        )
-
-        from .models import FuzzyMatchConfig, SemanticMatchConfig
-
-        fuzzy_config = FuzzyMatchConfig(
-            enabled=True,
-            threshold=70,
-            strategies=["prefix", "substring", "levenshtein"],
-            cache_results=True,
-        )
-        semantic_config = SemanticMatchConfig(
-            enabled=True,
-            threshold=0.7,
-            use_tfidf=True,
-            min_word_length=3,
-            cache_results=True,
-        )
-
-        config = RepoMapConfig(
-            project_root=project_path,
-            performance=performance_config,
-            fuzzy_match=fuzzy_config,
-            semantic_match=semantic_config,
-            verbose=True,
-        )
-
-        # Initialize RepoMap
-        repomap = DockerRepoMap(config)
-
-        # Get performance metrics
-        metrics = repomap.get_performance_metrics()
-
-        # Display metrics
-        if metrics.get("monitoring_disabled"):
-            console.print("[yellow]Performance monitoring is disabled[/yellow]")
-            return
-
-        if "error" in metrics:
-            console.print(f"[red]Error getting metrics: {metrics['error']}[/red]")
-            return
-
-        # Create rich table for display
-        table = Table(title="Performance Metrics")
-        table.add_column("Metric", style="cyan")
-        table.add_column("Value", style="green")
-
-        # Configuration
-        config_metrics = metrics.get("configuration", {})
-        table.add_row("Max Workers", str(config_metrics.get("max_workers", "N/A")))
-        table.add_row(
-            "Parallel Threshold", str(config_metrics.get("parallel_threshold", "N/A"))
-        )
-        table.add_row(
-            "Progress Enabled", str(config_metrics.get("enable_progress", "N/A"))
-        )
-        table.add_row(
-            "Monitoring Enabled", str(config_metrics.get("enable_monitoring", "N/A"))
-        )
-
-        # Processing stats
-        processing_stats = metrics.get("processing_stats", {})
-        if processing_stats:
-            table.add_row("Total Files", str(processing_stats.get("total_files", 0)))
-            table.add_row(
-                "Successful Files", str(processing_stats.get("successful_files", 0))
-            )
-            table.add_row("Failed Files", str(processing_stats.get("failed_files", 0)))
-            table.add_row(
-                "Success Rate", f"{processing_stats.get('success_rate', 0):.1f}%"
-            )
-            table.add_row(
-                "Total Identifiers", str(processing_stats.get("total_identifiers", 0))
-            )
-            table.add_row(
-                "Processing Time", f"{processing_stats.get('processing_time', 0):.2f}s"
-            )
-            table.add_row(
-                "Files per Second", f"{processing_stats.get('files_per_second', 0):.1f}"
-            )
-
-        # File size stats
-        file_size_stats = metrics.get("file_size_stats", {})
-        if file_size_stats:
-            table.add_row(
-                "Total Size (MB)", f"{file_size_stats.get('total_size_mb', 0):.2f}"
-            )
-            table.add_row(
-                "Average Size (KB)", f"{file_size_stats.get('avg_size_kb', 0):.1f}"
-            )
-            table.add_row(
-                "Largest File (KB)", f"{file_size_stats.get('largest_file_kb', 0):.1f}"
-            )
-
-        console.print(table)
-
-    except Exception as e:
-        console.print(f"[red]Error: {e}[/red]")
-        sys.exit(1)
-
-
-@cli.command()
+@system.command()
 def version() -> None:
     """Show version information."""
     console.print(
         Panel(
-            "[bold blue]Docker RepoMap[/bold blue]\n"
+            "[bold blue]RepoMap-Tool[/bold blue]\n"
             "Version: 0.1.0\n"
             "A portable code analysis tool using aider libraries\n"
             "with fuzzy and semantic matching capabilities.",
@@ -616,8 +537,476 @@ def load_config_file(config_path: str) -> RepoMapConfig:
         raise ValueError(f"Failed to load configuration file: {e}")
 
 
+def get_config_file_path(project_path: str) -> Path:
+    """Get the path to the .repomap/config.json file for a project."""
+    return Path(project_path) / ".repomap" / "config.json"
+
+
+def discover_config_file(project_path: str) -> Optional[str]:
+    """Discover existing config file in the project directory."""
+    config_path = get_config_file_path(project_path)
+    if config_path.exists():
+        return str(config_path)
+    return None
+
+
+def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
+    """Discover and load config file in current directory or parent directories."""
+    current_dir = Path.cwd()
+
+    # Check current directory and parent directories
+    for directory in [current_dir] + list(current_dir.parents):
+        config_path = directory / ".repomap" / "config.json"
+        if config_path.exists():
+            try:
+                return load_config_file(str(config_path))
+            except Exception:
+                # If we can't load this config file, continue searching
+                continue
+
+    # Also check /workspace directory (for Docker usage)
+    workspace_dir = Path("/workspace")
+    if workspace_dir.exists():
+        config_path = workspace_dir / ".repomap" / "config.json"
+        if config_path.exists():
+            try:
+                return load_config_file(str(config_path))
+            except Exception:
+                pass
+
+    return None
+
+
+def resolve_project_path(
+    provided_path: Optional[str], config_file: Optional[str]
+) -> str:
+    """Resolve project path from provided path, config file, or discovered config.
+
+    Args:
+        provided_path: Explicitly provided project path
+        config_file: Explicitly provided config file path
+
+    Returns:
+        Resolved project path
+
+    Raises:
+        SystemExit: If no project path can be resolved
+    """
+    if provided_path:
+        return provided_path
+
+    # Try to load config file to get project_root
+    config_obj = None
+    if config_file:
+        config_obj = load_config_file(config_file)
+    else:
+        # Try to discover config file
+        config_obj = discover_config_file_in_current_dir()
+
+    if config_obj is None:
+        # Use current directory as fallback when no project path or config is provided
+        current_dir = str(Path.cwd())
+        console.print(
+            f"[blue]No project path provided, using current directory: {current_dir}[/blue]"
+        )
+        return current_dir
+
+    project_path = str(config_obj.project_root)
+    console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+    return project_path
+
+
+def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
+    """Create a default config file in .repomap/config.json."""
+    config_path = get_config_file_path(project_path)
+
+    # Create .repomap directory if it doesn't exist
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save config to file
+    with open(config_path, "w") as f:
+        json.dump(config.model_dump(), f, indent=2, default=str)
+
+    return str(config_path)
+
+
+def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
+    """
+    Apply environment variable overrides to configuration.
+
+    Environment variables take precedence over file-based config but are overridden by CLI args.
+    """
+    # Core configuration
+    verbose_env = os.environ.get("REPOMAP_VERBOSE")
+    if verbose_env:
+        config.verbose = verbose_env.lower() in ("true", "1", "yes")
+
+    log_level_env = os.environ.get("REPOMAP_LOG_LEVEL")
+    if log_level_env:
+        config.log_level = log_level_env
+
+    output_format_env = os.environ.get("REPOMAP_OUTPUT_FORMAT")
+    if output_format_env:
+        config.output_format = output_format_env  # type: ignore
+
+    max_results_env = os.environ.get("REPOMAP_MAX_RESULTS")
+    if max_results_env:
+        try:
+            config.max_results = int(max_results_env)
+        except ValueError:
+            pass  # Keep default if invalid
+
+    refresh_cache_env = os.environ.get("REPOMAP_REFRESH_CACHE")
+    if refresh_cache_env:
+        config.refresh_cache = refresh_cache_env.lower() in ("true", "1", "yes")
+
+    # Cache configuration
+    cache_dir_env = os.environ.get("REPOMAP_CACHE_DIR")
+    if cache_dir_env:
+        config.cache_dir = Path(cache_dir_env)
+    else:
+        legacy_cache_dir = os.environ.get("CACHE_DIR")  # Legacy support
+        if legacy_cache_dir:
+            config.cache_dir = Path(legacy_cache_dir)
+
+    # Performance configuration
+    max_workers_env = os.environ.get("REPOMAP_MAX_WORKERS")
+    if max_workers_env:
+        try:
+            config.performance.max_workers = int(max_workers_env)
+        except ValueError:
+            pass
+
+    cache_size_env = os.environ.get("REPOMAP_CACHE_SIZE")
+    if cache_size_env:
+        try:
+            config.performance.cache_size = int(cache_size_env)
+        except ValueError:
+            pass
+
+    max_memory_env = os.environ.get("REPOMAP_MAX_MEMORY_MB")
+    if max_memory_env:
+        try:
+            config.performance.max_memory_mb = int(max_memory_env)
+        except ValueError:
+            pass
+
+    enable_progress_env = os.environ.get("REPOMAP_ENABLE_PROGRESS")
+    if enable_progress_env:
+        config.performance.enable_progress = enable_progress_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    enable_monitoring_env = os.environ.get("REPOMAP_ENABLE_MONITORING")
+    if enable_monitoring_env:
+        config.performance.enable_monitoring = enable_monitoring_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    parallel_threshold_env = os.environ.get("REPOMAP_PARALLEL_THRESHOLD")
+    if parallel_threshold_env:
+        try:
+            config.performance.parallel_threshold = int(parallel_threshold_env)
+        except ValueError:
+            pass
+
+    cache_ttl_env = os.environ.get("REPOMAP_CACHE_TTL")
+    if cache_ttl_env:
+        try:
+            config.performance.cache_ttl = int(cache_ttl_env)
+        except ValueError:
+            pass
+
+    allow_fallback_env = os.environ.get("REPOMAP_ALLOW_FALLBACK")
+    if allow_fallback_env:
+        config.performance.allow_fallback = allow_fallback_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # Fuzzy matching configuration
+    fuzzy_threshold_env = os.environ.get("REPOMAP_FUZZY_THRESHOLD")
+    if fuzzy_threshold_env:
+        try:
+            config.fuzzy_match.threshold = int(fuzzy_threshold_env)
+        except ValueError:
+            pass
+
+    fuzzy_strategies_env = os.environ.get("REPOMAP_FUZZY_STRATEGIES")
+    if fuzzy_strategies_env:
+        strategies = fuzzy_strategies_env.split(",")
+        config.fuzzy_match.strategies = [s.strip() for s in strategies]
+
+    fuzzy_cache_env = os.environ.get("REPOMAP_FUZZY_CACHE_RESULTS")
+    if fuzzy_cache_env:
+        config.fuzzy_match.cache_results = fuzzy_cache_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # Semantic matching configuration
+    semantic_enabled_env = os.environ.get("REPOMAP_SEMANTIC_ENABLED")
+    if semantic_enabled_env:
+        config.semantic_match.enabled = semantic_enabled_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    semantic_threshold_env = os.environ.get("REPOMAP_SEMANTIC_THRESHOLD")
+    if semantic_threshold_env:
+        try:
+            config.semantic_match.threshold = float(semantic_threshold_env)
+        except ValueError:
+            pass
+
+    semantic_tfidf_env = os.environ.get("REPOMAP_SEMANTIC_USE_TFIDF")
+    if semantic_tfidf_env:
+        config.semantic_match.use_tfidf = semantic_tfidf_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    semantic_min_word_env = os.environ.get("REPOMAP_SEMANTIC_MIN_WORD_LENGTH")
+    if semantic_min_word_env:
+        try:
+            config.semantic_match.min_word_length = int(semantic_min_word_env)
+        except ValueError:
+            pass
+
+    semantic_cache_env = os.environ.get("REPOMAP_SEMANTIC_CACHE_RESULTS")
+    if semantic_cache_env:
+        config.semantic_match.cache_results = semantic_cache_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # Tree configuration
+    tree_max_depth_env = os.environ.get("REPOMAP_TREE_MAX_DEPTH")
+    if tree_max_depth_env:
+        try:
+            config.trees.max_depth = int(tree_max_depth_env)
+        except ValueError:
+            pass
+
+    tree_max_trees_env = os.environ.get("REPOMAP_TREE_MAX_TREES_PER_SESSION")
+    if tree_max_trees_env:
+        try:
+            config.trees.max_trees_per_session = int(tree_max_trees_env)
+        except ValueError:
+            pass
+
+    tree_threshold_env = os.environ.get("REPOMAP_TREE_ENTRYPOINT_THRESHOLD")
+    if tree_threshold_env:
+        try:
+            config.trees.entrypoint_threshold = float(tree_threshold_env)
+        except ValueError:
+            pass
+
+    tree_snippets_env = os.environ.get("REPOMAP_TREE_ENABLE_CODE_SNIPPETS")
+    if tree_snippets_env:
+        config.trees.enable_code_snippets = tree_snippets_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    tree_cache_env = os.environ.get("REPOMAP_TREE_CACHE_STRUCTURES")
+    if tree_cache_env:
+        config.trees.cache_tree_structures = tree_cache_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    # Dependency configuration
+    dep_cache_graphs_env = os.environ.get("REPOMAP_DEP_CACHE_GRAPHS")
+    if dep_cache_graphs_env:
+        config.dependencies.cache_graphs = dep_cache_graphs_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    dep_max_graph_env = os.environ.get("REPOMAP_DEP_MAX_GRAPH_SIZE")
+    if dep_max_graph_env:
+        try:
+            config.dependencies.max_graph_size = int(dep_max_graph_env)
+        except ValueError:
+            pass
+
+    dep_call_graph_env = os.environ.get("REPOMAP_DEP_ENABLE_CALL_GRAPH")
+    if dep_call_graph_env:
+        config.dependencies.enable_call_graph = dep_call_graph_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    dep_impact_env = os.environ.get("REPOMAP_DEP_ENABLE_IMPACT_ANALYSIS")
+    if dep_impact_env:
+        config.dependencies.enable_impact_analysis = dep_impact_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    dep_algorithms_env = os.environ.get("REPOMAP_DEP_CENTRALITY_ALGORITHMS")
+    if dep_algorithms_env:
+        algorithms = dep_algorithms_env.split(",")
+        config.dependencies.centrality_algorithms = [a.strip() for a in algorithms]
+
+    dep_centrality_cache_env = os.environ.get("REPOMAP_DEP_MAX_CENTRALITY_CACHE_SIZE")
+    if dep_centrality_cache_env:
+        try:
+            config.dependencies.max_centrality_cache_size = int(
+                dep_centrality_cache_env
+            )
+        except ValueError:
+            pass
+
+    dep_performance_env = os.environ.get("REPOMAP_DEP_PERFORMANCE_THRESHOLD_SECONDS")
+    if dep_performance_env:
+        try:
+            config.dependencies.performance_threshold_seconds = float(
+                dep_performance_env
+            )
+        except ValueError:
+            pass
+
+    return config
+
+
+def apply_cli_overrides(
+    config: RepoMapConfig, overrides: Dict[str, Any]
+) -> RepoMapConfig:
+    """
+    Apply CLI argument overrides to configuration.
+
+    CLI arguments take highest precedence and override both file config and environment variables.
+    """
+    if not overrides:
+        return config
+
+    # Handle specific override patterns
+    if "semantic_enabled" in overrides and overrides["semantic_enabled"] is not None:
+        config.semantic_match.enabled = overrides["semantic_enabled"]
+    if "fuzzy_threshold" in overrides and overrides["fuzzy_threshold"] is not None:
+        config.fuzzy_match.threshold = overrides["fuzzy_threshold"]
+    if (
+        "semantic_threshold" in overrides
+        and overrides["semantic_threshold"] is not None
+    ):
+        config.semantic_match.threshold = overrides["semantic_threshold"]
+    if "max_workers" in overrides and overrides["max_workers"] is not None:
+        config.performance.max_workers = overrides["max_workers"]
+    if (
+        "parallel_threshold" in overrides
+        and overrides["parallel_threshold"] is not None
+    ):
+        config.performance.parallel_threshold = overrides["parallel_threshold"]
+    if "enable_progress" in overrides and overrides["enable_progress"] is not None:
+        config.performance.enable_progress = overrides["enable_progress"]
+    if "enable_monitoring" in overrides and overrides["enable_monitoring"] is not None:
+        config.performance.enable_monitoring = overrides["enable_monitoring"]
+    if "allow_fallback" in overrides and overrides["allow_fallback"] is not None:
+        config.performance.allow_fallback = overrides["allow_fallback"]
+    if "cache_size" in overrides and overrides["cache_size"] is not None:
+        config.performance.cache_size = overrides["cache_size"]
+    if "cache_dir" in overrides and overrides["cache_dir"] is not None:
+        config.cache_dir = overrides["cache_dir"]
+    if "output_format" in overrides and overrides["output_format"] is not None:
+        config.output_format = overrides["output_format"]
+    if "verbose" in overrides and overrides["verbose"] is not None:
+        config.verbose = overrides["verbose"]
+    if "max_results" in overrides and overrides["max_results"] is not None:
+        config.max_results = overrides["max_results"]
+    if "log_level" in overrides and overrides["log_level"] is not None:
+        config.log_level = overrides["log_level"]
+    if "refresh_cache" in overrides and overrides["refresh_cache"] is not None:
+        config.refresh_cache = overrides["refresh_cache"]
+
+    return config
+
+
+def load_or_create_config(
+    project_path: Optional[str], config_file: Optional[str] = None, **overrides: Any
+) -> tuple[RepoMapConfig, bool]:
+    """
+    Load existing config or create a new one.
+
+    Configuration precedence (highest to lowest):
+    1. CLI arguments
+    2. Environment variables
+    3. Configuration file
+    4. Default values
+
+    Returns:
+        tuple: (config, was_created)
+    """
+    config = None
+    was_created = False
+
+    # 1. Load from file (if available)
+    if config_file:
+        config = load_config_file(config_file)
+    else:
+        # Look for existing .repomap/config.json
+        if project_path is not None:
+            discovered_config = discover_config_file(project_path)
+            if discovered_config:
+                config = load_config_file(discovered_config)
+
+    # 2. If no config file found, create default config
+    if config is None:
+        if project_path is None:
+            raise ValueError("project_path is required when no config file is found")
+        config = create_default_config(
+            project_path=project_path,
+            fuzzy=True,
+            semantic=overrides.get("semantic_enabled", False),
+            threshold=overrides.get("semantic_threshold", 0.7),
+            max_results=overrides.get("max_results", 50),
+            output=overrides.get("output_format", "table"),
+            verbose=overrides.get("verbose", False),
+            max_workers=overrides.get("max_workers", 4),
+            parallel_threshold=overrides.get("parallel_threshold", 10),
+            no_progress=not overrides.get("enable_progress", True),
+            no_monitoring=not overrides.get("enable_monitoring", True),
+            allow_fallback=overrides.get("allow_fallback", False),
+            cache_size=overrides.get("cache_size", 1000),
+            log_level=overrides.get("log_level", "INFO"),
+            refresh_cache=overrides.get("refresh_cache", False),
+        )
+
+        # Apply cache_dir override if provided
+        if "cache_dir" in overrides and overrides["cache_dir"] is not None:
+            config.cache_dir = overrides["cache_dir"]
+
+        # Save the new config file
+        if project_path is not None:
+            create_default_config_file(project_path, config)
+        was_created = True
+
+    # 3. Apply environment variable overrides (after file loading)
+    config = apply_environment_overrides(config)
+
+    # 4. Apply CLI argument overrides (highest precedence)
+    config = apply_cli_overrides(config, overrides)
+
+    return config, was_created
+
+
 def create_default_config(
-    project_path: str,
+    project_path: Optional[str],
     fuzzy: bool,
     semantic: bool,
     threshold: float,
@@ -634,10 +1023,11 @@ def create_default_config(
     refresh_cache: bool = False,
 ) -> RepoMapConfig:
     """Create default configuration."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_default_config")
 
     # Create fuzzy match config
     fuzzy_config = FuzzyMatchConfig(
-        enabled=fuzzy,
         threshold=int(threshold * 100),  # Convert to percentage
         strategies=["prefix", "substring", "levenshtein"],
     )
@@ -659,9 +1049,14 @@ def create_default_config(
         cache_size=cache_size,
     )
 
+    # Get cache directory from environment variable if set
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
+
     # Create main config
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         performance=performance_config,
@@ -676,23 +1071,24 @@ def create_default_config(
 
 
 def create_search_config(
-    project_path: str,
+    project_path: Optional[str],
     match_type: str,
     verbose: bool,
     log_level: str = "INFO",
     cache_size: int = 1000,
 ) -> RepoMapConfig:
     """Create configuration for search operations."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_search_config")
 
     # Enable appropriate matchers based on match type
     # Default to hybrid if invalid match type is provided
     if match_type not in ["fuzzy", "semantic", "hybrid"]:
         match_type = "hybrid"
 
-    fuzzy_enabled = match_type in ["fuzzy", "hybrid"]
     semantic_enabled = match_type in ["semantic", "hybrid"]
 
-    fuzzy_config = FuzzyMatchConfig(enabled=fuzzy_enabled)
+    fuzzy_config = FuzzyMatchConfig()
     semantic_config = SemanticMatchConfig(enabled=semantic_enabled)
 
     # Create performance config with cache settings
@@ -702,8 +1098,13 @@ def create_search_config(
         cache_size=cache_size,
     )
 
+    # Get cache directory from environment variable if set
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
+
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         performance=performance_config,
@@ -715,21 +1116,29 @@ def create_search_config(
 
 
 def create_tree_config(
-    project_path: str,
+    project_path: Optional[str],
     max_depth: int = 3,
     verbose: bool = True,
 ) -> RepoMapConfig:
     """Create configuration for tree-related operations (explore, focus, expand, prune, map, list_trees, status)."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_tree_config")
+
     from .models import TreeConfig
 
-    fuzzy_config = FuzzyMatchConfig(enabled=True, threshold=70, cache_results=True)
+    fuzzy_config = FuzzyMatchConfig(threshold=70, cache_results=True)
     semantic_config = SemanticMatchConfig(
         enabled=True, threshold=0.7, cache_results=True
     )
     tree_config = TreeConfig(max_depth=max_depth, entrypoint_threshold=0.6)
 
+    # Get cache directory from environment variable if set
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
+
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         trees=tree_config,
@@ -740,12 +1149,13 @@ def create_tree_config(
 
 
 def create_basic_config(
-    project_path: str,
+    project_path: Optional[str],
     verbose: bool = True,
 ) -> RepoMapConfig:
     """Create basic configuration for simple operations (cache)."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_basic_config")
     fuzzy_config = FuzzyMatchConfig(
-        enabled=True,
         threshold=70,
         cache_results=True,
     )
@@ -755,8 +1165,13 @@ def create_basic_config(
         cache_results=True,
     )
 
+    # Get cache directory from environment variable if set
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
+
     config = RepoMapConfig(
         project_root=project_path,
+        cache_dir=cache_dir,
         fuzzy_match=fuzzy_config,
         semantic_match=semantic_config,
         verbose=verbose,
@@ -893,19 +1308,33 @@ def display_search_results(
     console.print(summary)
 
 
-@cli.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
-)
+@explore.command()
 @click.argument("intent", type=str)
+@click.argument(
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
+)
 @click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
 @click.option("--max-depth", default=3, help="Maximum tree depth")
-def explore(
-    project_path: str, intent: str, session: Optional[str], max_depth: int
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+def start(
+    intent: str,
+    project_path: Optional[str],
+    session: Optional[str],
+    max_depth: int,
+    config: Optional[str],
 ) -> None:
     """Discover exploration trees from intent."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         import os
         import time
 
@@ -916,10 +1345,10 @@ def explore(
             console.print(f"Set: export REPOMAP_SESSION={session_id}")
 
         # Create configuration
-        config = create_tree_config(project_path, max_depth, verbose=True)
+        config_obj = create_tree_config(resolved_project_path, max_depth, verbose=True)
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config_obj)
 
         # Import tree components
         from .trees import (
@@ -931,7 +1360,7 @@ def explore(
 
         # Discover entrypoints
         discoverer = EntrypointDiscoverer(repomap)
-        entrypoints = discoverer.discover_entrypoints(project_path, intent)
+        entrypoints = discoverer.discover_entrypoints(resolved_project_path, intent)
 
         if not entrypoints:
             console.print(
@@ -944,7 +1373,7 @@ def explore(
             console.print(f'  • Use semantic search: repomap-tool search "{intent}"')
             console.print("\n🔧 Alternative approaches:")
             console.print(
-                f"  repomap-tool analyze {project_path}               # Get general overview"
+                f"  repomap-tool analyze {resolved_project_path}               # Get general overview"
             )
             console.print(
                 f'  repomap-tool search "{intent}" --fuzzy          # Fuzzy search'
@@ -963,7 +1392,7 @@ def explore(
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")
         session_manager = SessionManager(storage_dir=session_storage_dir)
         exploration_session = session_manager.get_or_create_session(
-            session_id, project_path
+            session_id, resolved_project_path
         )
 
         console.print(f"🔍 Found {len(clusters)} exploration contexts:")
@@ -995,7 +1424,7 @@ def explore(
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.argument("tree_id", type=str)
 @click.option("--session", "-s", help="Session ID")
 def focus(tree_id: str, session: Optional[str]) -> None:
@@ -1023,7 +1452,7 @@ def focus(tree_id: str, session: Optional[str]) -> None:
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1040,7 +1469,7 @@ def focus(tree_id: str, session: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.argument("expansion_area", type=str)
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
@@ -1069,7 +1498,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1086,7 +1515,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.argument("prune_area", type=str)
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
@@ -1115,7 +1544,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1132,7 +1561,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.option("--session", "-s", help="Session ID")
 @click.option("--tree", "-t", help="Tree ID (uses current focus if not specified)")
 @click.option("--include-code", is_flag=True, help="Include code snippets")
@@ -1161,7 +1590,7 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap, TreeManager, and TreeMapper
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager, TreeMapper
 
         tree_manager = TreeManager(repomap)
@@ -1181,9 +1610,9 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.option("--session", "-s", help="Session ID")
-def list_trees(session: Optional[str]) -> None:
+def trees(session: Optional[str]) -> None:
     """List all trees in a session."""
 
     try:
@@ -1208,7 +1637,7 @@ def list_trees(session: Optional[str]) -> None:
         config = create_tree_config(project_path, verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager
 
         tree_manager = TreeManager(repomap)
@@ -1248,7 +1677,7 @@ def list_trees(session: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@explore.command()
 @click.option("--session", "-s", help="Session ID")
 def status(session: Optional[str]) -> None:
     """Show session status and current tree information."""
@@ -1267,7 +1696,7 @@ def status(session: Optional[str]) -> None:
         config = create_tree_config(".", verbose=False)
 
         # Initialize RepoMap and TreeManager
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
         from .trees import TreeManager, SessionManager
 
         tree_manager = TreeManager(repomap)
@@ -1338,100 +1767,17 @@ def status(session: Optional[str]) -> None:
         sys.exit(1)
 
 
-@cli.command()
+@search.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
-    "--refresh",
-    is_flag=True,
-    help="Refresh/clear all caches before showing status",
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Choice(["json", "table"]),
-    default="table",
-    help="Output format",
-)
-@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def cache(
-    project_path: str,
-    refresh: bool,
-    output: str,
-    verbose: bool,
-) -> None:
-    """Show cache status and optionally refresh caches."""
-
-    try:
-        # Create minimal configuration for cache operations
-        config = create_basic_config(project_path, verbose)
-
-        # Initialize RepoMap
-        repomap = DockerRepoMap(config)
-
-        # Refresh caches if requested
-        if refresh:
-            console.print("[yellow]Refreshing all caches...[/yellow]")
-            repomap.refresh_all_caches()
-            console.print("[green]✓ All caches cleared[/green]")
-
-        # Get cache status
-        status = repomap.get_cache_status()
-
-        # Display results
-        if output == "json":
-            import json
-
-            console.print(json.dumps(status, indent=2, default=str))
-        else:
-            # Create table display
-            table = Table(title="Cache Status")
-            table.add_column("Component", style="cyan")
-            table.add_column("Status", style="green")
-            table.add_column("Details", style="yellow")
-
-            # Cache enabled status
-            cache_enabled = "✓ Enabled" if status["cache_enabled"] else "✗ Disabled"
-            table.add_row(
-                "Cache System", cache_enabled, f"Project: {status['project_root']}"
-            )
-
-            # Fuzzy matcher cache details
-            if status["fuzzy_matcher_cache"]:
-                cache_stats = status["fuzzy_matcher_cache"]
-                cache_details = (
-                    f"Size: {cache_stats['cache_size']}/{cache_stats['max_size']} entries\n"
-                    f"Hit rate: {cache_stats['hit_rate_percent']}%\n"
-                    f"Files tracked: {cache_stats['tracked_files']}"
-                )
-                table.add_row("Fuzzy Matcher", "✓ Active", cache_details)
-            else:
-                table.add_row(
-                    "Fuzzy Matcher", "✗ No cache", "Cache disabled or not initialized"
-                )
-
-            console.print(table)
-
-            # Show tracked files if verbose
-            if verbose and status["tracked_files"]:
-                files_table = Table(title="Tracked Files")
-                files_table.add_column("File Path", style="cyan")
-
-                for file_path in status["tracked_files"]:
-                    files_table.add_row(file_path)
-
-                console.print(files_table)
-
-    except Exception as e:
-        error_response = create_error_response(str(e), "CacheError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
-        sys.exit(1)
-
-
-@cli.command()
-@click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
 )
 @click.option(
     "--output",
@@ -1459,8 +1805,9 @@ def cache(
     default=True,
     help="Enable change impact analysis",
 )
-def analyze_dependencies(
-    project_path: str,
+def dependencies(
+    project_path: Optional[str],
+    config: Optional[str],
     output: str,
     verbose: bool,
     max_files: int,
@@ -1470,19 +1817,20 @@ def analyze_dependencies(
     """Analyze project dependencies and build dependency graph."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
         dependency_config = DependencyConfig(
-            enabled=True,
             max_graph_size=max_files,
             enable_call_graph=enable_call_graph,
             enable_impact_analysis=enable_impact_analysis,
         )
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -1495,7 +1843,7 @@ def analyze_dependencies(
         ) as progress:
             task = progress.add_task("Building dependency graph...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analyzing dependencies...")
 
             # Build dependency graph
@@ -1544,9 +1892,11 @@ def analyze_dependencies(
         sys.exit(1)
 
 
-@cli.command()
+@analyze.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--file",
@@ -1562,23 +1912,32 @@ def analyze_dependencies(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def show_centrality(
-    project_path: str,
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+def centrality(
+    project_path: Optional[str],
     file: str,
     output: str,
     verbose: bool,
+    config: Optional[str],
 ) -> None:
     """Show centrality analysis for project files."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
-        dependency_config = DependencyConfig(enabled=True)
+        dependency_config = DependencyConfig()
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -1591,7 +1950,7 @@ def show_centrality(
         ) as progress:
             task = progress.add_task("Calculating centrality scores...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analysis complete!")
 
         # Get centrality scores
@@ -1650,9 +2009,11 @@ def show_centrality(
         sys.exit(1)
 
 
-@cli.command()
+@analyze.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
 )
 @click.option(
     "--files",
@@ -1668,8 +2029,8 @@ def show_centrality(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def impact_analysis(
-    project_path: str,
+def impact(
+    project_path: Optional[str],
     files: tuple,
     output: str,
     verbose: bool,
@@ -1680,12 +2041,15 @@ def impact_analysis(
         console.print("[red]Error: Must specify at least one file with --files[/red]")
         sys.exit(1)
 
+    if project_path is None:
+        console.print("[red]Error: project_path is required for impact analysis[/red]")
+        sys.exit(1)
+
     try:
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
         dependency_config = DependencyConfig(
-            enabled=True,
             enable_impact_analysis=True,
         )
 
@@ -1704,7 +2068,7 @@ def impact_analysis(
         ) as progress:
             task = progress.add_task("Analyzing change impact...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
             progress.update(task, description="Analysis complete!")
 
         # Analyze impact for each file
@@ -1759,9 +2123,17 @@ def impact_analysis(
         sys.exit(1)
 
 
-@cli.command()
+@search.command()
 @click.argument(
-    "project_path", type=click.Path(exists=True, file_okay=False, dir_okay=True)
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
 )
 @click.option(
     "--output",
@@ -1771,22 +2143,25 @@ def impact_analysis(
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
-def find_cycles(
-    project_path: str,
+def cycles(
+    project_path: Optional[str],
+    config: Optional[str],
     output: str,
     verbose: bool,
 ) -> None:
     """Find circular dependencies in the project."""
 
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
-        dependency_config = DependencyConfig(enabled=True)
+        dependency_config = DependencyConfig()
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -1799,7 +2174,7 @@ def find_cycles(
         ) as progress:
             task = progress.add_task("Finding circular dependencies...", total=None)
 
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analysis complete!")
 
         # Find cycles

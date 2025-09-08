@@ -11,7 +11,7 @@ from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from repomap_tool.models import ExplorationTree, TreeNode
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 
 logger = logging.getLogger(__name__)
 
@@ -19,11 +19,11 @@ logger = logging.getLogger(__name__)
 class TreeMapper:
     """Generates repomaps from current tree exploration state."""
 
-    def __init__(self, repo_map: DockerRepoMap):
+    def __init__(self, repo_map: RepoMapService):
         """Initialize tree mapper.
 
         Args:
-            repo_map: DockerRepoMap instance
+            repo_map: RepoMapService instance
         """
         self.repo_map = repo_map
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Docker RepoMap Tool - A comprehensive tool for analyzing Docker repositories
+RepoMap-Tool Tool - A comprehensive tool for analyzing Docker repositories
 and finding similar identifiers across different codebases.
 """
 
@@ -10,15 +10,13 @@ __email__ = "your.email@example.com"
 
 # Import core functionality
 try:
-    from .core import DockerRepoMap
+    from .core import RepoMapService
 except ImportError:
-    DockerRepoMap = None  # type: ignore
+    RepoMapService = None  # type: ignore
 
-# Import CLI
-try:
-    from .cli import cli
-except ImportError:
-    cli = None  # type: ignore
+# Import CLI - removed to prevent circular import issues
+# CLI should be imported directly when needed, not at package level
+cli = None
 
 # Import models
 try:
@@ -118,7 +116,7 @@ except ImportError:
     handle_errors = None  # type: ignore
 
 __all__ = [
-    "DockerRepoMap",
+    "RepoMapService",
     "cli",
     "RepoMapConfig",
     "FuzzyMatchConfig",

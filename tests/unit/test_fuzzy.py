@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import pytest
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 from repomap_tool.models import RepoMapConfig
 
 
@@ -9,7 +9,7 @@ from repomap_tool.models import RepoMapConfig
 def project_identifiers():
     """Extract identifiers from the project for testing."""
     config = RepoMapConfig(project_root=".", verbose=True)
-    dm = DockerRepoMap(config)
+    dm = RepoMapService(config)
 
     # Get identifiers
     project_files = dm._get_project_files()
@@ -35,23 +35,23 @@ def test_identifier_extraction(project_identifiers):
     """Test that identifiers are extracted correctly from the project."""
     # Should have extracted some identifiers
     assert len(project_identifiers) > 0
-    assert "DockerRepoMap" in project_identifiers
+    assert "RepoMapService" in project_identifiers
     assert "parse_gitignore" in project_identifiers
 
 
 def test_fuzzy_search_with_real_identifiers(project_identifiers):
     """Test fuzzy search with real identifiers from the project."""
     config = RepoMapConfig(project_root=".", verbose=True)
-    dm = DockerRepoMap(config)
+    dm = RepoMapService(config)
 
     # Test fuzzy matcher
     if dm.fuzzy_matcher:
-        # Test DockerRepoMap search
+        # Test RepoMapService search
         matches = dm.fuzzy_matcher.match_identifiers(
-            "DockerRepoMap", project_identifiers
+            "RepoMapService", project_identifiers
         )
         assert len(matches) > 0
-        assert any(identifier == "DockerRepoMap" for identifier, score in matches)
+        assert any(identifier == "RepoMapService" for identifier, score in matches)
 
         # Test parse_gitignore search
         matches = dm.fuzzy_matcher.match_identifiers(

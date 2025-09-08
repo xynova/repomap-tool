@@ -14,7 +14,7 @@ from repomap_tool.models import (
     SemanticMatchConfig,
     DependencyConfig,
 )
-from repomap_tool.core import DockerRepoMap
+from repomap_tool.core import RepoMapService
 
 
 class TestDependencyComponentsReal:
@@ -128,7 +128,7 @@ class ComplexProcessor:
         # Create configuration
         config = RepoMapConfig(
             project_root=temp_project_with_dependencies,
-            fuzzy_match=FuzzyMatchConfig(enabled=True, threshold=70),
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.7),
             dependencies=DependencyConfig(
                 max_files=100, enable_call_graph=True, enable_impact_analysis=True
@@ -136,7 +136,7 @@ class ComplexProcessor:
         )
 
         # Initialize RepoMap
-        repomap = DockerRepoMap(config)
+        repomap = RepoMapService(config)
 
         # Test dependency graph building
         try:

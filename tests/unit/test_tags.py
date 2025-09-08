@@ -25,7 +25,7 @@ def test_tag_extraction():
 
 
 def test_dockerrepomap_tag():
-    """Test that DockerRepoMap tag is found."""
+    """Test that RepoMapService tag is found."""
     # Initialize RepoMap
     rm = RepoMap(root=".", main_model=Model(DEFAULT_MODEL_NAME), io=InputOutput())
 
@@ -34,12 +34,12 @@ def test_dockerrepomap_tag():
         "src/repomap_tool/core/repo_map.py", "src/repomap_tool/core/repo_map.py"
     )
 
-    # Look for DockerRepoMap specifically
-    docker_tags = [tag for tag in tags if "DockerRepoMap" in tag.name]
+    # Look for RepoMapService specifically
+    docker_tags = [tag for tag in tags if "RepoMapService" in tag.name]
 
-    # Should find DockerRepoMap
+    # Should find RepoMapService
     assert len(docker_tags) > 0
-    assert any(tag.name == "DockerRepoMap" for tag in docker_tags)
+    assert any(tag.name == "RepoMapService" for tag in docker_tags)
 
 
 def test_definition_tags():

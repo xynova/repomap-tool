@@ -1,6 +1,6 @@
 #!/bin/bash
 
-echo "Docker RepoMap Tool - Example Usage"
+echo "RepoMap-Tool Tool - Example Usage"
 echo "==================================="
 echo ""
 

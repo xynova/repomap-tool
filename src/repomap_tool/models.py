@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-models.py - Pydantic models for Docker RepoMap
+models.py - Pydantic models for RepoMap-Tool
 
 This module defines structured data models for configuration, API requests/responses,
 and match results using Pydantic for validation and serialization.
@@ -49,7 +49,6 @@ class PerformanceConfig(BaseModel):
 class FuzzyMatchConfig(BaseModel):
     """Configuration for fuzzy matching."""
 
-    enabled: bool = True
     threshold: int = Field(
         default=70, ge=0, le=100, description="Similarity threshold (0-100)"
     )
@@ -89,7 +88,6 @@ class SemanticMatchConfig(BaseModel):
 class TreeConfig(BaseModel):
     """Configuration for tree exploration functionality."""
 
-    enabled: bool = Field(default=True, description="Enable tree exploration")
     max_depth: int = Field(default=3, ge=1, le=10, description="Maximum tree depth")
     max_trees_per_session: int = Field(
         default=10, ge=1, le=100, description="Maximum trees per session"
@@ -108,7 +106,6 @@ class TreeConfig(BaseModel):
 class DependencyConfig(BaseModel):
     """Configuration for dependency analysis."""
 
-    enabled: bool = Field(default=True, description="Enable dependency analysis")
     cache_graphs: bool = Field(default=True, description="Cache dependency graphs")
     max_graph_size: int = Field(
         default=10000, ge=100, le=100000, description="Maximum number of files in graph"
@@ -135,7 +132,7 @@ class DependencyConfig(BaseModel):
 
 
 class RepoMapConfig(BaseModel):
-    """Main configuration for Docker RepoMap."""
+    """Main configuration for RepoMap-Tool."""
 
     project_root: Union[str, Path]
     map_tokens: int = Field(
@@ -227,11 +224,8 @@ class RepoMapConfig(BaseModel):
 
     @model_validator(mode="after")
     def validate_matching_config(self) -> "RepoMapConfig":
-        """Validate that at least one matching method is enabled."""
-        if not self.fuzzy_match.enabled and not self.semantic_match.enabled:
-            raise ValueError(
-                "At least one matching method (fuzzy or semantic) must be enabled"
-            )
+        """Validate matching configuration."""
+        # Fuzzy matching is always enabled, so no validation needed
         return self
 
 

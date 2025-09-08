@@ -1,8 +1,8 @@
-# Docker RepoMap Integration: Complete System Overview
+# RepoMap-Tool Integration: Complete System Overview
 
-## 🎯 **What is Docker RepoMap?**
+## 🎯 **What is RepoMap-Tool?**
 
-Docker RepoMap is a sophisticated code analysis tool that creates intelligent maps of your codebase. It combines multiple matching strategies to help you understand and navigate complex projects by finding related code elements.
+RepoMap-Tool is a sophisticated code analysis tool that creates intelligent maps of your codebase. It combines multiple matching strategies to help you understand and navigate complex projects by finding related code elements.
 
 ## 🏗️ **System Architecture Overview**
 
@@ -254,7 +254,7 @@ docker run -v /path/to/project:/project repomap-tool /project \
 ```mermaid
 graph TB
     A[Aider Core] --> B[RepoMap Module]
-    B --> C[Docker RepoMap]
+    B --> C[RepoMap-Tool]
     C --> D[External RepoMap]
     
     D --> E[Fuzzy Matcher]
@@ -278,7 +278,7 @@ graph TB
 graph LR
     A[Developer] --> B[IDE/Editor]
     B --> C[Aider Integration]
-    C --> D[Docker RepoMap]
+    C --> D[RepoMap-Tool]
     D --> E[Code Analysis]
     E --> F[Intelligent Suggestions]
     F --> G[Code Changes]

@@ -8,7 +8,7 @@ VENV_PIP = $(VENV_BIN)/pip
 
 # Docker configuration
 DOCKER_IMAGE_NAME ?= repomap-tool
-DOCKER_TAG ?= latest
+DOCKER_TAG ?= local
 
 # Default target
 help:
@@ -151,7 +151,7 @@ dev-setup: install format lint type-check test
 # Test CLI functionality
 test-cli: install
 	$(VENV_PYTHON) -m repomap_tool.cli --help
-	$(VENV_PYTHON) -m repomap_tool.cli version
+	$(VENV_PYTHON) -m repomap_tool.cli system version
 
 # Run with different performance configurations
 test-performance-configs:
@@ -185,8 +185,8 @@ docker-test: docker-build
 	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) --help || (echo "❌ CLI help failed" && exit 1)
 	@echo "✅ CLI help works"
 	@echo ""
-	@echo "3. Testing version command..."
-	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) version || (echo "❌ Version command failed" && exit 1)
+	@echo "3. Testing system version command..."
+	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) system version || (echo "❌ Version command failed" && exit 1)
 	@echo "✅ Version command works"
 	@echo ""
 	@echo "4. Running integration tests against real codebase..."
@@ -205,8 +205,8 @@ docker-test-ci:
 	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) --help || (echo "❌ CLI help failed" && exit 1)
 	@echo "✅ CLI help works"
 	@echo ""
-	@echo "3. Testing version command..."
-	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) version || (echo "❌ Version command failed" && exit 1)
+	@echo "3. Testing system version command..."
+	@docker run --rm $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) system version || (echo "❌ Version command failed" && exit 1)
 	@echo "✅ Version command works"
 	@echo ""
 	@echo "4. Running integration tests against real codebase..."

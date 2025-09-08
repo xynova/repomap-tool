@@ -2,7 +2,7 @@
 
 ## 🎯 **Executive Summary**
 
-The hybrid approach in Docker RepoMap consistently outperforms semantic search alone by combining the conceptual understanding of semantic analysis with the comprehensive coverage of fuzzy matching. This document provides technical evidence and real-world examples demonstrating why hybrid search is superior.
+The hybrid approach in RepoMap-Tool consistently outperforms semantic search alone by combining the conceptual understanding of semantic analysis with the comprehensive coverage of fuzzy matching. This document provides technical evidence and real-world examples demonstrating why hybrid search is superior.
 
 ## 📊 **Quantitative Comparison**
 
@@ -414,7 +414,7 @@ conceptual_search:
 
 ## 📋 **Conclusion**
 
-The hybrid approach in Docker RepoMap provides significant advantages over semantic search alone:
+The hybrid approach in RepoMap-Tool provides significant advantages over semantic search alone:
 
 ### **Key Benefits:**
 1. **95% Coverage** vs 65% for semantic-only

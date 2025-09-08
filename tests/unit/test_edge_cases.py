@@ -28,7 +28,7 @@ from repomap_tool.models import (
     SearchRequest,
     FuzzyMatchConfig,
 )
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 
 
 class TestSearchEngineEdgeCases:
@@ -355,7 +355,7 @@ class TestRepoMapEdgeCases:
             # Act & Assert - Should handle nonexistent paths gracefully
             with pytest.raises((ValueError, FileNotFoundError)):
                 config = RepoMapConfig(project_root=path)
-                DockerRepoMap(config)
+                RepoMapService(config)
 
     def test_repo_map_with_file_as_project_root(self):
         """Test RepoMap with a file as project root (should be directory)."""
@@ -364,14 +364,14 @@ class TestRepoMapEdgeCases:
             # Act & Assert - Should handle file as project root gracefully
             with pytest.raises((ValueError, IsADirectoryError)):
                 config = RepoMapConfig(project_root=temp_file.name)
-                DockerRepoMap(config)
+                RepoMapService(config)
 
     def test_repo_map_with_empty_directory(self):
         """Test RepoMap with empty directory."""
         # Arrange
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -393,7 +393,7 @@ class TestRepoMapEdgeCases:
                     file_path.write_text(f"def function_{i}_{j}(): pass")
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -424,7 +424,7 @@ class TestRepoMapEdgeCases:
                     file_path.write_bytes(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -449,7 +449,7 @@ class TestRepoMapEdgeCases:
                 shutil.copy2(original_file, symlink_file)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -469,7 +469,7 @@ class TestRepoMapEdgeCases:
                 link2.symlink_to(link1)
 
                 config = RepoMapConfig(project_root=temp_dir)
-                repomap = DockerRepoMap(config)
+                repomap = RepoMapService(config)
 
                 # Act
                 project_info = repomap.analyze_project()
@@ -499,7 +499,7 @@ class TestRepoMapEdgeCases:
                     sock.close()
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -658,7 +658,7 @@ class TestIntegrationEdgeCases:
                 file_path.write_text(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = DockerRepoMap(config)
+            repomap = RepoMapService(config)
 
             # Act
             project_info = repomap.analyze_project()

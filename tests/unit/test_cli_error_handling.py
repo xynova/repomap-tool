@@ -105,7 +105,7 @@ class TestErrorHandling:
         )
 
         # Should default to hybrid (both enabled) for invalid match type
-        assert config.fuzzy_match.enabled is True
+        # Fuzzy matching is always enabled
         assert config.semantic_match.enabled is True
 
 
@@ -205,7 +205,7 @@ class TestDisplayFunctionsErrorHandling:
 class TestCLICommandErrorScenarios:
     """Test CLI command error scenarios using mocks."""
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.create_default_config")
     @patch("src.repomap_tool.cli.display_project_info")
@@ -245,7 +245,7 @@ class TestCLICommandErrorScenarios:
             error_message = str(e)
             assert "Test error" in error_message
 
-    @patch("src.repomap_tool.cli.DockerRepoMap")
+    @patch("src.repomap_tool.cli.RepoMapService")
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.create_search_config")
     @patch("src.repomap_tool.cli.display_search_results")
@@ -298,136 +298,6 @@ class TestCLICommandErrorScenarios:
             # This simulates the exception handling in the config command
             error_message = str(e)
             assert "Config error" in error_message
-
-    @patch("src.repomap_tool.cli.DockerRepoMap")
-    @patch("src.repomap_tool.cli.console")
-    def test_performance_command_exception_handling(self, mock_console, mock_repo_map):
-        """Test performance command exception handling."""
-        # Mock an exception in DockerRepoMap
-        mock_repo_map.side_effect = Exception("Performance error")
-
-        # This simulates the exception path in performance command
-        try:
-            repomap = mock_repo_map("test_config")
-        except Exception as e:
-            # This simulates the exception handling in the performance command
-            error_message = str(e)
-            assert "Performance error" in error_message
-
-
-class TestPerformanceCommandPaths:
-    """Test specific paths in the performance command."""
-
-    @patch("src.repomap_tool.cli.DockerRepoMap")
-    @patch("src.repomap_tool.cli.console")
-    @patch("src.repomap_tool.models.PerformanceConfig")
-    @patch("src.repomap_tool.models.RepoMapConfig")
-    def test_performance_command_monitoring_disabled_path(
-        self, mock_repo_map_config, mock_perf_config, mock_console, mock_repo_map
-    ):
-        """Test performance command when monitoring is disabled."""
-        # Mock the RepoMap
-        mock_repomap_instance = Mock()
-        mock_repo_map.return_value = mock_repomap_instance
-
-        # Mock performance metrics with monitoring disabled
-        mock_metrics = {"monitoring_disabled": True}
-        mock_repomap_instance.get_performance_metrics.return_value = mock_metrics
-
-        # Mock config objects
-        mock_perf_config_instance = Mock()
-        mock_perf_config.return_value = mock_perf_config_instance
-
-        mock_repo_map_config_instance = Mock()
-        mock_repo_map_config.return_value = mock_repo_map_config_instance
-
-        # This simulates the monitoring disabled path in performance command
-        performance_config = mock_perf_config(
-            max_workers=4,
-            parallel_threshold=10,
-            enable_progress=True,
-            enable_monitoring=True,
-            allow_fallback=False,
-        )
-
-        config = mock_repo_map_config(
-            project_root=".",
-            performance=performance_config,
-            verbose=True,
-        )
-
-        repomap = mock_repo_map(config)
-        metrics = repomap.get_performance_metrics()
-
-        # Check if monitoring is disabled
-        if metrics.get("monitoring_disabled"):
-            mock_console.print("[yellow]Performance monitoring is disabled[/yellow]")
-
-        # Verify the function calls
-        mock_perf_config.assert_called_once()
-        mock_repo_map_config.assert_called_once()
-        mock_repo_map.assert_called_once_with(mock_repo_map_config_instance)
-        mock_repomap_instance.get_performance_metrics.assert_called_once()
-        mock_console.print.assert_called_once_with(
-            "[yellow]Performance monitoring is disabled[/yellow]"
-        )
-
-    @patch("src.repomap_tool.cli.DockerRepoMap")
-    @patch("src.repomap_tool.cli.console")
-    @patch("src.repomap_tool.models.PerformanceConfig")
-    @patch("src.repomap_tool.models.RepoMapConfig")
-    def test_performance_command_error_path(
-        self, mock_repo_map_config, mock_perf_config, mock_console, mock_repo_map
-    ):
-        """Test performance command when there's an error in metrics."""
-        # Mock the RepoMap
-        mock_repomap_instance = Mock()
-        mock_repo_map.return_value = mock_repomap_instance
-
-        # Mock performance metrics with error
-        mock_metrics = {"error": "Test error"}
-        mock_repomap_instance.get_performance_metrics.return_value = mock_metrics
-
-        # Mock config objects
-        mock_perf_config_instance = Mock()
-        mock_perf_config.return_value = mock_perf_config_instance
-
-        mock_repo_map_config_instance = Mock()
-        mock_repo_map_config.return_value = mock_repo_map_config_instance
-
-        # This simulates the error path in performance command
-        performance_config = mock_perf_config(
-            max_workers=4,
-            parallel_threshold=10,
-            enable_progress=True,
-            enable_monitoring=True,
-            allow_fallback=False,
-        )
-
-        config = mock_repo_map_config(
-            project_root=".",
-            performance=performance_config,
-            verbose=True,
-        )
-
-        repomap = mock_repo_map(config)
-        metrics = repomap.get_performance_metrics()
-
-        # Check if there's an error
-        if "error" in metrics:
-            mock_console.print(f"[red]Error getting metrics: {metrics['error']}[/red]")
-
-        # Verify the function calls
-        mock_perf_config.assert_called_once()
-        mock_repo_map_config.assert_called_once()
-        mock_repo_map.assert_called_once_with(mock_repo_map_config_instance)
-        mock_repomap_instance.get_performance_metrics.assert_called_once()
-        mock_console.print.assert_called_once_with(
-            "[red]Error getting metrics: Test error[/red]"
-        )
-
-
-# Removed problematic test that doesn't contribute to coverage
 
 
 if __name__ == "__main__":

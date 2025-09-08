@@ -454,10 +454,10 @@ from ..models import RepoMapConfig, SearchRequest, SearchResponse, ProjectInfo
 from ..exceptions import RepoMapError, TagExtractionError
 
 class DockerRepoMap:
-    """Main orchestrator for Docker RepoMap functionality."""
+    """Main orchestrator for RepoMap-Tool functionality."""
     
     def __init__(self, config: RepoMapConfig):
-        """Initialize Docker RepoMap with validated configuration."""
+        """Initialize RepoMap-Tool with validated configuration."""
         self.config = config
         self.logger = logging.getLogger(__name__)
         

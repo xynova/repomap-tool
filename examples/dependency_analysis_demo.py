@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from repomap_tool.models import RepoMapConfig, DependencyConfig
-from repomap_tool.core.repo_map import DockerRepoMap
+from repomap_tool.core.repo_map import RepoMapService
 
 
 def main():
@@ -48,10 +48,10 @@ def main():
     print()
 
     try:
-        # Initialize DockerRepoMap with dependency analysis
-        print("🔧 Initializing DockerRepoMap with dependency analysis...")
-        repomap = DockerRepoMap(config)
-        print("✅ DockerRepoMap initialized successfully!")
+        # Initialize RepoMapService with dependency analysis
+        print("🔧 Initializing RepoMapService with dependency analysis...")
+        repomap = RepoMapService(config)
+        print("✅ RepoMapService initialized successfully!")
         print()
 
         # Build dependency graph
