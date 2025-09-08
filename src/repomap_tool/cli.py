@@ -604,14 +604,10 @@ def resolve_project_path(
         config_obj = discover_config_file_in_current_dir()
 
     if config_obj is None:
-        console.print(
-            "[red]Error: No project path provided and no configuration file found.[/red]\n"
-            "Please either:\n"
-            "1. Provide a project path as an argument\n"
-            "2. Create a config file first: repomap index config /path/to/project\n"
-            "3. Specify a config file: --config /path/to/config.json"
-        )
-        sys.exit(1)
+        # Use current directory as fallback when no project path or config is provided
+        current_dir = str(Path.cwd())
+        console.print(f"[blue]No project path provided, using current directory: {current_dir}[/blue]")
+        return current_dir
 
     project_path = str(config_obj.project_root)
     console.print(f"[blue]Using project path from config: {project_path}[/blue]")
