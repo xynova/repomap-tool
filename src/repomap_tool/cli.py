@@ -2016,6 +2016,12 @@ def centrality(
     required=False,
 )
 @click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+@click.option(
     "--files",
     "-f",
     multiple=True,
@@ -2031,6 +2037,7 @@ def centrality(
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 def impact(
     project_path: Optional[str],
+    config: Optional[str],
     files: tuple,
     output: str,
     verbose: bool,
@@ -2041,11 +2048,10 @@ def impact(
         console.print("[red]Error: Must specify at least one file with --files[/red]")
         sys.exit(1)
 
-    if project_path is None:
-        console.print("[red]Error: project_path is required for impact analysis[/red]")
-        sys.exit(1)
-
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
+        
         from .models import RepoMapConfig, DependencyConfig
 
         # Create dependency configuration
@@ -2054,8 +2060,8 @@ def impact(
         )
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
@@ -2068,7 +2074,7 @@ def impact(
         ) as progress:
             task = progress.add_task("Analyzing change impact...", total=None)
 
-            repomap = RepoMapService(config)
+            repomap = RepoMapService(config_obj)
             progress.update(task, description="Analysis complete!")
 
         # Analyze impact for each file
@@ -2088,16 +2094,16 @@ def impact(
                 table.add_column("Metric", style="cyan")
                 table.add_column("Value", style="green")
 
-                table.add_row("Risk Score", f"{report.get('risk_score', 0):.2f}")
+                table.add_row("Risk Score", f"{getattr(report, 'risk_score', 0):.2f}")
                 table.add_row(
-                    "Affected Files", str(len(report.get("affected_files", [])))
+                    "Affected Files", str(len(getattr(report, "affected_files", [])))
                 )
                 table.add_row(
                     "Breaking Change Potential",
-                    str(report.get("breaking_change_potential", 0)),
+                    str(getattr(report, "breaking_change_potential", 0)),
                 )
                 table.add_row(
-                    "Suggested Tests", str(len(report.get("suggested_tests", [])))
+                    "Suggested Tests", str(len(getattr(report, "suggested_tests", [])))
                 )
 
                 console.print(table)
@@ -2105,15 +2111,15 @@ def impact(
         else:
             for file_path, report in impact_reports.items():
                 console.print(f"[cyan]Impact Analysis: {file_path}[/cyan]")
-                console.print(f"  Risk Score: {report.get('risk_score', 0):.2f}")
+                console.print(f"  Risk Score: {getattr(report, 'risk_score', 0):.2f}")
                 console.print(
-                    f"  Affected Files: {len(report.get('affected_files', []))}"
+                    f"  Affected Files: {len(getattr(report, 'affected_files', []))}"
                 )
                 console.print(
-                    f"  Breaking Change Potential: {report.get('breaking_change_potential', 0)}"
+                    f"  Breaking Change Potential: {getattr(report, 'breaking_change_potential', 0)}"
                 )
                 console.print(
-                    f"  Suggested Tests: {len(report.get('suggested_tests', []))}"
+                    f"  Suggested Tests: {len(getattr(report, 'suggested_tests', []))}"
                 )
                 console.print()  # Add spacing
 
