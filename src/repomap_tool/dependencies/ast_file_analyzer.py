@@ -449,10 +449,98 @@ class ASTFileAnalyzer:
         Returns:
             True if the import refers to the target file
         """
-        # This is a simplified check - in practice, you'd need more sophisticated
-        # module resolution logic
-        target_module = Path(target_file).stem
-        return import_obj.module == target_module
+        try:
+            # Get the module name that the target file represents
+            target_module = self._file_path_to_module_name(target_file)
+            if not target_module:
+                return False
+
+            # Check if the import matches the target module
+            import_module = import_obj.module
+
+            # Handle exact matches
+            if import_module == target_module:
+                return True
+
+            # Handle cases where the import is a parent package of the target
+            # e.g., import "my_package" matches file "my_package/__init__.py"
+            if target_module.startswith(import_module + "."):
+                return True
+
+            # Handle cases where the import is a submodule of the target
+            # e.g., import "my_package.utils" matches file "my_package/utils.py"
+            if import_module.startswith(target_module + "."):
+                return True
+
+            # Handle relative imports
+            if import_obj.is_relative:
+                # For relative imports, we need to resolve them relative to the importing file
+                # This is more complex and would require the importing file context
+                # For now, we'll do a simple check
+                relative_module = import_module.lstrip(".")
+                if relative_module == target_module or target_module.endswith(
+                    "." + relative_module
+                ):
+                    return True
+
+            return False
+
+        except Exception as e:
+            logger.debug(f"Error in _is_import_of_file: {e}")
+            return False
+
+    def _file_path_to_module_name(self, file_path: str) -> Optional[str]:
+        """Convert a file path to its corresponding Python module name.
+
+        Args:
+            file_path: Path to the Python file
+
+        Returns:
+            Module name or None if conversion fails
+        """
+        try:
+            if not self.project_root:
+                # Fallback to simple stem extraction if no project root
+                return Path(file_path).stem
+
+            # Convert to absolute path
+            abs_file_path = Path(file_path).resolve()
+            abs_project_root = Path(self.project_root).resolve()
+
+            # Check if the file is within the project root
+            try:
+                relative_path = abs_file_path.relative_to(abs_project_root)
+            except ValueError:
+                # File is not within project root
+                return Path(file_path).stem
+
+            # Convert path to module name
+            module_parts = []
+            is_init_file = False
+
+            for part in relative_path.parts:
+                if part == "__init__.py":
+                    # Handle __init__.py files - the module is the parent directory
+                    is_init_file = True
+                    break
+                elif part.endswith(".py"):
+                    # Remove .py extension
+                    module_parts.append(part[:-3])
+                else:
+                    module_parts.append(part)
+
+            # Join parts with dots
+            if is_init_file:
+                # For __init__.py files, the module name is the parent directory path
+                module_name = ".".join(module_parts)
+            else:
+                module_name = ".".join(module_parts)
+
+            return module_name if module_name else None
+
+        except Exception as e:
+            logger.debug(f"Error converting file path to module name: {e}")
+            return None
 
     def clear_cache(self) -> None:
         """Clear the analysis cache."""

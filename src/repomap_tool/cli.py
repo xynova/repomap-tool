@@ -2076,24 +2076,6 @@ def centrality(
     default=4000,
     help="Maximum tokens for LLM-optimized output",
 )
-@click.option(
-    "--show-imports",
-    is_flag=True,
-    default=True,
-    help="Show import dependencies",
-)
-@click.option(
-    "--show-calls",
-    is_flag=True,
-    default=True,
-    help="Show function call analysis",
-)
-@click.option(
-    "--show-reverse",
-    is_flag=True,
-    default=True,
-    help="Show reverse dependencies",
-)
 def impact(
     project_path: Optional[str],
     config: Optional[str],
@@ -2101,9 +2083,6 @@ def impact(
     output: str,
     verbose: bool,
     max_tokens: int,
-    show_imports: bool,
-    show_calls: bool,
-    show_reverse: bool,
 ) -> None:
     """Analyze impact of changes to specific files with AST-based analysis."""
 

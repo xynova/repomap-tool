@@ -104,14 +104,12 @@ class LLMFileAnalyzer:
         self,
         file_paths: List[str],
         format_type: AnalysisFormat = AnalysisFormat.LLM_OPTIMIZED,
-        include_code_snippets: bool = False,
     ) -> str:
         """Analyze impact for one or more files.
 
         Args:
             file_paths: List of file paths to analyze
             format_type: Output format type
-            include_code_snippets: Whether to include code snippets
 
         Returns:
             Formatted impact analysis string
