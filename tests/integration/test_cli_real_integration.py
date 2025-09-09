@@ -542,7 +542,7 @@ def utility_function():
                 "analyze",
                 "centrality",
                 temp_project_with_dependencies,
-                "--file",
+                "--files",
                 main_file,
                 "--output",
                 "json",

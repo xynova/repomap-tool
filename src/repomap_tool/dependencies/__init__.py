@@ -31,6 +31,17 @@ from .call_graph_builder import CallGraphBuilder
 from .centrality_calculator import CentralityCalculator
 from .impact_analyzer import ImpactAnalyzer
 from .advanced_dependency_graph import AdvancedDependencyGraph
+from .ast_file_analyzer import (
+    ASTFileAnalyzer,
+    FileAnalysisResult,
+    CrossFileRelationship,
+)
+from .llm_file_analyzer import (
+    LLMFileAnalyzer,
+    FileImpactAnalysis,
+    FileCentralityAnalysis,
+    AnalysisFormat,
+)
 
 __all__ = [
     # Core classes
@@ -40,6 +51,8 @@ __all__ = [
     "CentralityCalculator",
     "ImpactAnalyzer",
     "AdvancedDependencyGraph",
+    "ASTFileAnalyzer",
+    "LLMFileAnalyzer",
     # Data models
     "FileImports",
     "ProjectImports",
@@ -49,6 +62,11 @@ __all__ = [
     "FunctionCall",
     "ImpactReport",
     "BreakingChangeRisk",
+    "FileAnalysisResult",
+    "CrossFileRelationship",
+    "FileImpactAnalysis",
+    "FileCentralityAnalysis",
+    "AnalysisFormat",
 ]
 
 __version__ = "0.1.0"
