@@ -1899,16 +1899,16 @@ def dependencies(
     required=False,
 )
 @click.option(
-    "--file",
+    "--files",
     "-f",
-    type=str,
-    help="Specific file to analyze (relative to project root)",
+    multiple=True,
+    help="Specific files to analyze (relative to project root)",
 )
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "table", "text"]),
-    default="table",
+    type=click.Choice(["json", "table", "text", "llm_optimized"]),
+    default="llm_optimized",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
@@ -1918,19 +1918,27 @@ def dependencies(
     type=click.Path(exists=True),
     help="Configuration file path",
 )
+@click.option(
+    "--max-tokens",
+    type=int,
+    default=4000,
+    help="Maximum tokens for LLM-optimized output",
+)
 def centrality(
     project_path: Optional[str],
-    file: str,
+    files: tuple,
     output: str,
     verbose: bool,
     config: Optional[str],
+    max_tokens: int,
 ) -> None:
-    """Show centrality analysis for project files."""
+    """Show centrality analysis for project files with AST-based analysis."""
 
     try:
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
         from .models import RepoMapConfig, DependencyConfig
+        from .dependencies import LLMFileAnalyzer, AnalysisFormat
 
         # Create dependency configuration
         dependency_config = DependencyConfig()
@@ -1942,43 +1950,70 @@ def centrality(
             verbose=verbose,
         )
 
-        # Initialize RepoMap
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Calculating centrality scores...", total=None)
+        # Initialize RepoMap and build dependency graph
+        # Suppress progress indicators and logging for JSON output to avoid contamination
+        if output == "json":
+            import logging
 
-            repomap = RepoMapService(config_obj)
-            progress.update(task, description="Analysis complete!")
-
-        # Get centrality scores
-        centrality_scores = repomap.get_centrality_scores()
-
-        if file:
-            # Show centrality for specific file
-            if file in centrality_scores:
-                score = centrality_scores[file]
-                if output == "json":
-                    import json
-
-                    console.print(json.dumps({file: score}, indent=2))
-                elif output == "table":
-                    table = Table(title=f"Centrality Analysis: {file}")
-                    table.add_column("Metric", style="cyan")
-                    table.add_column("Value", style="green")
-                    table.add_row("Composite Score", f"{score:.4f}")
-                    table.add_row("Rank", "N/A")  # Would need to calculate rank
-                    console.print(table)
-                else:
-                    console.print(f"[cyan]Centrality Analysis: {file}[/cyan]")
-                    console.print(f"  Composite Score: {score:.4f}")
-            else:
-                console.print(f"[red]File '{file}' not found in project[/red]")
-                sys.exit(1)
+            # Temporarily suppress logging to avoid contaminating JSON output
+            logging.disable(logging.CRITICAL)
+            try:
+                repomap = RepoMapService(config_obj)
+                dependency_graph = repomap.build_dependency_graph()
+                llm_analyzer = LLMFileAnalyzer(
+                    dependency_graph=dependency_graph,
+                    project_root=resolved_project_path,
+                    max_tokens=max_tokens,
+                )
+            finally:
+                # Re-enable logging
+                logging.disable(logging.NOTSET)
         else:
-            # Show top centrality files
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Building dependency graph...", total=None)
+
+                repomap = RepoMapService(config_obj)
+                progress.update(task, description="Calculating centrality scores...")
+
+                # Build dependency graph for comprehensive analysis
+                dependency_graph = repomap.build_dependency_graph()
+
+                # Initialize LLM file analyzer
+                llm_analyzer = LLMFileAnalyzer(
+                    dependency_graph=dependency_graph,
+                    project_root=resolved_project_path,
+                    max_tokens=max_tokens,
+                )
+
+                progress.update(task, description="Analysis complete!")
+
+        # Convert output format
+        if output == "llm_optimized":
+            format_type = AnalysisFormat.LLM_OPTIMIZED
+        elif output == "json":
+            format_type = AnalysisFormat.JSON
+        elif output == "table":
+            format_type = AnalysisFormat.TABLE
+        else:
+            format_type = AnalysisFormat.TEXT
+
+        if files:
+            # Analyze specific files
+            result = llm_analyzer.analyze_file_centrality(
+                file_paths=list(files), format_type=format_type
+            )
+            if output == "json":
+                # Use print() for JSON to avoid Rich formatting contamination
+                print(result)
+            else:
+                console.print(result)
+        else:
+            # Show top centrality files (fallback to original behavior)
+            centrality_scores = repomap.get_centrality_scores()
             sorted_scores = sorted(
                 centrality_scores.items(), key=lambda x: x[1], reverse=True
             )
@@ -2016,6 +2051,12 @@ def centrality(
     required=False,
 )
 @click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+@click.option(
     "--files",
     "-f",
     multiple=True,
@@ -2024,29 +2065,37 @@ def centrality(
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "table", "text"]),
-    default="table",
+    type=click.Choice(["json", "table", "text", "llm_optimized"]),
+    default="llm_optimized",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.option(
+    "--max-tokens",
+    type=int,
+    default=4000,
+    help="Maximum tokens for LLM-optimized output",
+)
 def impact(
     project_path: Optional[str],
+    config: Optional[str],
     files: tuple,
     output: str,
     verbose: bool,
+    max_tokens: int,
 ) -> None:
-    """Analyze impact of changes to specific files."""
+    """Analyze impact of changes to specific files with AST-based analysis."""
 
     if not files:
         console.print("[red]Error: Must specify at least one file with --files[/red]")
         sys.exit(1)
 
-    if project_path is None:
-        console.print("[red]Error: project_path is required for impact analysis[/red]")
-        sys.exit(1)
-
     try:
+        # Resolve project path from argument, config file, or discovery
+        resolved_project_path = resolve_project_path(project_path, config)
+
         from .models import RepoMapConfig, DependencyConfig
+        from .dependencies import LLMFileAnalyzer, AnalysisFormat
 
         # Create dependency configuration
         dependency_config = DependencyConfig(
@@ -2054,68 +2103,74 @@ def impact(
         )
 
         # Create main configuration
-        config = RepoMapConfig(
-            project_root=project_path,
+        config_obj = RepoMapConfig(
+            project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
         )
 
-        # Initialize RepoMap
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Analyzing change impact...", total=None)
+        # Initialize RepoMap and build dependency graph
+        # Suppress progress indicators and logging for JSON output to avoid contamination
+        if output == "json":
+            import logging
 
-            repomap = RepoMapService(config)
-            progress.update(task, description="Analysis complete!")
+            # Temporarily suppress logging to avoid contaminating JSON output
+            logging.disable(logging.CRITICAL)
+            try:
+                repomap = RepoMapService(config_obj)
+                dependency_graph = repomap.build_dependency_graph()
+                llm_analyzer = LLMFileAnalyzer(
+                    dependency_graph=dependency_graph,
+                    project_root=resolved_project_path,
+                    max_tokens=max_tokens,
+                )
+            finally:
+                # Re-enable logging
+                logging.disable(logging.NOTSET)
+        else:
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Building dependency graph...", total=None)
 
-        # Analyze impact for each file
-        impact_reports = {}
-        for file_path in files:
-            impact_report = repomap.analyze_change_impact(file_path)
-            impact_reports[file_path] = impact_report
+                repomap = RepoMapService(config_obj)
+                progress.update(task, description="Analyzing file impact...")
+
+                # Build dependency graph for comprehensive analysis
+                dependency_graph = repomap.build_dependency_graph()
+
+                # Initialize LLM file analyzer
+                llm_analyzer = LLMFileAnalyzer(
+                    dependency_graph=dependency_graph,
+                    project_root=resolved_project_path,
+                    max_tokens=max_tokens,
+                )
+
+                progress.update(task, description="Analysis complete!")
+
+        # Convert output format
+        if output == "llm_optimized":
+            format_type = AnalysisFormat.LLM_OPTIMIZED
+        elif output == "json":
+            format_type = AnalysisFormat.JSON
+        elif output == "table":
+            format_type = AnalysisFormat.TABLE
+        else:
+            format_type = AnalysisFormat.TEXT
+
+        # Analyze impact for specified files
+        result = llm_analyzer.analyze_file_impact(
+            file_paths=list(files), format_type=format_type
+        )
 
         # Display results
         if output == "json":
-            import json
-
-            console.print(json.dumps(impact_reports, indent=2, default=str))
-        elif output == "table":
-            for file_path, report in impact_reports.items():
-                table = Table(title=f"Impact Analysis: {file_path}")
-                table.add_column("Metric", style="cyan")
-                table.add_column("Value", style="green")
-
-                table.add_row("Risk Score", f"{report.get('risk_score', 0):.2f}")
-                table.add_row(
-                    "Affected Files", str(len(report.get("affected_files", [])))
-                )
-                table.add_row(
-                    "Breaking Change Potential",
-                    str(report.get("breaking_change_potential", 0)),
-                )
-                table.add_row(
-                    "Suggested Tests", str(len(report.get("suggested_tests", [])))
-                )
-
-                console.print(table)
-                console.print()  # Add spacing between tables
+            # Use print() for JSON to avoid Rich formatting contamination
+            print(result)
         else:
-            for file_path, report in impact_reports.items():
-                console.print(f"[cyan]Impact Analysis: {file_path}[/cyan]")
-                console.print(f"  Risk Score: {report.get('risk_score', 0):.2f}")
-                console.print(
-                    f"  Affected Files: {len(report.get('affected_files', []))}"
-                )
-                console.print(
-                    f"  Breaking Change Potential: {report.get('breaking_change_potential', 0)}"
-                )
-                console.print(
-                    f"  Suggested Tests: {len(report.get('suggested_tests', []))}"
-                )
-                console.print()  # Add spacing
+            console.print(result)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ImpactAnalysisError")
