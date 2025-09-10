@@ -67,6 +67,9 @@ class FileCentralityAnalysis:
 class LLMFileAnalyzer:
     """LLM-optimized file analyzer for comprehensive impact and centrality analysis."""
 
+    centrality_calculator: Optional[CentralityCalculator]
+    impact_analyzer: Optional[ImpactAnalyzer]
+
     def __init__(
         self,
         dependency_graph: Optional[AdvancedDependencyGraph] = None,
@@ -122,8 +125,11 @@ class LLMFileAnalyzer:
             if os.path.isabs(file_path):
                 resolved_paths.append(file_path)
             else:
-                resolved_path = os.path.join(self.project_root, file_path)
-                resolved_paths.append(resolved_path)
+                if self.project_root is None:
+                    resolved_paths.append(file_path)
+                else:
+                    resolved_path = os.path.join(self.project_root, file_path)
+                    resolved_paths.append(resolved_path)
 
         # Perform AST analysis for all files
         ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
@@ -133,9 +139,10 @@ class LLMFileAnalyzer:
 
         # Analyze each file
         impact_analyses = []
-        for file_path in file_paths:
+        for i, file_path in enumerate(file_paths):
+            resolved_path = resolved_paths[i]
             impact_analysis = self._analyze_single_file_impact(
-                file_path, ast_results[file_path], all_files
+                file_path, ast_results[resolved_path], all_files
             )
             impact_analyses.append(impact_analysis)
 
@@ -174,8 +181,11 @@ class LLMFileAnalyzer:
             if os.path.isabs(file_path):
                 resolved_paths.append(file_path)
             else:
-                resolved_path = os.path.join(self.project_root, file_path)
-                resolved_paths.append(resolved_path)
+                if self.project_root is None:
+                    resolved_paths.append(file_path)
+                else:
+                    resolved_path = os.path.join(self.project_root, file_path)
+                    resolved_paths.append(resolved_path)
 
         # Perform AST analysis for all files
         ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
@@ -185,9 +195,10 @@ class LLMFileAnalyzer:
 
         # Analyze each file
         centrality_analyses = []
-        for file_path in file_paths:
+        for i, file_path in enumerate(file_paths):
+            resolved_path = resolved_paths[i]
             centrality_analysis = self._analyze_single_file_centrality(
-                file_path, ast_results[file_path], all_files
+                file_path, ast_results[resolved_path], all_files
             )
             centrality_analyses.append(centrality_analysis)
 
@@ -451,8 +462,8 @@ class LLMFileAnalyzer:
         output.append("")
 
         # Combined dependencies
-        all_direct_deps = set()
-        all_reverse_deps = set()
+        all_direct_deps: Set[str] = set()
+        all_reverse_deps: Set[str] = set()
 
         for analysis in analyses:
             for dep in analysis.direct_dependencies:
@@ -461,15 +472,15 @@ class LLMFileAnalyzer:
                 all_reverse_deps.add(Path(dep["file"]).name)
 
         output.append("COMBINED DEPENDENCIES:")
-        for dep in list(all_direct_deps)[:10]:
-            output.append(f"├── {dep}")
+        for dep_name in list(all_direct_deps)[:10]:
+            output.append(f"├── {dep_name}")
         if len(all_direct_deps) > 10:
             output.append(f"└── ... and {len(all_direct_deps) - 10} more")
         output.append("")
 
         output.append("COMBINED REVERSE DEPENDENCIES:")
-        for dep in list(all_reverse_deps)[:10]:
-            output.append(f"├── {dep}")
+        for dep_name in list(all_reverse_deps)[:10]:
+            output.append(f"├── {dep_name}")
         if len(all_reverse_deps) > 10:
             output.append(f"└── ... and {len(all_reverse_deps) - 10} more")
 
@@ -715,7 +726,7 @@ class LLMFileAnalyzer:
         if not function_calls:
             return None
 
-        call_counts = {}
+        call_counts: Dict[str, int] = {}
         for call in function_calls:
             func_name = call.callee
             call_counts[func_name] = call_counts.get(func_name, 0) + 1
@@ -727,7 +738,7 @@ class LLMFileAnalyzer:
         if not imports:
             return None
 
-        class_counts = {}
+        class_counts: Dict[str, int] = {}
         for import_obj in imports:
             # Check if any imported symbols are classes (start with uppercase)
             if import_obj.symbols:

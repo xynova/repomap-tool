@@ -250,7 +250,7 @@ class ASTFileAnalyzer:
                     target_file="unknown",  # Would need more analysis to determine
                     relationship_type="calls_function",
                     line_number=func_call.line_number or 0,
-                    details=f"calls {func_call.function_name}",
+                    details=f"calls {func_call.callee}",
                 )
             )
 
@@ -274,7 +274,7 @@ class ASTFileAnalyzer:
         function_calls = []
         defined_functions = []
         defined_classes = []
-        used_classes = []
+        used_classes: List[str] = []
         used_variables = []
         analysis_errors = []
 

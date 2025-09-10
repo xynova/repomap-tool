@@ -101,7 +101,7 @@ def validate_credentials(email: str) -> bool:
     '''Validate email credentials'''
     if not email:
         return False
-    pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    pattern = '^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$'
     return bool(re.match(pattern, email))
 
 def hash_password(password: str) -> str:
@@ -127,7 +127,7 @@ class DatabaseConnection:
     
     def save_user(self, user) -> int:
         cursor = self.connection.cursor()
-        cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)", 
+        cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)",
                       (user.name, user.email))
         self.connection.commit()
         return cursor.lastrowid
@@ -903,7 +903,6 @@ class User:
 
     def test_llm_analyzer_impact_analysis(self):
         """Test LLM analyzer impact analysis."""
-        from repomap_tool.dependencies import LLMFileAnalyzer
 
         main_file = str(self.project_root / "src" / "main.py")
 
@@ -917,7 +916,6 @@ class User:
 
     def test_llm_analyzer_centrality_analysis(self):
         """Test LLM analyzer centrality analysis."""
-        from repomap_tool.dependencies import LLMFileAnalyzer
         from repomap_tool.core.repo_map import RepoMapService
         from repomap_tool.models import RepoMapConfig, DependencyConfig
 
@@ -946,7 +944,6 @@ class User:
 
     def test_llm_analyzer_json_output(self):
         """Test LLM analyzer JSON output."""
-        from repomap_tool.dependencies import LLMFileAnalyzer
 
         main_file = str(self.project_root / "src" / "main.py")
 
@@ -963,7 +960,6 @@ class User:
 
     def test_llm_analyzer_token_optimization(self):
         """Test LLM analyzer token optimization."""
-        from repomap_tool.dependencies import LLMFileAnalyzer
 
         main_file = str(self.project_root / "src" / "main.py")
 
@@ -978,7 +974,6 @@ class User:
 
     def test_llm_analyzer_multiple_files(self):
         """Test LLM analyzer with multiple files."""
-        from repomap_tool.dependencies import LLMFileAnalyzer
 
         main_file = str(self.project_root / "src" / "main.py")
         utils_file = str(self.project_root / "src" / "utils.py")

@@ -62,6 +62,7 @@ def should_ignore_file(
         return False
 
     rel_path_str = str(rel_path)
+    is_ignored = False
 
     for pattern in gitignore_patterns:
         # Skip empty patterns
@@ -70,28 +71,88 @@ def should_ignore_file(
 
         # Handle negation patterns (starting with !)
         if pattern.startswith("!"):
-            # For now, we'll skip negation patterns as they require more complex logic
-            # TODO: Implement proper negation support
+            # Remove the ! prefix
+            negated_pattern = pattern[1:]
+            # Check if this negation pattern matches
+            if _pattern_matches(rel_path_str, negated_pattern):
+                # Negation pattern matches, so don't ignore this file
+                is_ignored = False
             continue
 
-        # Handle directory patterns (ending with /)
-        if pattern.endswith("/"):
-            dir_pattern = pattern[:-1]
-            if (
-                rel_path_str.startswith(dir_pattern + "/")
-                or rel_path_str == dir_pattern
-            ):
-                return True
+        # Check if this pattern matches
+        if _pattern_matches(rel_path_str, pattern):
+            is_ignored = True
 
-        # Handle patterns with wildcards (anywhere in the pattern)
-        elif "*" in pattern or "?" in pattern:
-            # Use fnmatch for any pattern containing wildcards
-            if fnmatch.fnmatch(rel_path_str, pattern):
+    return is_ignored
+
+
+def _pattern_matches(rel_path_str: str, pattern: str) -> bool:
+    """
+    Check if a gitignore pattern matches a relative path.
+
+    Args:
+        rel_path_str: Relative path string to check
+        pattern: Gitignore pattern to match against
+
+    Returns:
+        True if pattern matches, False otherwise
+    """
+    # Handle double wildcard patterns (**)
+    if "**" in pattern:
+        # Handle different ** patterns
+        if pattern.startswith("**/"):
+            # **/pattern -> matches pattern at any depth
+            pattern = pattern[3:]
+            if pattern.endswith("/"):
+                pattern = pattern[:-1]
+            # Check if any directory in the path matches the pattern
+            path_parts = rel_path_str.split("/")
+            for i in range(len(path_parts)):
+                sub_path = "/".join(path_parts[: i + 1])
+                if fnmatch.fnmatch(sub_path, pattern) or sub_path == pattern:
+                    return True
+                # Also check individual path parts
+                if path_parts[i] == pattern:
+                    return True
+            return False
+
+        elif pattern.endswith("/**"):
+            # pattern/** -> matches pattern and anything under it
+            pattern = pattern[:-3]
+            if rel_path_str.startswith(pattern + "/") or rel_path_str == pattern:
                 return True
-        else:
-            # Exact match or prefix match
-            if rel_path_str == pattern or rel_path_str.startswith(pattern + "/"):
-                return True
+            return False
+
+        elif "/**/" in pattern:
+            # pattern/**/suffix -> matches pattern, then any directories, then suffix
+            prefix, suffix = pattern.split("/**/", 1)
+            if rel_path_str.startswith(prefix + "/"):
+                remaining_path = rel_path_str[len(prefix) + 1 :]
+                # Check if suffix appears anywhere in the remaining path
+                if suffix in remaining_path:
+                    return True
+                # Check if suffix is at the end
+                if remaining_path.endswith("/" + suffix) or remaining_path == suffix:
+                    return True
+            return False
+
+        return False
+
+    # Handle directory patterns (ending with /)
+    if pattern.endswith("/"):
+        dir_pattern = pattern[:-1]
+        if rel_path_str.startswith(dir_pattern + "/") or rel_path_str == dir_pattern:
+            return True
+
+    # Handle patterns with wildcards (anywhere in the pattern)
+    elif "*" in pattern or "?" in pattern:
+        # Use fnmatch for any pattern containing wildcards
+        if fnmatch.fnmatch(rel_path_str, pattern):
+            return True
+    else:
+        # Exact match or prefix match
+        if rel_path_str == pattern or rel_path_str.startswith(pattern + "/"):
+            return True
 
     return False
 
@@ -132,16 +193,20 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
         for filename in filenames:
             file_path = Path(root) / filename
 
+            # Always ignore .gitignore file itself
+            if filename == ".gitignore":
+                if verbose:
+                    logging.debug(f"Ignoring .gitignore file: {file_path}")
+                continue
+
             # Check if file should be ignored
             if should_ignore_file(file_path, gitignore_patterns, Path(project_root)):
                 if verbose:
                     logging.debug(f"Ignoring file (gitignore): {file_path}")
                 continue
 
-            # Only include supported file types
-            if filename.endswith((".py", ".js", ".ts", ".java", ".cpp", ".c", ".h")):
-                # Get relative path from project root
-                rel_path = file_path.relative_to(Path(project_root))
-                files.append(str(rel_path))
+            # Get relative path from project root
+            rel_path = file_path.relative_to(Path(project_root))
+            files.append(str(rel_path))
 
     return files
