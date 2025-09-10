@@ -307,16 +307,15 @@ class LLMFileAnalyzer:
         """
         # Calculate centrality score
         centrality_score = 0.0
-        if self.centrality_calculator and file_path in self.dependency_graph.nodes:
-            centrality_scores = (
+        rank = 1
+        all_scores = {}
+        if self.centrality_calculator:
+            all_scores = (
                 self.centrality_calculator.calculate_composite_importance()
             )
-            centrality_score = centrality_scores.get(file_path, 0.0)
+            centrality_score = all_scores.get(file_path, 0.0)
 
-        # Calculate rank
-        rank = 1
-        if self.centrality_calculator:
-            all_scores = self.centrality_calculator.calculate_composite_importance()
+            # Calculate rank
             sorted_scores = sorted(all_scores.items(), key=lambda x: x[1], reverse=True)
             for i, (fpath, score) in enumerate(sorted_scores, 1):
                 if fpath == file_path:
