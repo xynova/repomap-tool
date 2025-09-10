@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from enum import Enum
 
 from .ast_file_analyzer import (
+    AnalysisType,
     ASTFileAnalyzer,
     FileAnalysisResult,
     CrossFileRelationship,
@@ -316,38 +317,85 @@ class LLMFileAnalyzer:
         Returns:
             FileCentralityAnalysis object
         """
+        # Convert absolute path to relative path for dependency graph lookup
+        if os.path.isabs(file_path) and self.project_root:
+            try:
+                relative_file_path = os.path.relpath(file_path, self.project_root)
+            except ValueError:
+                # If paths are on different drives (Windows), use the original path
+                relative_file_path = file_path
+        else:
+            relative_file_path = file_path
+
         # Calculate centrality score
         centrality_score = 0.0
         rank = 1
+        total_files = 0
         all_scores = {}
         if self.centrality_calculator:
             all_scores = self.centrality_calculator.calculate_composite_importance()
-            centrality_score = all_scores.get(file_path, 0.0)
+            centrality_score = all_scores.get(relative_file_path, 0.0)
+            total_files = len(all_scores) if all_scores else 0
 
             # Calculate rank
-            sorted_scores = sorted(all_scores.items(), key=lambda x: x[1], reverse=True)
-            for i, (fpath, score) in enumerate(sorted_scores, 1):
-                if fpath == file_path:
-                    rank = i
-                    break
+            if all_scores:
+                sorted_scores = sorted(all_scores.items(), key=lambda x: x[1], reverse=True)
+                for i, (fpath, score) in enumerate(sorted_scores, 1):
+                    if fpath == relative_file_path:
+                        rank = i
+                        break
+        
+        # If centrality calculator failed or returned empty results, use fallback
+        if total_files == 0:
+            if self.dependency_graph and len(self.dependency_graph.nodes) > 0:
+                total_files = len(self.dependency_graph.nodes)
+            else:
+                total_files = len(all_files) if all_files else 1
 
-        # Dependency analysis
+        # Dependency analysis - use dependency graph data when available
+        if self.dependency_graph and relative_file_path in self.dependency_graph.nodes:
+            node = self.dependency_graph.nodes[relative_file_path]
+            direct_imports = len(node.imports) if node.imports else 0
+            reverse_dependencies = len(node.imported_by) if node.imported_by else 0
+            # Get actual lists for detailed analysis
+            import_list = list(node.imports) if node.imports else []
+            reverse_dep_list = list(node.imported_by) if node.imported_by else []
+        else:
+            # Fallback to AST results for Python files
+            direct_imports = len(ast_result.imports)
+            reverse_dep_relationships = self.ast_analyzer.find_reverse_dependencies(file_path, all_files)
+            reverse_dependencies = len(reverse_dep_relationships)
+            import_list = [imp.module for imp in ast_result.imports] if ast_result.imports else []
+            reverse_dep_list = [rel.source_file for rel in reverse_dep_relationships]
+        
         dependency_analysis = {
-            "direct_imports": len(ast_result.imports),
-            "reverse_dependencies": len(
-                self.ast_analyzer.find_reverse_dependencies(file_path, all_files)
-            ),
-            "total_connections": len(ast_result.imports)
-            + len(self.ast_analyzer.find_reverse_dependencies(file_path, all_files)),
+            "direct_imports": direct_imports,
+            "reverse_dependencies": reverse_dependencies,
+            "total_connections": direct_imports + reverse_dependencies,
+            "import_list": import_list[:15],  # Show more for LLM analysis
+            "reverse_dep_list": reverse_dep_list,  # Show ALL inbound deps for LLM
+            "import_list_truncated": len(import_list) > 15,
+            "reverse_dep_list_truncated": False,  # Don't truncate inbound deps
         }
 
         # Function call analysis
+        categorized_calls = self._smart_categorize_function_calls(
+            ast_result.function_calls, ast_result.defined_functions, ast_result.imports, limit=5
+        )
         function_call_analysis = {
             "total_calls": len(ast_result.function_calls),
+            "internal_calls": categorized_calls["internal_count"],
+            "external_calls": categorized_calls["external_count"],
             "defined_functions": len(ast_result.defined_functions),
             "most_called_function": self._find_most_called_function(
                 ast_result.function_calls
             ),
+            "top_called_functions": self._get_top_called_functions(
+                ast_result.function_calls, limit=5
+            ),
+            "internal_functions": categorized_calls["internal"],
+            "external_functions": categorized_calls["external"],
+            "external_with_sources": categorized_calls["external_with_sources"],
             "most_used_class": self._find_most_used_class(ast_result.imports),
         }
 
@@ -358,11 +406,18 @@ class LLMFileAnalyzer:
             "pagerank": centrality_score * 0.3,
         }
 
-        # Structural impact
-        structural_impact = {
-            "if_file_changes": len(
+        # Structural impact - use dependency graph data when available
+        if self.dependency_graph and relative_file_path in self.dependency_graph.nodes:
+            node = self.dependency_graph.nodes[relative_file_path]
+            files_affected = len(node.imported_by) if node.imported_by else 0
+        else:
+            # Fallback to AST results for Python files
+            files_affected = len(
                 self.ast_analyzer.find_reverse_dependencies(file_path, all_files)
-            ),
+            )
+        
+        structural_impact = {
+            "if_file_changes": files_affected,
             "if_functions_change": len(ast_result.defined_functions),
             "if_classes_change": len(ast_result.defined_classes),
         }
@@ -371,7 +426,7 @@ class LLMFileAnalyzer:
             file_path=file_path,
             centrality_score=centrality_score,
             rank=rank,
-            total_files=len(all_files),
+            total_files=total_files,
             dependency_analysis=dependency_analysis,
             function_call_analysis=function_call_analysis,
             centrality_breakdown=centrality_breakdown,
@@ -508,46 +563,162 @@ class LLMFileAnalyzer:
         output.append("")
 
         output.append(
-            f"CENTRALITY SCORE: {analysis.centrality_score:.3f} (Rank: {analysis.rank}/{analysis.total_files})"
+            f"📊 IMPORTANCE SCORE: {analysis.centrality_score:.3f}/1.0 (Rank: {analysis.rank}/{analysis.total_files})"
         )
         output.append("")
 
         # Dependency analysis
-        output.append("DEPENDENCY ANALYSIS:")
+        output.append("🔗 FILE CONNECTIONS:")
         output.append(
-            f"├── Direct imports: {analysis.dependency_analysis['direct_imports']} files"
+            f"├── Files this imports from: {analysis.dependency_analysis['direct_imports']} files"
         )
         output.append(
-            f"├── Direct dependents: {analysis.dependency_analysis['reverse_dependencies']} files"
+            f"├── Files that import this: {analysis.dependency_analysis['reverse_dependencies']} files"
         )
         output.append(
             f"└── Total connections: {analysis.dependency_analysis['total_connections']}"
         )
         output.append("")
+        
+        # Show actual dependency lists if available
+        import_list = analysis.dependency_analysis.get('import_list', [])
+        reverse_dep_list = analysis.dependency_analysis.get('reverse_dep_list', [])
+        
+        if import_list:
+            output.append("📤 OUTBOUND DEPENDENCIES (imports):")
+            for i, dep in enumerate(import_list):
+                # Convert to relative path for cleaner display
+                dep_display = Path(dep).name if dep else dep
+                prefix = "├──" if i < len(import_list) - 1 else "└──"
+                output.append(f"│   {prefix} {dep_display}")
+            if analysis.dependency_analysis.get('import_list_truncated'):
+                output.append(f"│   └── ... and {analysis.dependency_analysis['direct_imports'] - len(import_list)} more")
+            output.append("")
+            
+        if reverse_dep_list:
+            output.append("📥 INBOUND DEPENDENCIES (files that import this):")
+            
+            # Group dependencies by directory for better organization
+            deps_by_dir = {}
+            for dep in reverse_dep_list:
+                # Show relative path with context
+                if dep.startswith(self.project_root):
+                    dep_relative = os.path.relpath(dep, self.project_root)
+                else:
+                    dep_relative = dep
+                
+                # Extract meaningful directory context
+                parts = Path(dep_relative).parts
+                if len(parts) > 1:
+                    dir_path = str(Path(*parts[:-1]))  # Directory path
+                    filename = parts[-1]  # Just filename
+                else:
+                    dir_path = "."
+                    filename = dep_relative
+                
+                if dir_path not in deps_by_dir:
+                    deps_by_dir[dir_path] = []
+                deps_by_dir[dir_path].append((dep, filename))
+            
+            # Display grouped dependencies
+            dir_count = 0
+            total_dirs = len(deps_by_dir)
+            
+            for dir_path, files in deps_by_dir.items():
+                dir_count += 1
+                dir_prefix = "├──" if dir_count < total_dirs else "└──"
+                
+                if len(files) == 1:
+                    # Single file in directory - show inline
+                    dep, filename = files[0]
+                    if dir_path == ".":
+                        output.append(f"│   {dir_prefix} {filename}")
+                    else:
+                        output.append(f"│   {dir_prefix} {dir_path}/{filename}")
+                else:
+                    # Multiple files in directory - group them
+                    output.append(f"│   {dir_prefix} {dir_path}/ ({len(files)} files)")
+                    for j, (dep, filename) in enumerate(files):
+                        file_prefix = "├──" if j < len(files) - 1 else "└──"
+                        output.append(f"│   │   {file_prefix} {filename}")
+                        
+                        # Add function call details if available (but only for first few to avoid clutter)
+                        if j < 3:  # Show function calls for first 3 files per directory
+                            called_functions = self._get_functions_called_from_file(dep, analysis.file_path)
+                            if called_functions:
+                                func_list = ", ".join(called_functions[:2])  # Show top 2 functions
+                                if len(called_functions) > 2:
+                                    func_list += f" (+{len(called_functions)-2} more)"
+                                output.append(f"│   │       └── calls: {func_list}")
+            
+            output.append("")
 
         # Function call analysis
-        output.append("FUNCTION CALL ANALYSIS:")
-        output.append(
-            f"├── Total function calls: {analysis.function_call_analysis['total_calls']}"
-        )
-        output.append(
-            f"├── Defined functions: {analysis.function_call_analysis['defined_functions']}"
-        )
-        if analysis.function_call_analysis["most_called_function"]:
-            output.append(
-                f"└── Most called function: {analysis.function_call_analysis['most_called_function']}"
-            )
+        output.append("⚙️ FUNCTION USAGE:")
+        
+        total_calls = analysis.function_call_analysis['total_calls']
+        internal_calls = analysis.function_call_analysis.get('internal_calls', 0)
+        external_calls = analysis.function_call_analysis.get('external_calls', 0)
+        
+        output.append(f"├── Total function calls: {total_calls}")
+        output.append(f"├── Internal calls: {internal_calls} ({internal_calls/total_calls*100:.1f}%)" if total_calls > 0 else "├── Internal calls: 0")
+        output.append(f"├── External calls: {external_calls} ({external_calls/total_calls*100:.1f}%)" if total_calls > 0 else "├── External calls: 0") 
+        output.append(f"├── Functions defined: {analysis.function_call_analysis['defined_functions']}")
+        
+        # Show internal functions (calls to functions defined in this file)
+        internal_functions = analysis.function_call_analysis.get("internal_functions", [])
+        external_with_sources = analysis.function_call_analysis.get("external_with_sources", [])
+        
+        if internal_functions:
+            output.append("├── 🏠 Internal calls (business logic):")
+            for i, (func_name, count) in enumerate(internal_functions):
+                # Calculate importance based on call frequency
+                importance = "🔥" if count >= 3 else "⚡" if count >= 2 else "📋"
+                prefix = "│   ├──" if i < len(internal_functions) - 1 else "│   └──"
+                output.append(f"{prefix} {importance} {func_name} ({count}x)")
+        
+        if external_with_sources:
+            is_last_section = not internal_functions
+            section_prefix = "└──" if is_last_section else "├──"
+            output.append(f"{section_prefix} 🌐 External calls (dependencies):")
+            
+            for i, (func_name, count, source) in enumerate(external_with_sources):
+                if is_last_section:
+                    prefix = "    ├──" if i < len(external_with_sources) - 1 else "    └──"
+                else:
+                    prefix = "│   ├──" if i < len(external_with_sources) - 1 else "│   └──"
+                
+                # Color-code by dependency type
+                if "(built-in)" in source:
+                    dep_type = "🔧"  # Built-in
+                elif "unknown" in source:
+                    dep_type = "❓"  # Unknown
+                else:
+                    dep_type = "📦"  # Import
+                
+                output.append(f"{prefix} {dep_type} {func_name} ({count}x) → {source}")
+        
+        # If no categorized data available, fall back to top functions
+        if not internal_functions and not external_with_sources:
+            top_functions = analysis.function_call_analysis.get("top_called_functions", [])
+            if top_functions:
+                output.append("└── Most called functions:")
+                for i, (func_name, count) in enumerate(top_functions):
+                    prefix = "    ├──" if i < len(top_functions) - 1 else "    └──"
+                    output.append(f"{prefix} {func_name} ({count}x)")
+        
         output.append("")
 
         # Centrality breakdown
-        output.append("CENTRALITY BREAKDOWN:")
+        output.append("📈 IMPORTANCE METRICS (0.0 = low, 1.0 = high):")
         for metric, score in analysis.centrality_breakdown.items():
-            output.append(f"├── {metric}: {score:.3f}")
-        output.append(f"└── Composite score: {analysis.centrality_score:.3f}")
+            metric_name = metric.replace('_', ' ').title()
+            output.append(f"├── {metric_name}: {score:.3f}")
+        output.append(f"└── Overall score: {analysis.centrality_score:.3f}")
         output.append("")
 
         # Structural impact
-        output.append("STRUCTURAL IMPACT:")
+        output.append("💥 CHANGE IMPACT:")
         output.append(
             f"├── If this file changes → {analysis.structural_impact['if_file_changes']} files potentially affected"
         )
@@ -732,6 +903,179 @@ class LLMFileAnalyzer:
             call_counts[func_name] = call_counts.get(func_name, 0) + 1
 
         return max(call_counts.items(), key=lambda x: x[1])[0] if call_counts else None
+
+    def _get_top_called_functions(self, function_calls: List[Any], limit: int = 5) -> List[Tuple[str, int]]:
+        """Get the top N most frequently called functions with their call counts."""
+        if not function_calls:
+            return []
+
+        call_counts: Dict[str, int] = {}
+        for call in function_calls:
+            func_name = call.callee
+            call_counts[func_name] = call_counts.get(func_name, 0) + 1
+
+        # Sort by call count (descending) and return top N
+        sorted_calls = sorted(call_counts.items(), key=lambda x: x[1], reverse=True)
+        return sorted_calls[:limit]
+
+    def _smart_categorize_function_calls(self, function_calls: List[Any], defined_functions: List[str], imports: List[Any], limit: int = 5) -> Dict[str, Any]:
+        """Smart categorization that infers sources rather than hardcoding them."""
+        if not function_calls:
+            return {
+                "internal": [], 
+                "external": [], 
+                "internal_count": 0, 
+                "external_count": 0,
+                "external_with_sources": []
+            }
+
+        internal_counts: Dict[str, int] = {}
+        external_counts: Dict[str, int] = {}
+        
+        # Convert defined_functions to a set for faster lookup
+        defined_funcs_set = set(defined_functions)
+        
+        # Build import mapping
+        import_sources: Dict[str, str] = {}
+        for imp in imports:
+            if hasattr(imp, 'symbols') and imp.symbols:
+                for symbol in imp.symbols:
+                    import_sources[symbol] = imp.module
+            if hasattr(imp, 'module'):
+                module_name = imp.module.split('/')[-1] if '/' in imp.module else imp.module
+                import_sources[module_name] = imp.module
+
+        # Categorize calls
+        for call in function_calls:
+            func_name = call.callee
+            if func_name in defined_funcs_set:
+                internal_counts[func_name] = internal_counts.get(func_name, 0) + 1
+            else:
+                external_counts[func_name] = external_counts.get(func_name, 0) + 1
+
+        # Sort and limit
+        internal_sorted = sorted(internal_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+        external_sorted = sorted(external_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+        
+        # Smart source detection for external functions
+        external_with_sources = []
+        for func_name, count in external_sorted:
+            source = self._infer_function_source(func_name, import_sources)
+            external_with_sources.append((func_name, count, source))
+
+        return {
+            "internal": internal_sorted,
+            "external": external_sorted,
+            "internal_count": sum(internal_counts.values()),
+            "external_count": sum(external_counts.values()), 
+            "external_with_sources": external_with_sources
+        }
+    
+    def _infer_function_source(self, func_name: str, import_sources: Dict[str, str]) -> str:
+        """Language-agnostic function source inference based on imports and patterns."""
+        
+        # 1. EXPLICIT IMPORTS (Most reliable - works for any language)
+        if func_name in import_sources:
+            return import_sources[func_name]
+        
+        # 2. FUZZY IMPORT MATCHING (Language-agnostic)
+        # Check if function name is contained in any imported module/symbol
+        for symbol, module in import_sources.items():
+            # Direct substring match
+            if func_name.lower() in symbol.lower() or symbol.lower() in func_name.lower():
+                return f"{module} (via {symbol})"
+            
+            # Module name matching (e.g., 'log' from imported 'console')
+            module_base = module.split('/')[-1].split('.')[0]  # Extract base name
+            if func_name.lower() in module_base.lower() or module_base.lower() in func_name.lower():
+                return f"{module} (module method)"
+        
+        # 3. NAMING PATTERN ANALYSIS (Language-agnostic)
+        
+        # Common cross-language patterns
+        if any(pattern in func_name.lower() for pattern in ['log', 'print', 'debug', 'warn', 'error']):
+            return "logging/output"
+        
+        if any(pattern in func_name.lower() for pattern in ['push', 'add', 'append', 'insert']):
+            return "collection mutation"
+            
+        if any(pattern in func_name.lower() for pattern in ['map', 'filter', 'reduce', 'transform']):
+            return "collection processing"
+            
+        if any(pattern in func_name.lower() for pattern in ['get', 'fetch', 'retrieve', 'find']):
+            return "data access"
+            
+        if any(pattern in func_name.lower() for pattern in ['set', 'update', 'modify', 'change']):
+            return "data mutation"
+            
+        if any(pattern in func_name.lower() for pattern in ['emit', 'trigger', 'fire', 'dispatch']):
+            return "event system"
+            
+        if any(pattern in func_name.lower() for pattern in ['async', 'await', 'promise', 'future']):
+            return "async/concurrency"
+            
+        if any(pattern in func_name.lower() for pattern in ['parse', 'serialize', 'stringify', 'encode', 'decode']):
+            return "data serialization"
+            
+        if any(pattern in func_name.lower() for pattern in ['validate', 'check', 'verify', 'test']):
+            return "validation/testing"
+        
+        # 4. CAPITALIZATION PATTERNS (Language-agnostic)
+        
+        # Constructor pattern (PascalCase)
+        if func_name and func_name[0].isupper() and not func_name.isupper():
+            return "constructor/class"
+            
+        # Constant pattern (UPPER_CASE)
+        if func_name.isupper() and '_' in func_name:
+            return "constant/enum"
+            
+        # Method pattern (camelCase starting with lowercase)
+        if func_name and func_name[0].islower() and any(c.isupper() for c in func_name):
+            return "method/function"
+        
+        # 5. STRUCTURAL PATTERNS
+        
+        # Compound names suggest external libraries
+        if len(func_name.split('_')) > 2 or len([c for c in func_name if c.isupper()]) > 2:
+            return "external library"
+            
+        # Short names often indicate built-ins or common utilities
+        if len(func_name) <= 3:
+            return "built-in/utility"
+        
+        # 6. FALLBACK - Unknown but categorized
+        return "external (unknown)"
+
+    def _get_functions_called_from_file(self, calling_file: str, target_file: str) -> List[str]:
+        """Get list of functions that calling_file calls from target_file."""
+        try:
+            # Analyze the calling file to find function calls
+            result = self.ast_analyzer.analyze_file(calling_file, AnalysisType.ALL)
+            if not result or not result.function_calls:
+                return []
+            
+            # Get functions defined in target file for reference
+            target_result = self.ast_analyzer.analyze_file(target_file, AnalysisType.ALL)
+            if not target_result or not target_result.defined_functions:
+                return []
+            
+            target_functions = set(target_result.defined_functions)
+            
+            # Find calls that match functions defined in target file
+            called_functions = []
+            for call in result.function_calls:
+                if hasattr(call, 'callee') and call.callee in target_functions:
+                    called_functions.append(call.callee)
+            
+            # Count and return most frequently called functions
+            from collections import Counter
+            call_counts = Counter(called_functions)
+            return [func for func, count in call_counts.most_common(5)]
+            
+        except Exception as e:
+            # Silently fail to avoid disrupting main analysis
+            return []
 
     def _find_most_used_class(self, imports: List[Any]) -> Optional[str]:
         """Find the most frequently imported class."""

@@ -372,13 +372,18 @@ class RepoMapService:
         """Perform search based on request configuration."""
         start_time = time.time()
 
-        # Get project files and extract identifiers from tags
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
-
-        # Extract identifiers from all project files
-        identifiers = self._extract_identifiers_from_files(project_files)
+        # Try to use cached identifiers first, fallback to re-parsing if needed
+        identifiers = self._get_cached_identifiers()
+        
+        if not identifiers:
+            # Fallback: Get project files and extract identifiers from tags
+            self.logger.info("Cache miss or empty cache, re-parsing files")
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            identifiers = self._extract_identifiers_from_files(project_files)
+        else:
+            self.logger.info(f"Using cached identifiers: {len(identifiers)} found")
 
         if not identifiers:
             return SearchResponse(
@@ -418,24 +423,69 @@ class RepoMapService:
             search_time_ms=processing_time * 1000,  # Convert to milliseconds
         )
 
+    def _get_cached_identifiers(self) -> List[str]:
+        """
+        Get all identifiers from the aider cache.
+        
+        Returns:
+            List of identifier names from cache, or empty list if cache unavailable
+        """
+        if not self.repo_map or not hasattr(self.repo_map, 'TAGS_CACHE'):
+            self.logger.debug("No aider cache available")
+            return []
+        
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            all_identifiers = set()
+            
+            # Iterate through all cached files
+            for key in cache:
+                try:
+                    value = cache[key]
+                    if isinstance(value, dict) and 'data' in value:
+                        data = value['data']
+                        if isinstance(data, list):
+                            for tag in data:
+                                if hasattr(tag, 'name') and tag.name:
+                                    all_identifiers.add(tag.name)
+                except Exception as e:
+                    self.logger.debug(f"Error processing cache entry {key}: {e}")
+                    continue
+            
+            identifiers_list = list(all_identifiers)
+            self.logger.debug(f"Retrieved {len(identifiers_list)} identifiers from cache")
+            return identifiers_list
+            
+        except Exception as e:
+            self.logger.warning(f"Failed to retrieve identifiers from cache: {e}")
+            return []
+
     def get_tags(self) -> List[str]:
         """Get all available tags/identifiers in the project."""
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
-
-        # Extract identifiers from all project files
-        identifiers = self._extract_identifiers_from_files(project_files)
+        # Try to use cached identifiers first
+        identifiers = self._get_cached_identifiers()
+        
+        if not identifiers:
+            # Fallback: re-parse files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            identifiers = self._extract_identifiers_from_files(project_files)
+        
         return sorted(list(set(identifiers)))
 
     def get_ranked_tags_map(self) -> Dict[str, float]:
         """Get a map of tags with their relevance scores."""
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
-
-        # Extract identifiers from all project files
-        identifier_list = self._extract_identifiers_from_files(project_files)
+        # Try to use cached identifiers first
+        identifier_list = self._get_cached_identifiers()
+        
+        if not identifier_list:
+            # Fallback: re-parse files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            identifier_list = self._extract_identifiers_from_files(project_files)
+        
         identifiers = set(identifier_list)
 
         # Simple ranking based on identifier characteristics
@@ -584,6 +634,52 @@ class RepoMapService:
                 continue
         return identifiers
 
+    def _get_cached_import_analysis(self) -> Optional[Any]:
+        """
+        Get cached import analysis results from persistent cache.
+        
+        Returns:
+            Cached ProjectImports object or None if not available
+        """
+        if not self.repo_map or not hasattr(self.repo_map, 'TAGS_CACHE'):
+            self.logger.debug("No aider cache available for import analysis")
+            return None
+        
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            cache_key = f"import_analysis_{self.config.project_root}"
+            
+            if cache_key in cache:
+                cached_data = cache[cache_key]
+                self.logger.info("Using cached import analysis results")
+                return cached_data
+            else:
+                self.logger.debug("No cached import analysis found")
+                return None
+                
+        except Exception as e:
+            self.logger.warning(f"Failed to retrieve cached import analysis: {e}")
+            return None
+
+    def _cache_import_analysis(self, project_imports: Any) -> None:
+        """
+        Cache import analysis results to persistent cache.
+        
+        Args:
+            project_imports: ProjectImports object to cache
+        """
+        if not self.repo_map or not hasattr(self.repo_map, 'TAGS_CACHE'):
+            self.logger.debug("No aider cache available for caching import analysis")
+            return
+        
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            cache_key = f"import_analysis_{self.config.project_root}"
+            cache[cache_key] = project_imports
+            self.logger.info("Cached import analysis results to persistent storage")
+        except Exception as e:
+            self.logger.warning(f"Failed to cache import analysis: {e}")
+
     # Phase 2: Dependency Analysis Methods
 
     def build_dependency_graph(self) -> Any:
@@ -594,16 +690,23 @@ class RepoMapService:
         start_time = time.time()
 
         try:
-            # Import the ImportAnalyzer
-            from ..dependencies.import_analyzer import ImportAnalyzer
+            # Try to use cached import analysis first
+            project_imports = self._get_cached_import_analysis()
+            
+            if project_imports is None:
+                # Fallback: Import the ImportAnalyzer and analyze
+                from ..dependencies.import_analyzer import ImportAnalyzer
 
-            # Initialize import analyzer with project root
-            import_analyzer = ImportAnalyzer(project_root=str(self.config.project_root))
+                # Initialize import analyzer with project root
+                import_analyzer = ImportAnalyzer(project_root=str(self.config.project_root))
 
-            # Analyze project imports
-            project_imports = import_analyzer.analyze_project_imports(
-                str(self.config.project_root)
-            )
+                # Analyze project imports
+                project_imports = import_analyzer.analyze_project_imports(
+                    str(self.config.project_root)
+                )
+                
+                # Cache the results for future use
+                self._cache_import_analysis(project_imports)
 
             # Limit files if configured
             if len(project_imports) > self.config.dependencies.max_graph_size:

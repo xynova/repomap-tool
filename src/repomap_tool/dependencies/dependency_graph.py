@@ -36,6 +36,9 @@ class DependencyGraph:
             f"Building dependency graph from ProjectImports for {project_imports.project_path}"
         )
 
+        # Set project path for path resolution
+        self.project_path = project_imports.project_path
+
         # Clear existing graph
         self.graph.clear()
         self.nodes.clear()
@@ -56,10 +59,20 @@ class DependencyGraph:
             node.language = file_imports.language
 
             for imp in file_imports.imports:
-                if imp.resolved_path and imp.resolved_path in self.nodes:
-                    self.graph.add_edge(file_path, imp.resolved_path)
-                    if imp.resolved_path in self.nodes:
-                        self.nodes[imp.resolved_path].imported_by.append(file_path)
+                if imp.resolved_path:
+                    # Convert absolute resolved path to relative path for node lookup
+                    try:
+                        resolved_path = Path(imp.resolved_path)
+                        if self.project_path:
+                            project_root = Path(self.project_path)
+                            if project_root in resolved_path.parents:
+                                relative_resolved_path = str(resolved_path.relative_to(project_root))
+                                if relative_resolved_path in self.nodes:
+                                    self.graph.add_edge(file_path, relative_resolved_path)
+                                    self.nodes[relative_resolved_path].imported_by.append(file_path)
+                    except (ValueError, OSError):
+                        # Path is not relative to project root, skip
+                        continue
 
         logger.info(
             f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"

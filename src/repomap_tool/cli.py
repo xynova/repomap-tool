@@ -1960,11 +1960,6 @@ def centrality(
             try:
                 repomap = RepoMapService(config_obj)
                 dependency_graph = repomap.build_dependency_graph()
-                llm_analyzer = LLMFileAnalyzer(
-                    dependency_graph=dependency_graph,
-                    project_root=resolved_project_path,
-                    max_tokens=max_tokens,
-                )
             finally:
                 # Re-enable logging
                 logging.disable(logging.NOTSET)
@@ -1982,14 +1977,14 @@ def centrality(
                 # Build dependency graph for comprehensive analysis
                 dependency_graph = repomap.build_dependency_graph()
 
-                # Initialize LLM file analyzer
-                llm_analyzer = LLMFileAnalyzer(
-                    dependency_graph=dependency_graph,
-                    project_root=resolved_project_path,
-                    max_tokens=max_tokens,
-                )
-
                 progress.update(task, description="Analysis complete!")
+
+        # Initialize LLM file analyzer (outside conditional blocks for proper scope)
+        llm_analyzer = LLMFileAnalyzer(
+            dependency_graph=dependency_graph,
+            project_root=resolved_project_path,
+            max_tokens=max_tokens,
+        )
 
         # Convert output format
         if output == "llm_optimized":
