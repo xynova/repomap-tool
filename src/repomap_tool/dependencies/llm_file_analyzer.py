@@ -310,9 +310,7 @@ class LLMFileAnalyzer:
         rank = 1
         all_scores = {}
         if self.centrality_calculator:
-            all_scores = (
-                self.centrality_calculator.calculate_composite_importance()
-            )
+            all_scores = self.centrality_calculator.calculate_composite_importance()
             centrality_score = all_scores.get(file_path, 0.0)
 
             # Calculate rank
