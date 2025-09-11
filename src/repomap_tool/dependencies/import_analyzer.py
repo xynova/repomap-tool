@@ -406,41 +406,46 @@ class ImportAnalyzer:
     ) -> List[str]:
         """Recursively get all files in a project directory, respecting .gitignore."""
         from ..core.file_scanner import parse_gitignore, should_ignore_file
-        
+
         if file_extensions is None:
             file_extensions = list(self.analyzable_extensions)
 
         # Parse .gitignore file
         gitignore_path = Path(project_path) / ".gitignore"
         gitignore_patterns = parse_gitignore(gitignore_path)
-        
+
         if gitignore_patterns:
-            logger.info(f"Loaded {len(gitignore_patterns)} .gitignore patterns for import analysis")
+            logger.info(
+                f"Loaded {len(gitignore_patterns)} .gitignore patterns for import analysis"
+            )
 
         all_files = []
         project_root_path = Path(project_path)
-        
+
         for root, dirs, files in os.walk(project_path):
             # Filter out ignored directories using gitignore
             dirs[:] = [
-                d for d in dirs 
-                if not should_ignore_file(Path(root) / d, gitignore_patterns, project_root_path)
+                d
+                for d in dirs
+                if not should_ignore_file(
+                    Path(root) / d, gitignore_patterns, project_root_path
+                )
             ]
-            
+
             for file in files:
                 file_path = Path(root) / file
-                
+
                 # Check if file should be ignored based on gitignore
                 if should_ignore_file(file_path, gitignore_patterns, project_root_path):
                     logger.debug(f"Ignoring file (gitignore): {file_path}")
                     continue
-                
+
                 # Check file extension
                 if any(file.endswith(f".{ext}") for ext in file_extensions):
                     # Get relative path from project root
                     rel_path = file_path.relative_to(project_root_path)
                     all_files.append(str(rel_path))
-                    
+
         return all_files
 
     def _resolve_import_paths(
@@ -520,7 +525,7 @@ class ImportAnalyzer:
                 candidate_path = target_dir / relative_path
                 if candidate_path.exists():
                     return candidate_path
-                
+
                 # Last resort: return None if nothing found
                 return None
 

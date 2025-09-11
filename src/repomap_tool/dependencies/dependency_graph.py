@@ -66,10 +66,16 @@ class DependencyGraph:
                         if self.project_path:
                             project_root = Path(self.project_path)
                             if project_root in resolved_path.parents:
-                                relative_resolved_path = str(resolved_path.relative_to(project_root))
+                                relative_resolved_path = str(
+                                    resolved_path.relative_to(project_root)
+                                )
                                 if relative_resolved_path in self.nodes:
-                                    self.graph.add_edge(file_path, relative_resolved_path)
-                                    self.nodes[relative_resolved_path].imported_by.append(file_path)
+                                    self.graph.add_edge(
+                                        file_path, relative_resolved_path
+                                    )
+                                    self.nodes[
+                                        relative_resolved_path
+                                    ].imported_by.append(file_path)
                     except (ValueError, OSError):
                         # Path is not relative to project root, skip
                         continue

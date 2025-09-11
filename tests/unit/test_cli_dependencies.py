@@ -209,13 +209,13 @@ class TestCLIDependencies:
     def test_show_centrality_specific_file(self, cli_runner, temp_project):
         """Test show-centrality for a specific file."""
         # Create the actual file that the test expects
-    
+
         src_dir = os.path.join(temp_project, "src")
         os.makedirs(src_dir, exist_ok=True)
         main_file = os.path.join(src_dir, "main.py")
         with open(main_file, "w") as f:
             f.write("# Test file\nimport os\n\ndef main():\n    pass\n")
-    
+
         # Test with real implementation - no mocking needed
         result = cli_runner.invoke(
             cli,
@@ -229,11 +229,11 @@ class TestCLIDependencies:
                 "text",
             ],
         )
-    
+
         print(f"Exit code: {result.exit_code}")
         print(f"Output: {result.output}")
         print(f"Exception: {result.exception}")
-    
+
         # Check that it runs successfully
         assert result.exit_code == 0
         # Check for expected output elements
@@ -248,7 +248,7 @@ class TestCLIDependencies:
         existing_file = os.path.join(src_dir, "existing.py")
         with open(existing_file, "w") as f:
             f.write("# Existing file\nimport os\n\ndef existing():\n    pass\n")
-    
+
         # Test with real implementation - should handle missing files gracefully
         result = cli_runner.invoke(
             cli,
@@ -262,11 +262,11 @@ class TestCLIDependencies:
                 "text",
             ],
         )
-    
+
         print(f"Exit code: {result.exit_code}")
         print(f"Output: {result.output}")
         print(f"Exception: {result.exception}")
-    
+
         # The implementation should handle missing files gracefully
         # It may exit with code 0 or 1 depending on how it handles the error
         assert result.exit_code in [0, 1]  # Acceptable exit codes

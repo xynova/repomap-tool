@@ -370,11 +370,11 @@ class TestUserService:
 
         assert result.exit_code == 0
         assert "Centrality Analysis: user_service.py" in result.output
-        assert "CENTRALITY SCORE" in result.output
-        assert "DEPENDENCY ANALYSIS" in result.output
-        assert "FUNCTION CALL ANALYSIS" in result.output
-        assert "CENTRALITY BREAKDOWN" in result.output
-        assert "STRUCTURAL IMPACT" in result.output
+        assert "IMPORTANCE SCORE" in result.output
+        assert "FILE CONNECTIONS" in result.output
+        assert "FUNCTION USAGE" in result.output
+        assert "IMPORTANCE METRICS" in result.output
+        assert "CHANGE IMPACT" in result.output
 
     def test_analyze_centrality_multiple_files(self):
         """Test analyze centrality command with multiple files."""
@@ -938,9 +938,9 @@ class User:
         )
 
         assert "Centrality Analysis: main.py" in result
-        assert "CENTRALITY SCORE" in result
-        assert "DEPENDENCY ANALYSIS" in result
-        assert "STRUCTURAL IMPACT" in result
+        assert "IMPORTANCE SCORE" in result
+        assert "FILE CONNECTIONS" in result
+        assert "CHANGE IMPACT" in result
 
     def test_llm_analyzer_json_output(self):
         """Test LLM analyzer JSON output."""

@@ -35,11 +35,7 @@ docker-repomap/
 │   └── entrypoint.sh                # Container entrypoint
 │
 ├── 📁 API & Server
-│   ├── api_server.py                # Basic API server (7KB)
-│   ├── enhanced_api_server.py       # Enhanced API server (12KB)
-│   ├── client_example.py            # Client example (7KB)
-│   ├── enhanced_client_example.py   # Enhanced client (11KB)
-│   └── requirements-api.txt         # API dependencies
+│   └── (REMOVED - API functionality not providing value)
 │
 ├── 📁 Documentation (NEW)
 │   ├── README_INTEGRATION_SUMMARY.md    # Overview guide
@@ -294,8 +290,6 @@ repomap-toolkit/
 
 ### **🔄 Needs Refactoring**
 - `external_repomap.py` → `standalone_repomap.py`
-- `api_server.py` → Update for standalone
-- `client_example.py` → Update for standalone
 - `requirements.txt` → Remove aider dependency
 
 ### **❌ Cannot Move (Aider Dependent)**
