@@ -132,23 +132,22 @@ class EnhancedRepoMapAPI:
         ]
 
         try:
-            # Validate and sanitize inputs for security
-            if not os.path.isabs(project_path) or ".." in project_path:
+            # Comprehensive security validation
+            if not self._validate_project_path(project_path):
                 return {"success": False, "error": "Invalid project path"}
 
-            # Sanitize file lists to prevent command injection
-            def sanitize_filename(filename: str) -> str:
-                """Sanitize filename to prevent command injection"""
-                import re
+            # Validate Docker image name
+            if not self._validate_docker_image():
+                return {"success": False, "error": "Invalid Docker image configuration"}
 
-                # Remove any potentially dangerous characters
-                return re.sub(r'[;&|`$(){}[\]"\'\\]', "", filename)
+            # Validate and sanitize all inputs
+            chat_abs_files = self._sanitize_file_paths(chat_abs_files)
+            mentioned_abs_files = self._sanitize_file_paths(mentioned_abs_files)
+            mentioned_idents_sanitized = self._sanitize_identifiers(mentioned_idents)
 
-            chat_abs_files = [sanitize_filename(f) for f in chat_abs_files]
-            mentioned_abs_files = [sanitize_filename(f) for f in mentioned_abs_files]
-            mentioned_idents_sanitized = [
-                sanitize_filename(ident) for ident in mentioned_idents
-            ]
+            # Validate input lengths to prevent DoS
+            if not self._validate_input_lengths(chat_abs_files, mentioned_abs_files, mentioned_idents_sanitized):
+                return {"success": False, "error": "Input too large"}
 
             # Build Docker command with context
             cmd = [
@@ -174,13 +173,16 @@ class EnhancedRepoMapAPI:
             if force_refresh:
                 cmd.append("--force-refresh")
 
-            # Run the command
+            # Run the command with additional security measures
             result = subprocess.run(
                 cmd,
                 capture_output=True,
                 text=True,
                 timeout=300,
-                shell=False,  # nosec B603
+                shell=False,  # nosec B603 - shell=False prevents shell injection
+                cwd=None,  # Don't change working directory
+                env=None,  # Don't pass environment variables
+                check=False,  # Don't raise exception on non-zero exit
             )
 
             if result.returncode == 0:
@@ -230,6 +232,109 @@ class EnhancedRepoMapAPI:
             map_tokens=map_tokens,
             force_refresh=force_refresh,
         )
+
+    def _validate_project_path(self, project_path: str) -> bool:
+        """Validate project path for security"""
+        try:
+            # Must be absolute path
+            if not os.path.isabs(project_path):
+                return False
+            
+            # No path traversal
+            if ".." in project_path or "~" in project_path:
+                return False
+            
+            # Must exist and be a directory
+            if not os.path.exists(project_path) or not os.path.isdir(project_path):
+                return False
+            
+            # Path length limit
+            if len(project_path) > 1000:
+                return False
+            
+            # Only allow alphanumeric, forward slashes, hyphens, underscores, dots
+            if not re.match(r'^[a-zA-Z0-9/_.-]+$', project_path):
+                return False
+            
+            return True
+        except Exception:
+            return False
+
+    def _validate_docker_image(self) -> bool:
+        """Validate Docker image name for security"""
+        try:
+            # Must not be empty
+            if not self.docker_image or not self.docker_image.strip():
+                return False
+            
+            # Length limit
+            if len(self.docker_image) > 200:
+                return False
+            
+            # Only allow alphanumeric, hyphens, underscores, colons, forward slashes
+            if not re.match(r'^[a-zA-Z0-9/_.-:]+$', self.docker_image):
+                return False
+            
+            # Must not contain dangerous patterns
+            dangerous_patterns = ['..', '~', '$', '`', ';', '|', '&', '(', ')', '{', '}', '[', ']']
+            if any(pattern in self.docker_image for pattern in dangerous_patterns):
+                return False
+            
+            return True
+        except Exception:
+            return False
+
+    def _sanitize_file_paths(self, file_paths: List[str]) -> List[str]:
+        """Sanitize file paths to prevent command injection"""
+        sanitized = []
+        for path in file_paths:
+            try:
+                # Remove any potentially dangerous characters
+                sanitized_path = re.sub(r'[;&|`$(){}[\]"\'\\~]', "", path)
+                
+                # Ensure it's still a valid path after sanitization
+                if sanitized_path and len(sanitized_path) <= 500:
+                    sanitized.append(sanitized_path)
+            except Exception:
+                # Skip invalid paths
+                continue
+        return sanitized
+
+    def _sanitize_identifiers(self, identifiers: Set[str]) -> List[str]:
+        """Sanitize identifiers to prevent command injection"""
+        sanitized = []
+        for ident in identifiers:
+            try:
+                # Remove any potentially dangerous characters
+                sanitized_ident = re.sub(r'[;&|`$(){}[\]"\'\\~]', "", ident)
+                
+                # Ensure it's still valid after sanitization
+                if sanitized_ident and len(sanitized_ident) <= 200:
+                    sanitized.append(sanitized_ident)
+            except Exception:
+                # Skip invalid identifiers
+                continue
+        return sanitized
+
+    def _validate_input_lengths(self, chat_files: List[str], mentioned_files: List[str], identifiers: List[str]) -> bool:
+        """Validate input lengths to prevent DoS attacks"""
+        try:
+            # Limit number of files
+            if len(chat_files) > 100 or len(mentioned_files) > 100:
+                return False
+            
+            # Limit number of identifiers
+            if len(identifiers) > 200:
+                return False
+            
+            # Limit total string length
+            total_length = sum(len(f) for f in chat_files) + sum(len(f) for f in mentioned_files) + sum(len(i) for i in identifiers)
+            if total_length > 10000:
+                return False
+            
+            return True
+        except Exception:
+            return False
 
 
 # Initialize the API

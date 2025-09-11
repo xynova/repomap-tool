@@ -832,13 +832,34 @@ class RepoMapService:
         if not self.semantic_matcher or not self.semantic_matcher.enabled:
             return []
 
-        # This is a simplified search. A real implementation would be more complex.
+        # Use real search engine implementation
         all_symbols = self.get_all_symbols()
+        identifiers = [symbol["identifier"] for symbol in all_symbols]
+        
+        # Get real search results with actual similarity scores
+        match_results = semantic_search(
+            query=query,
+            identifiers=identifiers,
+            semantic_matcher=self.semantic_matcher,
+            limit=50
+        )
+        
+        # Convert MatchResult objects to the expected format
         results = []
-        for symbol in all_symbols:
-            # A real implementation would use a more sophisticated similarity metric.
-            if query.lower() in symbol["identifier"].lower():
-                results.append({"symbol": symbol, "score": 0.8})  # Dummy score
+        for match_result in match_results:
+            # Find the corresponding symbol data
+            symbol_data = next(
+                (symbol for symbol in all_symbols if symbol["identifier"] == match_result.identifier),
+                {"identifier": match_result.identifier, "file_path": match_result.file_path}
+            )
+            results.append({
+                "symbol": symbol_data,
+                "score": match_result.score,  # Real score from semantic matcher
+                "strategy": match_result.strategy,
+                "match_type": match_result.match_type,
+                "context": match_result.context
+            })
+        
         return results
 
     def fuzzy_search(self, query: str) -> List[Any]:
@@ -846,24 +867,20 @@ class RepoMapService:
         if not self.fuzzy_matcher:
             return []
 
-        # This is a simplified search.
+        # Use real search engine implementation
         all_symbols = self.get_all_symbols()
-        results = []
-        for symbol in all_symbols:
-            if query.lower() in symbol["identifier"].lower():
-                # The real fuzzy_search returns a list of MatchResult objects
-                from repomap_tool.models import MatchResult
-
-                results.append(
-                    MatchResult(
-                        identifier=symbol["identifier"],
-                        score=0.8,
-                        strategy="substring",
-                        match_type="fuzzy",
-                        file_path=symbol.get("file_path"),
-                    )
-                )
-        return results
+        identifiers = [symbol["identifier"] for symbol in all_symbols]
+        
+        # Get real search results with actual similarity scores
+        match_results = fuzzy_search(
+            query=query,
+            identifiers=identifiers,
+            fuzzy_matcher=self.fuzzy_matcher,
+            limit=50
+        )
+        
+        # Return MatchResult objects directly (as expected by the interface)
+        return match_results
 
     def get_dependency_enhanced_trees(
         self, session_id: str, intent: str, current_files: Optional[List[str]] = None
