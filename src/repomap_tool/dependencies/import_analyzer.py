@@ -313,7 +313,7 @@ class ImportAnalyzer:
             imports = parser.extract_imports(content, file_path)
 
             # Resolve import paths
-            resolved_imports = self._resolve_import_paths(imports, file_path)
+            resolved_imports = self._resolve_import_paths(imports, full_path)
 
             file_imports = FileImports(
                 file_path=file_path,
@@ -404,19 +404,48 @@ class ImportAnalyzer:
         ignore_dirs: Optional[List[str]] = None,
         file_extensions: Optional[List[str]] = None,
     ) -> List[str]:
-        """Recursively get all files in a project directory."""
-        if ignore_dirs is None:
-            ignore_dirs = [".git", "__pycache__", "node_modules", "target"]
+        """Recursively get all files in a project directory, respecting .gitignore."""
+        from ..core.file_scanner import parse_gitignore, should_ignore_file
 
         if file_extensions is None:
             file_extensions = list(self.analyzable_extensions)
 
+        # Parse .gitignore file
+        gitignore_path = Path(project_path) / ".gitignore"
+        gitignore_patterns = parse_gitignore(gitignore_path)
+
+        if gitignore_patterns:
+            logger.info(
+                f"Loaded {len(gitignore_patterns)} .gitignore patterns for import analysis"
+            )
+
         all_files = []
+        project_root_path = Path(project_path)
+
         for root, dirs, files in os.walk(project_path):
-            dirs[:] = [d for d in dirs if d not in ignore_dirs]
+            # Filter out ignored directories using gitignore
+            dirs[:] = [
+                d
+                for d in dirs
+                if not should_ignore_file(
+                    Path(root) / d, gitignore_patterns, project_root_path
+                )
+            ]
+
             for file in files:
+                file_path = Path(root) / file
+
+                # Check if file should be ignored based on gitignore
+                if should_ignore_file(file_path, gitignore_patterns, project_root_path):
+                    logger.debug(f"Ignoring file (gitignore): {file_path}")
+                    continue
+
+                # Check file extension
                 if any(file.endswith(f".{ext}") for ext in file_extensions):
-                    all_files.append(os.path.join(root, file))
+                    # Get relative path from project root
+                    rel_path = file_path.relative_to(project_root_path)
+                    all_files.append(str(rel_path))
+
         return all_files
 
     def _resolve_import_paths(
@@ -471,6 +500,9 @@ class ImportAnalyzer:
                 # Count leading dots
                 dot_count = len(module) - len(module.lstrip("."))
                 relative_path = module[dot_count:]
+                # Remove leading slash if present
+                if relative_path.startswith("/"):
+                    relative_path = relative_path[1:]
 
                 # Navigate up directories
                 target_dir = file_dir
@@ -489,8 +521,13 @@ class ImportAnalyzer:
                     if init_file.exists():
                         return init_file
 
-                # If no extension found, return the directory
-                return target_dir / relative_path
+                # If no extension found, try without extension
+                candidate_path = target_dir / relative_path
+                if candidate_path.exists():
+                    return candidate_path
+
+                # Last resort: return None if nothing found
+                return None
 
         except Exception as e:
             logger.debug(f"Error resolving relative import {module}: {e}")

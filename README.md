@@ -308,7 +308,7 @@ This analysis enables more intelligent searching and provides insights into your
 
 ## Getting Help
 
-- **Documentation**: [API Guide](docs/API_GUIDE.md), [CLI Reference](docs/CLI_GUIDE.md)
+- **Documentation**: [CLI Reference](docs/CLI_GUIDE.md)
 - **Examples**: Check the `examples/` directory for practical usage
 - **Architecture**: [Development Guide](docs/architecture/DEVELOPMENT_GUIDE.md)
 

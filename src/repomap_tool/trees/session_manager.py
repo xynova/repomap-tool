@@ -7,14 +7,13 @@ allowing multiple independent exploration sessions to run simultaneously.
 
 import os
 import json
-import pickle
 import tempfile
 import logging
 from pathlib import Path
 from typing import Optional, Dict, List
 from datetime import datetime
 
-from repomap_tool.models import ExplorationSession
+from repomap_tool.models import ExplorationSession, TreeNode
 from repomap_tool.exceptions import RepoMapError
 
 logger = logging.getLogger(__name__)
@@ -67,31 +66,45 @@ class SessionStore:
         try:
             session_file = self.storage_dir / f"{session.session_id}.json"
 
-            # Convert to dict for JSON serialization
-            session_dict = session.model_dump()
+            # Convert to dict for JSON serialization, excluding tree_structure to avoid circular references
+            session_dict = session.model_dump(
+                exclude={"exploration_trees"}, mode="json"
+            )
             session_dict["last_activity"] = session.last_activity.isoformat()
             session_dict["created_at"] = session.created_at.isoformat()
 
-            # Handle TreeNode objects that can't be directly serialized
-            for tree in session_dict["exploration_trees"].values():
-                if tree.get("tree_structure"):
-                    tree["tree_structure"] = self._serialize_tree_node(
-                        tree["tree_structure"]
+            # Handle exploration trees separately to avoid circular references
+            session_dict["exploration_trees"] = {}
+            for tree_id, tree in session.exploration_trees.items():
+                tree_dict = tree.model_dump(exclude={"tree_structure"}, mode="json")
+
+                # Handle TreeNode objects that can't be directly serialized
+                if tree.tree_structure:
+                    tree_dict["tree_structure"] = self._serialize_tree_node_manual(
+                        tree.tree_structure
                     )
 
                 # Convert sets to lists for JSON serialization
-                if "expanded_areas" in tree and isinstance(tree["expanded_areas"], set):
-                    tree["expanded_areas"] = list(tree["expanded_areas"])
-                if "pruned_areas" in tree and isinstance(tree["pruned_areas"], set):
-                    tree["pruned_areas"] = list(tree["pruned_areas"])
+                if "expanded_areas" in tree_dict and isinstance(
+                    tree_dict["expanded_areas"], set
+                ):
+                    tree_dict["expanded_areas"] = list(tree_dict["expanded_areas"])
+                if "pruned_areas" in tree_dict and isinstance(
+                    tree_dict["pruned_areas"], set
+                ):
+                    tree_dict["pruned_areas"] = list(tree_dict["pruned_areas"])
 
                 # Convert datetime fields to ISO format strings
-                if "created_at" in tree and hasattr(tree["created_at"], "isoformat"):
-                    tree["created_at"] = tree["created_at"].isoformat()
-                if "last_modified" in tree and hasattr(
-                    tree["last_modified"], "isoformat"
+                if "created_at" in tree_dict and hasattr(
+                    tree_dict["created_at"], "isoformat"
                 ):
-                    tree["last_modified"] = tree["last_modified"].isoformat()
+                    tree_dict["created_at"] = tree_dict["created_at"].isoformat()
+                if "last_modified" in tree_dict and hasattr(
+                    tree_dict["last_modified"], "isoformat"
+                ):
+                    tree_dict["last_modified"] = tree_dict["last_modified"].isoformat()
+
+                session_dict["exploration_trees"][tree_id] = tree_dict
 
             with open(session_file, "w") as f:
                 json.dump(session_dict, f, indent=2)
@@ -207,6 +220,39 @@ class SessionStore:
             logger.error(f"Failed to list sessions: {e}")
             return []
 
+    def _serialize_tree_node_manual(self, node: TreeNode) -> Dict:
+        """Manually serialize TreeNode to avoid circular references.
+
+        Args:
+            node: TreeNode object to serialize
+
+        Returns:
+            Serialized node dict
+        """
+        # Manually extract data to avoid circular references
+        serialized: Dict = {
+            "identifier": node.identifier,
+            "location": node.location,
+            "node_type": node.node_type,
+            "depth": node.depth,
+            "expanded": node.expanded,
+            "structural_info": node.structural_info,
+            "children": [],
+        }
+
+        # Add optional fields if they exist
+        if (
+            hasattr(node, "dependency_centrality")
+            and node.dependency_centrality is not None
+        ):
+            serialized["dependency_centrality"] = node.dependency_centrality
+
+        # Recursively serialize children
+        for child in node.children:
+            serialized["children"].append(self._serialize_tree_node_manual(child))
+
+        return serialized
+
     def _serialize_tree_node(self, node: Dict) -> Dict:
         """Serialize TreeNode for JSON storage.
 
@@ -236,11 +282,23 @@ class SessionStore:
             node_dict: Serialized node dict
 
         Returns:
-            Deserialized node dict
+            Deserialized node dict with proper TreeNode structure
         """
-        # TreeNode will be properly reconstructed when creating ExplorationTree
-        # This is just a placeholder for now
-        return node_dict
+        # Create a copy to avoid modifying the original
+        deserialized = node_dict.copy()
+
+        # Recursively deserialize children
+        if "children" in deserialized and deserialized["children"]:
+            deserialized["children"] = [
+                self._deserialize_tree_node(child) for child in deserialized["children"]
+            ]
+
+        # Note: Parent references are not restored during deserialization
+        # as they would create circular references. The TreeNode model
+        # will handle parent-child relationships when the tree is reconstructed
+        # by the ExplorationTree model.
+
+        return deserialized
 
 
 class SessionManager:

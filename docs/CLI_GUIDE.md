@@ -239,6 +239,5 @@ repomap-tool search --help
 
 ## 📚 Next Steps
 
-- Read the **[API Guide](API_GUIDE.md)** for programmatic access
 - Check **[Configuration Guide](CONFIGURATION_GUIDE.md)** for advanced options
 - Explore **[Matching Algorithms](MATCHING_ALGORITHM_GUIDE.md)** for technical details

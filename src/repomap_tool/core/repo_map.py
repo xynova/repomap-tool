@@ -372,13 +372,18 @@ class RepoMapService:
         """Perform search based on request configuration."""
         start_time = time.time()
 
-        # Get project files and extract identifiers from tags
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
+        # Try to use cached identifiers first, fallback to re-parsing if needed
+        identifiers = self._get_cached_identifiers()
 
-        # Extract identifiers from all project files
-        identifiers = self._extract_identifiers_from_files(project_files)
+        if not identifiers:
+            # Fallback: Get project files and extract identifiers from tags
+            self.logger.info("Cache miss or empty cache, re-parsing files")
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            identifiers = self._extract_identifiers_from_files(project_files)
+        else:
+            self.logger.info(f"Using cached identifiers: {len(identifiers)} found")
 
         if not identifiers:
             return SearchResponse(
@@ -418,24 +423,71 @@ class RepoMapService:
             search_time_ms=processing_time * 1000,  # Convert to milliseconds
         )
 
+    def _get_cached_identifiers(self) -> List[str]:
+        """
+        Get all identifiers from the aider cache.
+
+        Returns:
+            List of identifier names from cache, or empty list if cache unavailable
+        """
+        if not self.repo_map or not hasattr(self.repo_map, "TAGS_CACHE"):
+            self.logger.debug("No aider cache available")
+            return []
+
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            all_identifiers = set()
+
+            # Iterate through all cached files
+            for key in cache:
+                try:
+                    value = cache[key]
+                    if isinstance(value, dict) and "data" in value:
+                        data = value["data"]
+                        if isinstance(data, list):
+                            for tag in data:
+                                if hasattr(tag, "name") and tag.name:
+                                    all_identifiers.add(tag.name)
+                except Exception as e:
+                    self.logger.debug(f"Error processing cache entry {key}: {e}")
+                    continue
+
+            identifiers_list = list(all_identifiers)
+            self.logger.debug(
+                f"Retrieved {len(identifiers_list)} identifiers from cache"
+            )
+            return identifiers_list
+
+        except Exception as e:
+            self.logger.warning(f"Failed to retrieve identifiers from cache: {e}")
+            return []
+
     def get_tags(self) -> List[str]:
         """Get all available tags/identifiers in the project."""
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
+        # Try to use cached identifiers first
+        identifiers = self._get_cached_identifiers()
 
-        # Extract identifiers from all project files
-        identifiers = self._extract_identifiers_from_files(project_files)
+        if not identifiers:
+            # Fallback: re-parse files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            identifiers = self._extract_identifiers_from_files(project_files)
+
         return sorted(list(set(identifiers)))
 
     def get_ranked_tags_map(self) -> Dict[str, float]:
         """Get a map of tags with their relevance scores."""
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
+        # Try to use cached identifiers first
+        identifier_list = self._get_cached_identifiers()
 
-        # Extract identifiers from all project files
-        identifier_list = self._extract_identifiers_from_files(project_files)
+        if not identifier_list:
+            # Fallback: re-parse files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+            identifier_list = self._extract_identifiers_from_files(project_files)
+
         identifiers = set(identifier_list)
 
         # Simple ranking based on identifier characteristics
@@ -584,6 +636,52 @@ class RepoMapService:
                 continue
         return identifiers
 
+    def _get_cached_import_analysis(self) -> Optional[Any]:
+        """
+        Get cached import analysis results from persistent cache.
+
+        Returns:
+            Cached ProjectImports object or None if not available
+        """
+        if not self.repo_map or not hasattr(self.repo_map, "TAGS_CACHE"):
+            self.logger.debug("No aider cache available for import analysis")
+            return None
+
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            cache_key = f"import_analysis_{self.config.project_root}"
+
+            if cache_key in cache:
+                cached_data = cache[cache_key]
+                self.logger.info("Using cached import analysis results")
+                return cached_data
+            else:
+                self.logger.debug("No cached import analysis found")
+                return None
+
+        except Exception as e:
+            self.logger.warning(f"Failed to retrieve cached import analysis: {e}")
+            return None
+
+    def _cache_import_analysis(self, project_imports: Any) -> None:
+        """
+        Cache import analysis results to persistent cache.
+
+        Args:
+            project_imports: ProjectImports object to cache
+        """
+        if not self.repo_map or not hasattr(self.repo_map, "TAGS_CACHE"):
+            self.logger.debug("No aider cache available for caching import analysis")
+            return
+
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            cache_key = f"import_analysis_{self.config.project_root}"
+            cache[cache_key] = project_imports
+            self.logger.info("Cached import analysis results to persistent storage")
+        except Exception as e:
+            self.logger.warning(f"Failed to cache import analysis: {e}")
+
     # Phase 2: Dependency Analysis Methods
 
     def build_dependency_graph(self) -> Any:
@@ -594,16 +692,25 @@ class RepoMapService:
         start_time = time.time()
 
         try:
-            # Import the ImportAnalyzer
-            from ..dependencies.import_analyzer import ImportAnalyzer
+            # Try to use cached import analysis first
+            project_imports = self._get_cached_import_analysis()
 
-            # Initialize import analyzer with project root
-            import_analyzer = ImportAnalyzer(project_root=str(self.config.project_root))
+            if project_imports is None:
+                # Fallback: Import the ImportAnalyzer and analyze
+                from ..dependencies.import_analyzer import ImportAnalyzer
 
-            # Analyze project imports
-            project_imports = import_analyzer.analyze_project_imports(
-                str(self.config.project_root)
-            )
+                # Initialize import analyzer with project root
+                import_analyzer = ImportAnalyzer(
+                    project_root=str(self.config.project_root)
+                )
+
+                # Analyze project imports
+                project_imports = import_analyzer.analyze_project_imports(
+                    str(self.config.project_root)
+                )
+
+                # Cache the results for future use
+                self._cache_import_analysis(project_imports)
 
             # Limit files if configured
             if len(project_imports) > self.config.dependencies.max_graph_size:
@@ -729,13 +836,43 @@ class RepoMapService:
         if not self.semantic_matcher or not self.semantic_matcher.enabled:
             return []
 
-        # This is a simplified search. A real implementation would be more complex.
+        # Use real search engine implementation
         all_symbols = self.get_all_symbols()
+        identifiers = [symbol["identifier"] for symbol in all_symbols]
+
+        # Get real search results with actual similarity scores
+        match_results = semantic_search(
+            query=query,
+            identifiers=identifiers,
+            semantic_matcher=self.semantic_matcher,
+            limit=50,
+        )
+
+        # Convert MatchResult objects to the expected format
         results = []
-        for symbol in all_symbols:
-            # A real implementation would use a more sophisticated similarity metric.
-            if query.lower() in symbol["identifier"].lower():
-                results.append({"symbol": symbol, "score": 0.8})  # Dummy score
+        for match_result in match_results:
+            # Find the corresponding symbol data
+            symbol_data = next(
+                (
+                    symbol
+                    for symbol in all_symbols
+                    if symbol["identifier"] == match_result.identifier
+                ),
+                {
+                    "identifier": match_result.identifier,
+                    "file_path": match_result.file_path,
+                },
+            )
+            results.append(
+                {
+                    "symbol": symbol_data,
+                    "score": match_result.score,  # Real score from semantic matcher
+                    "strategy": match_result.strategy,
+                    "match_type": match_result.match_type,
+                    "context": match_result.context,
+                }
+            )
+
         return results
 
     def fuzzy_search(self, query: str) -> List[Any]:
@@ -743,24 +880,20 @@ class RepoMapService:
         if not self.fuzzy_matcher:
             return []
 
-        # This is a simplified search.
+        # Use real search engine implementation
         all_symbols = self.get_all_symbols()
-        results = []
-        for symbol in all_symbols:
-            if query.lower() in symbol["identifier"].lower():
-                # The real fuzzy_search returns a list of MatchResult objects
-                from repomap_tool.models import MatchResult
+        identifiers = [symbol["identifier"] for symbol in all_symbols]
 
-                results.append(
-                    MatchResult(
-                        identifier=symbol["identifier"],
-                        score=0.8,
-                        strategy="substring",
-                        match_type="fuzzy",
-                        file_path=symbol.get("file_path"),
-                    )
-                )
-        return results
+        # Get real search results with actual similarity scores
+        match_results = fuzzy_search(
+            query=query,
+            identifiers=identifiers,
+            fuzzy_matcher=self.fuzzy_matcher,
+            limit=50,
+        )
+
+        # Return MatchResult objects directly (as expected by the interface)
+        return match_results
 
     def get_dependency_enhanced_trees(
         self, session_id: str, intent: str, current_files: Optional[List[str]] = None
@@ -775,6 +908,7 @@ class RepoMapService:
         try:
             # Import here to avoid circular imports
             from ..trees.discovery_engine import EntrypointDiscoverer
+            from ..trees.tree_builder import TreeBuilder
 
             # Use enhanced entrypoint discovery (Phase 1 + Phase 2)
             enhanced_discoverer = EntrypointDiscoverer(self)
@@ -782,10 +916,60 @@ class RepoMapService:
                 str(self.config.project_root), intent
             )
 
-            # For now, return entrypoints with dependency information
-            # TODO: Implement full tree building with dependency intelligence
-            return entrypoints
+            # Build full exploration trees with dependency intelligence
+            tree_builder = TreeBuilder(self)
+            exploration_trees = []
+
+            for entrypoint in entrypoints:
+                try:
+                    # Build tree with dependency intelligence
+                    tree = tree_builder.build_exploration_tree_with_dependencies(
+                        entrypoint=entrypoint,
+                        max_depth=self._calculate_optimal_depth(entrypoint),
+                        current_files=current_files,
+                    )
+                    exploration_trees.append(tree)
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to build tree for {entrypoint.identifier}: {e}"
+                    )
+                    # Fallback to simple tree structure
+                    tree = tree_builder.build_exploration_tree(entrypoint)
+                    exploration_trees.append(tree)
+
+            self.logger.info(
+                f"Built {len(exploration_trees)} dependency-enhanced trees"
+            )
+            return exploration_trees
 
         except Exception as e:
             self.logger.error(f"Failed to generate dependency-enhanced trees: {e}")
             raise
+
+    def _calculate_optimal_depth(self, entrypoint: Any) -> int:
+        """Calculate optimal tree depth based on entrypoint complexity and centrality."""
+        try:
+            if not self.centrality_calculator:
+                return 3  # Default depth
+
+            # Get centrality scores for the entrypoint file
+            file_path = str(entrypoint.location)
+            centrality_scores = (
+                self.centrality_calculator.calculate_composite_importance()
+            )
+
+            if file_path in centrality_scores:
+                importance = centrality_scores[file_path]
+                # Higher importance = deeper exploration (max 5, min 2)
+                depth = max(2, min(5, int(importance * 5) + 2))
+                self.logger.debug(
+                    f"Calculated depth {depth} for {file_path} (importance: {importance:.3f})"
+                )
+                return depth
+
+            return 3  # Default depth
+
+        except Exception as e:
+            self.logger.warning(f"Failed to calculate optimal depth: {e}")
+            return 3

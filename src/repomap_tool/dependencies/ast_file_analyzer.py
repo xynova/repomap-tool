@@ -92,11 +92,35 @@ class ASTFileAnalyzer:
             with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
-            # Parse AST
-            tree = ast.parse(content, filename=file_path)
+            # Check file extension to determine parsing method
+            file_ext = Path(file_path).suffix.lower()
+            if file_ext == ".py":
+                # Use Python AST for Python files
+                tree = ast.parse(content, filename=file_path)
+                result = self._analyze_ast_tree(tree, file_path, content, analysis_type)
+            elif file_ext in [".ts", ".js", ".tsx", ".jsx"]:
+                # Use regex-based parsing for TypeScript/JavaScript files
+                result = self._analyze_javascript_typescript(
+                    content, file_path, analysis_type
+                )
+            else:
+                # For other file types, return empty result with analysis error
+                logger.debug(
+                    f"Skipping analysis for unsupported file type: {file_path}"
+                )
+                return FileAnalysisResult(
+                    file_path=file_path,
+                    imports=[],
+                    function_calls=[],
+                    defined_functions=[],
+                    defined_classes=[],
+                    used_classes=[],
+                    used_variables=[],
+                    line_count=len(content.splitlines()),
+                    analysis_errors=[f"Analysis not supported for {file_ext} files"],
+                )
 
-            # Perform analysis
-            result = self._analyze_ast_tree(tree, file_path, content, analysis_type)
+            # Result is already obtained from the appropriate parser above
 
             # Cache result
             if self.cache_enabled:
@@ -558,3 +582,213 @@ class ASTFileAnalyzer:
             "cache_size": len(self.analysis_cache),
             "cached_files": list(self.analysis_cache.keys()),
         }
+
+    def _analyze_javascript_typescript(
+        self, content: str, file_path: str, analysis_type: AnalysisType
+    ) -> FileAnalysisResult:
+        """Analyze JavaScript/TypeScript files using regex patterns.
+
+        Args:
+            content: File content
+            file_path: Path to the file
+            analysis_type: Type of analysis to perform
+
+        Returns:
+            FileAnalysisResult with extracted information
+        """
+        import re
+
+        defined_functions = []
+        defined_classes = []
+        function_calls = []
+        imports = []
+        used_classes: list[str] = []
+        used_variables: list[str] = []
+
+        try:
+            # Extract function definitions
+            # Matches: function name() {}, async function name() {}, export function name() {}
+            function_pattern = (
+                r"(?:export\s+)?(?:async\s+)?function\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\("
+            )
+            for match in re.finditer(function_pattern, content):
+                defined_functions.append(match.group(1))
+
+            # Extract arrow function definitions
+            # Matches: const name = () => {}, export const name = async () => {}
+            arrow_function_pattern = r"(?:export\s+)?(?:const|let|var)\s+([a-zA-Z_$][a-zA-Z0-9_$]*)\s*=\s*(?:async\s+)?\([^)]*\)\s*=>"
+            for match in re.finditer(arrow_function_pattern, content):
+                defined_functions.append(match.group(1))
+
+            # Extract class method definitions
+            # Matches: methodName() {}, async methodName() {}, private methodName() {}
+            method_pattern = r"(?:public\s+|private\s+|protected\s+|static\s+|async\s+)*([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\([^)]*\)\s*(?::\s*[^{]+)?\s*{"
+            for match in re.finditer(method_pattern, content):
+                method_name = match.group(1)
+                # Skip constructor and common non-method keywords
+                if method_name not in [
+                    "constructor",
+                    "if",
+                    "for",
+                    "while",
+                    "switch",
+                    "catch",
+                    "with",
+                    "try",
+                ]:
+                    defined_functions.append(method_name)
+
+            # Extract class definitions
+            # Matches: class Name {}, export class Name {}
+            class_pattern = r"(?:export\s+)?class\s+([a-zA-Z_$][a-zA-Z0-9_$]*)"
+            for match in re.finditer(class_pattern, content):
+                defined_classes.append(match.group(1))
+
+            # Extract function calls (simplified)
+            # Matches: functionName(, .functionName(, functionName.call(
+            call_pattern = r"([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\("
+            for match in re.finditer(call_pattern, content):
+                func_name = match.group(1)
+                if func_name not in [
+                    "if",
+                    "for",
+                    "while",
+                    "switch",
+                    "catch",
+                    "with",
+                ]:  # Skip control structures
+                    function_calls.append(
+                        FunctionCall(
+                            caller="<unknown>",  # We can't easily determine the caller with regex
+                            callee=func_name,
+                            line_number=self._get_line_number(content, match.start()),
+                            file_path=file_path,
+                        )
+                    )
+
+            # Extract imports (ES6 modules)
+            # Enhanced pattern to capture different import types
+
+            # Pattern 1: Named imports { a, b, c } from 'module' (including multiline)
+            named_import_pattern = (
+                r"import\s+\{\s*([^}]+)\s*\}\s+from\s+['\"]([^'\"]+)['\"]"
+            )
+            for match in re.finditer(named_import_pattern, content, re.DOTALL):
+                symbols_str = match.group(1)
+                module = match.group(2)
+
+                # Parse symbols: handle "name as alias" and regular names
+                symbols = []
+                for symbol in symbols_str.split(","):
+                    symbol = symbol.strip()
+                    # Skip empty symbols (from trailing commas)
+                    if not symbol:
+                        continue
+                    # Remove newlines and extra whitespace
+                    symbol = " ".join(symbol.split())
+
+                    if " as " in symbol:
+                        # Handle "original as alias"
+                        parts = symbol.split(" as ", 1)
+                        if len(parts) >= 2:
+                            original = parts[0].strip()
+                            if original:  # Only add non-empty symbols
+                                symbols.append(original)
+                    else:
+                        if symbol:  # Only add non-empty symbols
+                            symbols.append(symbol)
+
+                imports.append(
+                    Import(
+                        module=module,
+                        symbols=symbols,
+                        is_relative=module.startswith("."),
+                        import_type=(
+                            ImportType.RELATIVE
+                            if module.startswith(".")
+                            else ImportType.ABSOLUTE
+                        ),
+                        line_number=self._get_line_number(content, match.start()),
+                    )
+                )
+
+            # Pattern 2: Default imports: import name from 'module'
+            default_import_pattern = r"import\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]"
+            for match in re.finditer(default_import_pattern, content):
+                symbol = match.group(1)
+                module = match.group(2)
+
+                imports.append(
+                    Import(
+                        module=module,
+                        symbols=[symbol],
+                        is_relative=module.startswith("."),
+                        import_type=(
+                            ImportType.RELATIVE
+                            if module.startswith(".")
+                            else ImportType.ABSOLUTE
+                        ),
+                        line_number=self._get_line_number(content, match.start()),
+                    )
+                )
+
+            # Pattern 3: Namespace imports: import * as name from 'module'
+            namespace_import_pattern = (
+                r"import\s+\*\s+as\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]"
+            )
+            for match in re.finditer(namespace_import_pattern, content):
+                namespace = match.group(1)
+                module = match.group(2)
+
+                imports.append(
+                    Import(
+                        module=module,
+                        symbols=[namespace],
+                        is_relative=module.startswith("."),
+                        import_type=(
+                            ImportType.RELATIVE
+                            if module.startswith(".")
+                            else ImportType.ABSOLUTE
+                        ),
+                        line_number=self._get_line_number(content, match.start()),
+                    )
+                )
+
+            # Extract require() calls (CommonJS)
+            require_pattern = r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"
+            for match in re.finditer(require_pattern, content):
+                imports.append(
+                    Import(
+                        module=match.group(1),
+                        symbols=[],
+                        is_relative=match.group(1).startswith("."),
+                        import_type=(
+                            ImportType.RELATIVE
+                            if match.group(1).startswith(".")
+                            else ImportType.ABSOLUTE
+                        ),
+                        line_number=self._get_line_number(content, match.start()),
+                    )
+                )
+
+        except Exception as e:
+            logger.error(f"Error analyzing JavaScript/TypeScript file {file_path}: {e}")
+
+        return FileAnalysisResult(
+            file_path=file_path,
+            imports=imports,
+            function_calls=function_calls,
+            defined_functions=defined_functions,
+            defined_classes=defined_classes,
+            used_classes=used_classes,
+            used_variables=used_variables,
+            line_count=len(content.splitlines()),
+            analysis_errors=[],
+        )
+
+    def _get_line_number(self, content: str, position: int) -> int:
+        """Get line number for a given position in content."""
+        try:
+            return content[:position].count("\n") + 1
+        except Exception:
+            return 1

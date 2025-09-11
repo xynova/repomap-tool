@@ -7,7 +7,6 @@ Welcome to the RepoMap Tool documentation! This directory contains comprehensive
 ### **🚀 Getting Started**
 - **[Main README](../README.md)** - Project overview, installation, and quick start
 - **[CLI Guide](CLI_GUIDE.md)** - Command-line interface guide
-- **[API Guide](API_GUIDE.md)** - REST API documentation
 - **[Configuration Guide](CONFIGURATION_GUIDE.md)** - Configuration options and examples
 - **[Fuzzy Matching Guide](FUZZY_MATCHING_GUIDE.md)** - Fuzzy matching feature guide
 
@@ -35,9 +34,9 @@ Welcome to the RepoMap Tool documentation! This directory contains comprehensive
 3. Review **[Matching Algorithms](architecture/MATCHING_ALGORITHM_GUIDE.md)**
 
 ### **For Integrations**
-1. Check **[API Guide](API_GUIDE.md)**
-2. Review **[Integration Patterns](architecture/INTEGRATION_DIAGRAMS.md)**
-3. Explore **[Architecture & Design](#️-architecture--design)** section
+1. Review **[Integration Patterns](architecture/INTEGRATION_DIAGRAMS.md)**
+2. Explore **[Architecture & Design](#️-architecture--design)** section
+3. Use CLI for programmatic access
 
 ## 📁 **Directory Structure**
 
@@ -45,7 +44,6 @@ Welcome to the RepoMap Tool documentation! This directory contains comprehensive
 docs/
 ├── README.md                           # This file
 ├── CLI_GUIDE.md                        # CLI usage guide
-├── API_GUIDE.md                        # API documentation
 ├── CONFIGURATION_GUIDE.md              # Configuration guide
 ├── FUZZY_MATCHING_GUIDE.md             # Fuzzy matching guide
 └── architecture/                       # Architecture and technical docs

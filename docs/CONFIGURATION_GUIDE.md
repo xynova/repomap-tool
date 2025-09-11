@@ -521,6 +521,5 @@ repomap-tool search "UserService" /path/to/different-project
 
 ## 📚 Next Steps
 
-- Read the **[CLI Guide](README-CLI.md)** for command-line usage
-- Check **[API Guide](API_GUIDE.md)** for programmatic configuration
+- Read the **[CLI Guide](CLI_GUIDE.md)** for command-line usage
 - Explore **[Matching Algorithms](MATCHING_ALGORITHM_GUIDE.md)** for algorithm details
