@@ -908,6 +908,7 @@ class RepoMapService:
         try:
             # Import here to avoid circular imports
             from ..trees.discovery_engine import EntrypointDiscoverer
+            from ..trees.tree_builder import TreeBuilder
 
             # Use enhanced entrypoint discovery (Phase 1 + Phase 2)
             enhanced_discoverer = EntrypointDiscoverer(self)
@@ -915,10 +916,60 @@ class RepoMapService:
                 str(self.config.project_root), intent
             )
 
-            # For now, return entrypoints with dependency information
-            # TODO: Implement full tree building with dependency intelligence
-            return entrypoints
+            # Build full exploration trees with dependency intelligence
+            tree_builder = TreeBuilder(self)
+            exploration_trees = []
+
+            for entrypoint in entrypoints:
+                try:
+                    # Build tree with dependency intelligence
+                    tree = tree_builder.build_exploration_tree_with_dependencies(
+                        entrypoint=entrypoint,
+                        max_depth=self._calculate_optimal_depth(entrypoint),
+                        current_files=current_files,
+                    )
+                    exploration_trees.append(tree)
+
+                except Exception as e:
+                    self.logger.warning(
+                        f"Failed to build tree for {entrypoint.identifier}: {e}"
+                    )
+                    # Fallback to simple tree structure
+                    tree = tree_builder.build_exploration_tree(entrypoint)
+                    exploration_trees.append(tree)
+
+            self.logger.info(
+                f"Built {len(exploration_trees)} dependency-enhanced trees"
+            )
+            return exploration_trees
 
         except Exception as e:
             self.logger.error(f"Failed to generate dependency-enhanced trees: {e}")
             raise
+
+    def _calculate_optimal_depth(self, entrypoint: Any) -> int:
+        """Calculate optimal tree depth based on entrypoint complexity and centrality."""
+        try:
+            if not self.centrality_calculator:
+                return 3  # Default depth
+
+            # Get centrality scores for the entrypoint file
+            file_path = str(entrypoint.location)
+            centrality_scores = (
+                self.centrality_calculator.calculate_composite_importance()
+            )
+
+            if file_path in centrality_scores:
+                importance = centrality_scores[file_path]
+                # Higher importance = deeper exploration (max 5, min 2)
+                depth = max(2, min(5, int(importance * 5) + 2))
+                self.logger.debug(
+                    f"Calculated depth {depth} for {file_path} (importance: {importance:.3f})"
+                )
+                return depth
+
+            return 3  # Default depth
+
+        except Exception as e:
+            self.logger.warning(f"Failed to calculate optimal depth: {e}")
+            return 3
