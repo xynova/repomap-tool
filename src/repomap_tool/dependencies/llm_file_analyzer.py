@@ -432,19 +432,18 @@ class LLMFileAnalyzer:
                     logger.debug(f"Closeness centrality calculation failed: {e}")
                     
             except Exception as e:
-                logger.warning(f"Error calculating detailed centrality breakdown: {e}")
-                # Fallback to simplified calculation
+                logger.error(f"Error calculating detailed centrality breakdown: {e}")
+                # No fake calculations - report the error to user
                 centrality_breakdown = {
-                    "degree": centrality_score * 0.4,
-                    "betweenness": centrality_score * 0.3,
-                    "pagerank": centrality_score * 0.3,
+                    "error": f"Centrality calculation failed: {str(e)}",
+                    "note": "Run dependency analysis first to enable centrality calculations"
                 }
         else:
-            # Fallback when no centrality calculator available
+            # No centrality calculator available - inform user
+            logger.warning("No centrality calculator available - run dependency analysis first")
             centrality_breakdown = {
-                "degree": centrality_score * 0.4,
-                "betweenness": centrality_score * 0.3, 
-                "pagerank": centrality_score * 0.3,
+                "error": "Centrality calculator not available",
+                "note": "Run dependency analysis first to enable centrality calculations"
             }
 
         # Structural impact - use dependency graph data when available
@@ -774,6 +773,15 @@ class LLMFileAnalyzer:
             'closeness': ('Accessibility', 'how easily reachable from other files')
         }
         
+        # Check if we have error information instead of metrics
+        if "error" in analysis.centrality_breakdown:
+            output.append(f"├── ❌ Centrality Analysis Error: {analysis.centrality_breakdown['error']}")
+            if "note" in analysis.centrality_breakdown:
+                output.append(f"└── 💡 Note: {analysis.centrality_breakdown['note']}")
+            output.append("")
+            return "\n".join(output)
+        
+        # Display actual centrality metrics
         metric_count = 0
         total_metrics = len(analysis.centrality_breakdown)
         

@@ -7,7 +7,6 @@ allowing multiple independent exploration sessions to run simultaneously.
 
 import os
 import json
-import pickle
 import tempfile
 import logging
 from pathlib import Path
