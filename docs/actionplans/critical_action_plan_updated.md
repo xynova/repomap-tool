@@ -45,37 +45,81 @@ This plan addresses the most critical issues identified through comprehensive co
 
 ---
 
-## 🎯 **CRITICAL PRIORITY 2: Performance Optimization**
+## 🎯 **CRITICAL PRIORITY 2: Tree-Sitter Migration (FUNDAMENTAL ISSUE)**
 
 **Status**: 🔴 **PENDING**  
 **Priority**: **CRITICAL**  
-**Impact**: High - affects scalability and user experience
+**Impact**: **CRITICAL** - This is the core purpose of the project
 
-### 2.1 Loop Optimization
-**Location**: Multiple files with 922 loop instances  
-**Issue**: O(n³) complexity in nested loops affecting performance
+### 2.1 The Fundamental Problem
+**Issue**: We have `tree-sitter>=0.23.0` as a dependency but are using brittle regex patterns for ALL language parsing instead of proper AST parsing.
+
+**Current State - Regex Everywhere**:
+- **JavaScript/TypeScript**: 31+ regex patterns
+- **Go**: 33+ regex patterns  
+- **Java**: 51+ regex patterns
+- **C#**: 95+ regex patterns
+- **Rust**: 107+ regex patterns
+- **Total**: 300+ brittle regex patterns across all languages
+
+**Concrete Evidence of Problems** (from Gemini Code Assist):
+- **Performance Degradation**: Repeated file parsing in loops causing O(n³) complexity
+- **Data Integrity Issues**: TreeNode parent references lost during deserialization
+- **Malformed Import Paths**: Parser generating paths starting with `/` instead of `.`
+- **Defensive Workarounds**: Code patching parser errors instead of fixing root cause
+- **Path Resolution Failures**: Import analysis based on incorrect path data
+
+**What We Should Be Doing**:
+- **Tree-sitter supports ALL these languages** natively
+- **Proper AST parsing** for every language
+- **Robust syntax handling** for complex features
+- **Future-proof** as languages evolve
+- **Single-pass parsing** eliminating performance bottlenecks
+- **Correct path resolution** from proper language grammar
+
+### 2.2 Tree-Sitter Migration Strategy
+**Location**: All language analyzers in `src/repomap_tool/llm/critical_line_extractor.py` and `src/repomap_tool/dependencies/`
 
 **Required Actions**:
-- [ ] Identify and optimize nested loop structures
-- [ ] Implement caching for repeated calculations
-- [ ] Use vectorized operations where possible
-- [ ] Add performance monitoring and metrics
+- [ ] **Replace JavaScriptCriticalAnalyzer** with tree-sitter-javascript/tree-sitter-typescript
+- [ ] **Replace GoCriticalAnalyzer** with tree-sitter-go
+- [ ] **Replace JavaCriticalAnalyzer** with tree-sitter-java
+- [ ] **Replace CSharpCriticalAnalyzer** with tree-sitter-c-sharp
+- [ ] **Replace RustCriticalAnalyzer** with tree-sitter-rust
+- [ ] **Update all import/call analyzers** to use tree-sitter instead of regex
+- [ ] **Remove all 300+ regex patterns** and replace with proper AST traversal
+- [ ] **Add tree-sitter language grammars** to dependencies
 
-### 2.2 Regex Optimization
-**Location**: Multiple files with 502 regex operations  
-**Issue**: Uncompiled regex patterns causing performance bottlenecks
+### 2.3 Critical Issues to Fix During Migration
+**Data Integrity Problems** (from Gemini Code Assist):
+- [ ] **Fix TreeNode parent references** - restore parent-child relationships after deserialization
+- [ ] **Fix malformed import paths** - eliminate defensive workarounds for parser errors
+- [ ] **Fix path resolution logic** - ensure correct relative/absolute path handling
+- [ ] **Fix tree traversal** - enable both upward and downward navigation
+- [ ] **Fix dependency analysis** - base on correct import path data
 
-**Required Actions**:
-- [ ] Compile all regex patterns at module level
-- [ ] Cache compiled patterns for reuse
-- [ ] Optimize regex patterns for better performance
-- [ ] Add regex performance monitoring
+### 2.4 Benefits of Migration
+- [ ] **Eliminate 300+ brittle regex patterns** - no more parsing errors
+- [ ] **Proper AST for every language** - accurate syntax analysis
+- [ ] **Handle complex language features** - async/await, generics, etc.
+- [ ] **Future-proof** - as languages add features, tree-sitter handles them
+- [ ] **Consistent parsing approach** - same methodology across all languages
+- [ ] **Actually use the dependency** we're already paying for (~20MB)
+- [ ] **Fix performance bottlenecks** - single-pass parsing eliminates O(n³) complexity
+- [ ] **Fix data integrity** - correct paths and tree structure from the start
 
 ### Success Criteria
-- [ ] Loop complexity reduced from O(n³) to O(n²) or better
-- [ ] All regex patterns compiled and cached
-- [ ] Performance benchmarks show 50%+ improvement
-- [ ] Memory usage optimized and bounded
+- [ ] **ZERO regex patterns** for language parsing (only for simple text processing)
+- [ ] **All languages use tree-sitter** for AST parsing
+- [ ] **Proper AST traversal** for all language features
+- [ ] **Robust parsing** that handles complex syntax correctly
+- [ ] **Future-proof** parsing that adapts to language evolution
+- [ ] **Performance improvement** from proper parsing vs regex
+- [ ] **TreeNode parent references** properly restored after deserialization
+- [ ] **Import paths** correctly resolved without defensive workarounds
+- [ ] **Tree traversal** works in both directions (up and down)
+- [ ] **Dependency analysis** based on correct path data
+- [ ] **No more O(n³) complexity** from repeated file parsing
 
 ---
 
@@ -255,10 +299,11 @@ This plan addresses the most critical issues identified through comprehensive co
    - Enhanced C# analysis (95 patterns)
    - Enhanced Rust analysis (107 patterns)
    - Total: 300+ comprehensive language patterns
+   - **NOTE**: These are regex patterns - should be replaced with tree-sitter AST parsing
 
 ### In Progress (🔄)
+- **Tree-Sitter Migration** - 🔄 **CRITICAL PRIORITY** - Replace 300+ regex patterns with proper AST parsing
 - **Tree Building Implementation** - 🔄 PENDING
-- **Performance Optimization** - 🔄 PENDING
 - **Architecture Refactoring** - 🔄 PENDING
 - **File System Validation** - 🔄 PENDING
 
@@ -267,15 +312,16 @@ This plan addresses the most critical issues identified through comprehensive co
 ## 🎯 **Next Steps**
 
 ### Immediate Actions (Next 1-2 weeks)
-1. **Start Tree Building Implementation**
+1. **CRITICAL: Start Tree-Sitter Migration**
+   - This is the fundamental issue - we're using regex instead of proper AST parsing
+   - Replace all 300+ regex patterns with tree-sitter AST parsing
+   - Start with JavaScript/TypeScript as highest impact
+   - This is the core purpose of the project
+
+2. **Complete Tree Building Implementation**
    - Analyze current tree building code
    - Design dependency intelligence integration
    - Implement core tree building logic
-
-2. **Begin Performance Optimization**
-   - Profile current performance bottlenecks
-   - Identify most critical loop optimizations
-   - Start regex compilation and caching
 
 ### Medium-term Goals (Next 2-4 weeks)
 1. **Complete Architecture Refactoring**
@@ -299,8 +345,9 @@ This plan addresses the most critical issues identified through comprehensive co
 - [ ] CI pipeline passing consistently
 
 ### Performance
+- [ ] **Tree-sitter migration completed** - All languages use proper AST parsing
+- [ ] **ZERO regex patterns** for language parsing (only for simple text processing)
 - [ ] Loop complexity optimized (O(n³) → O(n²))
-- [ ] Regex operations optimized (compiled patterns)
 - [ ] Memory usage bounded and monitored
 - [ ] Response times improved by 50%+
 
@@ -331,7 +378,7 @@ This plan addresses the most critical issues identified through comprehensive co
 
 - **Last Updated**: January 2025
 - **Next Review**: Weekly progress reviews
-- **Priority**: Focus on tree building implementation first
+- **Priority**: **CRITICAL** - Focus on tree-sitter migration first (this is the core purpose of the project)
 - **Status**: 6/10 critical tasks completed (60% complete)
 
-**Overall Status**: 🔄 **IN PROGRESS** - Significant progress made, critical tasks remaining
+**Overall Status**: 🔄 **IN PROGRESS** - Significant progress made, **CRITICAL TREE-SITTER MIGRATION** required
