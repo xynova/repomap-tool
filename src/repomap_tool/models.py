@@ -8,7 +8,7 @@ and match results using Pydantic for validation and serialization.
 
 from pathlib import Path
 from typing import List, Dict, Optional, Any, Literal, Union, Set
-from pydantic import BaseModel, Field, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import logging
 
@@ -320,8 +320,9 @@ class ProjectInfo(BaseModel):
     )
     last_updated: datetime = Field(description="Last analysis timestamp")
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        validate_assignment=True, extra="forbid", ser_json_timedelta="iso8601"
+    )
 
 
 class HealthCheck(BaseModel):
@@ -352,8 +353,9 @@ class ErrorResponse(BaseModel):
         default=None, description="Request ID for tracking"
     )
 
-    class Config:
-        json_encoders = {datetime: lambda v: v.isoformat()}
+    model_config = ConfigDict(
+        validate_assignment=True, extra="forbid", ser_json_timedelta="iso8601"
+    )
 
 
 # Utility functions for working with models
@@ -428,8 +430,9 @@ class TreeNode(BaseModel):
         default=None, description="Refactoring priority score (0-1)"
     )
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        validate_assignment=True, extra="forbid", arbitrary_types_allowed=True
+    )
 
 
 class Entrypoint(BaseModel):
@@ -491,8 +494,9 @@ class ExplorationTree(BaseModel):
         default_factory=datetime.now, description="Last modification timestamp"
     )
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(
+        validate_assignment=True, extra="forbid", arbitrary_types_allowed=True
+    )
 
 
 class ExplorationSession(BaseModel):
