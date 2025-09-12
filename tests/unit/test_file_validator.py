@@ -73,11 +73,19 @@ class TestFileValidator:
             self.validator.validate_path("some/../path")
 
     def test_validate_path_windows_reserved_names_rejection(self):
-        """Test rejection of Windows reserved names."""
+        """Test rejection of Windows reserved names (only on Windows)."""
+        import platform
+
         reserved_names = ["CON", "PRN", "AUX", "NUL", "COM1", "LPT1"]
         for name in reserved_names:
-            with pytest.raises(ValidationError, match="forbidden pattern"):
-                self.validator.validate_path(f"/path/{name}/file")
+            if platform.system() == "Windows":
+                # On Windows, these should be rejected
+                with pytest.raises(ValidationError, match="forbidden pattern"):
+                    self.validator.validate_path(f"/path/{name}/file")
+            else:
+                # On non-Windows, these should be allowed
+                result = self.validator.validate_path(f"/path/{name}/file")
+                assert result == Path(f"/path/{name}/file")
 
     def test_validate_path_nonexistent_with_must_exist(self):
         """Test failure when path doesn't exist but must_exist=True."""

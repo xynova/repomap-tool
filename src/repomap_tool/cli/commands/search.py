@@ -108,11 +108,17 @@ def identifiers(
             resolved_project_path, match_type, verbose, log_level, cache_size
         )
 
+        # Update configuration with threshold from CLI
+        # Convert float threshold (0.0-1.0) to integer (0-100) for internal use
+        threshold_int = int(threshold * 100) if threshold <= 1.0 else int(threshold)
+        config_obj.fuzzy_match.threshold = threshold_int
+        config_obj.semantic_match.threshold = threshold
+
         # Create search request
         request = SearchRequest(
             query=query,
             match_type=match_type,
-            threshold=threshold,
+            threshold=threshold,  # Keep as float for API consistency
             max_results=max_results,
             strategies=list(strategies) if strategies else None,
         )
@@ -189,7 +195,7 @@ def dependencies(
     enable_call_graph: bool,
     enable_impact_analysis: bool,
 ) -> None:
-    """Analyze project dependencies."""
+    """Analyze project dependencies and build dependency graph."""
 
     try:
         # Resolve project path from argument, config file, or discovery
@@ -197,6 +203,7 @@ def dependencies(
 
         # Create dependency configuration
         dependency_config = DependencyConfig(
+            max_graph_size=max_files,
             enable_call_graph=enable_call_graph,
             enable_impact_analysis=enable_impact_analysis,
         )
@@ -206,7 +213,6 @@ def dependencies(
             project_root=resolved_project_path,
             dependencies=dependency_config,
             verbose=verbose,
-            max_results=max_files,
         )
 
         # Initialize RepoMap
@@ -228,7 +234,7 @@ def dependencies(
         results = {
             "total_files": len(dependency_graph.nodes) if dependency_graph else 0,
             "total_dependencies": (
-                len(dependency_graph.edges) if dependency_graph else 0
+                len(dependency_graph.graph.edges) if dependency_graph else 0
             ),
             "circular_dependencies": 0,  # TODO: Calculate actual cycles
         }
@@ -299,11 +305,10 @@ def cycles(
             dependency_graph = repomap.build_dependency_graph()
             progress.update(task, description="Detecting cycles...")
 
-            # Find cycles (placeholder implementation)
-            cycles = []  # TODO: Implement actual cycle detection
+            # Find cycles
+            cycles = []
             if dependency_graph:
-                # This is a placeholder - actual cycle detection would be implemented here
-                pass
+                cycles = repomap.find_circular_dependencies()
 
             progress.update(task, description="Analysis complete!")
 

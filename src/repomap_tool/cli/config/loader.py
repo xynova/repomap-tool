@@ -252,6 +252,13 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
             "yes",
         )
 
+    semantic_threshold_env = os.environ.get("REPOMAP_SEMANTIC_THRESHOLD")
+    if semantic_threshold_env:
+        try:
+            config.semantic_match.threshold = float(semantic_threshold_env)
+        except ValueError:
+            pass  # Keep default if invalid
+
     max_results_env = os.environ.get("REPOMAP_MAX_RESULTS")
     if max_results_env:
         try:
@@ -270,6 +277,21 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
     enable_monitoring_env = os.environ.get("REPOMAP_ENABLE_MONITORING")
     if enable_monitoring_env:
         config.performance.enable_monitoring = enable_monitoring_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    cache_size_env = os.environ.get("REPOMAP_CACHE_SIZE")
+    if cache_size_env:
+        try:
+            config.performance.cache_size = int(cache_size_env)
+        except ValueError:
+            pass  # Keep default if invalid
+
+    enable_progress_env = os.environ.get("REPOMAP_ENABLE_PROGRESS")
+    if enable_progress_env:
+        config.performance.enable_progress = enable_progress_env.lower() in (
             "true",
             "1",
             "yes",
