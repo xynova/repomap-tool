@@ -123,7 +123,7 @@ def create(
         resolved_project_path = resolve_project_path(project_path, config)
 
         # Load or create configuration
-        config_obj = load_or_create_config(
+        config_obj, was_created = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
             create_if_missing=True,

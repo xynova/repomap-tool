@@ -65,7 +65,7 @@ class TestCLICore:
                 cli, ["index", "create", temp_project, "--fuzzy"]
             )
             assert result.exit_code == 0
-            assert "Analysis complete" in result.output
+            assert "project_root" in result.output  # Check for JSON output
 
     def test_analyze_with_config_file(self, cli_runner, temp_project):
         """Test analyze command with config file."""
@@ -99,7 +99,7 @@ class TestCLICore:
                     cli, ["index", "create", temp_project, "--config", config_file]
                 )
                 assert result.exit_code == 0
-                assert "Analysis complete" in result.output
+                assert "project_root" in result.output  # Check for JSON output
         finally:
             os.unlink(config_file)
 

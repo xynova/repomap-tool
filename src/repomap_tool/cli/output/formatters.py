@@ -12,6 +12,7 @@ from rich.panel import Panel
 
 from ...models import ProjectInfo, SearchResponse
 
+# Create console instance for this module
 console = Console()
 
 
@@ -26,45 +27,68 @@ def display_project_info(
         console.print(project_info.model_dump_json(indent=2))
         return
 
-    # Use OutputTemplates for markdown and text formats
+    # Handle text and markdown formats
     if output_format in ["markdown", "text"]:
-        from ...llm.output_templates import OutputTemplates, TemplateConfig
-
-        # Create template config from CLI options
-        if template_config:
-            config = TemplateConfig(
-                use_emojis=not template_config.get("no_emojis", False),
-                use_hierarchical_structure=not template_config.get(
-                    "no_hierarchy", False
-                ),
-                include_line_numbers=not template_config.get("no_line_numbers", False),
-                include_centrality_scores=not template_config.get(
-                    "no_centrality", False
-                ),
-                include_impact_risk=not template_config.get("no_impact_risk", False),
-                max_critical_lines=template_config.get("max_critical_lines", 3),
-                max_dependencies=template_config.get("max_dependencies", 3),
-                compression_level=template_config.get("compression", "medium"),
-            )
-        else:
-            config = TemplateConfig()
-
-        templates = OutputTemplates(config)
-
-        # Convert ProjectInfo to dict for template processing
-        project_data = {
-            "project_root": str(project_info.project_root),
-            "total_files": project_info.total_files,
-            "total_identifiers": project_info.total_identifiers,
-            "file_types": project_info.file_types,
-            "identifier_types": project_info.identifier_types,
-            "cache_stats": project_info.cache_stats,
-        }
-
+        use_emojis = not (template_config and template_config.get("no_emojis", False))
+        
         if output_format == "markdown":
-            output = templates.render_markdown_project_analysis(project_data)
+            # Markdown format
+            lines = []
+            lines.append("# 📊 Project Analysis Results" if use_emojis else "# Project Analysis Results")
+            lines.append("")
+            lines.append(f"**Project Root:** {project_info.project_root}")
+            lines.append(f"**Total Files:** {project_info.total_files}")
+            lines.append(f"**Total Identifiers:** {project_info.total_identifiers}")
+            lines.append(f"**Analysis Time:** {project_info.analysis_time_ms:.2f}ms")
+            lines.append("")
+            
+            if project_info.file_types:
+                lines.append("## File Types")
+                for ext, count in project_info.file_types.items():
+                    lines.append(f"- **{ext}:** {count}")
+                lines.append("")
+            
+            if project_info.identifier_types:
+                lines.append("## Identifier Types")
+                for id_type, count in project_info.identifier_types.items():
+                    lines.append(f"- **{id_type}:** {count}")
+                lines.append("")
+            
+            if project_info.cache_stats:
+                lines.append("## Cache Statistics")
+                for key, value in project_info.cache_stats.items():
+                    lines.append(f"- **{key.replace('_', ' ').title()}:** {value}")
+                    
+            output = "\n".join(lines)
         else:  # text
-            output = templates.render_text_project_analysis(project_data)
+            # Text format
+            lines = []
+            lines.append("📊 Project Analysis Results" if use_emojis else "Project Analysis Results")
+            lines.append("=" * 30)
+            lines.append(f"Project Root: {project_info.project_root}")
+            lines.append(f"Total Files: {project_info.total_files}")
+            lines.append(f"Total Identifiers: {project_info.total_identifiers}")
+            lines.append(f"Analysis Time: {project_info.analysis_time_ms:.2f}ms")
+            lines.append("")
+            
+            if project_info.file_types:
+                lines.append("File Types:")
+                for ext, count in project_info.file_types.items():
+                    lines.append(f"  {ext}: {count}")
+                lines.append("")
+            
+            if project_info.identifier_types:
+                lines.append("Identifier Types:")
+                for id_type, count in project_info.identifier_types.items():
+                    lines.append(f"  {id_type}: {count}")
+                lines.append("")
+            
+            if project_info.cache_stats:
+                lines.append("Cache Statistics:")
+                for key, value in project_info.cache_stats.items():
+                    lines.append(f"  {key.replace('_', ' ').title()}: {value}")
+                    
+            output = "\n".join(lines)
 
         console.print(output)
         return

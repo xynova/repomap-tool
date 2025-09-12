@@ -329,11 +329,27 @@ class FileValidator:
         if len(path_str) > MAX_PATH_LENGTH:
             raise ValidationError(f"Path too long: {len(path_str)} > {MAX_PATH_LENGTH}")
 
-        # Check for suspicious patterns
+        # Check for suspicious patterns (but exclude Windows reserved names on non-Windows)
         path_lower = path_str.lower()
+        import os
+        windows_reserved = ["CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", 
+                           "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", 
+                           "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"]
+        
         for pattern in FORBIDDEN_PATTERNS:
-            if pattern.lower() in path_lower:
-                raise ValidationError(f"Path contains forbidden pattern: {pattern}")
+            # Skip Windows reserved name checks on non-Windows systems
+            if pattern in windows_reserved and os.name != "nt":
+                continue
+            # For Windows reserved names, check only individual path components
+            if pattern in windows_reserved:
+                path_parts = Path(path_str).parts
+                for part in path_parts:
+                    if part.upper() == pattern:
+                        raise ValidationError(f"Path contains forbidden pattern: {pattern}")
+            else:
+                # For other patterns, check the full path
+                if pattern.lower() in path_lower:
+                    raise ValidationError(f"Path contains forbidden pattern: {pattern}")
 
         # Check for relative path traversal
         if ".." in Path(path_str).parts:
