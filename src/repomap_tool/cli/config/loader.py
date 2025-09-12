@@ -1,0 +1,371 @@
+"""
+Configuration loading and management utilities.
+
+This module handles loading, creating, and managing RepoMap configurations.
+"""
+
+import json
+import os
+from pathlib import Path
+from typing import Optional, Literal
+
+from pydantic import ValidationError
+from rich.console import Console
+
+from ...models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    TreeConfig,
+)
+
+console = Console()
+
+
+def load_config_file(config_path: str) -> RepoMapConfig:
+    """Load and validate configuration from file."""
+    try:
+        with open(config_path, "r") as f:
+            config_dict = json.load(f)
+
+        # Validate against RepoMapConfig model
+        config = RepoMapConfig(**config_dict)
+        return config
+    except ValidationError as e:
+        raise ValueError(f"Invalid configuration file: {e}")
+    except Exception as e:
+        raise ValueError(f"Failed to load configuration file: {e}")
+
+
+def get_config_file_path(project_path: str) -> Path:
+    """Get the path to the .repomap/config.json file for a project."""
+    return Path(project_path) / ".repomap" / "config.json"
+
+
+def discover_config_file(project_path: str) -> Optional[str]:
+    """Discover existing config file in the project directory."""
+    config_path = get_config_file_path(project_path)
+    if config_path.exists():
+        return str(config_path)
+    return None
+
+
+def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
+    """Discover and load config file in current directory or parent directories."""
+    current_dir = Path.cwd()
+
+    # Check current directory and parent directories
+    for directory in [current_dir] + list(current_dir.parents):
+        config_path = directory / ".repomap" / "config.json"
+        if config_path.exists():
+            try:
+                return load_config_file(str(config_path))
+            except Exception:
+                # If we can't load this config file, continue searching
+                continue
+
+    # Also check /workspace directory (for Docker usage)
+    workspace_dir = Path("/workspace")
+    if workspace_dir.exists():
+        config_path = workspace_dir / ".repomap" / "config.json"
+        if config_path.exists():
+            try:
+                return load_config_file(str(config_path))
+            except Exception:
+                pass
+
+    return None
+
+
+def resolve_project_path(
+    provided_path: Optional[str], config_file: Optional[str]
+) -> str:
+    """Resolve project path from provided path, config file, or discovered config.
+
+    Args:
+        provided_path: Explicitly provided project path
+        config_file: Explicitly provided config file path
+
+    Returns:
+        Resolved project path
+
+    Raises:
+        SystemExit: If no project path can be resolved
+    """
+    if provided_path:
+        return provided_path
+
+    # Try to load config file to get project_root
+    config_obj = None
+    if config_file:
+        config_obj = load_config_file(config_file)
+    else:
+        # Try to discover config file
+        config_obj = discover_config_file_in_current_dir()
+
+    if config_obj is None:
+        # Use current directory as fallback when no project path or config is provided
+        current_dir = str(Path.cwd())
+        console.print(
+            f"[blue]No project path provided, using current directory: {current_dir}[/blue]"
+        )
+        return current_dir
+
+    project_path = str(config_obj.project_root)
+    console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+    return project_path
+
+
+def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
+    """Create a default config file in .repomap/config.json."""
+    config_path = get_config_file_path(project_path)
+
+    # Create .repomap directory if it doesn't exist
+    config_path.parent.mkdir(parents=True, exist_ok=True)
+
+    # Save config to file
+    with open(config_path, "w") as f:
+        json.dump(config.model_dump(), f, indent=2, default=str)
+
+    return str(config_path)
+
+
+def create_default_config(
+    project_path: str,
+    fuzzy: bool = True,
+    semantic: bool = True,
+    threshold: float = 0.7,
+    max_results: int = 50,
+    output: Literal["json", "text", "table", "markdown"] = "json",
+    verbose: bool = False,
+    cache_size: int = 1000,
+) -> RepoMapConfig:
+    """Create default configuration."""
+    if not project_path:
+        raise ValueError("project_path is required for create_default_config")
+
+    return RepoMapConfig(
+        project_root=Path(project_path),
+        verbose=verbose,
+        max_results=max_results,
+        output_format=output,
+        fuzzy_match=FuzzyMatchConfig(
+            enabled=fuzzy,
+            threshold=threshold,
+        ),
+        semantic_match=SemanticMatchConfig(
+            enabled=semantic,
+            threshold=threshold,
+        ),
+        performance=PerformanceConfig(
+            cache_size=cache_size,
+        ),
+    )
+
+
+def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
+    """Apply environment variable overrides to configuration."""
+    # Core configuration
+    verbose_env = os.environ.get("REPOMAP_VERBOSE")
+    if verbose_env:
+        config.verbose = verbose_env.lower() in ("true", "1", "yes")
+
+    log_level_env = os.environ.get("REPOMAP_LOG_LEVEL")
+    if log_level_env:
+        config.log_level = log_level_env
+
+    output_format_env = os.environ.get("REPOMAP_OUTPUT_FORMAT")
+    if output_format_env:
+        config.output_format = output_format_env  # type: ignore
+
+    max_results_env = os.environ.get("REPOMAP_MAX_RESULTS")
+    if max_results_env:
+        try:
+            config.max_results = int(max_results_env)
+        except ValueError:
+            pass  # Keep default if invalid
+
+    refresh_cache_env = os.environ.get("REPOMAP_REFRESH_CACHE")
+    if refresh_cache_env:
+        config.refresh_cache = refresh_cache_env.lower() in ("true", "1", "yes")
+
+    # Cache configuration
+    cache_dir_env = os.environ.get("REPOMAP_CACHE_DIR")
+    if cache_dir_env:
+        config.cache_dir = Path(cache_dir_env)
+    else:
+        legacy_cache_dir = os.environ.get("CACHE_DIR")  # Legacy support
+        if legacy_cache_dir:
+            config.cache_dir = Path(legacy_cache_dir)
+
+    return config
+
+
+def apply_cli_overrides(
+    config: RepoMapConfig,
+    project_path: Optional[str] = None,
+    config_file: Optional[str] = None,
+    fuzzy: Optional[bool] = None,
+    semantic: Optional[bool] = None,
+    threshold: Optional[float] = None,
+    max_results: Optional[int] = None,
+    output: Optional[str] = None,
+    verbose: Optional[bool] = None,
+    refresh_cache: Optional[bool] = None,
+    cache_size: Optional[int] = None,
+    no_progress: Optional[bool] = None,
+    no_monitoring: Optional[bool] = None,
+    log_level: Optional[str] = None,
+) -> RepoMapConfig:
+    """Apply CLI argument overrides to configuration."""
+    # Override project_root if provided
+    if project_path:
+        config.project_root = Path(project_path)
+
+    # Override core settings if provided
+    if fuzzy is not None:
+        config.fuzzy_match.enabled = fuzzy
+    if semantic is not None:
+        config.semantic_match.enabled = semantic
+    if threshold is not None:
+        config.fuzzy_match.threshold = threshold
+        config.semantic_match.threshold = threshold
+    if max_results is not None:
+        config.max_results = max_results
+    if output is not None:
+        config.output_format = output  # type: ignore
+    if verbose is not None:
+        config.verbose = verbose
+    if refresh_cache is not None:
+        config.refresh_cache = refresh_cache
+    if log_level is not None:
+        config.log_level = log_level
+
+    # Override performance settings if provided
+    if cache_size is not None:
+        config.performance.cache_size = cache_size
+    if no_progress is not None:
+        config.performance.enable_progress = not no_progress
+    if no_monitoring is not None:
+        config.performance.enable_monitoring = not no_monitoring
+
+    return config
+
+
+def load_or_create_config(
+    project_path: Optional[str] = None,
+    config_file: Optional[str] = None,
+    create_if_missing: bool = False,
+    **cli_overrides,
+) -> RepoMapConfig:
+    """Load configuration from file or create default configuration."""
+    config = None
+
+    # 1. Try to load from config file if provided
+    if config_file:
+        config = load_config_file(config_file)
+    else:
+        # Try to discover config file in current directory
+        config = discover_config_file_in_current_dir()
+
+    # 2. If no config file found, create default config
+    if config is None:
+        # Resolve project path for default config
+        project_path = resolve_project_path(project_path, config_file)
+        config = create_default_config(
+            project_path,
+            fuzzy=True,
+            semantic=True,
+            threshold=0.7,
+            max_results=50,
+            output="json",
+            verbose=False,
+            cache_size=1000,
+        )
+
+        # Optionally create config file
+        if create_if_missing:
+            create_default_config_file(project_path, config)
+
+    # 3. Apply environment overrides
+    config = apply_environment_overrides(config)
+
+    # 4. Apply CLI overrides
+    config = apply_cli_overrides(config, project_path=project_path, **cli_overrides)
+
+    return config
+
+
+def create_search_config(
+    project_path: Optional[str],
+    match_type: str,
+    verbose: bool,
+    log_level: str = "INFO",
+    cache_size: int = 1000,
+) -> RepoMapConfig:
+    """Create configuration for search operations."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_search_config")
+
+    # Enable appropriate matchers based on match type
+    # Default to hybrid if invalid match type is provided
+    if match_type not in ["fuzzy", "semantic", "hybrid"]:
+        match_type = "hybrid"
+
+    semantic_enabled = match_type in ["semantic", "hybrid"]
+
+    fuzzy_config = FuzzyMatchConfig()
+    semantic_config = SemanticMatchConfig(enabled=semantic_enabled)
+
+    # Create performance config with cache settings
+    performance_config = PerformanceConfig(
+        cache_size=cache_size,
+    )
+
+    # Get cache directory from environment variable if set
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
+
+    config = RepoMapConfig(
+        project_root=project_path,
+        cache_dir=cache_dir,
+        fuzzy_match=fuzzy_config,
+        semantic_match=semantic_config,
+        performance=performance_config,
+        verbose=verbose,
+        log_level=log_level,
+    )
+
+    return config
+
+
+def create_tree_config(
+    project_path: Optional[str],
+    max_depth: int = 3,
+    verbose: bool = True,
+) -> RepoMapConfig:
+    """Create configuration for tree-related operations (explore, focus, expand, prune, map, list_trees, status)."""
+    if project_path is None:
+        raise ValueError("project_path is required for create_tree_config")
+
+    fuzzy_config = FuzzyMatchConfig(threshold=70, cache_results=True)
+    semantic_config = SemanticMatchConfig(
+        enabled=True, threshold=0.7, cache_results=True
+    )
+    tree_config = TreeConfig(max_depth=max_depth, entrypoint_threshold=0.6)
+
+    # Get cache directory from environment variable if set
+    cache_dir_env = os.environ.get("CACHE_DIR")
+    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
+
+    config = RepoMapConfig(
+        project_root=project_path,
+        cache_dir=cache_dir,
+        fuzzy_match=fuzzy_config,
+        semantic_match=semantic_config,
+        trees=tree_config,
+        verbose=verbose,
+    )
+
+    return config

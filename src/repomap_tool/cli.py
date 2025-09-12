@@ -4,6 +4,8 @@ cli.py - Command Line Interface for RepoMap-Tool
 
 This module provides a CLI interface using Click and Pydantic models
 for argument validation and structured output.
+
+NOTE: This file is being refactored. New command implementations are in src/repomap_tool/cli/
 """
 
 import json
@@ -30,7 +32,13 @@ from .models import (
 from pydantic import ValidationError
 from .core import RepoMapService
 
+# Import the refactored CLI as the main entry point
+from .cli.main import cli as refactored_cli
+
 console = Console()
+
+# Use the refactored CLI as the main entry point
+cli = refactored_cli
 
 
 def get_project_path_from_session(session_id: str) -> Optional[str]:

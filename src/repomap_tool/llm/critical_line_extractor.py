@@ -121,17 +121,17 @@ class PythonCriticalAnalyzer(LanguageAnalyzer):
         return None
 
 
+# DEPRECATED: Use AiderBasedExtractor instead
+# This analyzer used 31+ regex patterns when aider already provides tree-sitter
 class JavaScriptCriticalAnalyzer(LanguageAnalyzer):
-    """JavaScript/TypeScript critical line analyzer."""
+    """DEPRECATED: Use AiderBasedExtractor for tree-sitter-based analysis."""
 
     def __init__(self) -> None:
         self.code = ""
 
     def parse_code(self, code: str) -> ast.AST:
-        """Parse JavaScript code with enhanced pattern recognition."""
-        self.code = code  # Store code for later use
-        # Enhanced regex-based parsing for JavaScript/TypeScript constructs
-        # In production, would use proper JS parser like esprima
+        """DEPRECATED: Use aider's tree-sitter parsing instead."""
+        self.code = code
         return ast.Module(body=[], type_ignores=[])
 
     def find_critical_nodes(self, tree: ast.AST) -> List[Dict]:
