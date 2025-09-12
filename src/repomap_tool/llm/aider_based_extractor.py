@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 class AiderBasedExtractor:
     """Critical line extractor using aider's tree-sitter functionality."""
 
-    def __init__(self, repo_map):
+    def __init__(self, repo_map: Any) -> None:
         """Initialize with aider RepoMap instance.
 
         Args:
@@ -67,7 +67,7 @@ class AiderBasedExtractor:
             logger.warning(f"Failed to extract critical lines from {file_path}: {e}")
             return []
 
-    def _calculate_confidence(self, tag) -> float:
+    def _calculate_confidence(self, tag: Any) -> float:
         """Calculate confidence score based on tag kind.
 
         Args:
@@ -106,7 +106,7 @@ class AiderBasedExtractor:
 class CriticalLineExtractor:
     """Updated critical line extractor using aider's tree-sitter functionality."""
 
-    def __init__(self, repo_map=None):
+    def __init__(self, repo_map: Any = None) -> None:
         """Initialize with optional repo_map.
 
         Args:

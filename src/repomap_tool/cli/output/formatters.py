@@ -167,7 +167,7 @@ def display_search_results(
                 str(i),
                 result.identifier,
                 f"{result.score:.3f}",
-                result.match_type or "unknown",
+                result.match_type,
             )
 
         console.print(table)
@@ -194,7 +194,7 @@ def display_search_results(
             console.print(
                 f"{i:2d}. [green]{result.identifier}[/green] "
                 f"(score: [magenta]{result.score:.3f}[/magenta], "
-                f"type: [blue]{result.match_type or 'unknown'}[/blue])"
+                f"type: [blue]{result.match_type}[/blue])"
             )
 
         # Show performance metrics

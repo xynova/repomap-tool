@@ -7,7 +7,7 @@ This module handles loading, creating, and managing RepoMap configurations.
 import json
 import os
 from pathlib import Path
-from typing import Optional, Literal, Union, Dict, Any
+from typing import Optional, Literal, Union, Dict, Any, Tuple
 
 from pydantic import ValidationError
 from rich.console import Console
@@ -161,7 +161,7 @@ def create_default_config(
     no_monitoring: Optional[bool] = None,
     log_level: Optional[str] = None,
     refresh_cache: Optional[bool] = None,
-    **kwargs,  # Accept any other parameters for test compatibility
+    **kwargs: Any,  # Accept any other parameters for test compatibility
 ) -> RepoMapConfig:
     """Create default configuration."""
     if not project_path:
@@ -431,7 +431,7 @@ def apply_cli_overrides(
     no_progress: Optional[bool] = None,
     no_monitoring: Optional[bool] = None,
     log_level: Optional[str] = None,
-    **kwargs,  # Accept any other parameters for backward compatibility
+    **kwargs: Any,  # Accept any other parameters for backward compatibility
 ) -> RepoMapConfig:
     """Apply CLI argument overrides to configuration."""
 
@@ -502,8 +502,8 @@ def load_or_create_config(
     project_path: Optional[str] = None,
     config_file: Optional[str] = None,
     create_if_missing: bool = False,
-    **cli_overrides,
-) -> RepoMapConfig:
+    **cli_overrides: Any,
+) -> Tuple[RepoMapConfig, bool]:
     """Load configuration from file or create default configuration."""
     config = None
 

@@ -8,7 +8,7 @@ to prevent security vulnerabilities and improve reliability.
 import os
 import stat
 from pathlib import Path
-from typing import Optional, Union, List, Tuple
+from typing import Optional, Union, List, Tuple, Any
 import logging
 
 from ..exceptions import FileAccessError, ValidationError
@@ -429,7 +429,7 @@ _default_validator = FileValidator()
 
 
 # Convenience functions
-def validate_path(path: Union[str, Path], **kwargs) -> Path:
+def validate_path(path: Union[str, Path], **kwargs: Any) -> Path:
     """Validate path using default validator."""
     return _default_validator.validate_path(path, **kwargs)
 
