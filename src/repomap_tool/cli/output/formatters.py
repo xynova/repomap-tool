@@ -30,64 +30,72 @@ def display_project_info(
     # Handle text and markdown formats
     if output_format in ["markdown", "text"]:
         use_emojis = not (template_config and template_config.get("no_emojis", False))
-        
+
         if output_format == "markdown":
             # Markdown format
             lines = []
-            lines.append("# 📊 Project Analysis Results" if use_emojis else "# Project Analysis Results")
+            lines.append(
+                "# 📊 Project Analysis Results"
+                if use_emojis
+                else "# Project Analysis Results"
+            )
             lines.append("")
             lines.append(f"**Project Root:** {project_info.project_root}")
             lines.append(f"**Total Files:** {project_info.total_files}")
             lines.append(f"**Total Identifiers:** {project_info.total_identifiers}")
             lines.append(f"**Analysis Time:** {project_info.analysis_time_ms:.2f}ms")
             lines.append("")
-            
+
             if project_info.file_types:
                 lines.append("## File Types")
                 for ext, count in project_info.file_types.items():
                     lines.append(f"- **{ext}:** {count}")
                 lines.append("")
-            
+
             if project_info.identifier_types:
                 lines.append("## Identifier Types")
                 for id_type, count in project_info.identifier_types.items():
                     lines.append(f"- **{id_type}:** {count}")
                 lines.append("")
-            
+
             if project_info.cache_stats:
                 lines.append("## Cache Statistics")
                 for key, value in project_info.cache_stats.items():
                     lines.append(f"- **{key.replace('_', ' ').title()}:** {value}")
-                    
+
             output = "\n".join(lines)
         else:  # text
             # Text format
             lines = []
-            lines.append("📊 Project Analysis Results" if use_emojis else "Project Analysis Results")
+            lines.append(
+                "📊 Project Analysis Results"
+                if use_emojis
+                else "Project Analysis Results"
+            )
             lines.append("=" * 30)
             lines.append(f"Project Root: {project_info.project_root}")
             lines.append(f"Total Files: {project_info.total_files}")
             lines.append(f"Total Identifiers: {project_info.total_identifiers}")
             lines.append(f"Analysis Time: {project_info.analysis_time_ms:.2f}ms")
             lines.append("")
-            
+
             if project_info.file_types:
                 lines.append("File Types:")
                 for ext, count in project_info.file_types.items():
                     lines.append(f"  {ext}: {count}")
                 lines.append("")
-            
+
             if project_info.identifier_types:
                 lines.append("Identifier Types:")
                 for id_type, count in project_info.identifier_types.items():
                     lines.append(f"  {id_type}: {count}")
                 lines.append("")
-            
+
             if project_info.cache_stats:
                 lines.append("Cache Statistics:")
                 for key, value in project_info.cache_stats.items():
                     lines.append(f"  {key.replace('_', ' ').title()}: {value}")
-                    
+
             output = "\n".join(lines)
 
         console.print(output)

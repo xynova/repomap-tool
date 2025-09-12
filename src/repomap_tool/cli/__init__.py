@@ -41,7 +41,7 @@ __all__ = [
     "cli",
     # Config functions
     "load_config_file",
-    "create_default_config", 
+    "create_default_config",
     "create_search_config",
     "create_tree_config",
     "load_or_create_config",

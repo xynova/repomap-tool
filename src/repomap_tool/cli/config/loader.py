@@ -169,7 +169,7 @@ def create_default_config(
 
     # Convert threshold from 0.0-1.0 float to 0-100 integer for FuzzyMatchConfig
     fuzzy_threshold = int(threshold * 100) if threshold <= 1.0 else int(threshold)
-    
+
     config = RepoMapConfig(
         project_root=Path(project_path),
         verbose=verbose,
@@ -187,13 +187,15 @@ def create_default_config(
             cache_size=cache_size,
         ),
     )
-    
+
     # Apply optional parameters
     if log_level is not None:
         # Validate log level
         valid_log_levels = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
         if log_level.upper() not in valid_log_levels:
-            raise ValueError(f"Invalid log level: {log_level}. Must be one of {valid_log_levels}")
+            raise ValueError(
+                f"Invalid log level: {log_level}. Must be one of {valid_log_levels}"
+            )
         config.log_level = log_level.upper()
     if refresh_cache is not None:
         config.refresh_cache = refresh_cache
@@ -201,7 +203,7 @@ def create_default_config(
         config.performance.enable_progress = not no_progress
     if no_monitoring is not None:
         config.performance.enable_monitoring = not no_monitoring
-    
+
     return config
 
 
@@ -227,18 +229,28 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
             config.fuzzy_match.threshold = int(fuzzy_threshold_env)
         except ValueError:
             pass  # Keep default if invalid
-    
+
     fuzzy_strategies_env = os.environ.get("REPOMAP_FUZZY_STRATEGIES")
     if fuzzy_strategies_env:
-        config.fuzzy_match.strategies = [s.strip() for s in fuzzy_strategies_env.split(",")]
-    
+        config.fuzzy_match.strategies = [
+            s.strip() for s in fuzzy_strategies_env.split(",")
+        ]
+
     fuzzy_cache_results_env = os.environ.get("REPOMAP_FUZZY_CACHE_RESULTS")
     if fuzzy_cache_results_env:
-        config.fuzzy_match.cache_results = fuzzy_cache_results_env.lower() in ("true", "1", "yes")
-    
+        config.fuzzy_match.cache_results = fuzzy_cache_results_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
     semantic_enabled_env = os.environ.get("REPOMAP_SEMANTIC_ENABLED")
     if semantic_enabled_env:
-        config.semantic_match.enabled = semantic_enabled_env.lower() in ("true", "1", "yes")
+        config.semantic_match.enabled = semantic_enabled_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
 
     max_results_env = os.environ.get("REPOMAP_MAX_RESULTS")
     if max_results_env:
@@ -246,7 +258,7 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
             config.max_results = int(max_results_env)
         except ValueError:
             pass  # Keep default if invalid
-    
+
     # Performance configuration
     max_workers_env = os.environ.get("REPOMAP_MAX_WORKERS")
     if max_workers_env:
@@ -254,11 +266,15 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
             config.performance.max_workers = int(max_workers_env)
         except ValueError:
             pass
-    
+
     enable_monitoring_env = os.environ.get("REPOMAP_ENABLE_MONITORING")
     if enable_monitoring_env:
-        config.performance.enable_monitoring = enable_monitoring_env.lower() in ("true", "1", "yes")
-        
+        config.performance.enable_monitoring = enable_monitoring_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
     # Tree configuration
     tree_max_depth_env = os.environ.get("REPOMAP_TREE_MAX_DEPTH")
     if tree_max_depth_env:
@@ -266,64 +282,98 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
             config.trees.max_depth = int(tree_max_depth_env)
         except ValueError:
             pass
-    
-    tree_max_trees_per_session_env = os.environ.get("REPOMAP_TREE_MAX_TREES_PER_SESSION")
+
+    tree_max_trees_per_session_env = os.environ.get(
+        "REPOMAP_TREE_MAX_TREES_PER_SESSION"
+    )
     if tree_max_trees_per_session_env:
         try:
             config.trees.max_trees_per_session = int(tree_max_trees_per_session_env)
         except ValueError:
             pass
-    
+
     tree_entrypoint_threshold_env = os.environ.get("REPOMAP_TREE_ENTRYPOINT_THRESHOLD")
     if tree_entrypoint_threshold_env:
         try:
             config.trees.entrypoint_threshold = float(tree_entrypoint_threshold_env)
         except ValueError:
             pass
-    
+
     tree_enable_code_snippets_env = os.environ.get("REPOMAP_TREE_ENABLE_CODE_SNIPPETS")
     if tree_enable_code_snippets_env:
-        config.trees.enable_code_snippets = tree_enable_code_snippets_env.lower() in ("true", "1", "yes")
-    
-    tree_cache_tree_structures_env = os.environ.get("REPOMAP_TREE_CACHE_TREE_STRUCTURES")
+        config.trees.enable_code_snippets = tree_enable_code_snippets_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    tree_cache_tree_structures_env = os.environ.get(
+        "REPOMAP_TREE_CACHE_TREE_STRUCTURES"
+    )
     if tree_cache_tree_structures_env:
-        config.trees.cache_tree_structures = tree_cache_tree_structures_env.lower() in ("true", "1", "yes")
-    
+        config.trees.cache_tree_structures = tree_cache_tree_structures_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
     # Dependency configuration
     dep_cache_graphs_env = os.environ.get("REPOMAP_DEP_CACHE_GRAPHS")
     if dep_cache_graphs_env:
-        config.dependencies.cache_graphs = dep_cache_graphs_env.lower() in ("true", "1", "yes")
-        
+        config.dependencies.cache_graphs = dep_cache_graphs_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
     dep_max_graph_size_env = os.environ.get("REPOMAP_DEP_MAX_GRAPH_SIZE")
     if dep_max_graph_size_env:
         try:
             config.dependencies.max_graph_size = int(dep_max_graph_size_env)
         except ValueError:
             pass
-            
+
     dep_enable_call_graph_env = os.environ.get("REPOMAP_DEP_ENABLE_CALL_GRAPH")
     if dep_enable_call_graph_env:
-        config.dependencies.enable_call_graph = dep_enable_call_graph_env.lower() in ("true", "1", "yes")
-        
-    dep_enable_impact_analysis_env = os.environ.get("REPOMAP_DEP_ENABLE_IMPACT_ANALYSIS")
+        config.dependencies.enable_call_graph = dep_enable_call_graph_env.lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+
+    dep_enable_impact_analysis_env = os.environ.get(
+        "REPOMAP_DEP_ENABLE_IMPACT_ANALYSIS"
+    )
     if dep_enable_impact_analysis_env:
-        config.dependencies.enable_impact_analysis = dep_enable_impact_analysis_env.lower() in ("true", "1", "yes")
-    
+        config.dependencies.enable_impact_analysis = (
+            dep_enable_impact_analysis_env.lower() in ("true", "1", "yes")
+        )
+
     dep_centrality_algorithms_env = os.environ.get("REPOMAP_DEP_CENTRALITY_ALGORITHMS")
     if dep_centrality_algorithms_env:
-        config.dependencies.centrality_algorithms = [alg.strip() for alg in dep_centrality_algorithms_env.split(",")]
-        
-    dep_max_centrality_cache_size_env = os.environ.get("REPOMAP_DEP_MAX_CENTRALITY_CACHE_SIZE")
+        config.dependencies.centrality_algorithms = [
+            alg.strip() for alg in dep_centrality_algorithms_env.split(",")
+        ]
+
+    dep_max_centrality_cache_size_env = os.environ.get(
+        "REPOMAP_DEP_MAX_CENTRALITY_CACHE_SIZE"
+    )
     if dep_max_centrality_cache_size_env:
         try:
-            config.dependencies.max_centrality_cache_size = int(dep_max_centrality_cache_size_env)
+            config.dependencies.max_centrality_cache_size = int(
+                dep_max_centrality_cache_size_env
+            )
         except ValueError:
             pass
-    
-    dep_performance_threshold_env = os.environ.get("REPOMAP_DEP_PERFORMANCE_THRESHOLD_SECONDS")
+
+    dep_performance_threshold_env = os.environ.get(
+        "REPOMAP_DEP_PERFORMANCE_THRESHOLD_SECONDS"
+    )
     if dep_performance_threshold_env:
         try:
-            config.dependencies.performance_threshold_seconds = float(dep_performance_threshold_env)
+            config.dependencies.performance_threshold_seconds = float(
+                dep_performance_threshold_env
+            )
         except ValueError:
             pass
 
@@ -362,25 +412,25 @@ def apply_cli_overrides(
     **kwargs,  # Accept any other parameters for backward compatibility
 ) -> RepoMapConfig:
     """Apply CLI argument overrides to configuration."""
-    
+
     # Handle legacy test calling pattern: apply_cli_overrides(config, overrides_dict)
     if isinstance(project_path, dict):
         # Merge the dict into kwargs and reset project_path
         kwargs.update(project_path)
-        project_path = kwargs.pop('project_path', None)
-        fuzzy = kwargs.pop('fuzzy', fuzzy)
-        semantic = kwargs.pop('semantic', semantic)
-        threshold = kwargs.pop('threshold', threshold)
-        fuzzy_threshold = kwargs.pop('fuzzy_threshold', fuzzy_threshold)
-        max_results = kwargs.pop('max_results', max_results)
-        output = kwargs.pop('output', output)
-        verbose = kwargs.pop('verbose', verbose)
-        refresh_cache = kwargs.pop('refresh_cache', refresh_cache)
-        cache_size = kwargs.pop('cache_size', cache_size)
-        no_progress = kwargs.pop('no_progress', no_progress)
-        no_monitoring = kwargs.pop('no_monitoring', no_monitoring)
-        log_level = kwargs.pop('log_level', log_level)
-    
+        project_path = kwargs.pop("project_path", None)
+        fuzzy = kwargs.pop("fuzzy", fuzzy)
+        semantic = kwargs.pop("semantic", semantic)
+        threshold = kwargs.pop("threshold", threshold)
+        fuzzy_threshold = kwargs.pop("fuzzy_threshold", fuzzy_threshold)
+        max_results = kwargs.pop("max_results", max_results)
+        output = kwargs.pop("output", output)
+        verbose = kwargs.pop("verbose", verbose)
+        refresh_cache = kwargs.pop("refresh_cache", refresh_cache)
+        cache_size = kwargs.pop("cache_size", cache_size)
+        no_progress = kwargs.pop("no_progress", no_progress)
+        no_monitoring = kwargs.pop("no_monitoring", no_monitoring)
+        log_level = kwargs.pop("log_level", log_level)
+
     # Override project_root if provided
     if project_path:
         config.project_root = Path(str(project_path))
@@ -408,12 +458,12 @@ def apply_cli_overrides(
         config.refresh_cache = refresh_cache
     if log_level is not None:
         config.log_level = log_level
-    
+
     # Handle additional parameters from kwargs (for test compatibility)
-    if 'semantic_enabled' in kwargs:
-        config.semantic_match.enabled = kwargs['semantic_enabled']
-    if 'max_workers' in kwargs:
-        config.performance.max_workers = kwargs['max_workers']
+    if "semantic_enabled" in kwargs:
+        config.semantic_match.enabled = kwargs["semantic_enabled"]
+    if "max_workers" in kwargs:
+        config.performance.max_workers = kwargs["max_workers"]
 
     # Override performance settings if provided
     if cache_size is not None:
@@ -485,7 +535,9 @@ def create_search_config(
 
     # Enable appropriate matchers based on match type
     if match_type not in ["fuzzy", "semantic", "hybrid"]:
-        raise ValueError(f"Invalid match_type: '{match_type}'. Must be one of 'fuzzy', 'semantic', 'hybrid'.")
+        raise ValueError(
+            f"Invalid match_type: '{match_type}'. Must be one of 'fuzzy', 'semantic', 'hybrid'."
+        )
 
     semantic_enabled = match_type in ["semantic", "hybrid"]
 

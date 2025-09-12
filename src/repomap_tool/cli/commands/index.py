@@ -165,5 +165,3 @@ def create(
         error_response = create_error_response(str(e), "AnalysisError")
         console.print(f"[red]Error: {error_response.error}[/red]")
         sys.exit(1)
-
-

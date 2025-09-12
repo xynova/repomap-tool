@@ -122,9 +122,8 @@ class PythonCriticalAnalyzer(LanguageAnalyzer):
 
 
 # REMOVED: JavaScriptCriticalAnalyzer - Use AiderBasedExtractor instead
-# This analyzer used 31+ regex patterns when aider already provides tree-sitter  
+# This analyzer used 31+ regex patterns when aider already provides tree-sitter
 # Removal reduces maintenance burden as recommended by code quality analysis
-
 
 
 class GoCriticalAnalyzer(LanguageAnalyzer):
@@ -657,7 +656,7 @@ class CriticalLineExtractor:
         # for tree-sitter based analysis with better accuracy
         self.language_analyzers = {
             "python": PythonCriticalAnalyzer(),
-            # "javascript": DEPRECATED - Use AiderBasedExtractor 
+            # "javascript": DEPRECATED - Use AiderBasedExtractor
             # "typescript": DEPRECATED - Use AiderBasedExtractor
             # "js": DEPRECATED - Use AiderBasedExtractor
             "go": GoCriticalAnalyzer(),
