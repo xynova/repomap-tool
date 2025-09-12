@@ -279,14 +279,21 @@ class TestSecurityScenarios:
 
     def test_path_injection_attempts(self):
         """Test various path injection attempts."""
-        # Test only the paths we actually block
+        import os
+        
+        # Platform-independent malicious paths that should always be blocked
         malicious_paths = [
             "../../../etc/passwd",  # Should be blocked by ../
             "//server/share/file",  # Should be blocked by //
-            "CON",  # Should be blocked as reserved name
-            "PRN",  # Should be blocked as reserved name
             "/dev/null",  # Should be blocked by /dev/
         ]
+        
+        # Add Windows-specific reserved names only on Windows
+        if os.name == "nt":
+            malicious_paths.extend([
+                "CON",  # Should be blocked as reserved name
+                "PRN",  # Should be blocked as reserved name
+            ])
 
         blocked_count = 0
         for malicious_path in malicious_paths:
@@ -295,10 +302,7 @@ class TestSecurityScenarios:
             except ValidationError:
                 blocked_count += 1
 
-        # Should block at least some of these
-        assert (
-            blocked_count >= 3
-        ), f"Only blocked {blocked_count} out of {len(malicious_paths)} malicious paths"
+        assert blocked_count == len(malicious_paths), f"Expected to block {len(malicious_paths)} paths, but only blocked {blocked_count}"
 
     def test_unicode_normalization_attacks(self):
         """Test Unicode normalization attacks."""

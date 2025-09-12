@@ -119,28 +119,29 @@ class CriticalLineExtractor:
             self.aider_extractor = AiderBasedExtractor(repo_map)
 
     def extract_critical_lines(
-        self, symbol_content: str, language: str = "python"
+        self, path_or_content: str, language: str = "python"
     ) -> List[Dict[str, Any]]:
-        """Extract critical lines from symbol content.
+        """Extract critical lines from a file path or raw content.
 
         Args:
-            symbol_content: Content to analyze (file path if using aider)
-            language: Programming language (not needed with tree-sitter)
+            path_or_content: File path or raw code content to analyze
+            language: Programming language (used for fallback)
 
         Returns:
             List of critical line dictionaries
         """
-        # If we have aider extractor and symbol_content looks like a file path
-        if (
-            self.aider_extractor
-            and isinstance(symbol_content, str)
-            and Path(symbol_content).exists()
-        ):
+        # If we have aider extractor and the input is a valid file path, use it
+        if self.aider_extractor and isinstance(path_or_content, str):
+            try:
+                p = Path(path_or_content)
+                if p.is_file():
+                    return self.aider_extractor.extract_critical_lines(path_or_content)
+            except (OSError, ValueError):
+                # Not a valid path, treat as content
+                pass
 
-            return self.aider_extractor.extract_critical_lines(symbol_content)
-
-        # Fallback to simple pattern matching if no aider or not a file
-        return self._fallback_extraction(symbol_content)
+        # Fallback to simple pattern matching for raw content or if Aider extractor is unavailable
+        return self._fallback_extraction(path_or_content)
 
     def _fallback_extraction(self, content: str) -> List[Dict[str, Any]]:
         """Simple fallback extraction for non-file content."""

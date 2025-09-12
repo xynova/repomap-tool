@@ -484,9 +484,8 @@ def create_search_config(
         raise ValueError("project_path is required for create_search_config")
 
     # Enable appropriate matchers based on match type
-    # Default to hybrid if invalid match type is provided
     if match_type not in ["fuzzy", "semantic", "hybrid"]:
-        match_type = "hybrid"
+        raise ValueError(f"Invalid match_type: '{match_type}'. Must be one of 'fuzzy', 'semantic', 'hybrid'.")
 
     semantic_enabled = match_type in ["semantic", "hybrid"]
 
