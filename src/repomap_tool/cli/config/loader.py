@@ -19,6 +19,7 @@ from ...models import (
     PerformanceConfig,
     TreeConfig,
 )
+from ...utils.file_validator import FileValidator, safe_read_text, safe_write_text
 
 console = Console()
 
@@ -26,8 +27,19 @@ console = Console()
 def load_config_file(config_path: str) -> RepoMapConfig:
     """Load and validate configuration from file."""
     try:
-        with open(config_path, "r") as f:
-            config_dict = json.load(f)
+        # Initialize validator
+        validator = FileValidator()
+        
+        # Validate and read config file safely
+        validated_path = validator.validate_path(
+            config_path,
+            must_exist=True,
+            must_be_file=True,
+            allow_create=False
+        )
+        
+        json_content = validator.safe_read_text(validated_path)
+        config_dict = json.loads(json_content)
 
         # Validate against RepoMapConfig model
         config = RepoMapConfig(**config_dict)
@@ -119,16 +131,27 @@ def resolve_project_path(
 
 def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
     """Create a default config file in .repomap/config.json."""
+    # Initialize validator
+    validator = FileValidator()
+    
     config_path = get_config_file_path(project_path)
 
-    # Create .repomap directory if it doesn't exist
-    config_path.parent.mkdir(parents=True, exist_ok=True)
+    # Create .repomap directory if it doesn't exist using safe directory creation
+    config_dir = validator.safe_create_directory(config_path.parent)
 
-    # Save config to file
-    with open(config_path, "w") as f:
-        json.dump(config.model_dump(), f, indent=2, default=str)
+    # Validate config file path
+    validated_config_path = validator.validate_path(
+        config_path,
+        must_exist=False,
+        must_be_file=False,
+        allow_create=True
+    )
 
-    return str(config_path)
+    # Save config to file using safe writing
+    json_content = json.dumps(config.model_dump(), indent=2, default=str)
+    validator.safe_write_text(validated_config_path, json_content)
+
+    return str(validated_config_path)
 
 
 def create_default_config(
