@@ -15,7 +15,11 @@ from datetime import datetime
 
 from repomap_tool.models import ExplorationSession, TreeNode
 from repomap_tool.exceptions import RepoMapError
-from repomap_tool.utils.file_validator import FileValidator, safe_write_text, safe_read_text
+from repomap_tool.utils.file_validator import (
+    FileValidator,
+    safe_write_text,
+    safe_read_text,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -43,13 +47,10 @@ class SessionStore:
         """
         # Initialize file validator
         self.validator = FileValidator()
-        
+
         if storage_dir:
             self.storage_dir = self.validator.validate_path(
-                storage_dir, 
-                must_exist=False, 
-                must_be_dir=True, 
-                allow_create=True
+                storage_dir, must_exist=False, must_be_dir=True, allow_create=True
             )
         else:
             # Check environment variable first (for Docker compatibility)
@@ -59,16 +60,13 @@ class SessionStore:
                     env_session_dir,
                     must_exist=False,
                     must_be_dir=True,
-                    allow_create=True
+                    allow_create=True,
                 )
             else:
                 # Use validated temp directory
                 temp_dir = Path(tempfile.gettempdir()) / "repomap_sessions"
                 self.storage_dir = self.validator.validate_path(
-                    temp_dir,
-                    must_exist=False,
-                    must_be_dir=True,
-                    allow_create=True
+                    temp_dir, must_exist=False, must_be_dir=True, allow_create=True
                 )
 
         # Ensure storage directory exists with safe creation
@@ -88,13 +86,10 @@ class SessionStore:
             # Validate session filename
             session_filename = f"{session.session_id}.json"
             session_file = self.storage_dir / session_filename
-            
+
             # Validate the session file path
             validated_session_file = self.validator.validate_path(
-                session_file,
-                must_exist=False,
-                must_be_file=False,
-                allow_create=True
+                session_file, must_exist=False, must_be_file=False, allow_create=True
             )
 
             # Convert to dict for JSON serialization, excluding tree_structure to avoid circular references
@@ -141,7 +136,9 @@ class SessionStore:
             json_content = json.dumps(session_dict, indent=2)
             self.validator.safe_write_text(validated_session_file, json_content)
 
-            logger.debug(f"Saved session {session.session_id} to {validated_session_file}")
+            logger.debug(
+                f"Saved session {session.session_id} to {validated_session_file}"
+            )
 
         except Exception as e:
             raise SessionStoreError(
@@ -164,18 +161,15 @@ class SessionStore:
             # Validate session filename and path
             session_filename = f"{session_id}.json"
             session_file = self.storage_dir / session_filename
-            
+
             # Check if file exists first
             if not session_file.exists():
                 logger.debug(f"Session file not found: {session_file}")
                 return None
-            
+
             # Validate the session file path
             validated_session_file = self.validator.validate_path(
-                session_file,
-                must_exist=True,
-                must_be_file=True,
-                allow_create=False
+                session_file, must_exist=True, must_be_file=True, allow_create=False
             )
 
             # Use safe file reading

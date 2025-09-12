@@ -46,15 +46,16 @@ def get_project_path_from_session(session_id: str) -> Optional[str]:
 def create_session_id() -> str:
     """Create a new session ID based on current timestamp."""
     import time
+
     return f"explore_{int(time.time())}"
 
 
 def get_or_create_session(session: Optional[str]) -> str:
     """Get existing session or create a new one.
-    
+
     Args:
         session: Optional session ID
-        
+
     Returns:
         Session ID to use
     """

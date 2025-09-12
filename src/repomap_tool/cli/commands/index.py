@@ -12,7 +12,11 @@ from rich.console import Console
 
 from ...models import create_error_response
 from ...core import RepoMapService
-from ..config.loader import resolve_project_path, create_default_config, load_or_create_config
+from ..config.loader import (
+    resolve_project_path,
+    create_default_config,
+    load_or_create_config,
+)
 from ..output.formatters import display_project_info
 
 console = Console()
@@ -61,9 +65,7 @@ def index() -> None:
 @click.option("--no-progress", is_flag=True, help="Disable progress bars")
 @click.option("--no-monitoring", is_flag=True, help="Disable performance monitoring")
 @click.option("--allow-fallback", is_flag=True, help="Allow fallback to basic search")
-@click.option(
-    "--cache-size", type=int, default=1000, help="Maximum cache entries"
-)
+@click.option("--cache-size", type=int, default=1000, help="Maximum cache entries")
 @click.option(
     "--log-level",
     type=click.Choice(["DEBUG", "INFO", "WARNING", "ERROR"]),
@@ -76,8 +78,12 @@ def index() -> None:
 @click.option("--no-line-numbers", is_flag=True, help="Disable line numbers")
 @click.option("--no-centrality", is_flag=True, help="Disable centrality scores")
 @click.option("--no-impact-risk", is_flag=True, help="Disable impact risk analysis")
-@click.option("--max-critical-lines", type=int, default=3, help="Max critical lines to show")
-@click.option("--max-dependencies", type=int, default=3, help="Max dependencies to show")
+@click.option(
+    "--max-critical-lines", type=int, default=3, help="Max critical lines to show"
+)
+@click.option(
+    "--max-dependencies", type=int, default=3, help="Max dependencies to show"
+)
 @click.option(
     "--compression",
     type=click.Choice(["low", "medium", "high"]),
@@ -203,7 +209,7 @@ def config(
     try:
         # Resolve project path from argument or discovery
         resolved_project_path = resolve_project_path(project_path, None)
-        
+
         # Create default configuration
         config_obj = create_default_config(
             resolved_project_path,
@@ -222,6 +228,7 @@ def config(
         if output:
             # Write to file
             import json
+
             with open(output, "w") as f:
                 json.dump(config_dict, f, indent=2)
             console.print(f"[green]Configuration saved to: {output}[/green]")
@@ -229,6 +236,7 @@ def config(
             # Display configuration
             import json
             from rich.panel import Panel
+
             console.print(
                 Panel(
                     json.dumps(config_dict, indent=2),

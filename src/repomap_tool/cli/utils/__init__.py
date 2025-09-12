@@ -12,6 +12,6 @@ from .session import (
 
 __all__ = [
     "get_project_path_from_session",
-    "create_session_id", 
+    "create_session_id",
     "get_or_create_session",
 ]

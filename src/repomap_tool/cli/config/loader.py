@@ -29,15 +29,12 @@ def load_config_file(config_path: str) -> RepoMapConfig:
     try:
         # Initialize validator
         validator = FileValidator()
-        
+
         # Validate and read config file safely
         validated_path = validator.validate_path(
-            config_path,
-            must_exist=True,
-            must_be_file=True,
-            allow_create=False
+            config_path, must_exist=True, must_be_file=True, allow_create=False
         )
-        
+
         json_content = validator.safe_read_text(validated_path)
         config_dict = json.loads(json_content)
 
@@ -133,7 +130,7 @@ def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
     """Create a default config file in .repomap/config.json."""
     # Initialize validator
     validator = FileValidator()
-    
+
     config_path = get_config_file_path(project_path)
 
     # Create .repomap directory if it doesn't exist using safe directory creation
@@ -141,10 +138,7 @@ def create_default_config_file(project_path: str, config: RepoMapConfig) -> str:
 
     # Validate config file path
     validated_config_path = validator.validate_path(
-        config_path,
-        must_exist=False,
-        must_be_file=False,
-        allow_create=True
+        config_path, must_exist=False, must_be_file=False, allow_create=True
     )
 
     # Save config to file using safe writing

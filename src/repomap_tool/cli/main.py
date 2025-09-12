@@ -25,7 +25,7 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     """RepoMap-Tool: Intelligent code repository mapping and analysis."""
     ctx.ensure_object(dict)
     ctx.obj["no_color"] = no_color
-    
+
     if no_color:
         console.no_color = True
 

@@ -78,8 +78,10 @@ def centrality(
             verbose=verbose,
         )
 
-        console.print(f"🎯 Analyzing centrality for project: [blue]{resolved_project_path}[/blue]")
-        
+        console.print(
+            f"🎯 Analyzing centrality for project: [blue]{resolved_project_path}[/blue]"
+        )
+
         if files:
             console.print(f"📁 Files: {', '.join(files)}")
         else:
@@ -159,7 +161,9 @@ def impact(
             verbose=verbose,
         )
 
-        console.print(f"🎯 Analyzing impact for project: [blue]{resolved_project_path}[/blue]")
+        console.print(
+            f"🎯 Analyzing impact for project: [blue]{resolved_project_path}[/blue]"
+        )
         console.print(f"📁 Target files: {', '.join(files)}")
 
         # Placeholder for actual impact analysis

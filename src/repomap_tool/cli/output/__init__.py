@@ -13,7 +13,7 @@ from .formatters import (
 
 __all__ = [
     "display_project_info",
-    "display_search_results", 
+    "display_search_results",
     "display_dependency_results",
     "display_cycles_results",
 ]

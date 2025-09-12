@@ -38,9 +38,7 @@ def system() -> None:
 @click.option(
     "--threshold", "-t", default=0.7, type=float, help="Matching threshold (0.0-1.0)"
 )
-@click.option(
-    "--cache-size", default=1000, type=int, help="Cache size for results"
-)
+@click.option("--cache-size", default=1000, type=int, help="Cache size for results")
 def config(
     project_path: Optional[str],
     output: Optional[str],

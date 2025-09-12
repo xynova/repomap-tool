@@ -33,6 +33,7 @@ class TestFileValidator:
     def teardown_method(self):
         """Clean up test fixtures."""
         import shutil
+
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
@@ -164,7 +165,7 @@ class TestFileValidator:
     def test_safe_create_directory_success(self):
         """Test safe directory creation."""
         new_dir = self.temp_dir / "new" / "nested" / "directory"
-        
+
         result = self.validator.safe_create_directory(new_dir)
         assert result == new_dir.resolve()
         assert new_dir.exists()
@@ -226,6 +227,7 @@ class TestConvenienceFunctions:
     def teardown_method(self):
         """Clean up test fixtures."""
         import shutil
+
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
@@ -254,7 +256,7 @@ class TestConvenienceFunctions:
     def test_safe_create_directory_convenience(self):
         """Test safe_create_directory convenience function."""
         new_dir = self.temp_dir / "new_directory"
-        
+
         result = safe_create_directory(new_dir)
         assert result == new_dir.resolve()
         assert new_dir.exists()
@@ -271,6 +273,7 @@ class TestSecurityScenarios:
     def teardown_method(self):
         """Clean up test fixtures."""
         import shutil
+
         if self.temp_dir.exists():
             shutil.rmtree(self.temp_dir)
 
@@ -291,16 +294,18 @@ class TestSecurityScenarios:
                 self.validator.validate_path(malicious_path)
             except ValidationError:
                 blocked_count += 1
-        
+
         # Should block at least some of these
-        assert blocked_count >= 3, f"Only blocked {blocked_count} out of {len(malicious_paths)} malicious paths"
+        assert (
+            blocked_count >= 3
+        ), f"Only blocked {blocked_count} out of {len(malicious_paths)} malicious paths"
 
     def test_unicode_normalization_attacks(self):
         """Test Unicode normalization attacks."""
         # Test various Unicode representations that could bypass filters
         unicode_attacks = [
             "test\u002e\u002e/passwd",  # Unicode dots
-            "test\uff0e\uff0e/passwd",  # Fullwidth dots  
+            "test\uff0e\uff0e/passwd",  # Fullwidth dots
             "test\u2024\u2024/passwd",  # One dot leaders
         ]
 
@@ -308,7 +313,9 @@ class TestSecurityScenarios:
         # Just verify they don't cause crashes
         for attack_path in unicode_attacks:
             try:
-                result = self.validator.validate_path(attack_path, must_exist=False, allow_create=True)
+                result = self.validator.validate_path(
+                    attack_path, must_exist=False, allow_create=True
+                )
                 # If allowed, should be a valid Path object
                 assert isinstance(result, Path)
             except ValidationError:
@@ -351,22 +358,24 @@ class TestSecurityScenarios:
             # Create a symlink pointing outside the temp directory
             link_target = Path("/tmp")
             symlink_path = self.temp_dir / "bad_symlink"
-            
+
             try:
                 symlink_path.symlink_to(link_target, target_is_directory=True)
-                
+
                 # With sandbox restriction, this should be rejected
                 sandbox_validator = FileValidator(project_root=self.temp_dir)
-                
+
                 # The symlink itself might pass validation, but following it should fail
                 # (This tests that our resolve() call handles symlinks properly)
                 try:
-                    result = sandbox_validator.validate_path(symlink_path, must_exist=True)
+                    result = sandbox_validator.validate_path(
+                        symlink_path, must_exist=True
+                    )
                     # If it doesn't fail, make sure the resolved path is still in sandbox
                     assert str(result).startswith(str(self.temp_dir.resolve()))
                 except (ValidationError, FileAccessError):
                     pass  # Expected to fail
-                    
+
             except OSError:
                 # Skip if we can't create symlinks
                 pytest.skip("Cannot create symlinks in this environment")

@@ -17,7 +17,7 @@ from .loader import (
 
 __all__ = [
     "load_config_file",
-    "resolve_project_path", 
+    "resolve_project_path",
     "create_default_config",
     "load_or_create_config",
     "apply_environment_overrides",

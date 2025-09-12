@@ -118,7 +118,9 @@ def display_search_results(
         return
 
     if not search_response.results:
-        console.print(Panel("No results found.", title="Search Results", style="yellow"))
+        console.print(
+            Panel("No results found.", title="Search Results", style="yellow")
+        )
         return
 
     if output_format == "table":
@@ -179,9 +181,10 @@ def display_dependency_results(
     output_format: Literal["json", "text", "table"],
 ) -> None:
     """Display dependency analysis results."""
-    
+
     if output_format == "json":
         import json
+
         console.print(json.dumps(results, indent=2, default=str))
         return
 
@@ -193,7 +196,9 @@ def display_dependency_results(
 
         table.add_row("Total Files", str(results.get("total_files", 0)))
         table.add_row("Total Dependencies", str(results.get("total_dependencies", 0)))
-        table.add_row("Circular Dependencies", str(results.get("circular_dependencies", 0)))
+        table.add_row(
+            "Circular Dependencies", str(results.get("circular_dependencies", 0))
+        )
 
         console.print(table)
 
@@ -201,7 +206,9 @@ def display_dependency_results(
         console.print(f"\n📊 Dependency Analysis Results\n")
         console.print(f"Total Files: {results.get('total_files', 0)}")
         console.print(f"Total Dependencies: {results.get('total_dependencies', 0)}")
-        console.print(f"Circular Dependencies: {results.get('circular_dependencies', 0)}")
+        console.print(
+            f"Circular Dependencies: {results.get('circular_dependencies', 0)}"
+        )
 
 
 def display_cycles_results(
@@ -209,14 +216,21 @@ def display_cycles_results(
     output_format: Literal["json", "text", "table"],
 ) -> None:
     """Display circular dependency results."""
-    
+
     if output_format == "json":
         import json
+
         console.print(json.dumps({"cycles": cycles}, indent=2))
         return
 
     if not cycles:
-        console.print(Panel("No circular dependencies found! 🎉", title="Cycle Detection", style="green"))
+        console.print(
+            Panel(
+                "No circular dependencies found! 🎉",
+                title="Cycle Detection",
+                style="green",
+            )
+        )
         return
 
     if output_format == "table":
@@ -232,7 +246,7 @@ def display_cycles_results(
 
     elif output_format == "text":
         console.print(f"\n🔄 Circular Dependencies ({len(cycles)} found)\n")
-        
+
         for i, cycle in enumerate(cycles, 1):
             cycle_str = " → ".join(cycle + [cycle[0]])  # Close the cycle
             console.print(f"{i:2d}. [red]{cycle_str}[/red]")

@@ -11,10 +11,23 @@ import click
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from ...models import SearchRequest, RepoMapConfig, DependencyConfig, create_error_response
+from ...models import (
+    SearchRequest,
+    RepoMapConfig,
+    DependencyConfig,
+    create_error_response,
+)
 from ...core import RepoMapService
-from ..config.loader import resolve_project_path, create_search_config, create_tree_config
-from ..output.formatters import display_search_results, display_dependency_results, display_cycles_results
+from ..config.loader import (
+    resolve_project_path,
+    create_search_config,
+    create_tree_config,
+)
+from ..output.formatters import (
+    display_search_results,
+    display_dependency_results,
+    display_cycles_results,
+)
 
 console = Console()
 
@@ -214,7 +227,9 @@ def dependencies(
         # Prepare results
         results = {
             "total_files": len(dependency_graph.nodes) if dependency_graph else 0,
-            "total_dependencies": len(dependency_graph.edges) if dependency_graph else 0,
+            "total_dependencies": (
+                len(dependency_graph.edges) if dependency_graph else 0
+            ),
             "circular_dependencies": 0,  # TODO: Calculate actual cycles
         }
 

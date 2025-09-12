@@ -53,7 +53,7 @@ def start(
     try:
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
-        
+
         # Get or create session ID
         session_id = get_or_create_session(session)
 
@@ -86,7 +86,9 @@ def focus(tree_id: str, session: Optional[str]) -> None:
 
     try:
         session_id = session or get_or_create_session(session)
-        console.print(f"🎯 Focused on tree: [bold]{tree_id}[/bold] in session {session_id}")
+        console.print(
+            f"🎯 Focused on tree: [bold]{tree_id}[/bold] in session {session_id}"
+        )
         # TODO: Implement actual tree focus logic
 
     except Exception as e:
@@ -105,7 +107,9 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
     try:
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
-        console.print(f"✅ Expanded area: [green]{expansion_area}[/green] in tree {tree_id}")
+        console.print(
+            f"✅ Expanded area: [green]{expansion_area}[/green] in tree {tree_id}"
+        )
         # TODO: Implement actual tree expansion logic
 
     except Exception as e:
@@ -143,7 +147,9 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
     try:
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
-        console.print(f"🗺️ Generated map for tree {tree_id} (include_code: {include_code})")
+        console.print(
+            f"🗺️ Generated map for tree {tree_id} (include_code: {include_code})"
+        )
         # TODO: Implement actual tree mapping logic
 
     except Exception as e:
@@ -159,7 +165,7 @@ def trees(session: Optional[str]) -> None:
 
     try:
         session_id = session or get_or_create_session(session)
-        
+
         # Display placeholder trees table
         table = Table(title=f"🌳 Trees in Session: {session_id}")
         table.add_column("Tree ID", style="cyan", no_wrap=True)
@@ -187,7 +193,7 @@ def status(session: Optional[str]) -> None:
 
     try:
         session_id = session or get_or_create_session(session)
-        
+
         # Display session info
         table = Table(title=f"📊 Session Status: {session_id}")
         table.add_column("Property", style="cyan", no_wrap=True)
