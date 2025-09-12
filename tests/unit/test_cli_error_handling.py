@@ -35,7 +35,7 @@ class TestErrorHandling:
                 '{"invalid": "config"}'
             )
 
-            with pytest.raises(ValueError, match="Invalid configuration file"):
+            with pytest.raises(ValueError, match="Failed to load configuration file"):
                 load_config_file("test_config.json")
 
     def test_load_config_file_file_not_found(self):
@@ -97,22 +97,19 @@ class TestErrorHandling:
 
     def test_create_search_config_invalid_match_type(self):
         """Test create_search_config with invalid match type."""
-        # This should still work but with default settings
-        config = create_search_config(
-            project_path=".",
-            match_type="invalid_type",
-            verbose=True,
-        )
-
-        # Should default to hybrid (both enabled) for invalid match type
-        # Fuzzy matching is always enabled
-        assert config.semantic_match.enabled is True
+        # This should raise a ValueError now (fixed behavior)
+        with pytest.raises(ValueError, match="Invalid match_type: 'invalid_type'"):
+            create_search_config(
+                project_path=".",
+                match_type="invalid_type",
+                verbose=True,
+            )
 
 
 class TestDisplayFunctionsErrorHandling:
     """Test display functions with error scenarios."""
 
-    @patch("src.repomap_tool.cli.console")
+    @patch("src.repomap_tool.cli.output.formatters.console")
     def test_display_project_info_with_none_values(self, mock_console):
         """Test display_project_info with None values."""
         # Create project info with empty dicts (which are allowed)
@@ -133,7 +130,7 @@ class TestDisplayFunctionsErrorHandling:
         # Verify console.print was called
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch("src.repomap_tool.cli.output.formatters.console")
     def test_display_project_info_with_empty_dicts(self, mock_console):
         """Test display_project_info with empty dictionaries."""
         # Create project info with empty dicts
@@ -154,7 +151,7 @@ class TestDisplayFunctionsErrorHandling:
         # Verify console.print was called
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch("src.repomap_tool.cli.output.formatters.console")
     def test_display_search_results_with_empty_results(self, mock_console):
         """Test display_search_results with empty results."""
         # Create empty search results
@@ -173,7 +170,7 @@ class TestDisplayFunctionsErrorHandling:
         # Verify console.print was called for summary
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch("src.repomap_tool.cli.output.formatters.console")
     def test_display_search_results_with_none_values(self, mock_console):
         """Test display_search_results with None values in results."""
         # Create search results with empty string instead of None
@@ -198,8 +195,8 @@ class TestDisplayFunctionsErrorHandling:
         # Should not crash
         display_search_results(search_response, "table")
 
-        # Verify console.print was called
-        assert mock_console.print.call_count >= 2
+        # Verify console.print was called (table format calls print once for the table)
+        assert mock_console.print.call_count >= 1
 
 
 class TestCLICommandErrorScenarios:

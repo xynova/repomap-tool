@@ -121,85 +121,9 @@ class PythonCriticalAnalyzer(LanguageAnalyzer):
         return None
 
 
-class JavaScriptCriticalAnalyzer(LanguageAnalyzer):
-    """JavaScript/TypeScript critical line analyzer."""
-
-    def __init__(self) -> None:
-        self.code = ""
-
-    def parse_code(self, code: str) -> ast.AST:
-        """Parse JavaScript code with enhanced pattern recognition."""
-        self.code = code  # Store code for later use
-        # Enhanced regex-based parsing for JavaScript/TypeScript constructs
-        # In production, would use proper JS parser like esprima
-        return ast.Module(body=[], type_ignores=[])
-
-    def find_critical_nodes(self, tree: ast.AST) -> List[Dict]:
-        """Find critical nodes in JavaScript code using enhanced pattern recognition."""
-        # Enhanced pattern matching for JavaScript/TypeScript
-        patterns = [
-            (r"return\s+[^;]+;", 0.95, "return_statement"),
-            (r"if\s*\([^)]+\)\s*{?", 0.90, "conditional_logic"),
-            (r"else\s+if\s*\([^)]+\)\s*{?", 0.90, "conditional_logic"),
-            (r"else\s*{?", 0.85, "conditional_logic"),
-            (r"throw\s+[^;]+;", 0.85, "error_handling"),
-            (r"try\s*{", 0.80, "error_handling"),
-            (r"catch\s*\([^)]+\)\s*{", 0.80, "error_handling"),
-            (r"finally\s*{", 0.75, "error_handling"),
-            (r"function\s+\w+\s*\([^)]*\)\s*{", 0.80, "function_definition"),
-            (r"const\s+\w+\s*=\s*\([^)]*\)\s*=>", 0.80, "arrow_function"),
-            (r"let\s+\w+\s*=\s*\([^)]*\)\s*=>", 0.80, "arrow_function"),
-            (r"class\s+\w+\s*(?:extends\s+\w+)?\s*{", 0.85, "class_definition"),
-            (r"async\s+function\s+\w+\s*\([^)]*\)\s*{", 0.85, "async_function"),
-            (r"await\s+[^;]+;", 0.80, "await_statement"),
-            (r"Promise\.(resolve|reject|all|race)\s*\(", 0.80, "promise_handling"),
-            (r"\.then\s*\(", 0.75, "promise_handling"),
-            (r"\.catch\s*\(", 0.75, "promise_handling"),
-            (r"console\.(log|error|warn|info|debug)\s*\(", 0.70, "logging"),
-            (
-                r"export\s+(?:default\s+)?(?:const|let|var|function|class)",
-                0.75,
-                "export_statement",
-            ),
-            (r"import\s+.*from\s+['\"][^'\"]+['\"]", 0.70, "import_statement"),
-            (r"require\s*\(['\"][^'\"]+['\"]\)", 0.70, "require_statement"),
-            (r"switch\s*\([^)]+\)\s*{", 0.80, "switch_statement"),
-            (r"case\s+[^:]+:", 0.75, "case_statement"),
-            (r"default\s*:", 0.70, "default_case"),
-            (r"for\s*\([^)]*\)\s*{", 0.80, "for_loop"),
-            (r"for\s+\([^)]*\)\s+of\s+", 0.80, "for_of_loop"),
-            (r"for\s+\([^)]*\)\s+in\s+", 0.80, "for_in_loop"),
-            (r"while\s*\([^)]+\)\s*{", 0.80, "while_loop"),
-            (r"do\s*{", 0.80, "do_while_loop"),
-            (r"break\s*;", 0.70, "break_statement"),
-            (r"continue\s*;", 0.70, "continue_statement"),
-        ]
-
-        critical_nodes = []
-        lines = self.code.split("\n")
-
-        for line_num, line in enumerate(lines, 1):
-            line_stripped = line.strip()
-            if (
-                not line_stripped
-                or line_stripped.startswith("//")
-                or line_stripped.startswith("/*")
-            ):
-                continue
-
-            for pattern, importance, pattern_type in patterns:
-                if re.search(pattern, line_stripped):
-                    critical_nodes.append(
-                        {
-                            "line_number": line_num,
-                            "content": line_stripped,
-                            "importance": importance,
-                            "pattern_type": pattern_type,
-                        }
-                    )
-                    break
-
-        return critical_nodes
+# REMOVED: JavaScriptCriticalAnalyzer - Use AiderBasedExtractor instead
+# This analyzer used 31+ regex patterns when aider already provides tree-sitter
+# Removal reduces maintenance burden as recommended by code quality analysis
 
 
 class GoCriticalAnalyzer(LanguageAnalyzer):
@@ -728,11 +652,13 @@ class CriticalLineExtractor:
     """Extracts critical lines from code symbols for LLM optimization."""
 
     def __init__(self) -> None:
+        # Note: JavaScript/TypeScript analysis removed - use AiderBasedExtractor instead
+        # for tree-sitter based analysis with better accuracy
         self.language_analyzers = {
             "python": PythonCriticalAnalyzer(),
-            "javascript": JavaScriptCriticalAnalyzer(),
-            "typescript": JavaScriptCriticalAnalyzer(),  # Enhanced JS/TS pattern recognition
-            "js": JavaScriptCriticalAnalyzer(),
+            # "javascript": DEPRECATED - Use AiderBasedExtractor
+            # "typescript": DEPRECATED - Use AiderBasedExtractor
+            # "js": DEPRECATED - Use AiderBasedExtractor
             "go": GoCriticalAnalyzer(),
             "golang": GoCriticalAnalyzer(),
             "java": JavaCriticalAnalyzer(),

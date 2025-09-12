@@ -22,11 +22,15 @@ from src.repomap_tool.models import (
     MatchResult,
 )
 
+# Centralized patch path for console - makes refactoring easier
+# If the CLI structure changes, only this constant needs to be updated
+CONSOLE_PATCH_PATH = "src.repomap_tool.cli.output.formatters.console"
+
 
 class TestDisplayFunctions:
     """Test the display functions."""
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_project_info_json(self, mock_console):
         """Test display_project_info with JSON output."""
         # Create a mock project info
@@ -47,7 +51,7 @@ class TestDisplayFunctions:
         # Verify JSON output was called
         mock_console.print.assert_called_once()
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_project_info_text(self, mock_console):
         """Test display_project_info with text output."""
         # Create a mock project info
@@ -68,7 +72,7 @@ class TestDisplayFunctions:
         # Verify console.print was called multiple times for tables
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_project_info_table(self, mock_console):
         """Test display_project_info with table output."""
         # Create a mock project info
@@ -89,7 +93,7 @@ class TestDisplayFunctions:
         # Verify console.print was called multiple times for tables
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_project_info_markdown(self, mock_console):
         """Test display_project_info with markdown output."""
         # Create a mock project info
@@ -110,7 +114,7 @@ class TestDisplayFunctions:
         # Verify console.print was called multiple times for markdown
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_search_results_json(self, mock_console):
         """Test display_search_results with JSON output."""
         # Create mock search results
@@ -144,7 +148,7 @@ class TestDisplayFunctions:
         # Verify JSON output was called
         mock_console.print.assert_called_once()
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_search_results_table(self, mock_console):
         """Test display_search_results with table output."""
         # Create mock search results
@@ -170,6 +174,7 @@ class TestDisplayFunctions:
             match_type="hybrid",
             threshold=0.7,
             search_time_ms=100.0,
+            performance_metrics={"query_time": 50.0, "index_hits": 25},
         )
 
         # Call the display function
@@ -178,7 +183,7 @@ class TestDisplayFunctions:
         # Verify console.print was called multiple times for table and summary
         assert mock_console.print.call_count >= 2
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_search_results_text(self, mock_console):
         """Test display_search_results with text output."""
         # Create mock search results
@@ -206,7 +211,7 @@ class TestDisplayFunctions:
         # Verify console.print was called
         assert mock_console.print.call_count >= 1
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_display_search_results_empty(self, mock_console):
         """Test display_search_results with empty results."""
         # Create empty search results
@@ -349,7 +354,7 @@ class TestCLIHelperFunctions:
         mock_display.assert_called_once_with(mock_response, "table")
 
     @patch("src.repomap_tool.cli.create_default_config")
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_config_command_logic_with_output(self, mock_console, mock_create_config):
         """Test the logic that would be executed by the config command with output file."""
         # Mock the configuration
@@ -394,7 +399,7 @@ class TestCLIHelperFunctions:
             Path(temp_file).unlink(missing_ok=True)
 
     @patch("src.repomap_tool.cli.create_default_config")
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_config_command_logic_without_output(
         self, mock_console, mock_create_config
     ):
@@ -427,7 +432,7 @@ class TestCLIHelperFunctions:
         mock_config.model_dump.assert_called_once_with(mode="json")
         assert mock_console.print.call_count >= 2
 
-    @patch("src.repomap_tool.cli.console")
+    @patch(CONSOLE_PATCH_PATH)
     def test_version_command_logic(self, mock_console):
         """Test the logic that would be executed by the version command."""
         # This simulates what the version command would do

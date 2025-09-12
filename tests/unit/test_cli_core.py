@@ -49,7 +49,7 @@ class TestCLICore:
 
     def test_analyze_basic_usage(self, cli_runner, temp_project):
         """Test basic analyze command usage."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -65,7 +65,7 @@ class TestCLICore:
                 cli, ["index", "create", temp_project, "--fuzzy"]
             )
             assert result.exit_code == 0
-            assert "Analysis complete" in result.output
+            assert "project_root" in result.output  # Check for JSON output
 
     def test_analyze_with_config_file(self, cli_runner, temp_project):
         """Test analyze command with config file."""
@@ -82,7 +82,9 @@ class TestCLICore:
             config_file = f.name
 
         try:
-            with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+            with patch(
+                "repomap_tool.cli.commands.search.RepoMapService"
+            ) as mock_repo_map:
                 mock_instance = mock_repo_map.return_value
                 mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                     project_root=temp_project,
@@ -99,13 +101,13 @@ class TestCLICore:
                     cli, ["index", "create", temp_project, "--config", config_file]
                 )
                 assert result.exit_code == 0
-                assert "Analysis complete" in result.output
+                assert "project_root" in result.output  # Check for JSON output
         finally:
             os.unlink(config_file)
 
     def test_analyze_with_options(self, cli_runner, temp_project):
         """Test analyze command with various options."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -139,7 +141,7 @@ class TestCLICore:
 
     def test_search_basic_usage(self, cli_runner, temp_project):
         """Test basic search command usage."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.search_identifiers.return_value = SearchResponse(
                 query="test",
@@ -179,7 +181,7 @@ class TestCLICore:
 
     def test_search_with_options(self, cli_runner, temp_project):
         """Test search command with various options."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.search_identifiers.return_value = SearchResponse(
                 query="test",
@@ -210,7 +212,7 @@ class TestCLICore:
 
     def test_config_command_exists(self, cli_runner):
         """Test that config command exists and shows help."""
-        result = cli_runner.invoke(cli, ["index", "config", "--help"])
+        result = cli_runner.invoke(cli, ["system", "config", "--help"])
         assert result.exit_code == 0
         assert "config" in result.output.lower()
 
@@ -221,7 +223,7 @@ class TestCLICore:
 
         try:
             result = cli_runner.invoke(
-                cli, ["index", "config", temp_project, "--output", config_file]
+                cli, ["system", "config", temp_project, "--output", config_file]
             )
             assert result.exit_code == 0
             assert os.path.exists(config_file)
@@ -361,7 +363,7 @@ class TestCLICore:
 
     def test_cli_verbose_output(self, cli_runner, temp_project):
         """Test CLI verbose output."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -380,7 +382,7 @@ class TestCLICore:
 
     def test_cli_configuration_integration(self, cli_runner, temp_project):
         """Test CLI configuration integration."""
-        with patch("repomap_tool.cli.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
             mock_instance = mock_repo_map.return_value
             mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
                 project_root=temp_project,

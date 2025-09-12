@@ -49,6 +49,7 @@ class PerformanceConfig(BaseModel):
 class FuzzyMatchConfig(BaseModel):
     """Configuration for fuzzy matching."""
 
+    enabled: bool = True
     threshold: int = Field(
         default=70, ge=0, le=100, description="Similarity threshold (0-100)"
     )
@@ -304,6 +305,9 @@ class SearchResponse(BaseModel):
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )
+    performance_metrics: Dict[str, Any] = Field(
+        default_factory=dict, description="Performance metrics and timing data"
+    )
 
 
 class ProjectInfo(BaseModel):
@@ -319,6 +323,9 @@ class ProjectInfo(BaseModel):
         default=None, description="Cache size in bytes"
     )
     last_updated: datetime = Field(description="Last analysis timestamp")
+    cache_stats: Dict[str, Any] = Field(
+        default_factory=dict, description="Cache statistics and metrics"
+    )
 
     model_config = ConfigDict(
         validate_assignment=True, extra="forbid", ser_json_timedelta="iso8601"

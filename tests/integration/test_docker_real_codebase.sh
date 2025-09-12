@@ -27,8 +27,8 @@ run_test() {
     echo "🔍 $test_name"
     echo "$(echo "$test_name" | sed 's/./-/g')"
     
-    # Use environment variables for Docker image, fallback to repomap-tool for local development
-    local docker_image="${DOCKER_IMAGE_NAME:-repomap-tool}:${DOCKER_TAG:-latest}"
+    # Use environment variables for Docker image, fallback to repomap-tool:local for local development
+    local docker_image="${DOCKER_IMAGE_NAME:-repomap-tool}:${DOCKER_TAG:-local}"
     
     # Run test in separate container instance against the real codebase
     # Run command directly so the entrypoint script can handle it

@@ -14,6 +14,13 @@ from .type_validator import (
     safe_validate_identifier_set,
     log_type_validation_errors,
 )
+from .file_validator import (
+    FileValidator,
+    validate_path,
+    safe_read_text,
+    safe_write_text,
+    safe_create_directory,
+)
 
 __all__ = [
     "validate_project_map",
@@ -24,4 +31,9 @@ __all__ = [
     "safe_validate_project_map",
     "safe_validate_identifier_set",
     "log_type_validation_errors",
+    "FileValidator",
+    "validate_path",
+    "safe_read_text",
+    "safe_write_text",
+    "safe_create_directory",
 ]
