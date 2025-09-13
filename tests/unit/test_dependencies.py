@@ -14,10 +14,6 @@ from unittest.mock import Mock, patch
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
-    CentralityCalculator,
-    CallGraphBuilder,
-    AdvancedDependencyGraph,
-    ImpactAnalyzer,
     Import,
     FileImports,
     ProjectImports,
@@ -25,6 +21,10 @@ from repomap_tool.dependencies import (
     CallGraph,
     DependencyNode,
     ImpactReport,
+    get_call_graph_builder,
+    get_advanced_dependency_graph,
+    get_impact_analyzer,
+    get_centrality_calculator,
 )
 
 
@@ -276,6 +276,7 @@ class TestCentralityCalculator:
     def test_initialization(self):
         """Test CentralityCalculator initialization."""
         graph = DependencyGraph()
+        CentralityCalculator = get_centrality_calculator()
         calculator = CentralityCalculator(graph)
         assert calculator is not None
         assert calculator.graph == graph
@@ -292,6 +293,7 @@ class TestCentralityCalculator:
         graph.graph.add_edge("file2.py", "file1.py")  # file1 depends on file2
         graph.graph.add_edge("file3.py", "file1.py")  # file1 depends on file3
 
+        CentralityCalculator = get_centrality_calculator()
         calculator = CentralityCalculator(graph)
         degree_scores = calculator.calculate_degree_centrality()
 
@@ -312,6 +314,7 @@ class TestCentralityCalculator:
         # Edge direction: imported_file → importing_file
         graph.graph.add_edge("file2.py", "file1.py")  # file1 depends on file2
 
+        CentralityCalculator = get_centrality_calculator()
         calculator = CentralityCalculator(graph)
         composite_scores = calculator.calculate_composite_importance()
 
@@ -328,6 +331,7 @@ class TestCentralityCalculator:
         graph.nodes["file2.py"] = DependencyNode(file_path="file2.py")
         graph.graph.add_edge("file1.py", "file2.py")
 
+        CentralityCalculator = get_centrality_calculator()
         calculator = CentralityCalculator(graph)
         top_files = calculator.get_top_central_files("degree", top_n=5)
 
@@ -337,6 +341,7 @@ class TestCentralityCalculator:
     def test_cache_functionality(self):
         """Test caching functionality."""
         graph = DependencyGraph()
+        CentralityCalculator = get_centrality_calculator()
         calculator = CentralityCalculator(graph)
 
         # Enable cache
@@ -358,6 +363,7 @@ class TestCallGraphBuilder:
 
     def test_initialization(self):
         """Test CallGraphBuilder initialization."""
+        CallGraphBuilder = get_call_graph_builder()
         builder = CallGraphBuilder()
         assert builder is not None
         assert len(builder.language_analyzers) > 0
@@ -366,6 +372,7 @@ class TestCallGraphBuilder:
 
     def test_analyze_file_calls_python(self):
         """Test Python function call analysis."""
+        CallGraphBuilder = get_call_graph_builder()
         builder = CallGraphBuilder()
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
@@ -390,6 +397,7 @@ def helper_function():
 
     def test_build_call_graph(self):
         """Test building a complete call graph."""
+        CallGraphBuilder = get_call_graph_builder()
         builder = CallGraphBuilder()
 
         # Create temporary project files
@@ -417,6 +425,7 @@ def helper():
 
     def test_get_call_statistics(self):
         """Test getting call graph statistics."""
+        CallGraphBuilder = get_call_graph_builder()
         builder = CallGraphBuilder()
 
         # Create a mock call graph
@@ -453,6 +462,7 @@ class TestAdvancedDependencyGraph:
 
     def test_initialization(self):
         """Test AdvancedDependencyGraph initialization."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
         assert graph is not None
         assert graph.call_graph is None
@@ -461,6 +471,7 @@ class TestAdvancedDependencyGraph:
 
     def test_integrate_call_graph(self):
         """Test integrating call graph with dependency graph."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
 
         # Create a mock call graph
@@ -487,6 +498,7 @@ class TestAdvancedDependencyGraph:
 
     def test_calculate_transitive_dependencies(self):
         """Test calculating transitive dependencies with call graph."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
 
         # Create a simple graph with call graph
@@ -522,6 +534,7 @@ class TestAdvancedDependencyGraph:
 
     def test_identify_hotspots(self):
         """Test identifying dependency hotspots."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
 
         # Create a graph with a potential hotspot
@@ -539,6 +552,7 @@ class TestAdvancedDependencyGraph:
 
     def test_suggest_refactoring_opportunities(self):
         """Test suggesting refactoring opportunities."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
 
         # Create a graph with potential refactoring opportunities
@@ -558,13 +572,16 @@ class TestImpactAnalyzer:
 
     def test_initialization(self):
         """Test ImpactAnalyzer initialization."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
+        ImpactAnalyzer = get_impact_analyzer()
         analyzer = ImpactAnalyzer(graph)
         assert analyzer is not None
         assert analyzer.graph == graph
 
     def test_analyze_change_impact(self):
         """Test analyzing change impact."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
 
         # Create a simple graph
@@ -573,6 +590,7 @@ class TestImpactAnalyzer:
         graph.graph.add_edge("file1.py", "file2.py")
         graph.nodes["file2.py"].imported_by = ["file1.py"]
 
+        ImpactAnalyzer = get_impact_analyzer()
         analyzer = ImpactAnalyzer(graph)
         impact_report = analyzer.analyze_change_impact(["file2.py"])
 
@@ -584,6 +602,7 @@ class TestImpactAnalyzer:
 
     def test_find_affected_files(self):
         """Test finding affected files."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
 
         # Create a simple graph
@@ -592,6 +611,7 @@ class TestImpactAnalyzer:
         graph.graph.add_edge("file1.py", "file2.py")
         graph.nodes["file2.py"].imported_by = ["file1.py"]
 
+        ImpactAnalyzer = get_impact_analyzer()
         analyzer = ImpactAnalyzer(graph)
         affected_files = analyzer._find_affected_files(["file2.py"])
 
@@ -600,7 +620,9 @@ class TestImpactAnalyzer:
 
     def test_calculate_risk_score(self):
         """Test calculating risk scores."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
+        ImpactAnalyzer = get_impact_analyzer()
         analyzer = ImpactAnalyzer(graph)
 
         # Test with empty changes
@@ -615,7 +637,9 @@ class TestImpactAnalyzer:
 
     def test_cache_functionality(self):
         """Test caching functionality."""
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         graph = AdvancedDependencyGraph()
+        ImpactAnalyzer = get_impact_analyzer()
         analyzer = ImpactAnalyzer(graph)
 
         # Enable cache

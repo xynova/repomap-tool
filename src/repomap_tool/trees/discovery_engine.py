@@ -19,9 +19,9 @@ from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
-    AdvancedDependencyGraph,
-    CentralityCalculator,
-    ImpactAnalyzer,
+    get_advanced_dependency_graph,
+    get_centrality_calculator,
+    get_impact_analyzer,
 )
 
 logger = logging.getLogger(__name__)
@@ -54,6 +54,7 @@ class EntrypointDiscoverer:
         # Phase 2: Initialize dependency analysis components
         # Initialize import analyzer and dependency graph immediately
         self.import_analyzer = ImportAnalyzer()
+        AdvancedDependencyGraph = get_advanced_dependency_graph()
         self.dependency_graph = AdvancedDependencyGraph()
 
         # Lazy initialization for more expensive components
@@ -154,6 +155,7 @@ class EntrypointDiscoverer:
 
         logger.info("Enhancing entrypoints with dependency scores...")
         try:
+            CentralityCalculator = get_centrality_calculator()
             calculator = CentralityCalculator(self.dependency_graph)
             centrality_scores = calculator.calculate_composite_importance()
 
@@ -335,9 +337,11 @@ class EntrypointDiscoverer:
 
             # Initialize centrality calculator and impact analyzer if not already done
             if self.centrality_calculator is None:
+                CentralityCalculator = get_centrality_calculator()
                 self.centrality_calculator = CentralityCalculator(self.dependency_graph)
 
             if self.impact_analyzer is None:
+                ImpactAnalyzer = get_impact_analyzer()
                 self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
 
             # Enhance each entrypoint with dependency metrics

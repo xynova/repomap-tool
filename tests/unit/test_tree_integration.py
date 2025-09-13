@@ -16,8 +16,8 @@ from repomap_tool.models import Entrypoint
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
-    CentralityCalculator,
-    ImpactAnalyzer,
+    get_centrality_calculator,
+    get_impact_analyzer,
 )
 
 

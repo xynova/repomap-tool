@@ -14,7 +14,7 @@ Core Components:
 - OutputTemplates: LLM-optimized output templates
 """
 
-from .critical_line_extractor import CriticalLineExtractor
+from .aider_based_extractor import CriticalLineExtractor
 from .hierarchical_formatter import HierarchicalFormatter
 from .token_optimizer import TokenOptimizer
 from .signature_enhancer import SignatureEnhancer

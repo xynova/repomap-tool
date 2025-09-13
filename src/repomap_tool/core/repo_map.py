@@ -209,19 +209,22 @@ class RepoMapService:
         """Initialize dependency analysis components."""
         try:
             from ..dependencies import (
-                AdvancedDependencyGraph,
-                ImpactAnalyzer,
-                CentralityCalculator,
+                get_advanced_dependency_graph,
+                get_impact_analyzer,
+                get_centrality_calculator,
             )
 
             # Initialize advanced dependency graph
+            AdvancedDependencyGraph = get_advanced_dependency_graph()
             self.dependency_graph = AdvancedDependencyGraph()
 
             # Initialize impact analyzer
             if self.config.dependencies.enable_impact_analysis:
+                ImpactAnalyzer = get_impact_analyzer()
                 self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
 
             # Initialize centrality calculator
+            CentralityCalculator = get_centrality_calculator()
             self.centrality_calculator = CentralityCalculator(self.dependency_graph)
 
             self.logger.info("Dependency analysis components initialized successfully")
