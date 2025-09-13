@@ -24,6 +24,11 @@ from .models import (
     ImpactReport,
     BreakingChangeRisk,
     RefactoringOpportunity,
+    FileAnalysisResult,
+    CrossFileRelationship,
+    AnalysisFormat,
+    FileImpactAnalysis,
+    FileCentralityAnalysis,
 )
 from .import_analyzer import ImportAnalyzer
 from .dependency_graph import DependencyGraph
@@ -31,16 +36,32 @@ from .call_graph_builder import CallGraphBuilder
 from .centrality_calculator import CentralityCalculator
 from .impact_analyzer import ImpactAnalyzer
 from .advanced_dependency_graph import AdvancedDependencyGraph
-from .ast_file_analyzer import (
-    ASTFileAnalyzer,
-    FileAnalysisResult,
-    CrossFileRelationship,
+from .ast_file_analyzer import ASTFileAnalyzer
+from .ast_visitors import create_visitor, AnalysisContext
+from .js_ts_analyzer import JavaScriptTypeScriptAnalyzer
+from .import_utils import ImportUtils
+from .impact_analysis_engine import ImpactAnalysisEngine
+from .centrality_analysis_engine import CentralityAnalysisEngine
+from .path_resolver import PathResolver
+from .llm_file_analyzer import LLMFileAnalyzer
+from .file_utils import get_all_project_files, suggest_test_files
+from .function_utils import (
+    find_most_called_function,
+    get_top_called_functions,
+    smart_categorize_function_calls,
+    filter_business_relevant_calls,
+    get_functions_called_from_file,
+    find_most_used_class,
 )
-from .llm_file_analyzer import (
-    LLMFileAnalyzer,
-    FileImpactAnalysis,
-    FileCentralityAnalysis,
-    AnalysisFormat,
+from .format_utils import (
+    format_llm_optimized_impact,
+    format_llm_optimized_centrality,
+    format_json_impact,
+    format_json_centrality,
+    format_table_impact,
+    format_table_centrality,
+    format_text_impact,
+    format_text_centrality,
 )
 
 __all__ = [
@@ -53,6 +74,15 @@ __all__ = [
     "AdvancedDependencyGraph",
     "ASTFileAnalyzer",
     "LLMFileAnalyzer",
+    # Analysis engines
+    "ImpactAnalysisEngine",
+    "CentralityAnalysisEngine",
+    "PathResolver",
+    # AST analysis components
+    "create_visitor",
+    "AnalysisContext",
+    "JavaScriptTypeScriptAnalyzer",
+    "ImportUtils",
     # Data models
     "FileImports",
     "ProjectImports",
@@ -67,6 +97,24 @@ __all__ = [
     "FileImpactAnalysis",
     "FileCentralityAnalysis",
     "AnalysisFormat",
+    # File utilities
+    "get_all_project_files",
+    "suggest_test_files",
+    "find_most_called_function",
+    "get_top_called_functions",
+    "smart_categorize_function_calls",
+    "filter_business_relevant_calls",
+    "get_functions_called_from_file",
+    "find_most_used_class",
+    # Format utilities
+    "format_llm_optimized_impact",
+    "format_llm_optimized_centrality",
+    "format_json_impact",
+    "format_json_centrality",
+    "format_table_impact",
+    "format_table_centrality",
+    "format_text_impact",
+    "format_text_centrality",
 ]
 
 __version__ = "0.1.0"
