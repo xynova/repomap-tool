@@ -143,17 +143,27 @@ class ImportUtils:
         """
         relationships = []
 
+        # Pre-compute which imports match which target files to avoid nested loops
+        import_matches = {}
         for import_obj in imports:
+            matching_files = []
             for target_file in target_files:
                 if self.is_import_of_file(import_obj, target_file):
-                    relationship = CrossFileRelationship(
-                        source_file=source_file,
-                        target_file=target_file,
-                        relationship_type="import",
-                        line_number=import_obj.line_number or 0,
-                        details=f"Imports from {import_obj.module}",
-                    )
-                    relationships.append(relationship)
+                    matching_files.append(target_file)
+            if matching_files:
+                import_matches[import_obj] = matching_files
+
+        # Build relationships from pre-computed matches
+        for import_obj, matching_files in import_matches.items():
+            for target_file in matching_files:
+                relationship = CrossFileRelationship(
+                    source_file=source_file,
+                    target_file=target_file,
+                    relationship_type="import",
+                    line_number=import_obj.line_number or 0,
+                    details=f"Imports from {import_obj.module}",
+                )
+                relationships.append(relationship)
 
         return relationships
 

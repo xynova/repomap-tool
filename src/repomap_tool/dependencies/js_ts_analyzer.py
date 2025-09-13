@@ -28,31 +28,38 @@ class JavaScriptTypeScriptAnalyzer:
 
     def __init__(self) -> None:
         """Initialize the JavaScript/TypeScript analyzer."""
+        # Compile regex patterns once for better performance
         self.import_patterns = {
             # Pattern 1: Named imports: import { name1, name2 } from 'module'
-            "named_imports": r"import\s*\{\s*([^}]+)\s*\}\s*from\s*['\"]([^'\"]+)['\"]",
+            "named_imports": re.compile(
+                r"import\s*\{\s*([^}]+)\s*\}\s*from\s*['\"]([^'\"]+)['\"]"
+            ),
             # Pattern 2: Default imports: import name from 'module'
-            "default_imports": r"import\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]",
+            "default_imports": re.compile(
+                r"import\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]"
+            ),
             # Pattern 3: Namespace imports: import * as name from 'module'
-            "namespace_imports": r"import\s+\*\s+as\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]",
+            "namespace_imports": re.compile(
+                r"import\s+\*\s+as\s+(\w+)\s+from\s+['\"]([^'\"]+)['\"]"
+            ),
             # Pattern 4: CommonJS require: require('module')
-            "require_calls": r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)",
+            "require_calls": re.compile(r"require\s*\(\s*['\"]([^'\"]+)['\"]\s*\)"),
         }
 
         self.function_patterns = {
             # Function declarations: function name() {}
-            "function_declarations": r"function\s+(\w+)\s*\(",
+            "function_declarations": re.compile(r"function\s+(\w+)\s*\("),
             # Arrow functions: const name = () => {}
-            "arrow_functions": r"const\s+(\w+)\s*=\s*\(",
+            "arrow_functions": re.compile(r"const\s+(\w+)\s*=\s*\("),
             # Method definitions: name() {}
-            "method_definitions": r"(\w+)\s*\(\s*[^)]*\)\s*\{",
+            "method_definitions": re.compile(r"(\w+)\s*\(\s*[^)]*\)\s*\{"),
         }
 
         self.class_patterns = {
             # Class declarations: class Name {}
-            "class_declarations": r"class\s+(\w+)",
+            "class_declarations": re.compile(r"class\s+(\w+)"),
             # Class expressions: const Name = class {}
-            "class_expressions": r"const\s+(\w+)\s*=\s*class",
+            "class_expressions": re.compile(r"const\s+(\w+)\s*=\s*class"),
         }
 
     def analyze_file(self, context: JSAnalysisContext) -> FileAnalysisResult:
@@ -110,7 +117,7 @@ class JavaScriptTypeScriptAnalyzer:
         try:
             # Pattern 1: Named imports: import { name1, name2 } from 'module'
             named_import_pattern = self.import_patterns["named_imports"]
-            for match in re.finditer(named_import_pattern, content):
+            for match in named_import_pattern.finditer(content):
                 symbols_str = match.group(1)
                 module = match.group(2)
 
@@ -133,7 +140,7 @@ class JavaScriptTypeScriptAnalyzer:
 
             # Pattern 2: Default imports: import name from 'module'
             default_import_pattern = self.import_patterns["default_imports"]
-            for match in re.finditer(default_import_pattern, content):
+            for match in default_import_pattern.finditer(content):
                 symbol = match.group(1)
                 module = match.group(2)
 
@@ -153,7 +160,7 @@ class JavaScriptTypeScriptAnalyzer:
 
             # Pattern 3: Namespace imports: import * as name from 'module'
             namespace_import_pattern = self.import_patterns["namespace_imports"]
-            for match in re.finditer(namespace_import_pattern, content):
+            for match in namespace_import_pattern.finditer(content):
                 namespace = match.group(1)
                 module = match.group(2)
 
@@ -173,7 +180,7 @@ class JavaScriptTypeScriptAnalyzer:
 
             # Pattern 4: CommonJS require: require('module')
             require_pattern = self.import_patterns["require_calls"]
-            for match in re.finditer(require_pattern, content):
+            for match in require_pattern.finditer(content):
                 imports.append(
                     Import(
                         module=match.group(1),
@@ -200,12 +207,12 @@ class JavaScriptTypeScriptAnalyzer:
         try:
             # Function declarations: function name() {}
             function_pattern = self.function_patterns["function_declarations"]
-            for match in re.finditer(function_pattern, content):
+            for match in function_pattern.finditer(content):
                 functions.append(match.group(1))
 
             # Arrow functions: const name = () => {}
             arrow_pattern = self.function_patterns["arrow_functions"]
-            for match in re.finditer(arrow_pattern, content):
+            for match in arrow_pattern.finditer(content):
                 functions.append(match.group(1))
 
         except Exception as e:
@@ -220,12 +227,12 @@ class JavaScriptTypeScriptAnalyzer:
         try:
             # Class declarations: class Name {}
             class_pattern = self.class_patterns["class_declarations"]
-            for match in re.finditer(class_pattern, content):
+            for match in class_pattern.finditer(content):
                 classes.append(match.group(1))
 
             # Class expressions: const Name = class {}
             class_expr_pattern = self.class_patterns["class_expressions"]
-            for match in re.finditer(class_expr_pattern, content):
+            for match in class_expr_pattern.finditer(content):
                 classes.append(match.group(1))
 
         except Exception as e:
