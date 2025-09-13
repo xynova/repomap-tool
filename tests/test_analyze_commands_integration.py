@@ -13,7 +13,11 @@ from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
 
 from repomap_tool.cli import cli
-from repomap_tool.dependencies import ASTFileAnalyzer, AnalysisFormat, get_llm_file_analyzer
+from repomap_tool.dependencies import (
+    ASTFileAnalyzer,
+    AnalysisFormat,
+    get_llm_file_analyzer,
+)
 
 
 class TestAnalyzeCommandsIntegration:
