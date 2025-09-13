@@ -58,6 +58,14 @@ class LLMFileAnalyzer:
         dependency_graph: Optional[AdvancedDependencyGraph] = None,
         project_root: Optional[str] = None,
         max_tokens: int = 4000,
+        # Dependency injection parameters
+        ast_analyzer: Optional[ASTFileAnalyzer] = None,
+        token_optimizer: Optional[TokenOptimizer] = None,
+        context_selector: Optional[ContextSelector] = None,
+        hierarchical_formatter: Optional[HierarchicalFormatter] = None,
+        path_resolver: Optional[PathResolver] = None,
+        impact_engine: Optional[ImpactAnalysisEngine] = None,
+        centrality_engine: Optional[CentralityAnalysisEngine] = None,
     ):
         """Initialize the LLM file analyzer.
 
@@ -65,21 +73,28 @@ class LLMFileAnalyzer:
             dependency_graph: Advanced dependency graph for analysis
             project_root: Root path of the project
             max_tokens: Maximum tokens for LLM-optimized output
+            ast_analyzer: AST analyzer instance (injected)
+            token_optimizer: Token optimizer instance (injected)
+            context_selector: Context selector instance (injected)
+            hierarchical_formatter: Hierarchical formatter instance (injected)
+            path_resolver: Path resolver instance (injected)
+            impact_engine: Impact analysis engine instance (injected)
+            centrality_engine: Centrality analysis engine instance (injected)
         """
         self.dependency_graph = dependency_graph
         self.project_root = project_root
         self.max_tokens = max_tokens
 
-        # Initialize components
-        self.ast_analyzer = ASTFileAnalyzer(project_root)
-        self.token_optimizer = TokenOptimizer()
-        self.context_selector = ContextSelector(dependency_graph)
-        self.hierarchical_formatter = HierarchicalFormatter()
-        self.path_resolver = PathResolver(project_root)
+        # Initialize components with dependency injection
+        self.ast_analyzer = ast_analyzer or ASTFileAnalyzer(project_root)
+        self.token_optimizer = token_optimizer or TokenOptimizer()
+        self.context_selector = context_selector or ContextSelector(dependency_graph)
+        self.hierarchical_formatter = hierarchical_formatter or HierarchicalFormatter()
+        self.path_resolver = path_resolver or PathResolver(project_root)
 
-        # Initialize analysis engines
-        self.impact_engine = ImpactAnalysisEngine(self.ast_analyzer)
-        self.centrality_engine = CentralityAnalysisEngine(
+        # Initialize analysis engines with dependency injection
+        self.impact_engine = impact_engine or ImpactAnalysisEngine(self.ast_analyzer)
+        self.centrality_engine = centrality_engine or CentralityAnalysisEngine(
             self.ast_analyzer, None, dependency_graph
         )
 
@@ -87,10 +102,11 @@ class LLMFileAnalyzer:
         if dependency_graph:
             self.centrality_calculator = CentralityCalculator(dependency_graph)
             self.impact_analyzer = ImpactAnalyzer(dependency_graph)
-            # Update centrality engine with calculator
-            self.centrality_engine = CentralityAnalysisEngine(
-                self.ast_analyzer, self.centrality_calculator, dependency_graph
-            )
+            # Update centrality engine with calculator if not already injected
+            if not centrality_engine:
+                self.centrality_engine = CentralityAnalysisEngine(
+                    self.ast_analyzer, self.centrality_calculator, dependency_graph
+                )
         else:
             self.centrality_calculator = None
             self.impact_analyzer = None

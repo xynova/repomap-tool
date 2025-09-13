@@ -28,7 +28,7 @@ class TokenOptimizerProtocol(Protocol):
 
 
 if TYPE_CHECKING:
-    from .llm_file_analyzer import FileImpactAnalysis, FileCentralityAnalysis
+    from .models import FileImpactAnalysis, FileCentralityAnalysis
 
 logger = logging.getLogger(__name__)
 
