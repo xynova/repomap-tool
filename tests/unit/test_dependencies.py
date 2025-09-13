@@ -364,7 +364,6 @@ class TestCallGraphBuilder:
     def test_initialization(self):
         """Test CallGraphBuilder initialization."""
         CallGraphBuilder = get_call_graph_builder()
-        CallGraphBuilder = get_call_graph_builder()
         builder = CallGraphBuilder()
         assert builder is not None
         assert len(builder.language_analyzers) > 0
