@@ -8,7 +8,7 @@ for analysis results.
 import logging
 from typing import List, Any
 
-from .analysis_models import AnalysisFormat, FileImpactAnalysis, FileCentralityAnalysis
+from .models import AnalysisFormat, FileImpactAnalysis, FileCentralityAnalysis
 from ..llm.token_optimizer import TokenOptimizer
 
 logger = logging.getLogger(__name__)

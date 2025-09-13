@@ -121,25 +121,25 @@ class CriticalLineExtractor:
             self.aider_extractor = AiderBasedExtractor(repo_map)
 
     def extract_critical_lines(
-        self, symbol_content: str, language: str = "python"
+        self, path_or_content: str, language: str = "python"
     ) -> List[CriticalLine]:
-        """Extract critical lines from symbol content.
+        """Extract critical lines from a file path or raw content.
 
         Args:
-            symbol_content: Raw code content to analyze
+            path_or_content: File path or raw code content to analyze
             language: Programming language (used for fallback)
 
         Returns:
             List of CriticalLine objects sorted by importance
         """
         # If we have aider extractor and the input is a valid file path, use it
-        if self.aider_extractor and isinstance(symbol_content, str):
+        if self.aider_extractor and isinstance(path_or_content, str):
             try:
-                p = Path(symbol_content)
+                p = Path(path_or_content)
                 if p.is_file():
                     # Convert aider results to CriticalLine objects
                     aider_results = self.aider_extractor.extract_critical_lines(
-                        symbol_content
+                        path_or_content
                     )
                     return self._convert_to_critical_lines(aider_results)
             except (OSError, ValueError):
@@ -147,7 +147,7 @@ class CriticalLineExtractor:
                 pass
 
         # Fallback to simple pattern matching for raw content or if Aider extractor is unavailable
-        return self._fallback_extraction(symbol_content)
+        return self._fallback_extraction(path_or_content)
 
     def _convert_to_critical_lines(
         self, aider_results: List[Dict[str, Any]]

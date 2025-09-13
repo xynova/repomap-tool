@@ -13,20 +13,7 @@ Core Components:
 - AdvancedDependencyGraph: Enhanced graph with call graph integration
 """
 
-
-# Lazy imports to reduce coupling and improve startup time
-def _lazy_import(module_name: str, class_name: str):
-    """Lazy import helper to reduce coupling."""
-
-    def _import():
-        module = __import__(
-            f"repomap_tool.dependencies.{module_name}", fromlist=[class_name]
-        )
-        return getattr(module, class_name)
-
-    return _import
-
-
+# Lazy loading for advanced features
 # Core models - always available
 from .models import (
     Import,
@@ -53,91 +40,91 @@ from .ast_file_analyzer import ASTFileAnalyzer
 
 
 # Lazy loading for advanced features
-def get_call_graph_builder():
+def get_call_graph_builder() -> type:
     """Get CallGraphBuilder class (lazy loaded)."""
     from .call_graph_builder import CallGraphBuilder
 
     return CallGraphBuilder
 
 
-def get_centrality_calculator():
+def get_centrality_calculator() -> type:
     """Get CentralityCalculator class (lazy loaded)."""
     from .centrality_calculator import CentralityCalculator
 
     return CentralityCalculator
 
 
-def get_impact_analyzer():
+def get_impact_analyzer() -> type:
     """Get ImpactAnalyzer class (lazy loaded)."""
     from .impact_analyzer import ImpactAnalyzer
 
     return ImpactAnalyzer
 
 
-def get_advanced_dependency_graph():
+def get_advanced_dependency_graph() -> type:
     """Get AdvancedDependencyGraph class (lazy loaded)."""
     from .advanced_dependency_graph import AdvancedDependencyGraph
 
     return AdvancedDependencyGraph
 
 
-def get_llm_file_analyzer():
+def get_llm_file_analyzer() -> type:
     """Get LLMFileAnalyzer class (lazy loaded)."""
     from .llm_file_analyzer import LLMFileAnalyzer
 
     return LLMFileAnalyzer
 
 
-def get_impact_analysis_engine():
+def get_impact_analysis_engine() -> type:
     """Get ImpactAnalysisEngine class (lazy loaded)."""
     from .impact_analysis_engine import ImpactAnalysisEngine
 
     return ImpactAnalysisEngine
 
 
-def get_centrality_analysis_engine():
+def get_centrality_analysis_engine() -> type:
     """Get CentralityAnalysisEngine class (lazy loaded)."""
     from .centrality_analysis_engine import CentralityAnalysisEngine
 
     return CentralityAnalysisEngine
 
 
-def get_path_resolver():
+def get_path_resolver() -> type:
     """Get PathResolver class (lazy loaded)."""
     from .path_resolver import PathResolver
 
     return PathResolver
 
 
-def get_js_ts_analyzer():
+def get_js_ts_analyzer() -> type:
     """Get JavaScriptTypeScriptAnalyzer class (lazy loaded)."""
     from .js_ts_analyzer import JavaScriptTypeScriptAnalyzer
 
     return JavaScriptTypeScriptAnalyzer
 
 
-def get_import_utils():
+def get_import_utils() -> type:
     """Get ImportUtils class (lazy loaded)."""
     from .import_utils import ImportUtils
 
     return ImportUtils
 
 
-def get_ast_visitors():
+def get_ast_visitors() -> tuple:
     """Get AST visitor functions (lazy loaded)."""
     from .ast_visitors import create_visitor, AnalysisContext
 
     return create_visitor, AnalysisContext
 
 
-def get_file_utils():
+def get_file_utils() -> tuple:
     """Get file utility functions (lazy loaded)."""
     from .file_utils import get_all_project_files, suggest_test_files
 
     return get_all_project_files, suggest_test_files
 
 
-def get_function_utils():
+def get_function_utils() -> tuple:
     """Get function utility functions (lazy loaded)."""
     from .function_utils import (
         find_most_called_function,
@@ -158,7 +145,7 @@ def get_function_utils():
     )
 
 
-def get_format_utils():
+def get_format_utils() -> tuple:
     """Get format utility functions (lazy loaded)."""
     from .format_utils import (
         format_llm_optimized_impact,
