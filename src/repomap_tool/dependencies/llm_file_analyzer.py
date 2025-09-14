@@ -100,8 +100,18 @@ class LLMFileAnalyzer:
 
         # Initialize analysis components if dependency graph is available
         if dependency_graph:
-            self.centrality_calculator = CentralityCalculator(dependency_graph)
-            self.impact_analyzer = ImpactAnalyzer(dependency_graph)
+            try:
+                self.centrality_calculator = CentralityCalculator(dependency_graph)
+            except Exception as e:
+                logger.error(f"Failed to initialize centrality calculator: {e}")
+                self.centrality_calculator = None
+
+            try:
+                self.impact_analyzer = ImpactAnalyzer(dependency_graph)
+            except Exception as e:
+                logger.error(f"Failed to initialize impact analyzer: {e}")
+                self.impact_analyzer = None
+
             # Update centrality engine with calculator if not already injected
             if not centrality_engine:
                 self.centrality_engine = CentralityAnalysisEngine(
@@ -110,8 +120,6 @@ class LLMFileAnalyzer:
         else:
             self.centrality_calculator = None
             self.impact_analyzer = None
-
-        logger.info(f"LLMFileAnalyzer initialized for project: {project_root}")
 
     def analyze_file_impact(
         self,
@@ -127,7 +135,6 @@ class LLMFileAnalyzer:
         Returns:
             Formatted impact analysis string
         """
-        logger.info(f"Analyzing impact for {len(file_paths)} files")
 
         # Resolve file paths relative to project root
         resolved_paths = self.path_resolver.resolve_file_paths(file_paths)
@@ -175,7 +182,6 @@ class LLMFileAnalyzer:
         Returns:
             Formatted centrality analysis string
         """
-        logger.info(f"Analyzing centrality for {len(file_paths)} files")
 
         if not self.centrality_calculator:
             return "Centrality analysis requires dependency graph. Please run dependency analysis first."
@@ -192,11 +198,50 @@ class LLMFileAnalyzer:
         # Analyze each file
         centrality_analyses = []
         for i, file_path in enumerate(file_paths):
-            resolved_path = resolved_paths[i]
-            centrality_analysis = self.centrality_engine.analyze_file_centrality(
-                file_path, ast_results[resolved_path], all_files
-            )
-            centrality_analyses.append(centrality_analysis)
+            try:
+                resolved_path = resolved_paths[i]
+                centrality_analysis = self.centrality_engine.analyze_file_centrality(
+                    file_path, ast_results[resolved_path], all_files
+                )
+                centrality_analyses.append(centrality_analysis)
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+                # Create a minimal centrality analysis for this file
+
+                centrality_analysis = FileCentralityAnalysis(
+                    file_path=file_path,
+                    centrality_score=0.0,
+                    rank=1,
+                    total_files=len(file_paths),
+                    dependency_analysis={
+                        "total_connections": 0,
+                        "incoming_connections": 0,
+                        "outgoing_connections": 0,
+                        "connection_ratio": 0.0,
+                        "direct_imports": 0,
+                        "reverse_dependencies": 0,
+                    },
+                    function_call_analysis={
+                        "defined_functions": 0,
+                        "called_functions": 0,
+                        "external_calls": 0,
+                        "internal_calls": 0,
+                    },
+                    centrality_breakdown={
+                        "degree_centrality": 0.0,
+                        "betweenness_centrality": 0.0,
+                        "pagerank": 0.0,
+                        "eigenvector_centrality": 0.0,
+                        "closeness_centrality": 0.0,
+                    },
+                    structural_impact={
+                        "complexity_score": 0.0,
+                        "dependency_depth": 0,
+                        "fan_in": 0,
+                        "fan_out": 0,
+                    },
+                )
+                centrality_analyses.append(centrality_analysis)
 
         # Format output
         if format_type == AnalysisFormat.LLM_OPTIMIZED:

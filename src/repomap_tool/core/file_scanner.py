@@ -388,6 +388,11 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
         "*.gz",
         "*.bz2",
         "*.xz",
+        "*.ttf",
+        "*.otf",
+        "*.woff",
+        "*.woff2",
+        "*.eot",
         # Database files
         "*.db",
         "*.sqlite",
@@ -404,7 +409,6 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
         "*.swo",
         "*.cache",
         "*.lock",
-        
         # Configuration and tool files
         "*.gitconfig",
         "*.gitattributes",
@@ -420,16 +424,13 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
         "*.env",
         "*.sample",
         "*.example",
-        
         # Build and package files
         "*.snap",
         "*.db-shm",
         "*.db-wal",
         "*.val",
-        
         # Media files
         "*.wav",
-        
         # Husky git hooks
         "husky/pre-push",
         "husky/pre-commit",

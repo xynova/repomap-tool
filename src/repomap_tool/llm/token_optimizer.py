@@ -137,10 +137,7 @@ class TokenOptimizer:
         current_tokens = self.token_estimator.count_tokens(content, model)
 
         if current_tokens <= max_tokens:
-            logger.info(f"Content already within budget: {current_tokens}/{max_tokens}")
             return content
-
-        logger.info(f"Optimizing content: {current_tokens} -> {max_tokens} tokens")
 
         # Apply progressive compression strategies
         strategies = self._get_compression_strategies()
@@ -148,7 +145,7 @@ class TokenOptimizer:
 
         for strategy_name, strategy_func in strategies:
             try:
-                optimized_content = strategy_func(optimized_content, max_tokens)
+                optimized_content = strategy_func(optimized_content)
                 current_tokens = self.token_estimator.count_tokens(
                     optimized_content, model
                 )
@@ -156,7 +153,6 @@ class TokenOptimizer:
                 logger.debug(f"Applied {strategy_name}: {current_tokens} tokens")
 
                 if current_tokens <= max_tokens:
-                    logger.info(f"Budget achieved with {strategy_name}")
                     break
 
             except Exception as e:
@@ -166,7 +162,6 @@ class TokenOptimizer:
         # Final validation
         final_tokens = self.token_estimator.count_tokens(optimized_content, model)
         if final_tokens > max_tokens:
-            logger.warning(f"Could not meet budget, using emergency truncation")
             optimized_content = self._emergency_truncation(
                 optimized_content, max_tokens, model
             )

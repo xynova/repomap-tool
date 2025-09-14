@@ -185,15 +185,25 @@ def infer_function_source(func_name: str, import_sources: Dict[str, str]) -> str
     # 4. CAPITALIZATION PATTERNS (Language-agnostic)
 
     # Constructor pattern (PascalCase)
-    if func_name and func_name[0].isupper() and not func_name.isupper():
+    if (
+        func_name
+        and len(func_name) > 0
+        and func_name[0].isupper()
+        and not func_name.isupper()
+    ):
         return "constructor/class"
 
     # Constant pattern (UPPER_CASE)
-    if func_name.isupper() and "_" in func_name:
+    if func_name and func_name.isupper() and "_" in func_name:
         return "constant/enum"
 
     # Method pattern (camelCase starting with lowercase)
-    if func_name and func_name[0].islower() and any(c.isupper() for c in func_name):
+    if (
+        func_name
+        and len(func_name) > 0
+        and func_name[0].islower()
+        and any(c.isupper() for c in func_name)
+    ):
         return "method/function"
 
     # 5. STRUCTURAL PATTERNS
@@ -404,9 +414,13 @@ def find_most_used_class(imports: List[Any]) -> Optional[str]:
         # Check if any imported symbols are classes (start with uppercase)
         if import_obj.symbols:
             for symbol in import_obj.symbols:
-                if symbol[0].isupper():
+                if symbol and len(symbol) > 0 and symbol[0].isupper():
                     class_counts[symbol] = class_counts.get(symbol, 0) + 1
-        elif import_obj.alias and import_obj.alias[0].isupper():
+        elif (
+            import_obj.alias
+            and len(import_obj.alias) > 0
+            and import_obj.alias[0].isupper()
+        ):
             class_counts[import_obj.alias] = class_counts.get(import_obj.alias, 0) + 1
 
     return max(class_counts.items(), key=lambda x: x[1])[0] if class_counts else None

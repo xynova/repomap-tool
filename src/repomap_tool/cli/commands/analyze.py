@@ -38,7 +38,7 @@ def analyze() -> None:
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="llm_optimized",
+    default="table",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
@@ -87,12 +87,56 @@ def centrality(
         else:
             console.print("📁 Analyzing all files")
 
-        # Placeholder for actual centrality analysis
+        # Initialize RepoMapService to build dependency graph
+        from repomap_tool.core.repo_map import RepoMapService
+
+        # Create RepoMapService and build dependency graph
+        repomap_service = RepoMapService(config_obj)
+        dependency_graph = repomap_service.build_dependency_graph()
+
+        # Initialize LLM file analyzer with dependency graph
+        from repomap_tool.dependencies import get_llm_file_analyzer, AnalysisFormat
+
+        # Create LLM file analyzer with proper parameters
+        LLMFileAnalyzer = get_llm_file_analyzer()
+        llm_analyzer = LLMFileAnalyzer(
+            dependency_graph=dependency_graph,
+            project_root=resolved_project_path,
+            max_tokens=max_tokens,
+        )
+
+        # Determine files to analyze
+        if files:
+            file_paths = list(files)
+        else:
+            # Analyze all files in the project
+            from repomap_tool.core.file_scanner import get_project_files
+
+            all_files = get_project_files(resolved_project_path, verbose=verbose)
+            file_paths = all_files
+
+        # Convert output format
+        format_mapping = {
+            "json": AnalysisFormat.JSON,
+            "table": AnalysisFormat.TABLE,
+            "text": AnalysisFormat.TEXT,
+            "llm_optimized": AnalysisFormat.LLM_OPTIMIZED,
+        }
+        analysis_format = format_mapping.get(output, AnalysisFormat.TABLE)
+
+        # Perform centrality analysis
+        try:
+            result = llm_analyzer.analyze_file_centrality(file_paths, analysis_format)
+            console.print(result)
+        except Exception as analysis_error:
+            console.print(f"[yellow]Warning: {analysis_error}[/yellow]")
+            console.print(
+                "[yellow]This might be due to missing dependency analysis. Try running dependency analysis first.[/yellow]"
+            )
+
         console.print("✅ Centrality analysis completed")
         console.print(f"📊 Output format: {output}")
         console.print(f"🔢 Max tokens: {max_tokens}")
-
-        # TODO: Implement actual centrality analysis using LLMFileAnalyzer
 
     except Exception as e:
         error_response = create_error_response(str(e), "CentralityAnalysisError")
@@ -123,7 +167,7 @@ def centrality(
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="llm_optimized",
+    default="table",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")

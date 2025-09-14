@@ -55,40 +55,46 @@ class CentralityAnalysisEngine:
         Returns:
             FileCentralityAnalysis object
         """
-        # Convert absolute path to relative path for dependency graph lookup
-        relative_file_path = self._resolve_relative_path(file_path)
+        try:
+            # Convert absolute path to relative path for dependency graph lookup
+            relative_file_path = self._resolve_relative_path(file_path)
 
-        # Calculate centrality score and ranking
-        centrality_score, rank, total_files = self._calculate_centrality_metrics(
-            relative_file_path
-        )
+            # Calculate centrality score and ranking
+            centrality_score, rank, total_files = self._calculate_centrality_metrics(
+                relative_file_path
+            )
 
-        # Dependency analysis
-        dependency_analysis = self._analyze_dependencies(
-            relative_file_path, ast_result, all_files
-        )
+            # Dependency analysis
+            dependency_analysis = self._analyze_dependencies(
+                relative_file_path, ast_result, all_files
+            )
 
-        # Function call analysis
-        function_call_analysis = self._analyze_function_calls(ast_result)
+            # Function call analysis
+            function_call_analysis = self._analyze_function_calls(ast_result)
 
-        # Centrality breakdown
-        centrality_breakdown = self._calculate_centrality_breakdown(relative_file_path)
+            # Centrality breakdown
+            centrality_breakdown = self._calculate_centrality_breakdown(
+                relative_file_path
+            )
 
-        # Structural impact
-        structural_impact = self._calculate_structural_impact(
-            relative_file_path, ast_result, all_files
-        )
+            # Structural impact
+            structural_impact = self._calculate_structural_impact(
+                relative_file_path, ast_result, all_files
+            )
 
-        return FileCentralityAnalysis(
-            file_path=file_path,
-            centrality_score=centrality_score,
-            rank=rank,
-            total_files=total_files,
-            dependency_analysis=dependency_analysis,
-            function_call_analysis=function_call_analysis,
-            centrality_breakdown=centrality_breakdown,
-            structural_impact=structural_impact,
-        )
+            return FileCentralityAnalysis(
+                file_path=file_path,
+                centrality_score=centrality_score,
+                rank=rank,
+                total_files=total_files,
+                dependency_analysis=dependency_analysis,
+                function_call_analysis=function_call_analysis,
+                centrality_breakdown=centrality_breakdown,
+                structural_impact=structural_impact,
+            )
+        except Exception as e:
+            logger.error(f"Error in analyze_file_centrality for {file_path}: {e}")
+            raise
 
     def _resolve_relative_path(self, file_path: str) -> str:
         """Resolve file path to relative path for dependency graph lookup.
@@ -99,25 +105,29 @@ class CentralityAnalysisEngine:
         Returns:
             Relative file path
         """
-        if os.path.isabs(file_path) and self.dependency_graph:
-            # Try to get project root from dependency graph
-            project_root = None
-            if hasattr(self.dependency_graph, "project_root"):
-                project_root = self.dependency_graph.project_root
-            elif hasattr(self.dependency_graph, "project_path"):
-                project_root = self.dependency_graph.project_path
+        try:
+            if os.path.isabs(file_path) and self.dependency_graph:
+                # Try to get project root from dependency graph
+                project_root = None
+                if hasattr(self.dependency_graph, "project_root"):
+                    project_root = self.dependency_graph.project_root
+                elif hasattr(self.dependency_graph, "project_path"):
+                    project_root = self.dependency_graph.project_path
 
-            if project_root:
-                try:
-                    relative_file_path = os.path.relpath(file_path, project_root)
-                except ValueError:
-                    # If paths are on different drives (Windows), use the original path
+                if project_root:
+                    try:
+                        relative_file_path = os.path.relpath(file_path, project_root)
+                    except ValueError:
+                        # If paths are on different drives (Windows), use the original path
+                        relative_file_path = file_path
+                else:
                     relative_file_path = file_path
             else:
                 relative_file_path = file_path
-        else:
-            relative_file_path = file_path
-        return relative_file_path
+            return relative_file_path
+        except Exception as e:
+            logger.error(f"Error resolving relative path for {file_path}: {e}")
+            return file_path
 
     def _calculate_centrality_metrics(
         self, relative_file_path: str
