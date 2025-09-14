@@ -8,7 +8,6 @@ import sys
 from typing import Optional, Literal
 
 import click
-from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ...models import (
@@ -28,8 +27,7 @@ from ..output.formatters import (
     display_dependency_results,
     display_cycles_results,
 )
-
-console = Console()
+from ..utils.console import get_console
 
 
 @click.group()
@@ -84,7 +82,9 @@ def search() -> None:
     default=1000,
     help="Maximum cache entries (100-10000)",
 )
+@click.pass_context
 def identifiers(
+    ctx: click.Context,
     query: str,
     project_path: Optional[str],
     config: Optional[str],
@@ -98,6 +98,9 @@ def identifiers(
     cache_size: int,
 ) -> None:
     """Search for identifiers in a project."""
+
+    # Get console instance (automatically configured with no-color if set)
+    console = get_console(ctx)
 
     try:
         # Resolve project path from argument, config file, or discovery

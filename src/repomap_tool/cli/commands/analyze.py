@@ -8,12 +8,10 @@ import sys
 from typing import Optional
 
 import click
-from rich.console import Console
 
 from ...models import RepoMapConfig, DependencyConfig, create_error_response
 from ..config.loader import resolve_project_path
-
-console = Console()
+from ..utils.console import get_console
 
 
 @click.group()
@@ -54,7 +52,9 @@ def analyze() -> None:
     default=4000,
     help="Maximum tokens for LLM optimization",
 )
+@click.pass_context
 def centrality(
+    ctx: click.Context,
     project_path: Optional[str],
     files: tuple,
     output: str,
@@ -63,6 +63,9 @@ def centrality(
     max_tokens: int,
 ) -> None:
     """Show centrality analysis for project files with AST-based analysis."""
+
+    # Get console instance (automatically handles dependency injection from context)
+    console = get_console(ctx)
 
     try:
         # Resolve project path from argument, config file, or discovery
@@ -177,7 +180,9 @@ def centrality(
     default=4000,
     help="Maximum tokens for LLM optimization",
 )
+@click.pass_context
 def impact(
+    ctx: click.Context,
     project_path: Optional[str],
     config: Optional[str],
     files: tuple,
@@ -186,6 +191,9 @@ def impact(
     max_tokens: int,
 ) -> None:
     """Analyze impact of changes to specific files with AST-based analysis."""
+
+    # Get console instance (automatically handles dependency injection from context)
+    console = get_console(ctx)
 
     if not files:
         console.print("[red]Error: Must specify at least one file with --files[/red]")

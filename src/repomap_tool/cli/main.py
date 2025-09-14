@@ -6,7 +6,6 @@ This module provides the main CLI group and orchestrates all command groups.
 """
 
 import click
-from rich.console import Console
 
 # Import command groups
 from .commands.system import system
@@ -14,8 +13,7 @@ from .commands.index import index
 from .commands.search import search
 from .commands.explore import explore
 from .commands.analyze import analyze
-
-console = Console()
+from .utils.console import ConsoleProvider, RichConsoleFactory
 
 
 @click.group()
@@ -26,8 +24,9 @@ def cli(ctx: click.Context, no_color: bool) -> None:
     ctx.ensure_object(dict)
     ctx.obj["no_color"] = no_color
 
-    if no_color:
-        console.no_color = True
+    # Initialize console provider with dependency injection
+    console_provider = ConsoleProvider(RichConsoleFactory())
+    ctx.obj["console_provider"] = console_provider
 
 
 # Register command groups
