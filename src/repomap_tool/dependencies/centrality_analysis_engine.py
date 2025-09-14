@@ -18,6 +18,7 @@ from .function_utils import (
     find_most_used_class,
 )
 from .models import FileCentralityAnalysis
+from ..utils.path_normalizer import PathNormalizer
 
 logger = logging.getLogger(__name__)
 
@@ -28,8 +29,9 @@ class CentralityAnalysisEngine:
     def __init__(
         self,
         ast_analyzer: ASTFileAnalyzer,
-        centrality_calculator: Optional[CentralityCalculator] = None,
-        dependency_graph: Optional[Any] = None,
+        centrality_calculator: CentralityCalculator,
+        dependency_graph: Any,
+        path_normalizer: PathNormalizer,
     ):
         """Initialize the centrality analysis engine.
 
@@ -37,10 +39,14 @@ class CentralityAnalysisEngine:
             ast_analyzer: AST file analyzer instance
             centrality_calculator: Centrality calculator instance
             dependency_graph: Dependency graph for analysis
+            path_normalizer: Path normalizer for consistent file paths
         """
         self.ast_analyzer = ast_analyzer
         self.centrality_calculator = centrality_calculator
         self.dependency_graph = dependency_graph
+        self.path_normalizer = path_normalizer
+        
+        logger.info("CentralityAnalysisEngine initialized with all required dependencies")
 
     def analyze_file_centrality(
         self, file_path: str, ast_result: FileAnalysisResult, all_files: List[str]
@@ -103,28 +109,13 @@ class CentralityAnalysisEngine:
             file_path: File path to resolve
 
         Returns:
-            Relative file path
+            Normalized relative file path
         """
         try:
-            if os.path.isabs(file_path) and self.dependency_graph:
-                # Try to get project root from dependency graph
-                project_root = None
-                if hasattr(self.dependency_graph, "project_root"):
-                    project_root = self.dependency_graph.project_root
-                elif hasattr(self.dependency_graph, "project_path"):
-                    project_root = self.dependency_graph.project_path
-
-                if project_root:
-                    try:
-                        relative_file_path = os.path.relpath(file_path, project_root)
-                    except ValueError:
-                        # If paths are on different drives (Windows), use the original path
-                        relative_file_path = file_path
-                else:
-                    relative_file_path = file_path
-            else:
-                relative_file_path = file_path
-            return relative_file_path
+            # Use injected path normalizer
+            normalized_path = self.path_normalizer.normalize_path(file_path)
+            logger.debug(f"Normalized path: {file_path} -> {normalized_path}")
+            return normalized_path
         except Exception as e:
             logger.error(f"Error resolving relative path for {file_path}: {e}")
             return file_path
@@ -268,10 +259,12 @@ class CentralityAnalysisEngine:
             Centrality breakdown dictionary or None
         """
         if not self.centrality_calculator:
+            logger.warning(f"Centrality calculator is None for {relative_file_path}")
             return None
 
         try:
             centrality_breakdown = {}
+            logger.info(f"Calculating centrality breakdown for {relative_file_path}")
 
             # Get individual centrality measures for this file
             degree_scores = self.centrality_calculator.calculate_degree_centrality()
@@ -279,16 +272,24 @@ class CentralityAnalysisEngine:
                 self.centrality_calculator.calculate_betweenness_centrality()
             )
             pagerank_scores = self.centrality_calculator.calculate_pagerank_centrality()
+            
+            # Log centrality calculation progress
+            logger.debug(f"Calculating centrality breakdown for {relative_file_path}")
 
             # Only include metrics that were successfully calculated
             if degree_scores and relative_file_path in degree_scores:
-                centrality_breakdown["degree"] = degree_scores[relative_file_path]
+                centrality_breakdown["degree_centrality"] = degree_scores[relative_file_path]
             if betweenness_scores and relative_file_path in betweenness_scores:
-                centrality_breakdown["betweenness"] = betweenness_scores[
+                centrality_breakdown["betweenness_centrality"] = betweenness_scores[
                     relative_file_path
                 ]
             if pagerank_scores and relative_file_path in pagerank_scores:
                 centrality_breakdown["pagerank"] = pagerank_scores[relative_file_path]
+            
+            # If no centrality scores were found for this file, return None
+            if not centrality_breakdown:
+                logger.debug(f"No centrality scores found for {relative_file_path}")
+                return None
 
             # Try to get additional metrics if they work
             try:

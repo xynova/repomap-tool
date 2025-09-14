@@ -55,17 +55,19 @@ class LLMFileAnalyzer:
 
     def __init__(
         self,
-        dependency_graph: Optional[AdvancedDependencyGraph] = None,
-        project_root: Optional[str] = None,
-        max_tokens: int = 4000,
+        dependency_graph: AdvancedDependencyGraph,
+        project_root: str,
         # Dependency injection parameters
-        ast_analyzer: Optional[ASTFileAnalyzer] = None,
-        token_optimizer: Optional[TokenOptimizer] = None,
-        context_selector: Optional[ContextSelector] = None,
-        hierarchical_formatter: Optional[HierarchicalFormatter] = None,
-        path_resolver: Optional[PathResolver] = None,
-        impact_engine: Optional[ImpactAnalysisEngine] = None,
-        centrality_engine: Optional[CentralityAnalysisEngine] = None,
+        ast_analyzer: ASTFileAnalyzer,
+        token_optimizer: TokenOptimizer,
+        context_selector: ContextSelector,
+        hierarchical_formatter: HierarchicalFormatter,
+        path_resolver: PathResolver,
+        impact_engine: ImpactAnalysisEngine,
+        centrality_engine: CentralityAnalysisEngine,
+        # DI container injected dependencies
+        centrality_calculator: CentralityCalculator,
+        max_tokens: int = 4000,
     ):
         """Initialize the LLM file analyzer.
 
@@ -85,40 +87,26 @@ class LLMFileAnalyzer:
         self.project_root = project_root
         self.max_tokens = max_tokens
 
-        # Initialize components with dependency injection
-        self.ast_analyzer = ast_analyzer or ASTFileAnalyzer(project_root)
-        self.token_optimizer = token_optimizer or TokenOptimizer()
-        self.context_selector = context_selector or ContextSelector(dependency_graph)
-        self.hierarchical_formatter = hierarchical_formatter or HierarchicalFormatter()
-        self.path_resolver = path_resolver or PathResolver(project_root)
+        # Use injected dependencies only
+        self.ast_analyzer = ast_analyzer
+        self.token_optimizer = token_optimizer
+        self.context_selector = context_selector
+        self.hierarchical_formatter = hierarchical_formatter
+        self.path_resolver = path_resolver
+        self.centrality_calculator = centrality_calculator
+        self.centrality_engine = centrality_engine
+        self.impact_engine = impact_engine
+        
+        logger.info("LLMFileAnalyzer initialized with all injected dependencies")
 
-        # Initialize analysis engines with dependency injection
-        self.impact_engine = impact_engine or ImpactAnalysisEngine(self.ast_analyzer)
-        self.centrality_engine = centrality_engine or CentralityAnalysisEngine(
-            self.ast_analyzer, None, dependency_graph
-        )
-
-        # Initialize analysis components if dependency graph is available
+        # Initialize impact analyzer if dependency graph is available
         if dependency_graph:
-            try:
-                self.centrality_calculator = CentralityCalculator(dependency_graph)
-            except Exception as e:
-                logger.error(f"Failed to initialize centrality calculator: {e}")
-                self.centrality_calculator = None
-
             try:
                 self.impact_analyzer = ImpactAnalyzer(dependency_graph)
             except Exception as e:
                 logger.error(f"Failed to initialize impact analyzer: {e}")
                 self.impact_analyzer = None
-
-            # Update centrality engine with calculator if not already injected
-            if not centrality_engine:
-                self.centrality_engine = CentralityAnalysisEngine(
-                    self.ast_analyzer, self.centrality_calculator, dependency_graph
-                )
         else:
-            self.centrality_calculator = None
             self.impact_analyzer = None
 
     def analyze_file_impact(

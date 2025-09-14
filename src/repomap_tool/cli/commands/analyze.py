@@ -92,21 +92,74 @@ def centrality(
 
         # Initialize RepoMapService to build dependency graph
         from repomap_tool.core.repo_map import RepoMapService
+        from repomap_tool.core.container import create_container
+        from repomap_tool.dependencies import AnalysisFormat
 
         # Create RepoMapService and build dependency graph
         repomap_service = RepoMapService(config_obj)
         dependency_graph = repomap_service.build_dependency_graph()
 
-        # Initialize LLM file analyzer with dependency graph
+        # Create properly configured dependencies manually (bypassing DI container for now)
         from repomap_tool.dependencies import get_llm_file_analyzer, AnalysisFormat
-
-        # Create LLM file analyzer with proper parameters
+        from repomap_tool.dependencies.centrality_calculator import CentralityCalculator
+        from repomap_tool.dependencies.centrality_analysis_engine import CentralityAnalysisEngine
+        from repomap_tool.dependencies.impact_analysis_engine import ImpactAnalysisEngine
+        from repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
+        from repomap_tool.llm.token_optimizer import TokenOptimizer
+        from repomap_tool.llm.context_selector import ContextSelector
+        from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
+        from repomap_tool.dependencies.path_resolver import PathResolver
+        from repomap_tool.utils.path_normalizer import PathNormalizer
+        
+        # Create path normalizer
+        path_normalizer = PathNormalizer(resolved_project_path)
+        
+        # Create properly configured centrality calculator
+        centrality_calculator = CentralityCalculator(dependency_graph)
+        
+        # Create AST analyzer
+        ast_analyzer = ASTFileAnalyzer(resolved_project_path)
+        
+        # Create centrality analysis engine with proper calculator and path normalizer
+        centrality_engine = CentralityAnalysisEngine(
+            ast_analyzer=ast_analyzer,
+            centrality_calculator=centrality_calculator,
+            dependency_graph=dependency_graph,
+            path_normalizer=path_normalizer,
+        )
+        
+        # Create impact analysis engine
+        impact_engine = ImpactAnalysisEngine(ast_analyzer)
+        
+        # Create all other required dependencies
+        token_optimizer = TokenOptimizer()
+        context_selector = ContextSelector(dependency_graph)
+        hierarchical_formatter = HierarchicalFormatter()
+        path_resolver = PathResolver(resolved_project_path)
+        
+        # Create LLM file analyzer with proper dependency injection
         LLMFileAnalyzer = get_llm_file_analyzer()
         llm_analyzer = LLMFileAnalyzer(
             dependency_graph=dependency_graph,
             project_root=resolved_project_path,
+            ast_analyzer=ast_analyzer,
+            token_optimizer=token_optimizer,
+            context_selector=context_selector,
+            hierarchical_formatter=hierarchical_formatter,
+            path_resolver=path_resolver,
+            impact_engine=impact_engine,
+            centrality_engine=centrality_engine,
+            centrality_calculator=centrality_calculator,
             max_tokens=max_tokens,
         )
+        
+        # Debug logging
+        console.print("🔧 Manual DI: Created properly configured dependencies")
+        console.print(f"🔧 LLM Analyzer created: {type(llm_analyzer)}")
+        console.print(f"🔧 Centrality Engine: {type(llm_analyzer.centrality_engine)}")
+        console.print(f"🔧 Centrality Calculator: {type(llm_analyzer.centrality_calculator)}")
+        console.print(f"🔧 Centrality Engine instance: {llm_analyzer.centrality_engine}")
+        console.print(f"🔧 Centrality Calculator instance: {llm_analyzer.centrality_calculator}")
 
         # Determine files to analyze
         if files:

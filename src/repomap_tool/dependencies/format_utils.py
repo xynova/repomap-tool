@@ -595,35 +595,41 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     if not analyses:
         return "No centrality analysis data available."
     
+    # Sort analyses by centrality score (highest first) to show most important files first
+    sorted_analyses = sorted(analyses, key=lambda x: x.centrality_score, reverse=True)
+    
     # Calculate column widths
-    max_file_width = max(len(Path(analysis.file_path).name) for analysis in analyses[:10]) + 2
+    max_file_width = max(len(Path(analysis.file_path).name) for analysis in sorted_analyses[:10]) + 2
     max_file_width = min(max_file_width, 30)  # Cap at 30 chars
     
-    # Create header
-    header = f"{'File':<{max_file_width}} {'Score':<8} {'Rank':<6} {'Total':<6} {'Conn':<6} {'Imports':<8} {'Rev Deps':<8}"
+    # Create header with working data
+    header = f"{'File':<{max_file_width}} {'Score':<8} {'Rank':<6} {'Conn':<6} {'Imports':<8} {'Rev Deps':<8} {'Functions':<8}"
     separator = "─" * len(header)
     
     # Build table
     lines = []
-    lines.append("Centrality Analysis")
+    lines.append("Centrality Analysis (Most Important First)")
     lines.append(separator)
     lines.append(header)
     lines.append(separator)
     
-    # Add data rows
-    for analysis in analyses:
+    # Add data rows (now sorted by importance)
+    for analysis in sorted_analyses:
         file_name = Path(analysis.file_path).name
         if len(file_name) > max_file_width - 2:
             file_name = file_name[:max_file_width-5] + "..."
         
         score_str = f"{analysis.centrality_score:.3f}"
         rank_str = f"{analysis.rank}"
-        total_str = f"{analysis.total_files}"
         conn_str = f"{analysis.dependency_analysis.get('total_connections', 0)}"
         imports_str = f"{analysis.dependency_analysis.get('direct_imports', 0)}"
         rev_deps_str = f"{analysis.dependency_analysis.get('reverse_dependencies', 0)}"
         
-        row = f"{file_name:<{max_file_width}} {score_str:<8} {rank_str:<6} {total_str:<6} {conn_str:<6} {imports_str:<8} {rev_deps_str:<8}"
+        # Get function count (defined functions in this file)
+        functions = analysis.function_call_analysis.get('defined_functions', 0)
+        functions_str = f"{functions}"
+        
+        row = f"{file_name:<{max_file_width}} {score_str:<8} {rank_str:<6} {conn_str:<6} {imports_str:<8} {rev_deps_str:<8} {functions_str:<8}"
         lines.append(row)
     
     lines.append(separator)
