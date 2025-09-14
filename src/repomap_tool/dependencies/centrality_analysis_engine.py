@@ -45,8 +45,10 @@ class CentralityAnalysisEngine:
         self.centrality_calculator = centrality_calculator
         self.dependency_graph = dependency_graph
         self.path_normalizer = path_normalizer
-        
-        logger.info("CentralityAnalysisEngine initialized with all required dependencies")
+
+        logger.info(
+            "CentralityAnalysisEngine initialized with all required dependencies"
+        )
 
     def analyze_file_centrality(
         self, file_path: str, ast_result: FileAnalysisResult, all_files: List[str]
@@ -272,20 +274,22 @@ class CentralityAnalysisEngine:
                 self.centrality_calculator.calculate_betweenness_centrality()
             )
             pagerank_scores = self.centrality_calculator.calculate_pagerank_centrality()
-            
+
             # Log centrality calculation progress
             logger.debug(f"Calculating centrality breakdown for {relative_file_path}")
 
             # Only include metrics that were successfully calculated
             if degree_scores and relative_file_path in degree_scores:
-                centrality_breakdown["degree_centrality"] = degree_scores[relative_file_path]
+                centrality_breakdown["degree_centrality"] = degree_scores[
+                    relative_file_path
+                ]
             if betweenness_scores and relative_file_path in betweenness_scores:
                 centrality_breakdown["betweenness_centrality"] = betweenness_scores[
                     relative_file_path
                 ]
             if pagerank_scores and relative_file_path in pagerank_scores:
                 centrality_breakdown["pagerank"] = pagerank_scores[relative_file_path]
-            
+
             # If no centrality scores were found for this file, return None
             if not centrality_breakdown:
                 logger.debug(f"No centrality scores found for {relative_file_path}")

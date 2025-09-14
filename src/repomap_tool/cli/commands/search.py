@@ -31,7 +31,8 @@ from ..utils.console import get_console
 
 
 @click.group()
-def search() -> None:
+@click.pass_context
+def search(ctx: click.Context) -> None:
     """Search and discovery commands."""
     pass
 
@@ -82,9 +83,7 @@ def search() -> None:
     default=1000,
     help="Maximum cache entries (100-10000)",
 )
-@click.pass_context
 def identifiers(
-    ctx: click.Context,
     query: str,
     project_path: Optional[str],
     config: Optional[str],
@@ -100,6 +99,7 @@ def identifiers(
     """Search for identifiers in a project."""
 
     # Get console instance (automatically configured with no-color if set)
+    ctx = click.get_current_context()
     console = get_console(ctx)
 
     try:
@@ -200,6 +200,10 @@ def dependencies(
 ) -> None:
     """Analyze project dependencies and build dependency graph."""
 
+    # Get console instance (automatically configured with no-color if set)
+    ctx = click.get_current_context()
+    console = get_console(ctx)
+
     try:
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
@@ -278,6 +282,10 @@ def cycles(
     verbose: bool,
 ) -> None:
     """Find circular dependencies in the project."""
+
+    # Get console instance (automatically configured with no-color if set)
+    ctx = click.get_current_context()
+    console = get_console(ctx)
 
     try:
         # Resolve project path from argument, config file, or discovery

@@ -62,7 +62,7 @@ class ConsoleProvider:
             Configured Console instance
         """
         no_color = False
-        if ctx and ctx.obj.get("no_color", False):
+        if ctx and ctx.obj and ctx.obj.get("no_color", False):
             no_color = True
 
         return self._factory.create_console(no_color=no_color)
@@ -104,7 +104,7 @@ def get_console(ctx: Optional[click.Context] = None) -> Console:
         Configured Console instance
     """
     # If context is provided and has a console_provider, use it
-    if ctx and "console_provider" in ctx.obj:
+    if ctx and ctx.obj and "console_provider" in ctx.obj:
         provider: ConsoleProvider = ctx.obj["console_provider"]
         return provider.get_console(ctx)
 

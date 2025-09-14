@@ -96,7 +96,7 @@ class LLMFileAnalyzer:
         self.centrality_calculator = centrality_calculator
         self.centrality_engine = centrality_engine
         self.impact_engine = impact_engine
-        
+
         logger.info("LLMFileAnalyzer initialized with all injected dependencies")
 
         # Initialize impact analyzer if dependency graph is available
