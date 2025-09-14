@@ -96,80 +96,6 @@ def get_path_resolver() -> type:
     return PathResolver
 
 
-def get_js_ts_analyzer() -> type:
-    """Get JavaScriptTypeScriptAnalyzer class (lazy loaded)."""
-    from .js_ts_analyzer import JavaScriptTypeScriptAnalyzer
-
-    return JavaScriptTypeScriptAnalyzer
-
-
-def get_import_utils() -> type:
-    """Get ImportUtils class (lazy loaded)."""
-    from .import_utils import ImportUtils
-
-    return ImportUtils
-
-
-def get_ast_visitors() -> tuple:
-    """Get AST visitor functions (lazy loaded)."""
-    from .ast_visitors import create_visitor, AnalysisContext
-
-    return create_visitor, AnalysisContext
-
-
-def get_file_utils() -> tuple:
-    """Get file utility functions (lazy loaded)."""
-    from .file_utils import get_all_project_files, suggest_test_files
-
-    return get_all_project_files, suggest_test_files
-
-
-def get_function_utils() -> tuple:
-    """Get function utility functions (lazy loaded)."""
-    from .function_utils import (
-        find_most_called_function,
-        get_top_called_functions,
-        smart_categorize_function_calls,
-        filter_business_relevant_calls,
-        get_functions_called_from_file,
-        find_most_used_class,
-    )
-
-    return (
-        find_most_called_function,
-        get_top_called_functions,
-        smart_categorize_function_calls,
-        filter_business_relevant_calls,
-        get_functions_called_from_file,
-        find_most_used_class,
-    )
-
-
-def get_format_utils() -> tuple:
-    """Get format utility functions (lazy loaded)."""
-    from .format_utils import (
-        format_llm_optimized_impact,
-        format_llm_optimized_centrality,
-        format_json_impact,
-        format_json_centrality,
-        format_table_impact,
-        format_table_centrality,
-        format_text_impact,
-        format_text_centrality,
-    )
-
-    return (
-        format_llm_optimized_impact,
-        format_llm_optimized_centrality,
-        format_json_impact,
-        format_json_centrality,
-        format_table_impact,
-        format_table_centrality,
-        format_text_impact,
-        format_text_centrality,
-    )
-
-
 __all__ = [
     # Core classes (always available)
     "ImportAnalyzer",
@@ -200,12 +126,6 @@ __all__ = [
     "get_impact_analysis_engine",
     "get_centrality_analysis_engine",
     "get_path_resolver",
-    "get_js_ts_analyzer",
-    "get_import_utils",
-    "get_ast_visitors",
-    "get_file_utils",
-    "get_function_utils",
-    "get_format_utils",
 ]
 
 __version__ = "0.1.0"
