@@ -44,43 +44,44 @@ class TestTreeDependencyIntegration:
 
     def test_enhance_entrypoints_with_dependencies(self):
         """Test that entrypoints are enhanced with dependency information."""
-        # Mock repo_map
-        mock_repo_map = Mock()
-        mock_repo_map.config = Mock()
-        mock_repo_map.config.trees = Mock()
-        mock_repo_map.config.trees.entrypoint_threshold = 0.6
 
-        discoverer = EntrypointDiscoverer(mock_repo_map)
+        # Create a temporary directory for the test
+        with tempfile.TemporaryDirectory() as temp_dir:
+            # Mock repo_map
+            mock_repo_map = Mock()
+            mock_repo_map.config = Mock()
+            mock_repo_map.config.trees = Mock()
+            mock_repo_map.config.trees.entrypoint_threshold = 0.6
 
-        # Create test entrypoints
-        entrypoint1 = Entrypoint(
-            identifier="test_function",
-            file_path=Path("src/test.py"),
-            score=0.8,
-            structural_context={},
-        )
+            discoverer = EntrypointDiscoverer(mock_repo_map)
 
-        entrypoint2 = Entrypoint(
-            identifier="another_function",
-            file_path=Path("src/another.py"),
-            score=0.7,
-            structural_context={},
-        )
+            # Create test entrypoints
+            entrypoint1 = Entrypoint(
+                identifier="test_function",
+                file_path=Path("src/test.py"),
+                score=0.8,
+                structural_context={},
+            )
 
-        entrypoints = [entrypoint1, entrypoint2]
+            entrypoint2 = Entrypoint(
+                identifier="another_function",
+                file_path=Path("src/another.py"),
+                score=0.7,
+                structural_context={},
+            )
 
-        # Mock the dependency analysis methods
-        discoverer._build_project_dependency_graph = Mock()
-        discoverer._enhance_single_entrypoint = Mock()
+            entrypoints = [entrypoint1, entrypoint2]
 
-        # Call the enhancement method
-        discoverer._enhance_entrypoints_with_dependencies(entrypoints, "/test/project")
+            # Mock the dependency analysis methods
+            discoverer._build_project_dependency_graph = Mock()
+            discoverer._enhance_single_entrypoint = Mock()
 
-        # Verify that dependency analysis was called
-        discoverer._build_project_dependency_graph.assert_called_once_with(
-            "/test/project"
-        )
-        assert discoverer._enhance_single_entrypoint.call_count == 2
+            # Call the enhancement method with the temporary directory
+            discoverer._enhance_entrypoints_with_dependencies(entrypoints, temp_dir)
+
+            # Verify that dependency analysis was called
+            discoverer._build_project_dependency_graph.assert_called_once_with(temp_dir)
+            assert discoverer._enhance_single_entrypoint.call_count == 2
 
     def test_extract_file_path_from_location(self):
         """Test file path extraction from entrypoint location."""

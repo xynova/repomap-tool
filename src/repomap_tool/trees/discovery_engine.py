@@ -155,8 +155,15 @@ class EntrypointDiscoverer:
 
         logger.info("Enhancing entrypoints with dependency scores...")
         try:
-            CentralityCalculator = get_centrality_calculator()
-            calculator = CentralityCalculator(self.dependency_graph)
+            from ..core.container import create_container
+            from ..models import RepoMapConfig
+
+            # Create DI container for dependency analysis
+            config = RepoMapConfig(project_root=str(self.repo_map.config.project_root))
+            container = create_container(config)
+
+            # Get centrality calculator from DI container
+            calculator = container.centrality_calculator()
             centrality_scores = calculator.calculate_composite_importance()
 
             for entrypoint in entrypoints:
@@ -335,14 +342,20 @@ class EntrypointDiscoverer:
             # Build dependency graph for the project
             self._build_project_dependency_graph(project_path)
 
-            # Initialize centrality calculator and impact analyzer if not already done
-            if self.centrality_calculator is None:
-                CentralityCalculator = get_centrality_calculator()
-                self.centrality_calculator = CentralityCalculator(self.dependency_graph)
+            # Initialize centrality calculator and impact analyzer using DI container
+            if self.centrality_calculator is None or self.impact_analyzer is None:
+                from ..core.container import create_container
+                from ..models import RepoMapConfig
 
-            if self.impact_analyzer is None:
-                ImpactAnalyzer = get_impact_analyzer()
-                self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
+                # Create DI container for dependency analysis
+                config = RepoMapConfig(project_root=project_path)
+                container = create_container(config)
+
+                if self.centrality_calculator is None:
+                    self.centrality_calculator = container.centrality_calculator()
+
+                if self.impact_analyzer is None:
+                    self.impact_analyzer = container.impact_analyzer()
 
             # Enhance each entrypoint with dependency metrics
             for entrypoint in entrypoints:

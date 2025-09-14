@@ -99,15 +99,9 @@ class LLMFileAnalyzer:
 
         logger.info("LLMFileAnalyzer initialized with all injected dependencies")
 
-        # Initialize impact analyzer if dependency graph is available
-        if dependency_graph:
-            try:
-                self.impact_analyzer = ImpactAnalyzer(dependency_graph)
-            except Exception as e:
-                logger.error(f"Failed to initialize impact analyzer: {e}")
-                self.impact_analyzer = None
-        else:
-            self.impact_analyzer = None
+        # Impact analyzer is now injected via DI container
+        # No need for manual instantiation
+        self.impact_analyzer = None  # Will be set by DI container if needed
 
     def analyze_file_impact(
         self,

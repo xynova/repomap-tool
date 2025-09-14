@@ -206,28 +206,26 @@ class RepoMapService:
         self.logger.info("Initialized dependency analysis components")
 
     def _initialize_dependency_analysis(self) -> None:
-        """Initialize dependency analysis components."""
+        """Initialize dependency analysis components using DI container."""
         try:
-            from ..dependencies import (
-                get_advanced_dependency_graph,
-                get_impact_analyzer,
-                get_centrality_calculator,
-            )
+            from .container import create_container
 
-            # Initialize advanced dependency graph
-            AdvancedDependencyGraph = get_advanced_dependency_graph()
-            self.dependency_graph = AdvancedDependencyGraph()
+            # Create DI container for dependency analysis
+            container = create_container(self.config)
 
-            # Initialize impact analyzer
+            # Get instances from DI container
+            self.dependency_graph = container.dependency_graph()
+
+            # Initialize impact analyzer from DI container
             if self.config.dependencies.enable_impact_analysis:
-                ImpactAnalyzer = get_impact_analyzer()
-                self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
+                self.impact_analyzer = container.impact_analyzer()
 
-            # Initialize centrality calculator
-            CentralityCalculator = get_centrality_calculator()
-            self.centrality_calculator = CentralityCalculator(self.dependency_graph)
+            # Initialize centrality calculator from DI container
+            self.centrality_calculator = container.centrality_calculator()
 
-            self.logger.info("Dependency analysis components initialized successfully")
+            self.logger.info(
+                "Dependency analysis components initialized successfully using DI container"
+            )
 
         except ImportError as e:
             self.logger.warning(f"Failed to import dependency analysis components: {e}")
