@@ -13,7 +13,11 @@ from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
 
 from repomap_tool.cli import cli
-from repomap_tool.dependencies import ASTFileAnalyzer, LLMFileAnalyzer, AnalysisFormat
+from repomap_tool.dependencies import (
+    ASTFileAnalyzer,
+    AnalysisFormat,
+    get_llm_file_analyzer,
+)
 
 
 class TestAnalyzeCommandsIntegration:
@@ -893,6 +897,7 @@ class User:
 
         main_file = str(self.project_root / "src" / "main.py")
 
+        LLMFileAnalyzer = get_llm_file_analyzer()
         analyzer = LLMFileAnalyzer(project_root=str(self.project_root))
         result = analyzer.analyze_file_impact([main_file], AnalysisFormat.LLM_OPTIMIZED)
 
@@ -917,6 +922,7 @@ class User:
         dependency_graph = repomap.build_dependency_graph()
 
         # Create analyzer with dependency graph
+        LLMFileAnalyzer = get_llm_file_analyzer()
         analyzer = LLMFileAnalyzer(
             dependency_graph=dependency_graph, project_root=str(self.project_root)
         )
@@ -934,6 +940,7 @@ class User:
 
         main_file = str(self.project_root / "src" / "main.py")
 
+        LLMFileAnalyzer = get_llm_file_analyzer()
         analyzer = LLMFileAnalyzer(project_root=str(self.project_root))
         result = analyzer.analyze_file_impact([main_file], AnalysisFormat.JSON)
 
@@ -951,6 +958,7 @@ class User:
         main_file = str(self.project_root / "src" / "main.py")
 
         # Test with small token budget
+        LLMFileAnalyzer = get_llm_file_analyzer()
         analyzer = LLMFileAnalyzer(project_root=str(self.project_root), max_tokens=500)
         result = analyzer.analyze_file_impact([main_file], AnalysisFormat.LLM_OPTIMIZED)
 
@@ -965,6 +973,7 @@ class User:
         main_file = str(self.project_root / "src" / "main.py")
         utils_file = str(self.project_root / "src" / "utils.py")
 
+        LLMFileAnalyzer = get_llm_file_analyzer()
         analyzer = LLMFileAnalyzer(project_root=str(self.project_root))
         result = analyzer.analyze_file_impact(
             [main_file, utils_file], AnalysisFormat.LLM_OPTIMIZED

@@ -8,6 +8,7 @@ from typing import List, Dict, Set, Optional, Any, Tuple
 from pathlib import Path
 from pydantic import BaseModel, Field
 from enum import Enum
+from dataclasses import dataclass
 
 
 class ImportType(str, Enum):
@@ -290,3 +291,65 @@ class RefactoringOpportunity(BaseModel):
     benefits: List[str] = Field(
         default_factory=list, description="Benefits of refactoring"
     )
+
+
+@dataclass
+class FileAnalysisResult:
+    """Result of AST analysis for a single file."""
+
+    file_path: str
+    imports: List["Import"]
+    function_calls: List["FunctionCall"]
+    defined_functions: List[str]
+    defined_classes: List[str]
+    used_classes: List[str]
+    used_variables: List[str]
+    line_count: int
+    analysis_errors: List[str]
+
+
+@dataclass
+class CrossFileRelationship:
+    """Relationship between files based on AST analysis."""
+
+    source_file: str
+    target_file: str
+    relationship_type: str  # "imports", "calls_function", "uses_class", etc.
+    line_number: int
+    details: str
+
+
+class AnalysisFormat(str, Enum):
+    """Output formats for analysis results."""
+
+    TEXT = "text"
+    JSON = "json"
+    TABLE = "table"
+    LLM_OPTIMIZED = "llm_optimized"
+
+
+@dataclass
+class FileImpactAnalysis:
+    """Comprehensive impact analysis for a file."""
+
+    file_path: str
+    direct_dependencies: List[Dict[str, Any]]
+    reverse_dependencies: List[Dict[str, Any]]
+    function_call_analysis: List[Dict[str, Any]]
+    structural_impact: Dict[str, Any]
+    risk_assessment: Dict[str, Any]
+    suggested_tests: List[str]
+
+
+@dataclass
+class FileCentralityAnalysis:
+    """Comprehensive centrality analysis for a file."""
+
+    file_path: str
+    centrality_score: float
+    rank: int
+    total_files: int
+    dependency_analysis: Dict[str, Any]
+    function_call_analysis: Dict[str, Any]
+    centrality_breakdown: Optional[Dict[str, float]]
+    structural_impact: Dict[str, Any]

@@ -9,6 +9,8 @@ import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
+from .critical_line_extractor import CriticalLine
+
 logger = logging.getLogger(__name__)
 
 
@@ -120,7 +122,7 @@ class CriticalLineExtractor:
 
     def extract_critical_lines(
         self, path_or_content: str, language: str = "python"
-    ) -> List[Dict[str, Any]]:
+    ) -> List[CriticalLine]:
         """Extract critical lines from a file path or raw content.
 
         Args:
@@ -128,14 +130,18 @@ class CriticalLineExtractor:
             language: Programming language (used for fallback)
 
         Returns:
-            List of critical line dictionaries
+            List of CriticalLine objects sorted by importance
         """
         # If we have aider extractor and the input is a valid file path, use it
         if self.aider_extractor and isinstance(path_or_content, str):
             try:
                 p = Path(path_or_content)
                 if p.is_file():
-                    return self.aider_extractor.extract_critical_lines(path_or_content)
+                    # Convert aider results to CriticalLine objects
+                    aider_results = self.aider_extractor.extract_critical_lines(
+                        path_or_content
+                    )
+                    return self._convert_to_critical_lines(aider_results)
             except (OSError, ValueError):
                 # Not a valid path, treat as content
                 pass
@@ -143,7 +149,23 @@ class CriticalLineExtractor:
         # Fallback to simple pattern matching for raw content or if Aider extractor is unavailable
         return self._fallback_extraction(path_or_content)
 
-    def _fallback_extraction(self, content: str) -> List[Dict[str, Any]]:
+    def _convert_to_critical_lines(
+        self, aider_results: List[Dict[str, Any]]
+    ) -> List[CriticalLine]:
+        """Convert aider results to CriticalLine objects."""
+        critical_lines = []
+        for result in aider_results:
+            critical_line = CriticalLine(
+                line_number=result.get("line_number", 1),
+                content=result.get("content", ""),
+                importance=result.get("confidence", 0.5),
+                pattern_type=result.get("reason", "tree_sitter_analysis"),
+                context=result.get("tag_kind", ""),
+            )
+            critical_lines.append(critical_line)
+        return critical_lines
+
+    def _fallback_extraction(self, content: str) -> List[CriticalLine]:
         """Simple fallback extraction for non-file content."""
         critical_lines = []
         lines = content.split("\n")
@@ -154,13 +176,36 @@ class CriticalLineExtractor:
                 pattern in line
                 for pattern in ["def ", "class ", "return ", "if ", "import "]
             ):
-                critical_lines.append(
-                    {
-                        "line_number": i + 1,
-                        "content": line.strip(),
-                        "confidence": 0.6,
-                        "reason": "simple_pattern_match",
-                    }
+                critical_line = CriticalLine(
+                    line_number=i + 1,
+                    content=line.strip(),
+                    importance=0.6,
+                    pattern_type="simple_pattern_match",
                 )
+                critical_lines.append(critical_line)
 
         return critical_lines
+
+    def get_implementation_essence(
+        self, symbol_content: str, language: str = "python"
+    ) -> str:
+        """Get a concise summary of what the symbol does.
+
+        Args:
+            symbol_content: Raw code content
+            language: Programming language
+
+        Returns:
+            Concise description of the symbol's purpose
+        """
+        critical_lines = self.extract_critical_lines(symbol_content, language)
+
+        if not critical_lines:
+            return "Implementation details not available"
+
+        # Create essence from critical lines
+        essence_parts = []
+        for line in critical_lines[:2]:  # Use top 2 lines
+            essence_parts.append(line.content.strip())
+
+        return " | ".join(essence_parts)

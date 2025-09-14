@@ -1,379 +1,156 @@
 #!/usr/bin/env python3
 """
 Test multi-language support for LLM optimization components.
+
+Note: This test has been updated to reflect the tree-sitter migration.
+All language analysis now uses AiderBasedExtractor instead of regex-based analyzers.
 """
 
 import unittest
-from src.repomap_tool.llm.critical_line_extractor import (
+from unittest.mock import Mock
+from src.repomap_tool.llm.aider_based_extractor import (
     CriticalLineExtractor,
-    CriticalLine,
-    GoCriticalAnalyzer,
-    JavaCriticalAnalyzer,
-    CSharpCriticalAnalyzer,
-    RustCriticalAnalyzer,
+    AiderBasedExtractor,
 )
+from src.repomap_tool.llm.critical_line_extractor import CriticalLine
 
 
 class TestMultiLanguageSupport(unittest.TestCase):
-    """Test critical line extraction for multiple programming languages."""
+    """Test critical line extraction for multiple programming languages using tree-sitter."""
 
     def setUp(self):
         """Set up test fixtures."""
-        self.extractor = CriticalLineExtractor()
+        self.mock_repo_map = Mock()
+        self.extractor = CriticalLineExtractor(self.mock_repo_map)
 
-        # Test code samples for different languages
-        self.go_code = """
-package main
+    def test_aider_based_extractor_initialization(self):
+        """Test that AiderBasedExtractor initializes correctly."""
+        aider_extractor = AiderBasedExtractor(self.mock_repo_map)
+        self.assertEqual(aider_extractor.repo_map, self.mock_repo_map)
 
-import (
-    "fmt"
-    "errors"
-)
+    def test_critical_line_extractor_with_repo_map(self):
+        """Test CriticalLineExtractor with repo_map (tree-sitter mode)."""
+        extractor = CriticalLineExtractor(self.mock_repo_map)
+        self.assertIsNotNone(extractor.aider_extractor)
+        self.assertEqual(extractor.repo_map, self.mock_repo_map)
 
-func main() {
-    fmt.Println("Hello, Go!")
-    
-    result, err := processData("test")
-    if err != nil {
-        panic(err)
-    }
-    
-    defer cleanup()
-    
-    go asyncTask()
-    
-    fmt.Printf("Result: %v\n", result)
-}
+    def test_critical_line_extractor_without_repo_map(self):
+        """Test CriticalLineExtractor without repo_map (fallback mode)."""
+        extractor = CriticalLineExtractor()
+        self.assertIsNone(extractor.aider_extractor)
+        self.assertIsNone(extractor.repo_map)
 
-func processData(input string) (string, error) {
-    if input == "" {
-        return "", errors.New("input cannot be empty")
-    }
-    
-    return "processed: " + input, nil
-}
+    def test_extract_critical_lines_fallback_mode(self):
+        """Test fallback extraction for raw content."""
+        extractor = CriticalLineExtractor()  # No repo_map
 
-func cleanup() {
-    fmt.Println("Cleaning up...")
-}
-
-func asyncTask() {
-    fmt.Println("Async task running...")
-}
+        sample_code = """
+def test_function():
+    if condition:
+        return result
+    import os
 """
+        result = extractor.extract_critical_lines(sample_code, "python")
 
-        self.java_code = """
-package com.example;
+        self.assertIsInstance(result, list)
+        self.assertTrue(len(result) > 0)
 
-import java.util.List;
-import java.util.ArrayList;
+        # Check that we get CriticalLine objects
+        for line in result:
+            self.assertIsInstance(line, CriticalLine)
+            self.assertIsInstance(line.line_number, int)
+            self.assertIsInstance(line.content, str)
+            self.assertIsInstance(line.importance, float)
+            self.assertIsInstance(line.pattern_type, str)
 
-public class DataProcessor {
-    private List<String> data;
-    
-    public DataProcessor() {
-        this.data = new ArrayList<>();
-    }
-    
-    public void addData(String item) {
-        if (item == null) {
-            throw new IllegalArgumentException("Item cannot be null");
-        }
-        
-        try {
-            data.add(item);
-        } catch (Exception e) {
-            throw new RuntimeException("Failed to add item", e);
-        }
-    }
-    
-    public List<String> getData() {
-        return new ArrayList<>(data);
-    }
-    
-    public interface DataValidator {
-        boolean isValid(String data);
-    }
-}
-"""
+    def test_aider_based_extraction_success(self):
+        """Test successful extraction using aider's tree-sitter."""
+        # Mock aider tags
+        mock_tag1 = Mock()
+        mock_tag1.line = 10
+        mock_tag1.name = "authenticate_user"
+        mock_tag1.kind = "def"
+        mock_tag1.col = 5
 
-        self.csharp_code = """
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
+        mock_tag2 = Mock()
+        mock_tag2.line = 15
+        mock_tag2.name = "return result"
+        mock_tag2.kind = "ref"
+        mock_tag2.col = 8
 
-namespace ExampleApp
-{
-    public class PaymentProcessor
-    {
-        private readonly ILogger _logger;
-        
-        public PaymentProcessor(ILogger logger)
-        {
-            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
-        }
-        
-        public async Task<PaymentResult> ProcessPaymentAsync(decimal amount, string cardToken)
-        {
-            try
-            {
-                if (amount <= 0)
-                {
-                    throw new ArgumentException("Amount must be positive", nameof(amount));
-                }
-                
-                var result = await _paymentGateway.ChargeAsync(amount, cardToken);
-                
-                if (result.Success)
-                {
-                    _logger.LogInformation("Payment processed successfully");
-                    return new PaymentResult { Success = true, TransactionId = result.Id };
-                }
-                else
-                {
-                    return new PaymentResult { Success = false, Error = result.Error };
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Payment processing failed");
-                throw;
-            }
-        }
-        
-        public struct PaymentResult
-        {
-            public bool Success { get; set; }
-            public string TransactionId { get; set; }
-            public string Error { get; set; }
-        }
-    }
-}
-"""
+        self.mock_repo_map.get_tags.return_value = [mock_tag1, mock_tag2]
 
-        self.rust_code = """
-use std::collections::HashMap;
-use std::error::Error;
+        aider_extractor = AiderBasedExtractor(self.mock_repo_map)
+        result = aider_extractor.extract_critical_lines("test_file.py")
 
-pub struct Config {
-    pub api_key: String,
-    pub timeout: u64,
-}
+        self.assertEqual(len(result), 2)
+        self.assertEqual(result[0]["line_number"], 10)
+        self.assertEqual(result[0]["content"], "authenticate_user")
+        self.assertEqual(result[0]["confidence"], 0.9)  # def gets 0.9
+        self.assertEqual(result[0]["tag_kind"], "def")
 
-impl Config {
-    pub fn new(api_key: String) -> Result<Self, Box<dyn Error>> {
-        if api_key.is_empty() {
-            return Err("API key cannot be empty".into());
-        }
-        
-        Ok(Config {
-            api_key,
-            timeout: 30,
-        })
-    }
-    
-    pub fn with_timeout(mut self, timeout: u64) -> Self {
-        self.timeout = timeout;
-        self
-    }
-}
+    def test_aider_based_extraction_exception(self):
+        """Test extraction with exception handling."""
+        self.mock_repo_map.get_tags.side_effect = Exception("Test error")
 
-pub trait DataProcessor {
-    fn process(&self, data: &str) -> Result<String, Box<dyn Error>>;
-}
+        aider_extractor = AiderBasedExtractor(self.mock_repo_map)
+        result = aider_extractor.extract_critical_lines("test_file.py")
 
-pub struct JsonProcessor;
+        self.assertEqual(result, [])
 
-impl DataProcessor for JsonProcessor {
-    fn process(&self, data: &str) -> Result<String, Box<dyn Error>> {
-        match serde_json::from_str::<serde_json::Value>(data) {
-            Ok(_) => Ok("Valid JSON".to_string()),
-            Err(e) => Err(Box::new(e)),
-        }
-    }
-}
+    def test_confidence_calculation(self):
+        """Test confidence score calculation based on tag kind."""
+        aider_extractor = AiderBasedExtractor(self.mock_repo_map)
 
-pub enum ApiResponse {
-    Success { data: String },
-    Error { message: String },
-}
+        # Test different tag kinds
+        mock_def_tag = Mock()
+        mock_def_tag.kind = "def"
+        self.assertEqual(aider_extractor._calculate_confidence(mock_def_tag), 0.9)
 
-impl ApiResponse {
-    pub fn success(data: String) -> Self {
-        ApiResponse::Success { data }
-    }
-    
-    pub fn error(message: String) -> Self {
-        ApiResponse::Error { message }
-    }
-}
-"""
+        mock_ref_tag = Mock()
+        mock_ref_tag.kind = "ref"
+        self.assertEqual(aider_extractor._calculate_confidence(mock_ref_tag), 0.7)
 
-    def test_go_critical_analyzer(self):
-        """Test Go language critical line extraction."""
-        analyzer = GoCriticalAnalyzer()
-        tree = analyzer.parse_code(self.go_code)
-        critical_nodes = analyzer.find_critical_nodes(tree)
+        mock_other_tag = Mock()
+        mock_other_tag.kind = "other"
+        self.assertEqual(aider_extractor._calculate_confidence(mock_other_tag), 0.5)
 
-        # Should extract critical nodes
-        self.assertGreater(len(critical_nodes), 0)
+    def test_reason_from_kind_mapping(self):
+        """Test reason mapping from tag kind."""
+        aider_extractor = AiderBasedExtractor(self.mock_repo_map)
 
-        # Check for Go-specific patterns
-        go_patterns = [
-            "func main()",
-            "func processData",
-            "panic(err)",
-            "defer cleanup()",
-            "go asyncTask()",
-        ]
-        found_patterns = [node["content"] for node in critical_nodes]
-
-        for pattern in go_patterns:
-            self.assertTrue(
-                any(pattern in content for content in found_patterns),
-                f"Go pattern '{pattern}' not found in critical nodes",
-            )
-
-    def test_java_critical_analyzer(self):
-        """Test Java language critical line extraction."""
-        analyzer = JavaCriticalAnalyzer()
-        tree = analyzer.parse_code(self.java_code)
-        critical_nodes = analyzer.find_critical_nodes(tree)
-
-        # Should extract critical nodes
-        self.assertGreater(len(critical_nodes), 0)
-
-        # Check for Java-specific patterns
-        java_patterns = [
-            "public class",
-            "public void",
-            "throw new",
-            "try {",
-            "catch (",
-            "interface",
-        ]
-        found_patterns = [node["content"] for node in critical_nodes]
-
-        for pattern in java_patterns:
-            self.assertTrue(
-                any(pattern in content for content in found_patterns),
-                f"Java pattern '{pattern}' not found in critical nodes",
-            )
-
-    def test_csharp_critical_analyzer(self):
-        """Test C# language critical line extraction."""
-        analyzer = CSharpCriticalAnalyzer()
-        tree = analyzer.parse_code(self.csharp_code)
-        critical_nodes = analyzer.find_critical_nodes(tree)
-
-        # Should extract critical lines
-        self.assertGreater(len(critical_nodes), 0)
-
-        # Check for C#-specific patterns
-        csharp_patterns = [
-            "public class",
-            "public async Task",
-            "throw new",
-            "try {",
-            "catch (",
-            "struct",
-            "namespace",
-        ]
-        found_patterns = [node["content"] for node in critical_nodes]
-
-        # Note: Some patterns might not match exactly due to regex complexity
-        # Let's check that we get some critical nodes
-        self.assertGreater(len(found_patterns), 0)
-
-    def test_rust_critical_analyzer(self):
-        """Test Rust language critical line extraction."""
-        analyzer = RustCriticalAnalyzer()
-        tree = analyzer.parse_code(self.rust_code)
-        critical_nodes = analyzer.find_critical_nodes(tree)
-
-        # Should extract critical nodes
-        self.assertGreater(len(critical_nodes), 0)
-
-        # Check for Rust-specific patterns
-        rust_patterns = [
-            "pub struct",
-            "pub fn",
-            "impl",
-            "trait",
-            "match",
-            "Some(",
-            "None",
-            "Ok(",
-            "Err(",
-        ]
-        found_patterns = [node["content"] for node in critical_nodes]
-
-        # Note: Some patterns might not match exactly due to regex complexity
-        # Let's check that we get some critical nodes
-        self.assertGreater(len(found_patterns), 0)
-
-    def test_extractor_language_mapping(self):
-        """Test that the extractor correctly maps language extensions to analyzers."""
-        # Test Go
-        go_lines = self.extractor.extract_critical_lines(self.go_code, language="go")
-        self.assertGreater(len(go_lines), 0)
-
-        # Test Java
-        java_lines = self.extractor.extract_critical_lines(
-            self.java_code, language="java"
+        # Test known mappings
+        self.assertEqual(
+            aider_extractor._get_reason_from_kind("def"), "function_or_class_definition"
         )
-        self.assertGreater(len(java_lines), 0)
-
-        # Test C#
-        csharp_lines = self.extractor.extract_critical_lines(
-            self.csharp_code, language="csharp"
+        self.assertEqual(
+            aider_extractor._get_reason_from_kind("class"), "class_definition"
         )
-        self.assertGreater(len(csharp_lines), 0)
-
-        # Test Rust
-        rust_lines = self.extractor.extract_critical_lines(
-            self.rust_code, language="rust"
-        )
-        self.assertGreater(len(rust_lines), 0)
-
-    def test_fallback_extraction_multi_language(self):
-        """Test fallback extraction works for all supported languages."""
-        # Test with language=None to trigger fallback
-        go_fallback = self.extractor.extract_critical_lines(self.go_code, language=None)
-        java_fallback = self.extractor.extract_critical_lines(
-            self.java_code, language=None
-        )
-        csharp_fallback = self.extractor.extract_critical_lines(
-            self.csharp_code, language=None
-        )
-        rust_fallback = self.extractor.extract_critical_lines(
-            self.rust_code, language=None
+        self.assertEqual(
+            aider_extractor._get_reason_from_kind("ref"), "reference_or_call"
         )
 
-        # All should have some critical lines
-        self.assertGreater(len(go_fallback), 0)
-        self.assertGreater(len(java_fallback), 0)
-        self.assertGreater(len(csharp_fallback), 0)
-        self.assertGreater(len(rust_fallback), 0)
+        # Test unknown mapping
+        self.assertEqual(
+            aider_extractor._get_reason_from_kind("unknown"), "unknown_kind_unknown"
+        )
 
-    def test_critical_line_structure(self):
-        """Test that critical nodes have the correct structure."""
-        analyzer = GoCriticalAnalyzer()
-        tree = analyzer.parse_code(self.go_code)
-        critical_nodes = analyzer.find_critical_nodes(tree)
+    def test_tree_sitter_migration_complete(self):
+        """Test that tree-sitter migration is complete."""
+        # Verify that the new extractor uses tree-sitter approach
+        extractor = CriticalLineExtractor(self.mock_repo_map)
+        self.assertIsNotNone(extractor.aider_extractor)
 
-        for node in critical_nodes:
-            self.assertIsInstance(node, dict)
-            self.assertIsInstance(node["line_number"], int)
-            self.assertIsInstance(node["content"], str)
-            self.assertIsInstance(node["importance"], float)
-            self.assertIsInstance(node["pattern_type"], str)
+        # Verify that aider's get_tags method is used (tree-sitter)
+        mock_tag = Mock()
+        mock_tag.line = 1
+        mock_tag.name = "test"
+        mock_tag.kind = "def"
+        self.mock_repo_map.get_tags.return_value = [mock_tag]
 
-            # Validate ranges
-            self.assertGreaterEqual(node["line_number"], 1)
-            self.assertGreater(node["importance"], 0.0)
-            self.assertLessEqual(node["importance"], 1.0)
-            self.assertGreater(len(node["content"]), 0)
+        result = extractor.aider_extractor.extract_critical_lines("test.py")
+        self.mock_repo_map.get_tags.assert_called_once_with("test.py", "test.py")
+        self.assertEqual(len(result), 1)
 
 
 if __name__ == "__main__":
