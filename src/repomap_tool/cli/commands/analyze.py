@@ -103,20 +103,6 @@ def centrality(
         # Get LLM analyzer from service factory
         llm_analyzer = service_factory.get_llm_analyzer(config_obj)
 
-        # Debug logging
-        console.print("🔧 DI Container: Using proper dependency injection")
-        console.print(f"🔧 LLM Analyzer created: {type(llm_analyzer)}")
-        console.print(f"🔧 Centrality Engine: {type(llm_analyzer.centrality_engine)}")
-        console.print(
-            f"🔧 Centrality Calculator: {type(llm_analyzer.centrality_calculator)}"
-        )
-        console.print(
-            f"🔧 Centrality Engine instance: {llm_analyzer.centrality_engine}"
-        )
-        console.print(
-            f"🔧 Centrality Calculator instance: {llm_analyzer.centrality_calculator}"
-        )
-
         # Determine files to analyze
         if files:
             file_paths = list(files)

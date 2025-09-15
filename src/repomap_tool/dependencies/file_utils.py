@@ -24,7 +24,8 @@ def get_all_project_files(project_root: str) -> List[str]:
     if not project_root:
         return []
 
-    project_path = Path(project_root)
+    # Ensure project_root is always a string, not a ConfigurationOption
+    project_path = Path(str(project_root))
     python_files = []
 
     for py_file in project_path.rglob("*.py"):

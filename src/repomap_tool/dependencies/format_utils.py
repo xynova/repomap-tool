@@ -606,14 +606,14 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     # Sort analyses by centrality score (highest first) to show most important files first
     sorted_analyses = sorted(analyses, key=lambda x: x.centrality_score, reverse=True)
 
-    # Calculate column widths
+    # Calculate column widths - give much more space for file names
     max_file_width = (
-        max(len(Path(analysis.file_path).name) for analysis in sorted_analyses[:10]) + 2
+        max(len(analysis.file_path) for analysis in sorted_analyses[:50]) + 2
     )
-    max_file_width = min(max_file_width, 30)  # Cap at 30 chars
+    max_file_width = min(max_file_width, 120)  # Increased cap to 120 chars for full relative paths
 
-    # Create header with working data
-    header = f"{'File':<{max_file_width}} {'Score':<8} {'Rank':<6} {'Conn':<6} {'Imports':<8} {'Rev Deps':<8} {'Functions':<8}"
+    # Create header with working data - File column moved to last position
+    header = f"{'Score':<8} {'Rank':<6} {'Conn':<6} {'Imports':<8} {'Rev Deps':<8} {'Functions':<8} {'File':<{max_file_width}}"
     separator = "─" * len(header)
 
     # Build table
@@ -624,10 +624,17 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     lines.append(separator)
 
     # Add data rows (now sorted by importance)
+    displayed_count = 0
     for analysis in sorted_analyses:
-        file_name = Path(analysis.file_path).name
-        if len(file_name) > max_file_width - 2:
-            file_name = file_name[: max_file_width - 5] + "..."
+        if analysis.centrality_score <= 0.001 and displayed_count >= 10:  # Cut off after 10 important files
+            remaining_count = len(sorted_analyses) - displayed_count
+            lines.append(
+                f"... and {remaining_count} more files with very low centrality scores (≤ 0.001)"
+            )
+            break
+
+        # Use full relative path without truncation
+        file_path = analysis.file_path
 
         score_str = f"{analysis.centrality_score:.3f}"
         rank_str = f"{analysis.rank}"
@@ -639,10 +646,23 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
         functions = analysis.function_call_analysis.get("defined_functions", 0)
         functions_str = f"{functions}"
 
-        row = f"{file_name:<{max_file_width}} {score_str:<8} {rank_str:<6} {conn_str:<6} {imports_str:<8} {rev_deps_str:<8} {functions_str:<8}"
+        row = f"{score_str:<8} {rank_str:<6} {conn_str:<6} {imports_str:<8} {rev_deps_str:<8} {functions_str:<8} {file_path:<{max_file_width}}"
         lines.append(row)
+        displayed_count += 1
 
     lines.append(separator)
+    
+    # Add column explanations
+    lines.append("")
+    lines.append("📊 COLUMN EXPLANATIONS:")
+    lines.append("├── Score: Centrality score (0.0-1.0, higher = more important)")
+    lines.append("├── Rank: Position in importance ranking (1 = most important)")
+    lines.append("├── Conn: Total connections to other files")
+    lines.append("├── Imports: Number of files this file imports")
+    lines.append("├── Rev Deps: Number of files that import this file")
+    lines.append("├── Functions: Number of functions defined in this file")
+    lines.append("└── File: File path (relative to project root)")
+    
     return "\n".join(lines)
 
 

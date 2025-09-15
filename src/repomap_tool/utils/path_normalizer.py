@@ -22,7 +22,8 @@ class PathNormalizer:
         Args:
             project_root: The root directory of the project
         """
-        self.project_root = Path(project_root).resolve()
+        # Ensure project_root is always a string, not a ConfigurationOption
+        self.project_root = Path(str(project_root)).resolve()
         logger.debug(
             f"PathNormalizer initialized with project root: {self.project_root}"
         )

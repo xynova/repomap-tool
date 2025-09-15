@@ -75,7 +75,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[PathNormalizer]",
         providers.Singleton(
             "repomap_tool.utils.path_normalizer.PathNormalizer",
-            project_root=str(config.project_root),
+            project_root=config.project_root,
         ),
     )
 
@@ -84,7 +84,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[ASTFileAnalyzer]",
         providers.Singleton(
             "repomap_tool.dependencies.ast_file_analyzer.ASTFileAnalyzer",
-            project_root=str(config.project_root),
+            project_root=config.project_root,
         ),
     )
 
@@ -152,7 +152,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[PathResolver]",
         providers.Singleton(
             "repomap_tool.dependencies.path_resolver.PathResolver",
-            project_root=str(config.project_root),
+            project_root=config.project_root,
         ),
     )
 
@@ -161,7 +161,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[ImportAnalyzer]",
         providers.Singleton(
             "repomap_tool.dependencies.import_analyzer.ImportAnalyzer",
-            project_root=str(config.project_root),
+            project_root=config.project_root,
         ),
     )
 
@@ -191,7 +191,7 @@ class Container(containers.DeclarativeContainer):
         providers.Singleton(
             "repomap_tool.dependencies.llm_analyzer_config.LLMAnalyzerDependencies",
             dependency_graph=dependency_graph,
-            project_root=str(config.project_root),
+            project_root=config.project_root,
             ast_analyzer=ast_analyzer,
             token_optimizer=token_optimizer,
             context_selector=context_selector,
@@ -223,7 +223,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[CacheManager]",
         providers.Singleton(
             "repomap_tool.core.cache_manager.CacheManager",
-            project_root=str(config.project_root),
+            project_root=config.project_root,
         ),
     )
 
@@ -301,7 +301,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[JavaScriptTypeScriptAnalyzer]",
         providers.Factory(
             "repomap_tool.dependencies.js_ts_analyzer.JavaScriptTypeScriptAnalyzer",
-            project_root=str(config.project_root),
+            project_root=config.project_root,
         ),
     )
 
@@ -342,7 +342,7 @@ def create_container(config: RepoMapConfig) -> Container:
     try:
         container.config.from_dict(
             {
-                "project_root": config.project_root,
+                "project_root": str(config.project_root),
                 "dependencies": {
                     "enable_impact_analysis": (
                         config.dependencies.enable_impact_analysis
