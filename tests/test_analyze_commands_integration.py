@@ -839,7 +839,30 @@ class TestLLMFileAnalyzerIntegration:
 
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
-        centrality_calculator = CentralityCalculator(dependency_graph)
+        # Use service factory for centrality calculator
+        from repomap_tool.models import (
+            RepoMapConfig,
+            FuzzyMatchConfig,
+            SemanticMatchConfig,
+            PerformanceConfig,
+            DependencyConfig,
+        )
+        from repomap_tool.cli.services import get_service_factory
+
+        config = RepoMapConfig(
+            project_root=project_root,
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(
+                enable_impact_analysis=True,
+                enable_centrality_analysis=True,
+            ),
+            verbose=False,
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        centrality_calculator = repomap_service.centrality_calculator
         path_normalizer = PathNormalizer(project_root)
         centrality_engine = CentralityAnalysisEngine(
             ast_analyzer=ast_analyzer,

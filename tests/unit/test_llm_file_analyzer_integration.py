@@ -49,7 +49,26 @@ class TestLLMFileAnalyzerIntegration:
 
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
-        centrality_calculator = CentralityCalculator(dependency_graph)
+        # Use service factory for centrality calculator
+        from src.repomap_tool.models import (
+            RepoMapConfig,
+            FuzzyMatchConfig,
+            SemanticMatchConfig,
+            PerformanceConfig,
+            DependencyConfig,
+        )
+        from src.repomap_tool.cli.services import get_service_factory
+
+        config = RepoMapConfig(
+            project_root=project_root,
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        centrality_calculator = repomap_service.centrality_calculator
         path_normalizer = PathNormalizer(project_root)
         centrality_engine = CentralityAnalysisEngine(
             ast_analyzer=ast_analyzer,
@@ -78,9 +97,35 @@ class TestLLMFileAnalyzerIntegration:
         )
 
         # Create LLM analyzer with new DI-based constructor
+        llm_config = LLMAnalyzerConfig(
+            max_tokens=4000,
+            enable_impact_analysis=True,
+            enable_centrality_analysis=True,
+            verbose=False,
+        )
+        # Create mock objects for required dependencies
+        from unittest.mock import Mock
+
+        mock_token_optimizer = Mock()
+        mock_context_selector = Mock()
+        mock_hierarchical_formatter = Mock()
+        mock_impact_engine = Mock()
+
+        llm_dependencies = LLMAnalyzerDependencies(
+            dependency_graph=dependency_graph,
+            project_root=project_root,
+            ast_analyzer=ast_analyzer,
+            token_optimizer=mock_token_optimizer,
+            context_selector=mock_context_selector,
+            hierarchical_formatter=mock_hierarchical_formatter,
+            path_resolver=PathResolver(project_root),
+            impact_engine=mock_impact_engine,
+            centrality_engine=centrality_engine,
+            centrality_calculator=centrality_calculator,
+        )
         return LLMFileAnalyzer(
-            config=config,
-            dependencies=dependencies,
+            config=llm_config,
+            dependencies=llm_dependencies,
         )
 
     def test_analyze_file_centrality_with_absolute_paths(self):
