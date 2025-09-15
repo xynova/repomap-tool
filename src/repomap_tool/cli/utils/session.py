@@ -8,15 +8,19 @@ import os
 from typing import Optional
 
 from rich.console import Console
+from .console import get_console
 
-console = Console()
+# Note: console should be obtained via get_console(ctx) in functions that need it
 
 
-def get_project_path_from_session(session_id: str) -> Optional[str]:
+def get_project_path_from_session(
+    session_id: str, console: Optional[Console] = None
+) -> Optional[str]:
     """Get project path from session data.
 
     Args:
         session_id: Session ID to retrieve project path for
+        console: Console instance for output (optional)
 
     Returns:
         Project path from session or None if session not found
@@ -32,14 +36,17 @@ def get_project_path_from_session(session_id: str) -> Optional[str]:
         if session:
             return session.project_path
         else:
-            console.print(f"[yellow]Session '{session_id}' not found[/yellow]")
+            if console:
+                console.print(f"[yellow]Session '{session_id}' not found[/yellow]")
             return None
 
     except ImportError:
-        console.print("[red]Session management not available[/red]")
+        if console:
+            console.print("[red]Session management not available[/red]")
         return None
     except Exception as e:
-        console.print(f"[red]Error retrieving session: {e}[/red]")
+        if console:
+            console.print(f"[red]Error retrieving session: {e}[/red]")
         return None
 
 
@@ -50,11 +57,14 @@ def create_session_id() -> str:
     return f"explore_{int(time.time())}"
 
 
-def get_or_create_session(session: Optional[str]) -> str:
+def get_or_create_session(
+    session: Optional[str], console: Optional[Console] = None
+) -> str:
     """Get existing session or create a new one.
 
     Args:
         session: Optional session ID
+        console: Console instance for output (optional)
 
     Returns:
         Session ID to use
@@ -62,6 +72,7 @@ def get_or_create_session(session: Optional[str]) -> str:
     session_id = session or os.environ.get("REPOMAP_SESSION")
     if not session_id:
         session_id = create_session_id()
-        console.print(f"💡 Using session: {session_id}")
-        console.print(f"Set: export REPOMAP_SESSION={session_id}")
+        if console:
+            console.print(f"💡 Using session: {session_id}")
+            console.print(f"Set: export REPOMAP_SESSION={session_id}")
     return session_id

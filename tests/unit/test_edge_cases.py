@@ -371,7 +371,10 @@ class TestRepoMapEdgeCases:
         # Arrange
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -397,7 +400,10 @@ class TestRepoMapEdgeCases:
                     file_path.write_text(f"def function_{i}_{j}(): pass")
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -428,7 +434,10 @@ class TestRepoMapEdgeCases:
                     file_path.write_bytes(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -453,7 +462,10 @@ class TestRepoMapEdgeCases:
                 shutil.copy2(original_file, symlink_file)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -473,7 +485,10 @@ class TestRepoMapEdgeCases:
                 link2.symlink_to(link1)
 
                 config = RepoMapConfig(project_root=temp_dir)
-                repomap = RepoMapService(config)
+                from repomap_tool.cli.services import get_service_factory
+
+                service_factory = get_service_factory()
+                repomap = service_factory.create_repomap_service(config)
 
                 # Act
                 project_info = repomap.analyze_project()
@@ -503,7 +518,10 @@ class TestRepoMapEdgeCases:
                     sock.close()
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config)
 
             # Act
             project_info = repomap.analyze_project()
@@ -662,7 +680,10 @@ class TestIntegrationEdgeCases:
                 file_path.write_text(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config)
 
             # Act
             project_info = repomap.analyze_project()

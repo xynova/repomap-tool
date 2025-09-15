@@ -59,6 +59,7 @@
     - [Hybrid Matching](#hybrid-matching)
   - [Project Analysis](#project-analysis)
   - [Getting Help](#getting-help)
+  - [Code Quality \& DI Linting](#code-quality--di-linting)
   - [Contributing](#contributing)
   - [License](#license)
 
@@ -311,6 +312,32 @@ This analysis enables more intelligent searching and provides insights into your
 - **Documentation**: [CLI Reference](docs/CLI_GUIDE.md)
 - **Examples**: Check the `examples/` directory for practical usage
 - **Architecture**: [Development Guide](docs/architecture/DEVELOPMENT_GUIDE.md)
+
+## Code Quality & DI Linting
+
+RepoMap-Tool maintains high code quality through comprehensive linting and dependency injection (DI) validation:
+
+- **🔍 DI Linter**: Custom tool that detects DI violations and anti-patterns
+- **📋 Code Standards**: Strict Python coding standards with DRY principles
+- **🏗️ DI Architecture**: Excellent dependency injection with service factory pattern
+- **✅ Quality Gates**: Automated checks in CI/CD pipeline
+
+**Quick Start:**
+```bash
+# Run all quality checks
+make lint
+
+# Run DI linter specifically
+python scripts/di_linter.py src/ tests/
+
+# See DI violations
+python scripts/di_linter.py src/repomap_tool/cli/utils/console.py
+```
+
+**Documentation:**
+- [DI Linting Guide](docs/DI_LINTING_GUIDE.md)
+- [Python Coding Standards](.cursor/rules/rules-for-python-coding.mdc)
+- [DI Architecture Patterns](.cursor/rules/rules-for-python-coding.mdc#dependency-injection-patterns)
 
 ## Contributing
 

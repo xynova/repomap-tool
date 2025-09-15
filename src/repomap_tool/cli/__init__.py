@@ -16,7 +16,6 @@ from .config.loader import (
     resolve_project_path,
     apply_environment_overrides,
     apply_cli_overrides,
-    console as config_console,
 )
 from .output.formatters import (
     display_project_info,
@@ -34,8 +33,7 @@ from ..models import SearchRequest
 from rich.console import Console
 from rich.progress import Progress
 
-# Create the main console instance for CLI module
-console = Console()
+# Note: console should be obtained via get_console(ctx) in functions that need it
 
 __all__ = [
     "cli",
@@ -59,5 +57,4 @@ __all__ = [
     # Rich objects
     "Console",
     "Progress",
-    "console",
 ]

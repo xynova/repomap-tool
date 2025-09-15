@@ -136,7 +136,10 @@ class ComplexProcessor:
         )
 
         # Initialize RepoMap
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Test dependency graph building
         try:

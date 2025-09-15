@@ -10,7 +10,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
-from repomap_tool.models import Entrypoint
+from repomap_tool.models import Entrypoint, RepoMapConfig
 from repomap_tool.core import RepoMapService
 from repomap_tool.matchers.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
@@ -19,9 +19,6 @@ from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
-    get_advanced_dependency_graph,
-    get_centrality_calculator,
-    get_impact_analyzer,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,16 +27,29 @@ logger = logging.getLogger(__name__)
 class EntrypointDiscoverer:
     """Discovers relevant entrypoints using existing semantic/fuzzy matching."""
 
-    def __init__(self, repo_map: RepoMapService):
-        """Initialize entrypoint discoverer.
+    def __init__(
+        self,
+        repo_map: RepoMapService,
+        import_analyzer: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+        centrality_calculator: Optional[Any] = None,
+        impact_analyzer: Optional[Any] = None,
+    ):
+        """Initialize entrypoint discoverer with injected dependencies.
 
         Args:
             repo_map: RepoMapService instance with semantic/fuzzy matchers
+            import_analyzer: Import analyzer instance (injected)
+            dependency_graph: Dependency graph instance (injected)
+            centrality_calculator: Centrality calculator instance (injected)
+            impact_analyzer: Impact analyzer instance (injected)
         """
         self.repo_map = repo_map
-        self.semantic_matcher = getattr(repo_map, "semantic_matcher", None) or getattr(
-            repo_map, "domain_semantic_matcher", None
-        )
+        # Get semantic matcher from repo_map
+        semantic_matcher = getattr(repo_map, "semantic_matcher", None)
+        if semantic_matcher is None:
+            semantic_matcher = getattr(repo_map, "domain_semantic_matcher", None)
+        self.semantic_matcher = semantic_matcher
         self.fuzzy_matcher = getattr(repo_map, "fuzzy_matcher", None)
 
         # Use semantic matcher threshold from config if available
@@ -51,17 +61,20 @@ class EntrypointDiscoverer:
         # Fuzzy matching threshold (70% similarity)
         self.fuzzy_threshold = 0.7
 
-        # Phase 2: Initialize dependency analysis components
-        # Initialize import analyzer and dependency graph immediately
-        self.import_analyzer = ImportAnalyzer()
-        AdvancedDependencyGraph = get_advanced_dependency_graph()
-        self.dependency_graph = AdvancedDependencyGraph()
+        # All dependencies must be injected - no fallback allowed
+        if import_analyzer is None:
+            raise ValueError("ImportAnalyzer must be injected - no fallback allowed")
+        if dependency_graph is None:
+            raise ValueError("DependencyGraph must be injected - no fallback allowed")
+        if centrality_calculator is None:
+            raise ValueError(
+                "CentralityCalculator must be injected - no fallback allowed"
+            )
 
-        # Lazy initialization for more expensive components
-        self.centrality_calculator: Optional[Any] = (
-            None  # Will be initialized when needed
-        )
-        self.impact_analyzer: Optional[Any] = None  # Will be initialized when needed
+        self.import_analyzer = import_analyzer
+        self.dependency_graph = dependency_graph
+        self.centrality_calculator = centrality_calculator
+        self.impact_analyzer = impact_analyzer
 
         logger.debug(
             f"EntrypointDiscoverer initialized with semantic_threshold={self.semantic_threshold}, fuzzy_threshold={self.fuzzy_threshold}"
@@ -155,8 +168,14 @@ class EntrypointDiscoverer:
 
         logger.info("Enhancing entrypoints with dependency scores...")
         try:
-            CentralityCalculator = get_centrality_calculator()
-            calculator = CentralityCalculator(self.dependency_graph)
+            from ..core.container import create_container
+
+            # Create DI container for dependency analysis
+            config = RepoMapConfig(project_root=str(self.repo_map.config.project_root))
+            container = create_container(config)
+
+            # Get centrality calculator from DI container
+            calculator = container.centrality_calculator()
             centrality_scores = calculator.calculate_composite_importance()
 
             for entrypoint in entrypoints:
@@ -190,7 +209,7 @@ class EntrypointDiscoverer:
             # Use existing repo_map to get symbols
             if hasattr(self.repo_map, "get_tags"):
                 symbol_strings = self.repo_map.get_tags()
-                # Convert strings to dictionaries for compatibility
+                # Convert strings to dictionaries
                 symbols = [{"identifier": s, "type": "unknown"} for s in symbol_strings]
                 logger.debug(f"Retrieved {len(symbols)} symbols from repo_map")
                 return symbols
@@ -335,14 +354,15 @@ class EntrypointDiscoverer:
             # Build dependency graph for the project
             self._build_project_dependency_graph(project_path)
 
-            # Initialize centrality calculator and impact analyzer if not already done
+            # Use injected dependencies - no fallback allowed
             if self.centrality_calculator is None:
-                CentralityCalculator = get_centrality_calculator()
-                self.centrality_calculator = CentralityCalculator(self.dependency_graph)
-
+                raise ValueError(
+                    "CentralityCalculator must be injected - no fallback allowed"
+                )
             if self.impact_analyzer is None:
-                ImpactAnalyzer = get_impact_analyzer()
-                self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
+                raise ValueError(
+                    "ImpactAnalyzer must be injected - no fallback allowed"
+                )
 
             # Enhance each entrypoint with dependency metrics
             for entrypoint in entrypoints:

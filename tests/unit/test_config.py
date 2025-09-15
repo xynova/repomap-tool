@@ -15,7 +15,10 @@ def test_search_config_creation():
 def test_fuzzy_matcher_initialization():
     """Test that fuzzy matcher is initialized correctly."""
     config = create_search_config(".", "fuzzy", True)
-    dm = RepoMapService(config)
+    from repomap_tool.cli.services import get_service_factory
+
+    service_factory = get_service_factory()
+    dm = service_factory.create_repomap_service(config)
 
     assert dm.fuzzy_matcher is not None
 
@@ -23,7 +26,10 @@ def test_fuzzy_matcher_initialization():
 def test_fuzzy_matcher_functionality():
     """Test that fuzzy matcher works correctly."""
     config = create_search_config(".", "fuzzy", True)
-    dm = RepoMapService(config)
+    from repomap_tool.cli.services import get_service_factory
+
+    service_factory = get_service_factory()
+    dm = service_factory.create_repomap_service(config)
 
     if dm.fuzzy_matcher:
         test_identifiers = {"RepoMapService", "parse_gitignore", "should_ignore_file"}

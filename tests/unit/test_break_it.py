@@ -210,19 +210,21 @@ class TestEasiestWaysToBreakIt:
         # Arrange
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
-            # Act & Assert - Should handle empty directory gracefully
-            try:
-                project_info = repomap.analyze_project()
-                # Note: Temporary directories may contain SQLite database files (db, db-shm, db-wal)
-                # This is expected behavior and shows our file scanner is working correctly
-                assert project_info.total_files >= 0  # Should not crash
-                assert (
-                    project_info.total_identifiers == 0
-                )  # No code files in empty directory
-            except Exception as e:
-                pytest.fail(f"Empty directory broke the system: {e}")
+        # Act & Assert - Should handle empty directory gracefully
+        try:
+            project_info = repomap.analyze_project()
+            # Note: Temporary directories may contain SQLite database files (db, db-shm, db-wal)
+            # This is expected behavior and shows our file scanner is working correctly
+            assert project_info.total_files >= 0  # Should not crash
+            assert (
+                project_info.total_identifiers == 0
+            )  # No code files in empty directory
+        except Exception as e:
+            pytest.fail(f"Empty directory broke the system: {e}")
 
     def test_12_corrupted_files_break_repo_map(self):
         """Corrupted files commonly break file processing systems."""
@@ -239,15 +241,17 @@ class TestEasiestWaysToBreakIt:
                 file_path.write_bytes(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
-            # Act & Assert - Should handle corrupted files gracefully
-            try:
-                project_info = repomap.analyze_project()
-                assert isinstance(project_info.total_files, int)
-                assert isinstance(project_info.total_identifiers, int)
-            except Exception as e:
-                pytest.fail(f"Corrupted files broke the system: {e}")
+        # Act & Assert - Should handle corrupted files gracefully
+        try:
+            project_info = repomap.analyze_project()
+            assert isinstance(project_info.total_files, int)
+            assert isinstance(project_info.total_identifiers, int)
+        except Exception as e:
+            pytest.fail(f"Corrupted files broke the system: {e}")
 
     def test_13_invalid_configuration_breaks_system(self):
         """Invalid configuration values commonly break systems."""
@@ -404,21 +408,23 @@ class TestEasiestWaysToBreakIt:
                 file_path.write_text(content)
 
             config = RepoMapConfig(project_root=temp_dir)
-            repomap = RepoMapService(config)
+            from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
-            # Act & Assert - Should handle integration edge cases gracefully
-            try:
-                project_info = repomap.analyze_project()
-                assert isinstance(project_info.total_files, int)
-                assert isinstance(project_info.total_identifiers, int)
+        # Act & Assert - Should handle integration edge cases gracefully
+        try:
+            project_info = repomap.analyze_project()
+            assert isinstance(project_info.total_files, int)
+            assert isinstance(project_info.total_identifiers, int)
 
-                search_request = SearchRequest(
-                    query="test", match_type="fuzzy", max_results=5
-                )
-                search_response = repomap.search_identifiers(search_request)
-                assert isinstance(search_response.total_results, int)
-            except Exception as e:
-                pytest.fail(f"Integration edge cases broke the system: {e}")
+            search_request = SearchRequest(
+                query="test", match_type="fuzzy", max_results=5
+            )
+            search_response = repomap.search_identifiers(search_request)
+            assert isinstance(search_response.total_results, int)
+        except Exception as e:
+            pytest.fail(f"Integration edge cases broke the system: {e}")
 
 
 class TestRealWorldBreakScenarios:
@@ -435,7 +441,10 @@ class TestRealWorldBreakScenarios:
 
             # Act & Assert - Should handle network timeout gracefully
             try:
-                repomap = RepoMapService(config)
+                from repomap_tool.cli.services import get_service_factory
+
+                service_factory = get_service_factory()
+                repomap = service_factory.create_repomap_service(config)
                 project_info = repomap.analyze_project()
                 assert isinstance(project_info.total_files, int)
             except Exception as e:

@@ -21,7 +21,9 @@ from ...models import (
 )
 from ...utils.file_validator import FileValidator, safe_read_text, safe_write_text
 
-console = Console()
+# Note: console should be obtained via get_console(ctx) in functions that need it
+from ..utils.console import get_console
+import click
 
 
 def load_config_file(config_path: str) -> RepoMapConfig:
@@ -116,12 +118,18 @@ def resolve_project_path(
     if config_obj is None:
         # Use current directory as fallback when no project path or config is provided
         current_dir = str(Path.cwd())
+        # Get console from Click context
+        ctx = click.get_current_context(silent=True)
+        console = get_console(ctx)
         console.print(
             f"[blue]No project path provided, using current directory: {current_dir}[/blue]"
         )
         return current_dir
 
     project_path = str(config_obj.project_root)
+    # Get console from Click context
+    ctx = click.get_current_context(silent=True)
+    console = get_console(ctx)
     console.print(f"[blue]Using project path from config: {project_path}[/blue]")
     return project_path
 

@@ -9,7 +9,10 @@ from repomap_tool.models import RepoMapConfig
 def project_identifiers():
     """Extract identifiers from the project for testing."""
     config = RepoMapConfig(project_root=".", verbose=True)
-    dm = RepoMapService(config)
+    from repomap_tool.cli.services import get_service_factory
+
+    service_factory = get_service_factory()
+    dm = service_factory.create_repomap_service(config)
 
     # Get identifiers
     project_files = dm._get_project_files()
@@ -42,7 +45,10 @@ def test_identifier_extraction(project_identifiers):
 def test_fuzzy_search_with_real_identifiers(project_identifiers):
     """Test fuzzy search with real identifiers from the project."""
     config = RepoMapConfig(project_root=".", verbose=True)
-    dm = RepoMapService(config)
+    from repomap_tool.cli.services import get_service_factory
+
+    service_factory = get_service_factory()
+    dm = service_factory.create_repomap_service(config)
 
     # Test fuzzy matcher
     if dm.fuzzy_matcher:

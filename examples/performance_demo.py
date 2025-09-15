@@ -16,7 +16,7 @@ from pathlib import Path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from repomap_tool.models import RepoMapConfig, PerformanceConfig
-from repomap_tool.core.repo_map import RepoMapService
+from repomap_tool.cli.services import get_service_factory
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
@@ -87,8 +87,9 @@ def benchmark_analysis(project_path: Path, config: RepoMapConfig, label: str) ->
     start_time = time.time()
 
     try:
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
+        # Initialize RepoMap using service factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Analyze project
         if config.performance.enable_progress:

@@ -21,15 +21,29 @@ logger = logging.getLogger(__name__)
 class TreeManager:
     """Manages tree state, expansion, pruning, and focus operations."""
 
-    def __init__(self, repo_map: RepoMapService):
-        """Initialize tree manager.
+    def __init__(
+        self,
+        repo_map: RepoMapService,
+        session_manager: Optional[Any] = None,
+        tree_builder: Optional[Any] = None,
+    ):
+        """Initialize tree manager with injected dependencies.
 
         Args:
             repo_map: RepoMapService instance
+            session_manager: Session manager instance (injected)
+            tree_builder: Tree builder instance (injected)
         """
         self.repo_map = repo_map
-        self.session_manager = SessionManager()
-        self.tree_builder = TreeBuilder(repo_map)
+
+        # Use injected dependencies - no fallback
+        if session_manager is None:
+            raise ValueError("SessionManager must be injected - no fallback allowed")
+        if tree_builder is None:
+            raise ValueError("TreeBuilder must be injected - no fallback allowed")
+
+        self.session_manager = session_manager
+        self.tree_builder = tree_builder
 
         logger.debug("TreeManager initialized")
 
@@ -197,7 +211,8 @@ class TreeManager:
                 return None
 
             if target_tree_id in session.exploration_trees:
-                return session.exploration_trees[target_tree_id]
+                tree: ExplorationTree = session.exploration_trees[target_tree_id]
+                return tree
 
             return None
 

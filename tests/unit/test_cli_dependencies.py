@@ -54,7 +54,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_basic_usage(self, cli_runner, temp_project):
         """Test basic usage of analyze-dependencies command."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             # Mock the dependency graph
             mock_graph = Mock()
             mock_graph.nodes = {
@@ -72,10 +72,10 @@ class TestCLIDependencies:
             ]
             mock_graph.construction_time = 0.15
 
-            # Mock the repo map instance
-            mock_instance = Mock()
+            # Mock the service factory and repo map instance
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["search", "dependencies", temp_project, "--output", "text"]
@@ -88,15 +88,15 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_json_output(self, cli_runner, temp_project):
         """Test analyze-dependencies with JSON output."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_graph = Mock()
             mock_graph.nodes = {"file1.py": None, "file2.py": None, "file3.py": None}
             mock_graph.graph = Mock()
             mock_graph.graph.edges = [("file1.py", "file2.py")]
 
-            mock_instance = Mock()
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["search", "dependencies", temp_project, "--output", "json"]
@@ -120,7 +120,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_table_output(self, cli_runner, temp_project):
         """Test analyze-dependencies with table output."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_graph = Mock()
             mock_graph.nodes = {
                 "file1.py": None,
@@ -135,9 +135,9 @@ class TestCLIDependencies:
             ]
             mock_graph.construction_time = 0.1
 
-            mock_instance = Mock()
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["search", "dependencies", temp_project, "--output", "table"]
@@ -150,7 +150,7 @@ class TestCLIDependencies:
 
     def test_analyze_dependencies_with_options(self, cli_runner, temp_project):
         """Test analyze-dependencies with various options."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_graph = Mock()
             mock_graph.nodes = {f"file{i}.py": None for i in range(1, 11)}
             mock_graph.graph = Mock()
@@ -159,9 +159,9 @@ class TestCLIDependencies:
             ]
             mock_graph.construction_time = 0.1
 
-            mock_instance = Mock()
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli,
@@ -192,14 +192,15 @@ class TestCLIDependencies:
 
     def test_show_centrality_all_files(self, cli_runner, temp_project):
         """Test show-centrality for all files."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_instance = Mock()
             mock_instance.get_centrality_scores.return_value = {
                 "file1.py": 0.8,
                 "file2.py": 0.6,
                 "file3.py": 0.4,
             }
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["analyze", "centrality", temp_project, "--output", "table"]
@@ -284,7 +285,7 @@ class TestCLIDependencies:
         with open(main_file, "w") as f:
             f.write("# Test file\nimport os\n\ndef main():\n    pass\n")
 
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             # Mock impact report as dictionary
             mock_report = {
                 "risk_score": 0.7,
@@ -295,7 +296,8 @@ class TestCLIDependencies:
 
             mock_instance = Mock()
             mock_instance.analyze_change_impact.return_value = mock_report
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli,
@@ -334,7 +336,7 @@ class TestCLIDependencies:
         with open(file2, "w") as f:
             f.write("# Test file 2\nimport os\n\ndef func2():\n    pass\n")
 
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             # Mock multiple impact reports as dictionaries
             mock_report1 = {
                 "risk_score": 0.5,
@@ -355,7 +357,8 @@ class TestCLIDependencies:
                 mock_report1,
                 mock_report2,
             ]
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli,
@@ -387,10 +390,11 @@ class TestCLIDependencies:
 
     def test_find_cycles_no_cycles(self, cli_runner, temp_project):
         """Test find-cycles when no cycles exist."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_instance = Mock()
             mock_instance.find_circular_dependencies.return_value = []
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["search", "cycles", temp_project, "--output", "text"]
@@ -401,13 +405,14 @@ class TestCLIDependencies:
 
     def test_find_cycles_with_cycles(self, cli_runner, temp_project):
         """Test find-cycles when cycles exist."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_instance = Mock()
             mock_instance.find_circular_dependencies.return_value = [
                 ["file1.py", "file2.py", "file1.py"],
                 ["file3.py", "file4.py", "file3.py"],
             ]
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["search", "cycles", temp_project, "--output", "text"]
@@ -419,12 +424,13 @@ class TestCLIDependencies:
 
     def test_find_cycles_json_output(self, cli_runner, temp_project):
         """Test find-cycles with JSON output."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_instance = Mock()
             mock_instance.find_circular_dependencies.return_value = [
                 ["file1.py", "file2.py", "file1.py"]
             ]
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli, ["search", "cycles", temp_project, "--output", "json"]
@@ -450,12 +456,13 @@ class TestCLIDependencies:
 
     def test_cli_error_handling(self, cli_runner, temp_project):
         """Test CLI error handling when dependencies are disabled."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_instance = Mock()
             mock_instance.build_dependency_graph.side_effect = RuntimeError(
                 "Dependency analysis is not enabled"
             )
-            mock_repo_map.return_value = mock_instance
+            mock_factory = mock_get_factory.return_value
+            mock_factory.create_repomap_service.return_value = mock_instance
 
             result = cli_runner.invoke(cli, ["search", "dependencies", temp_project])
 
@@ -472,7 +479,7 @@ class TestCLIDependencies:
 
     def test_cli_output_format_validation(self, cli_runner, temp_project):
         """Test CLI output format validation."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_graph = Mock()
             mock_graph.get_graph_statistics.return_value = {
                 "total_nodes": 1,
@@ -482,9 +489,9 @@ class TestCLIDependencies:
                 "root_nodes": 0,
             }
 
-            mock_instance = Mock()
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             # Test invalid output format
             result = cli_runner.invoke(
@@ -496,16 +503,16 @@ class TestCLIDependencies:
 
     def test_cli_verbose_output(self, cli_runner, temp_project):
         """Test CLI verbose output."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_graph = Mock()
             mock_graph.nodes = {"file1.py": None, "file2.py": None}
             mock_graph.graph = Mock()
             mock_graph.graph.edges = [("file1.py", "file2.py")]
             mock_graph.construction_time = 0.1
 
-            mock_instance = Mock()
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli,
@@ -525,16 +532,16 @@ class TestCLIDependencies:
 
     def test_cli_configuration_integration(self, cli_runner, temp_project):
         """Test that CLI properly creates and uses configuration."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_graph = Mock()
             mock_graph.nodes = {"file1.py": None}
             mock_graph.graph = Mock()
             mock_graph.graph.edges = []
             mock_graph.construction_time = 0.1
 
-            mock_instance = Mock()
+            mock_factory = mock_get_factory.return_value
+            mock_instance = mock_factory.create_repomap_service.return_value
             mock_instance.build_dependency_graph.return_value = mock_graph
-            mock_repo_map.return_value = mock_instance
 
             result = cli_runner.invoke(
                 cli,
@@ -553,9 +560,10 @@ class TestCLIDependencies:
 
             assert result.exit_code == 0
 
-            # Verify RepoMapService was called with proper configuration
-            mock_repo_map.assert_called_once()
-            call_args = mock_repo_map.call_args[0][0]
+            # Verify ServiceFactory was called
+            mock_get_factory.assert_called_once()
+            mock_factory.create_repomap_service.assert_called_once()
+            call_args = mock_factory.create_repomap_service.call_args[0][0]
             assert isinstance(call_args, RepoMapConfig)
             assert call_args.dependencies.max_graph_size == 500
             # Note: The CLI function creates its own DependencyConfig internally

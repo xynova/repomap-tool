@@ -50,35 +50,63 @@ class RepoMapService:
     with improved configuration management using Pydantic models.
     """
 
-    def __init__(self, config: RepoMapConfig):
+    def __init__(
+        self,
+        config: RepoMapConfig,
+        console: Optional[Any] = None,
+        parallel_extractor: Optional[Any] = None,
+        fuzzy_matcher: Optional[Any] = None,
+        semantic_matcher: Optional[Any] = None,
+        hybrid_matcher: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+        impact_analyzer: Optional[Any] = None,
+        centrality_calculator: Optional[Any] = None,
+    ):
         """
-        Initialize RepoMapService with validated configuration.
+        Initialize RepoMapService with validated configuration and injected dependencies.
 
         Args:
             config: Validated RepoMapConfig instance
+            console: Rich console instance (injected)
+            parallel_extractor: Parallel tag extractor (injected)
+            fuzzy_matcher: Fuzzy matcher instance (injected)
+            semantic_matcher: Semantic matcher instance (injected)
+            hybrid_matcher: Hybrid matcher instance (injected)
+            dependency_graph: Dependency graph instance (injected)
+            impact_analyzer: Impact analyzer instance (injected)
+            centrality_calculator: Centrality calculator instance (injected)
         """
         self.config = config
         self.logger = self._setup_logging()
-        self.console = Console()
+
+        # All dependencies must be injected - no fallback allowed
+        if console is None:
+            raise ValueError("Console must be injected - no fallback allowed")
+        if parallel_extractor is None:
+            raise ValueError(
+                "ParallelTagExtractor must be injected - no fallback allowed"
+            )
+        if fuzzy_matcher is None:
+            raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
+        if dependency_graph is None:
+            raise ValueError("DependencyGraph must be injected - no fallback allowed")
+        if centrality_calculator is None:
+            raise ValueError(
+                "CentralityCalculator must be injected - no fallback allowed"
+            )
+
+        self.console = console
+        self.parallel_extractor = parallel_extractor
+        self.fuzzy_matcher = fuzzy_matcher
+        self.semantic_matcher = semantic_matcher
+        self.hybrid_matcher = hybrid_matcher
+        self.dependency_graph = dependency_graph
+        self.impact_analyzer = impact_analyzer
+        self.centrality_calculator = centrality_calculator
 
         # Initialize components
         self.repo_map: Optional[RepoMapProtocol] = None
-        self.fuzzy_matcher: Optional[FuzzyMatcherProtocol] = None
-        self.semantic_matcher: Optional[SemanticMatcherProtocol] = None
-        self.hybrid_matcher: Optional[HybridMatcherProtocol] = None
-
-        # Phase 2: Initialize dependency analysis components
-        self.dependency_graph: Optional[Any] = None
-        self.impact_analyzer: Optional[Any] = None
-        self.centrality_calculator: Optional[Any] = None
         self.analysis_results: Optional[Any] = None
-
-        # Initialize parallel processing
-        self.parallel_extractor = ParallelTagExtractor(
-            max_workers=self.config.performance.max_workers,
-            enable_progress=self.config.performance.enable_progress,
-            console=self.console,
-        )
 
         # Initialize the system
         self._initialize_components()
@@ -167,74 +195,7 @@ class RepoMapService:
             refresh="auto" if self.config.refresh_cache else "no",
         )
 
-        # Initialize matchers if available
-        if MATCHERS_AVAILABLE:
-            self._initialize_matchers()
-        else:
-            self.logger.warning("Matchers not available - matching features disabled")
-            # Type ignore for matcher assignments since they're not available
-
-    def _initialize_matchers(self) -> None:
-        """Initialize matching components."""
-        # Initialize fuzzy matcher
-        self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
-            threshold=self.config.fuzzy_match.threshold,
-            strategies=self.config.fuzzy_match.strategies,
-            cache_results=self.config.fuzzy_match.cache_results,
-            verbose=self.config.verbose,
-        )
-        self.logger.info(f"Initialized FuzzyMatcher: {self.config.fuzzy_match}")
-
-        # Initialize semantic matcher
-        if self.config.semantic_match.enabled:
-            self.semantic_matcher = AdaptiveSemanticMatcher(verbose=self.config.verbose)  # type: ignore
-            self.logger.info(
-                f"Initialized SemanticMatcher: {self.config.semantic_match}"
-            )
-
-        # Initialize hybrid matcher if semantic matching is enabled
-        if self.config.semantic_match.enabled:
-            self.hybrid_matcher = HybridMatcher(  # type: ignore
-                fuzzy_threshold=self.config.fuzzy_match.threshold,
-                semantic_threshold=self.config.semantic_match.threshold,
-                verbose=self.config.verbose,
-            )
-            self.logger.info("Initialized HybridMatcher")
-
-        # Phase 2: Initialize dependency analysis components
-        self._initialize_dependency_analysis()
-        self.logger.info("Initialized dependency analysis components")
-
-    def _initialize_dependency_analysis(self) -> None:
-        """Initialize dependency analysis components."""
-        try:
-            from ..dependencies import (
-                get_advanced_dependency_graph,
-                get_impact_analyzer,
-                get_centrality_calculator,
-            )
-
-            # Initialize advanced dependency graph
-            AdvancedDependencyGraph = get_advanced_dependency_graph()
-            self.dependency_graph = AdvancedDependencyGraph()
-
-            # Initialize impact analyzer
-            if self.config.dependencies.enable_impact_analysis:
-                ImpactAnalyzer = get_impact_analyzer()
-                self.impact_analyzer = ImpactAnalyzer(self.dependency_graph)
-
-            # Initialize centrality calculator
-            CentralityCalculator = get_centrality_calculator()
-            self.centrality_calculator = CentralityCalculator(self.dependency_graph)
-
-            self.logger.info("Dependency analysis components initialized successfully")
-
-        except ImportError as e:
-            self.logger.warning(f"Failed to import dependency analysis components: {e}")
-            self.logger.warning("Dependency analysis features will be disabled")
-        except Exception as e:
-            self.logger.error(f"Error initializing dependency analysis: {e}")
-            self.logger.warning("Dependency analysis features will be disabled")
+        # Matchers are now initialized via DI container in _initialize_with_di_container
 
     def _invalidate_stale_caches(self) -> None:
         """Invalidate cache entries for files that have been modified since caching."""
@@ -556,6 +517,8 @@ class RepoMapService:
             Exception: If parallel processing fails, with helpful debugging info
         """
         try:
+            identifiers: List[str]
+            stats: Any
             identifiers, stats = self.parallel_extractor.extract_tags_parallel(
                 files=project_files,
                 project_root=str(self.config.project_root),
@@ -699,13 +662,12 @@ class RepoMapService:
             project_imports = self._get_cached_import_analysis()
 
             if project_imports is None:
-                # Fallback: Import the ImportAnalyzer and analyze
-                from ..dependencies.import_analyzer import ImportAnalyzer
+                # Fallback: Use DI container to get ImportAnalyzer
+                from ..core.container import create_container
 
-                # Initialize import analyzer with project root
-                import_analyzer = ImportAnalyzer(
-                    project_root=str(self.config.project_root)
-                )
+                # Create container and get import analyzer
+                container = create_container(self.config)
+                import_analyzer = container.import_analyzer()
 
                 # Analyze project imports
                 project_imports = import_analyzer.analyze_project_imports(
@@ -909,18 +871,21 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            # Import here to avoid circular imports
-            from ..trees.discovery_engine import EntrypointDiscoverer
-            from ..trees.tree_builder import TreeBuilder
+            # Use service factory for proper dependency injection
+            from ..cli.services import get_service_factory
 
-            # Use enhanced entrypoint discovery (Phase 1 + Phase 2)
-            enhanced_discoverer = EntrypointDiscoverer(self)
+            service_factory = get_service_factory()
+
+            # Create services with proper DI
+            enhanced_discoverer = service_factory.create_entrypoint_discoverer(
+                self, self.config
+            )
             entrypoints = enhanced_discoverer.discover_entrypoints(
                 str(self.config.project_root), intent
             )
 
             # Build full exploration trees with dependency intelligence
-            tree_builder = TreeBuilder(self)
+            tree_builder = service_factory.create_tree_builder(self, self.config)
             exploration_trees = []
 
             for entrypoint in entrypoints:

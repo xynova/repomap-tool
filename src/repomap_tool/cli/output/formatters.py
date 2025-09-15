@@ -12,8 +12,9 @@ from rich.panel import Panel
 
 from ...models import ProjectInfo, SearchResponse
 
-# Create console instance for this module
-console = Console()
+# Note: console should be obtained via get_console(ctx) in functions that need it
+from ..utils.console import get_console
+import click
 
 
 def display_project_info(
@@ -22,6 +23,9 @@ def display_project_info(
     template_config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Display project analysis results."""
+    # Get console from Click context
+    ctx = click.get_current_context(silent=True)
+    console = get_console(ctx)
 
     if output_format == "json":
         console.print(project_info.model_dump_json(indent=2))
@@ -144,6 +148,9 @@ def display_search_results(
     template_config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Display search results."""
+    # Get console from Click context
+    ctx = click.get_current_context(silent=True)
+    console = get_console(ctx)
 
     if output_format == "json":
         console.print(search_response.model_dump_json(indent=2))
@@ -213,6 +220,9 @@ def display_dependency_results(
     output_format: Literal["json", "text", "table"],
 ) -> None:
     """Display dependency analysis results."""
+    # Get console from Click context
+    ctx = click.get_current_context(silent=True)
+    console = get_console(ctx)
 
     if output_format == "json":
         import json
@@ -248,6 +258,9 @@ def display_cycles_results(
     output_format: Literal["json", "text", "table"],
 ) -> None:
     """Display circular dependency results."""
+    # Get console from Click context
+    ctx = click.get_current_context(silent=True)
+    console = get_console(ctx)
 
     if output_format == "json":
         import json

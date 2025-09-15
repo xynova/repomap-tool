@@ -9,13 +9,11 @@ import sys
 from typing import Optional
 
 import click
-from rich.console import Console
 from rich.panel import Panel
 
 from ...models import RepoMapConfig, create_error_response
 from ..config.loader import resolve_project_path, create_default_config
-
-console = Console()
+from ..utils.console import get_console
 
 
 @click.group()
@@ -39,7 +37,9 @@ def system() -> None:
     "--threshold", "-t", default=0.7, type=float, help="Matching threshold (0.0-1.0)"
 )
 @click.option("--cache-size", default=1000, type=int, help="Cache size for results")
+@click.pass_context
 def config(
+    ctx: click.Context,
     project_path: Optional[str],
     output: Optional[str],
     fuzzy: bool,
@@ -48,6 +48,9 @@ def config(
     cache_size: int,
 ) -> None:
     """Generate a configuration file for the project."""
+
+    # Get console instance (automatically handles dependency injection from context)
+    console = get_console(ctx)
 
     try:
         # Resolve project path from argument or discovery
@@ -89,8 +92,12 @@ def config(
 
 
 @system.command()
-def version() -> None:
+@click.pass_context
+def version(ctx: click.Context) -> None:
     """Show version information."""
+    # Get console instance (automatically handles dependency injection from context)
+    console = get_console(ctx)
+
     console.print(
         Panel(
             "[bold blue]RepoMap-Tool[/bold blue]\n"

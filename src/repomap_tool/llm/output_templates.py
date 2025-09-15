@@ -30,7 +30,9 @@ class OutputTemplates:
     """Configurable output templates for different content types."""
 
     def __init__(self, config: Optional[TemplateConfig] = None):
-        self.config = config or TemplateConfig()
+        if config is None:
+            config = TemplateConfig()
+        self.config = config
         self.templates = self._load_templates()
 
     def apply_template(

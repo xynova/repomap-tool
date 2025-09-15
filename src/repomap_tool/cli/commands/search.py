@@ -8,7 +8,6 @@ import sys
 from typing import Optional, Literal
 
 import click
-from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from ...models import (
@@ -28,12 +27,12 @@ from ..output.formatters import (
     display_dependency_results,
     display_cycles_results,
 )
-
-console = Console()
+from ..utils.console import get_console
 
 
 @click.group()
-def search() -> None:
+@click.pass_context
+def search(ctx: click.Context) -> None:
     """Search and discovery commands."""
     pass
 
@@ -99,6 +98,10 @@ def identifiers(
 ) -> None:
     """Search for identifiers in a project."""
 
+    # Get console instance (automatically configured with no-color if set)
+    ctx = click.get_current_context()
+    console = get_console(ctx)
+
     try:
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
@@ -123,7 +126,7 @@ def identifiers(
             strategies=list(strategies) if strategies else None,
         )
 
-        # Initialize RepoMap
+        # Initialize RepoMap using service factory
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -131,7 +134,11 @@ def identifiers(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = RepoMapService(config_obj)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config_obj)
+
             progress.update(task, description="Searching identifiers...")
 
             # Perform search
@@ -197,21 +204,22 @@ def dependencies(
 ) -> None:
     """Analyze project dependencies and build dependency graph."""
 
+    # Get console instance (automatically configured with no-color if set)
+    ctx = click.get_current_context()
+    console = get_console(ctx)
+
     try:
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create dependency configuration
-        dependency_config = DependencyConfig(
-            max_graph_size=max_files,
-            enable_call_graph=enable_call_graph,
-            enable_impact_analysis=enable_impact_analysis,
-        )
+        # Create configuration using factory
+        from repomap_tool.core.config_factory import get_config_factory
 
-        # Create main configuration
-        config_obj = RepoMapConfig(
+        config_factory = get_config_factory()
+        config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
-            dependencies=dependency_config,
+            enable_impact_analysis=enable_impact_analysis,
+            max_graph_size=max_files,
             verbose=verbose,
         )
 
@@ -223,7 +231,10 @@ def dependencies(
         ) as progress:
             task = progress.add_task("Analyzing dependencies...", total=None)
 
-            repomap = RepoMapService(config_obj)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config_obj)
             progress.update(task, description="Building dependency graph...")
 
             # Perform dependency analysis
@@ -276,17 +287,20 @@ def cycles(
 ) -> None:
     """Find circular dependencies in the project."""
 
+    # Get console instance (automatically configured with no-color if set)
+    ctx = click.get_current_context()
+    console = get_console(ctx)
+
     try:
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create dependency configuration
-        dependency_config = DependencyConfig()
+        # Create configuration using factory
+        from repomap_tool.core.config_factory import get_config_factory
 
-        # Create main configuration
-        config_obj = RepoMapConfig(
+        config_factory = get_config_factory()
+        config_obj = config_factory.create_basic_config(
             project_root=resolved_project_path,
-            dependencies=dependency_config,
             verbose=verbose,
         )
 
@@ -298,7 +312,10 @@ def cycles(
         ) as progress:
             task = progress.add_task("Finding circular dependencies...", total=None)
 
-            repomap = RepoMapService(config_obj)
+            from repomap_tool.cli.services import get_service_factory
+
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config_obj)
             progress.update(task, description="Building dependency graph...")
 
             # Build dependency graph
