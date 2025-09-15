@@ -96,7 +96,9 @@ class LLMFileAnalyzer:
         self.centrality_engine = dependencies.centrality_engine
         self.impact_engine = dependencies.impact_engine
 
-        logger.info("LLMFileAnalyzer initialized with configuration and injected dependencies")
+        logger.info(
+            "LLMFileAnalyzer initialized with configuration and injected dependencies"
+        )
 
         # Impact analyzer is now injected via DI container
         # No need for manual instantiation

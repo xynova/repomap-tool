@@ -16,7 +16,6 @@ from repomap_tool.cli import cli
 from repomap_tool.dependencies import (
     ASTFileAnalyzer,
     AnalysisFormat,
-    get_llm_file_analyzer,
 )
 
 
@@ -952,6 +951,7 @@ class User:
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
@@ -978,6 +978,7 @@ class User:
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
@@ -1008,6 +1009,7 @@ class User:
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
@@ -1037,6 +1039,7 @@ class User:
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
@@ -1066,6 +1069,7 @@ class User:
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()

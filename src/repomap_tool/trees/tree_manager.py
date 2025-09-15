@@ -22,7 +22,7 @@ class TreeManager:
     """Manages tree state, expansion, pruning, and focus operations."""
 
     def __init__(
-        self, 
+        self,
         repo_map: RepoMapService,
         session_manager: Optional[Any] = None,
         tree_builder: Optional[Any] = None,
@@ -35,13 +35,13 @@ class TreeManager:
             tree_builder: Tree builder instance (injected)
         """
         self.repo_map = repo_map
-        
+
         # Use injected dependencies - no fallback
         if session_manager is None:
             raise ValueError("SessionManager must be injected - no fallback allowed")
         if tree_builder is None:
             raise ValueError("TreeBuilder must be injected - no fallback allowed")
-            
+
         self.session_manager = session_manager
         self.tree_builder = tree_builder
 

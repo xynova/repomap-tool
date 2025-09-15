@@ -20,7 +20,7 @@ class TreeBuilder:
     """Builds exploration trees from entrypoints using existing aider infrastructure."""
 
     def __init__(
-        self, 
+        self,
         repo_map: RepoMapService,
         entrypoint_discoverer: Optional[Any] = None,
     ):
@@ -36,7 +36,9 @@ class TreeBuilder:
 
         # Use injected entrypoint discoverer - no fallback
         if entrypoint_discoverer is None:
-            raise ValueError("EntrypointDiscoverer must be injected - no fallback allowed")
+            raise ValueError(
+                "EntrypointDiscoverer must be injected - no fallback allowed"
+            )
         self.entrypoint_discoverer = entrypoint_discoverer
 
         logger.debug("TreeBuilder initialized")

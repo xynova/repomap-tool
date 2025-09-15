@@ -19,9 +19,6 @@ from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
-    get_advanced_dependency_graph,
-    get_centrality_calculator,
-    get_impact_analyzer,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,7 +28,7 @@ class EntrypointDiscoverer:
     """Discovers relevant entrypoints using existing semantic/fuzzy matching."""
 
     def __init__(
-        self, 
+        self,
         repo_map: RepoMapService,
         import_analyzer: Optional[Any] = None,
         dependency_graph: Optional[Any] = None,
@@ -68,8 +65,10 @@ class EntrypointDiscoverer:
         if dependency_graph is None:
             raise ValueError("DependencyGraph must be injected - no fallback allowed")
         if centrality_calculator is None:
-            raise ValueError("CentralityCalculator must be injected - no fallback allowed")
-            
+            raise ValueError(
+                "CentralityCalculator must be injected - no fallback allowed"
+            )
+
         self.import_analyzer = import_analyzer
         self.dependency_graph = dependency_graph
         self.centrality_calculator = centrality_calculator
@@ -78,8 +77,6 @@ class EntrypointDiscoverer:
         logger.debug(
             f"EntrypointDiscoverer initialized with semantic_threshold={self.semantic_threshold}, fuzzy_threshold={self.fuzzy_threshold}"
         )
-
-
 
     def discover_entrypoints(self, project_path: str, intent: str) -> List[Entrypoint]:
         """Find relevant entrypoints using existing semantic/fuzzy matching.
@@ -170,7 +167,6 @@ class EntrypointDiscoverer:
         logger.info("Enhancing entrypoints with dependency scores...")
         try:
             from ..core.container import create_container
-            from ..models import RepoMapConfig
 
             # Create DI container for dependency analysis
             config = RepoMapConfig(project_root=str(self.repo_map.config.project_root))
@@ -211,7 +207,7 @@ class EntrypointDiscoverer:
             # Use existing repo_map to get symbols
             if hasattr(self.repo_map, "get_tags"):
                 symbol_strings = self.repo_map.get_tags()
-                # Convert strings to dictionaries for compatibility
+                # Convert strings to dictionaries
                 symbols = [{"identifier": s, "type": "unknown"} for s in symbol_strings]
                 logger.debug(f"Retrieved {len(symbols)} symbols from repo_map")
                 return symbols
@@ -356,20 +352,15 @@ class EntrypointDiscoverer:
             # Build dependency graph for the project
             self._build_project_dependency_graph(project_path)
 
-            # Initialize centrality calculator and impact analyzer using DI container
-            if self.centrality_calculator is None or self.impact_analyzer is None:
-                from ..core.container import create_container
-                from ..models import RepoMapConfig
-
-                # Create DI container for dependency analysis
-                config = RepoMapConfig(project_root=project_path)
-                container = create_container(config)
-
-                if self.centrality_calculator is None:
-                    self.centrality_calculator = container.centrality_calculator()
-
-                if self.impact_analyzer is None:
-                    self.impact_analyzer = container.impact_analyzer()
+            # Use injected dependencies - no fallback allowed
+            if self.centrality_calculator is None:
+                raise ValueError(
+                    "CentralityCalculator must be injected - no fallback allowed"
+                )
+            if self.impact_analyzer is None:
+                raise ValueError(
+                    "ImpactAnalyzer must be injected - no fallback allowed"
+                )
 
             # Enhance each entrypoint with dependency metrics
             for entrypoint in entrypoints:

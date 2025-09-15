@@ -535,7 +535,7 @@ def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
     from rich.text import Text
 
     # Create console with fallback for terminals that don't support Unicode
-    console = Console(force_terminal=True, legacy_windows=False)
+    console = Console(force_terminal=True)
 
     # Create table with ASCII-safe borders
     from rich.box import SIMPLE, ASCII

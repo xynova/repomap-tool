@@ -130,12 +130,13 @@ def test_hybrid_matcher():
 
     # Initialize fuzzy matcher first
     from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+
     fuzzy_matcher = FuzzyMatcher(
         threshold=60,
         strategies=["prefix", "substring", "levenshtein"],
         verbose=False,
     )
-    
+
     # Initialize hybrid matcher with injected fuzzy matcher
     matcher = HybridMatcher(
         fuzzy_matcher=fuzzy_matcher,

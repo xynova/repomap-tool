@@ -18,8 +18,14 @@ from ..config.loader import (
     load_or_create_config,
 )
 from ..output.formatters import display_project_info
+from ..utils.console import get_console
 
-console = Console()
+
+# Use DI-provided console instead of direct instantiation
+def get_index_console() -> Console:
+    """Get console instance using dependency injection."""
+    ctx = click.get_current_context()
+    return get_console(ctx)
 
 
 @click.group()
@@ -142,6 +148,7 @@ def create(
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config_obj)
 
@@ -165,5 +172,6 @@ def create(
 
     except Exception as e:
         error_response = create_error_response(str(e), "AnalysisError")
+        console = get_index_console()
         console.print(f"[red]Error: {error_response.error}[/red]")
         sys.exit(1)

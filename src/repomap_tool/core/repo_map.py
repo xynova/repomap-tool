@@ -51,7 +51,7 @@ class RepoMapService:
     """
 
     def __init__(
-        self, 
+        self,
         config: RepoMapConfig,
         console: Optional[Any] = None,
         parallel_extractor: Optional[Any] = None,
@@ -78,19 +78,23 @@ class RepoMapService:
         """
         self.config = config
         self.logger = self._setup_logging()
-        
+
         # All dependencies must be injected - no fallback allowed
         if console is None:
             raise ValueError("Console must be injected - no fallback allowed")
         if parallel_extractor is None:
-            raise ValueError("ParallelTagExtractor must be injected - no fallback allowed")
+            raise ValueError(
+                "ParallelTagExtractor must be injected - no fallback allowed"
+            )
         if fuzzy_matcher is None:
             raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
         if dependency_graph is None:
             raise ValueError("DependencyGraph must be injected - no fallback allowed")
         if centrality_calculator is None:
-            raise ValueError("CentralityCalculator must be injected - no fallback allowed")
-            
+            raise ValueError(
+                "CentralityCalculator must be injected - no fallback allowed"
+            )
+
         self.console = console
         self.parallel_extractor = parallel_extractor
         self.fuzzy_matcher = fuzzy_matcher
@@ -130,8 +134,6 @@ class RepoMapService:
             logger.addHandler(handler)
 
         return logger
-
-
 
     def _initialize_components(self) -> None:
         """Initialize all components based on configuration."""
@@ -194,7 +196,6 @@ class RepoMapService:
         )
 
         # Matchers are now initialized via DI container in _initialize_with_di_container
-
 
     def _invalidate_stale_caches(self) -> None:
         """Invalidate cache entries for files that have been modified since caching."""
@@ -659,13 +660,12 @@ class RepoMapService:
             project_imports = self._get_cached_import_analysis()
 
             if project_imports is None:
-                # Fallback: Import the ImportAnalyzer and analyze
-                from ..dependencies.import_analyzer import ImportAnalyzer
+                # Fallback: Use DI container to get ImportAnalyzer
+                from ..core.container import create_container
 
-                # Initialize import analyzer with project root
-                import_analyzer = ImportAnalyzer(
-                    project_root=str(self.config.project_root)
-                )
+                # Create container and get import analyzer
+                container = create_container(self.config)
+                import_analyzer = container.import_analyzer()
 
                 # Analyze project imports
                 project_imports = import_analyzer.analyze_project_imports(
@@ -869,18 +869,21 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            # Import here to avoid circular imports
-            from ..trees.discovery_engine import EntrypointDiscoverer
-            from ..trees.tree_builder import TreeBuilder
+            # Use service factory for proper dependency injection
+            from ..cli.services import get_service_factory
 
-            # Use enhanced entrypoint discovery (Phase 1 + Phase 2)
-            enhanced_discoverer = EntrypointDiscoverer(self)
+            service_factory = get_service_factory()
+
+            # Create services with proper DI
+            enhanced_discoverer = service_factory.create_entrypoint_discoverer(
+                self, self.config
+            )
             entrypoints = enhanced_discoverer.discover_entrypoints(
                 str(self.config.project_root), intent
             )
 
             # Build full exploration trees with dependency intelligence
-            tree_builder = TreeBuilder(self)
+            tree_builder = service_factory.create_tree_builder(self, self.config)
             exploration_trees = []
 
             for entrypoint in entrypoints:

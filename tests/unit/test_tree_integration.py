@@ -16,8 +16,6 @@ from repomap_tool.models import Entrypoint, RepoMapConfig
 from repomap_tool.dependencies import (
     ImportAnalyzer,
     DependencyGraph,
-    get_centrality_calculator,
-    get_impact_analyzer,
 )
 
 
@@ -31,28 +29,34 @@ class TestTreeDependencyIntegration:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             # Create real config
             config = RepoMapConfig(project_root=temp_dir)
-            
+
             # Mock repo_map with real config
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
             # Create dependencies using service factory
             from repomap_tool.cli.services import get_service_factory
+
             service_factory = get_service_factory()
             repomap_service = service_factory.create_repomap_service(config)
-            
+
             # Create discoverer with injected dependencies
             from repomap_tool.core.container import create_container
+
             container = create_container(config)
             discoverer = EntrypointDiscoverer(
                 repo_map=repomap_service,
                 import_analyzer=container.import_analyzer(),
                 dependency_graph=container.dependency_graph(),
                 centrality_calculator=container.centrality_calculator(),
-                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+                impact_analyzer=(
+                    container.impact_analyzer()
+                    if config.dependencies.enable_impact_analysis
+                    else None
+                ),
             )
 
             # Check that dependency components are initialized
@@ -73,28 +77,34 @@ class TestTreeDependencyIntegration:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             # Create real config
             config = RepoMapConfig(project_root=temp_dir)
-            
+
             # Mock repo_map with real config
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
             # Create dependencies using service factory
             from repomap_tool.cli.services import get_service_factory
+
             service_factory = get_service_factory()
             repomap_service = service_factory.create_repomap_service(config)
-            
+
             # Create discoverer with injected dependencies
             from repomap_tool.core.container import create_container
+
             container = create_container(config)
             discoverer = EntrypointDiscoverer(
                 repo_map=repomap_service,
                 import_analyzer=container.import_analyzer(),
                 dependency_graph=container.dependency_graph(),
                 centrality_calculator=container.centrality_calculator(),
-                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+                impact_analyzer=(
+                    container.impact_analyzer()
+                    if config.dependencies.enable_impact_analysis
+                    else None
+                ),
             )
 
             # Create test entrypoints
@@ -132,28 +142,34 @@ class TestTreeDependencyIntegration:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             # Create real config
             config = RepoMapConfig(project_root=temp_dir)
-            
+
             # Mock repo_map with real config
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
             # Create dependencies using service factory
             from repomap_tool.cli.services import get_service_factory
+
             service_factory = get_service_factory()
             repomap_service = service_factory.create_repomap_service(config)
-            
+
             # Create discoverer with injected dependencies
             from repomap_tool.core.container import create_container
+
             container = create_container(config)
             discoverer = EntrypointDiscoverer(
                 repo_map=repomap_service,
                 import_analyzer=container.import_analyzer(),
                 dependency_graph=container.dependency_graph(),
                 centrality_calculator=container.centrality_calculator(),
-                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+                impact_analyzer=(
+                    container.impact_analyzer()
+                    if config.dependencies.enable_impact_analysis
+                    else None
+                ),
             )
 
             # Test with line number - should return None since file doesn't exist
@@ -189,7 +205,9 @@ class TestTreeDependencyIntegration:
             constructed_path = os.path.join(temp_dir, file_part)
             normalized_path = os.path.normpath(constructed_path)
             # The constructed path should be correct
-            expected_constructed_path = os.path.normpath(os.path.join(temp_dir, "src/test.py"))
+            expected_constructed_path = os.path.normpath(
+                os.path.join(temp_dir, "src/test.py")
+            )
             assert normalized_path == expected_constructed_path
 
     def test_dependency_graph_integration(self):
@@ -199,28 +217,34 @@ class TestTreeDependencyIntegration:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             # Create real config
             config = RepoMapConfig(project_root=temp_dir)
-            
+
             # Mock repo_map with real config
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
             # Create dependencies using service factory
             from repomap_tool.cli.services import get_service_factory
+
             service_factory = get_service_factory()
             repomap_service = service_factory.create_repomap_service(config)
-            
+
             # Create discoverer with injected dependencies
             from repomap_tool.core.container import create_container
+
             container = create_container(config)
             discoverer = EntrypointDiscoverer(
                 repo_map=repomap_service,
                 import_analyzer=container.import_analyzer(),
                 dependency_graph=container.dependency_graph(),
                 centrality_calculator=container.centrality_calculator(),
-                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+                impact_analyzer=(
+                    container.impact_analyzer()
+                    if config.dependencies.enable_impact_analysis
+                    else None
+                ),
             )
 
             # Verify dependency graph is accessible
@@ -236,28 +260,34 @@ class TestTreeDependencyIntegration:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             # Create real config
             config = RepoMapConfig(project_root=temp_dir)
-            
+
             # Mock repo_map with real config
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
             # Create dependencies using service factory
             from repomap_tool.cli.services import get_service_factory
+
             service_factory = get_service_factory()
             repomap_service = service_factory.create_repomap_service(config)
-            
+
             # Create discoverer with injected dependencies
             from repomap_tool.core.container import create_container
+
             container = create_container(config)
             discoverer = EntrypointDiscoverer(
                 repo_map=repomap_service,
                 import_analyzer=container.import_analyzer(),
                 dependency_graph=container.dependency_graph(),
                 centrality_calculator=container.centrality_calculator(),
-                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+                impact_analyzer=(
+                    container.impact_analyzer()
+                    if config.dependencies.enable_impact_analysis
+                    else None
+                ),
             )
 
             # Verify import analyzer is accessible
@@ -272,28 +302,34 @@ class TestTreeDependencyIntegration:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             # Create real config
             config = RepoMapConfig(project_root=temp_dir)
-            
+
             # Mock repo_map with real config
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
             # Create dependencies using service factory
             from repomap_tool.cli.services import get_service_factory
+
             service_factory = get_service_factory()
             repomap_service = service_factory.create_repomap_service(config)
-            
+
             # Create discoverer with injected dependencies
             from repomap_tool.core.container import create_container
+
             container = create_container(config)
             discoverer = EntrypointDiscoverer(
                 repo_map=repomap_service,
                 import_analyzer=container.import_analyzer(),
                 dependency_graph=container.dependency_graph(),
                 centrality_calculator=container.centrality_calculator(),
-                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+                impact_analyzer=(
+                    container.impact_analyzer()
+                    if config.dependencies.enable_impact_analysis
+                    else None
+                ),
             )
 
             # With DI, these are now initialized immediately

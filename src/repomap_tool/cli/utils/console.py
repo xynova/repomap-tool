@@ -68,7 +68,7 @@ class ConsoleProvider:
         return self._factory.create_console(no_color=no_color)
 
 
-# Global provider instance for backward compatibility
+# Global provider instance
 _global_provider: Optional[ConsoleProvider] = None
 
 
@@ -108,6 +108,6 @@ def get_console(ctx: Optional[click.Context] = None) -> Console:
         provider: ConsoleProvider = ctx.obj["console_provider"]
         return provider.get_console(ctx)
 
-    # Fallback to global provider for backward compatibility
+    # Fallback to global provider
     provider = get_console_provider()
     return provider.get_console(ctx)

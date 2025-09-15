@@ -84,6 +84,8 @@ performance: install
 lint: install
 	$(VENV_PYTHON) -m flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503,E501,E402,F401,F541,F841,W293
 	$(VENV_PYTHON) -m black --check --diff src/ tests/ examples/
+	@echo "🔍 Running DI linter..."
+	$(VENV_PYTHON) scripts/di_linter.py src/ tests/
 
 # Format code
 format: install

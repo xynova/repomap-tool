@@ -71,13 +71,12 @@ def centrality(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create dependency configuration
-        dependency_config = DependencyConfig()
+        # Create configuration using factory
+        from repomap_tool.core.config_factory import get_config_factory
 
-        # Create main configuration
-        config_obj = RepoMapConfig(
+        config_factory = get_config_factory()
+        config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
-            dependencies=dependency_config,
             verbose=verbose,
         )
 
@@ -97,7 +96,7 @@ def centrality(
         # Create services using DI
         service_factory = get_service_factory()
         repomap_service = service_factory.create_repomap_service(config_obj)
-        
+
         # Build dependency graph
         dependency_graph = repomap_service.build_dependency_graph()
 
@@ -213,13 +212,12 @@ def impact(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create dependency configuration
-        dependency_config = DependencyConfig()
+        # Create configuration using factory
+        from repomap_tool.core.config_factory import get_config_factory
 
-        # Create main configuration
-        config_obj = RepoMapConfig(
+        config_factory = get_config_factory()
+        config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
-            dependencies=dependency_config,
             verbose=verbose,
         )
 

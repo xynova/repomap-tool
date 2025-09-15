@@ -50,7 +50,7 @@ class HybridMatcher:
         self.semantic_threshold = semantic_threshold
         self.use_word_embeddings = use_word_embeddings
         self.verbose = verbose
-        self.enabled = True  # Add enabled attribute for compatibility
+        self.enabled = True
 
         # TF-IDF components
         self.word_frequencies: Counter[str] = Counter()

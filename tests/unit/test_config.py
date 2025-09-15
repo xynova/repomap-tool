@@ -16,6 +16,7 @@ def test_fuzzy_matcher_initialization():
     """Test that fuzzy matcher is initialized correctly."""
     config = create_search_config(".", "fuzzy", True)
     from repomap_tool.cli.services import get_service_factory
+
     service_factory = get_service_factory()
     dm = service_factory.create_repomap_service(config)
 
@@ -26,6 +27,7 @@ def test_fuzzy_matcher_functionality():
     """Test that fuzzy matcher works correctly."""
     config = create_search_config(".", "fuzzy", True)
     from repomap_tool.cli.services import get_service_factory
+
     service_factory = get_service_factory()
     dm = service_factory.create_repomap_service(config)
 

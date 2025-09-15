@@ -74,6 +74,7 @@ class TestSelfIntegration:
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -139,6 +140,7 @@ class TestSelfIntegration:
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -200,6 +202,7 @@ class TestSelfIntegration:
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -261,6 +264,7 @@ class TestSelfIntegration:
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -326,6 +330,7 @@ class TestSelfIntegration:
         )
 
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -384,6 +389,7 @@ class TestSelfIntegration:
         )
 
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -417,6 +423,7 @@ class TestSelfIntegration:
         )
 
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -448,6 +455,7 @@ class TestSelfIntegration:
         )
 
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -484,6 +492,7 @@ class TestSelfIntegration:
         )
 
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -506,6 +515,7 @@ class TestSelfIntegration:
             verbose=False,
         )
         from repomap_tool.cli.services import get_service_factory
+
         service_factory = get_service_factory()
         fuzzy_repomap = service_factory.create_repomap_service(fuzzy_config)
 

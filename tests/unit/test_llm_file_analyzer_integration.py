@@ -32,8 +32,11 @@ class TestLLMFileAnalyzerIntegration:
 
     def _create_llm_analyzer(self, dependency_graph, project_root):
         """Helper method to create LLM analyzer with all required dependencies."""
-        from src.repomap_tool.dependencies.llm_analyzer_config import LLMAnalyzerConfig, LLMAnalyzerDependencies
-        
+        from src.repomap_tool.dependencies.llm_analyzer_config import (
+            LLMAnalyzerConfig,
+            LLMAnalyzerDependencies,
+        )
+
         # Create configuration
         config = LLMAnalyzerConfig(
             max_tokens=4000,
@@ -41,7 +44,7 @@ class TestLLMFileAnalyzerIntegration:
             enable_centrality_analysis=True,
             verbose=False,
         )
-        
+
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
         centrality_calculator = CentralityCalculator(dependency_graph)

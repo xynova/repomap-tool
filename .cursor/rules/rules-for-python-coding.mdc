@@ -290,6 +290,178 @@ from .exceptions import RepoMapError
 from .utils import timing_decorator
 ```
 
+## 🏗️ **DEPENDENCY INJECTION PATTERNS**
+
+### **DI Architecture Overview:**
+RepoMap-Tool uses a **hybrid DI approach** combining:
+- **DI Container**: Centralized service registration and lifecycle management
+- **Service Factory**: Manual service creation for CLI commands (superior to @inject for CLI)
+- **Manual DI**: Explicit dependency resolution for maximum control and testability
+
+### **DI Container Usage:**
+```python
+# ✅ GOOD: DI Container for core services
+from repomap_tool.core.container import create_container
+
+class Container(containers.DeclarativeContainer):
+    """Dependency injection container for RepoMap services."""
+    
+    # Configuration
+    config = providers.Configuration()
+    
+    # Core services with proper lifecycle
+    dependency_graph: "providers.Singleton[AdvancedDependencyGraph]" = cast(
+        "providers.Singleton[AdvancedDependencyGraph]",
+        providers.Singleton("repomap_tool.dependencies.advanced_dependency_graph.AdvancedDependencyGraph"),
+    )
+    
+    fuzzy_matcher: "providers.Factory[FuzzyMatcher]" = cast(
+        "providers.Factory[FuzzyMatcher]",
+        providers.Factory(
+            "repomap_tool.matchers.fuzzy_matcher.FuzzyMatcher",
+            threshold=config.fuzzy_match.threshold,
+            strategies=config.fuzzy_match.strategies,
+            cache_results=config.fuzzy_match.cache_results,
+            verbose=config.verbose,
+        ),
+    )
+```
+
+### **Service Factory Pattern (CLI Commands):**
+```python
+# ✅ GOOD: Service factory for CLI commands (superior to @inject)
+class ServiceFactory:
+    """Factory for creating services with dependency injection."""
+    
+    def create_repomap_service(self, config: RepoMapConfig) -> RepoMapService:
+        """Create a RepoMapService with all dependencies injected."""
+        # Create DI container
+        container = create_container(config)
+        
+        # Get all dependencies from container
+        console = container.console()
+        fuzzy_matcher = container.fuzzy_matcher()
+        dependency_graph = container.dependency_graph()
+        
+        # Create service with injected dependencies
+        return RepoMapService(
+            config=config,
+            console=console,
+            fuzzy_matcher=fuzzy_matcher,
+            dependency_graph=dependency_graph,
+        )
+
+# ✅ GOOD: CLI command using service factory
+@click.command()
+def search_command(query: str, project_path: str) -> None:
+    """Search command using proper DI."""
+    # Get console from Click context
+    console = get_console(ctx)
+    
+    # Create config from CLI arguments
+    config = create_search_config(project_path, ...)
+    
+    # Get services using service factory
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    
+    # Use injected services
+    results = repomap_service.search(query)
+```
+
+### **Dependency Validation:**
+```python
+# ✅ GOOD: Strict dependency validation
+class RepoMapService:
+    def __init__(
+        self,
+        config: RepoMapConfig,
+        console: Optional[Any] = None,
+        fuzzy_matcher: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+    ) -> None:
+        # All dependencies must be injected - no fallback allowed
+        if console is None:
+            raise ValueError("Console must be injected - no fallback allowed")
+        if fuzzy_matcher is None:
+            raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
+        if dependency_graph is None:
+            raise ValueError("DependencyGraph must be injected - no fallback allowed")
+        
+        self.console = console
+        self.fuzzy_matcher = fuzzy_matcher
+        self.dependency_graph = dependency_graph
+```
+
+### **Console DI Pattern:**
+```python
+# ✅ GOOD: Console dependency injection
+def get_console(ctx: Optional[click.Context] = None) -> Console:
+    """Get console instance from Click context or global provider."""
+    if ctx and ctx.obj and "console_provider" in ctx.obj:
+        provider: ConsoleProvider = ctx.obj["console_provider"]
+        return provider.get_console(ctx)
+    
+    # Fallback to global provider
+    provider = get_console_provider()
+    return provider.get_console(ctx)
+
+# ❌ BAD: Direct console instantiation
+console = Console()  # Bypasses DI system
+```
+
+### **DI Anti-Patterns to Avoid:**
+```python
+# ❌ BAD: Direct service instantiation
+matcher = FuzzyMatcher(threshold=70)  # Bypasses DI container
+
+# ❌ BAD: Fallback instantiation
+self.console = console or Console()  # Should raise error instead
+
+# ❌ BAD: Global service access
+from repomap_tool.core.container import get_container
+container = get_container()  # Use service factory instead
+
+# ❌ BAD: @inject decorators for CLI commands
+@inject
+def search_command(
+    console: Console = Provide[Container.console]  # Wrong for CLI
+) -> None:
+    pass
+```
+
+### **DI Testing Patterns:**
+```python
+# ✅ GOOD: Test using service factory
+def test_search_functionality():
+    """Test using proper DI patterns."""
+    # Create test config
+    config = create_test_config()
+    
+    # Use service factory (same as production)
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    
+    # Test with real injected dependencies
+    results = repomap_service.search("test query")
+    assert len(results) > 0
+
+# ❌ BAD: Direct instantiation in tests
+def test_search_functionality():
+    matcher = FuzzyMatcher(threshold=70)  # Bypasses DI
+    results = matcher.match("test", ["test_data"])
+```
+
+### **DI Best Practices:**
+- **ALWAYS** use service factory for CLI commands (not @inject decorators)
+- **ALWAYS** validate dependencies are injected (no fallback instantiation)
+- **ALWAYS** use DI container for core service registration
+- **ALWAYS** get console from Click context, never instantiate directly
+- **ALWAYS** use same DI patterns in tests as production code
+- **NEVER** bypass DI system with direct instantiation
+- **NEVER** use @inject decorators for CLI commands (manual DI is superior)
+- **NEVER** create services outside the DI container
+
 ## 🧪 **TESTING INTEGRATION**
 
 ### **Testable Code Patterns:**
@@ -324,6 +496,10 @@ class SearchEngine:
 - [ ] **Logging is appropriate**
 - [ ] **Documentation strings are present**
 - [ ] **Tests pass**: `make test` succeeds
+- [ ] **DI compliance**: All services use dependency injection
+- [ ] **No direct instantiation**: No `Console()`, `FuzzyMatcher()`, etc. outside DI
+- [ ] **Service factory usage**: CLI commands use service factory pattern
+- [ ] **Dependency validation**: All dependencies validated in constructors
 
 ### **Code Quality Gates:**
 - **Line length**: ≤88 characters (Black standard)
@@ -344,3 +520,7 @@ class SearchEngine:
 - Code follows DRY principles
 - Type annotations are complete and accurate
 - Modern Python patterns are used throughout
+- **Dependency injection is properly implemented**
+- **No direct service instantiation outside DI container**
+- **CLI commands use service factory pattern**
+- **All dependencies are validated and injected**

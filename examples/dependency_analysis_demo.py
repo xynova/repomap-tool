@@ -14,7 +14,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
 from repomap_tool.models import RepoMapConfig, DependencyConfig
-from repomap_tool.core.repo_map import RepoMapService
+from repomap_tool.cli.services import get_service_factory
 
 
 def main():
@@ -48,9 +48,10 @@ def main():
     print()
 
     try:
-        # Initialize RepoMapService with dependency analysis
+        # Initialize RepoMapService with dependency analysis using service factory
         print("🔧 Initializing RepoMapService with dependency analysis...")
-        repomap = RepoMapService(config)
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
         print("✅ RepoMapService initialized successfully!")
         print()
 

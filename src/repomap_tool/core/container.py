@@ -25,6 +25,13 @@ if TYPE_CHECKING:
     from repomap_tool.dependencies.llm_file_analyzer import LLMFileAnalyzer
     from repomap_tool.dependencies.path_resolver import PathResolver
     from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
+    from repomap_tool.dependencies.call_graph_builder import CallGraphBuilder
+    from repomap_tool.dependencies.js_ts_analyzer import (
+        JavaScriptTypeScriptAnalyzer,
+        JSAnalysisContext,
+    )
+    from repomap_tool.dependencies.import_utils import ImportUtils
+    from repomap_tool.dependencies.ast_visitors import AnalysisContext
     from repomap_tool.llm.context_selector import ContextSelector
     from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
     from repomap_tool.llm.token_optimizer import TokenOptimizer
@@ -34,18 +41,16 @@ if TYPE_CHECKING:
     from repomap_tool.matchers.hybrid_matcher import HybridMatcher
     from repomap_tool.core.cache_manager import CacheManager
     from repomap_tool.core.parallel_processor import ParallelTagExtractor
-    from repomap_tool.dependencies.llm_analyzer_config import LLMAnalyzerConfig, LLMAnalyzerDependencies
-    from repomap_tool.trees.session_manager import SessionManager
+    from repomap_tool.dependencies.llm_analyzer_config import (
+        LLMAnalyzerConfig,
+        LLMAnalyzerDependencies,
+    )
+    from repomap_tool.trees.session_manager import SessionManager, SessionStore
+    from repomap_tool.trees.tree_mapper import TreeMapper
+    from repomap_tool.trees.tree_clusters import TreeClusterer
     from rich.console import Console
 
-from ..dependencies import (
-    get_advanced_dependency_graph,
-    get_centrality_calculator,
-    get_centrality_analysis_engine,
-    get_impact_analyzer,
-    get_impact_analysis_engine,
-    get_llm_file_analyzer,
-)
+# Legacy factory functions removed - using DI container instead
 from ..models import RepoMapConfig
 
 logger = logging.getLogger(__name__)
@@ -259,6 +264,65 @@ class Container(containers.DeclarativeContainer):
             fuzzy_matcher=fuzzy_matcher,
             semantic_threshold=config.semantic_match.threshold,
             verbose=config.verbose,
+        ),
+    )
+
+    # Additional services for trees and dependencies
+    session_store: "providers.Singleton[SessionStore]" = cast(
+        "providers.Singleton[SessionStore]",
+        providers.Singleton(
+            "repomap_tool.trees.session_manager.SessionStore",
+        ),
+    )
+
+    tree_mapper: "providers.Factory[TreeMapper]" = cast(
+        "providers.Factory[TreeMapper]",
+        providers.Factory(
+            "repomap_tool.trees.tree_mapper.TreeMapper",
+        ),
+    )
+
+    tree_clusterer: "providers.Factory[TreeClusterer]" = cast(
+        "providers.Factory[TreeClusterer]",
+        providers.Factory(
+            "repomap_tool.trees.tree_clusters.TreeClusterer",
+        ),
+    )
+
+    # Dependency analysis services
+    call_analyzer: "providers.Singleton[CallGraphBuilder]" = cast(
+        "providers.Singleton[CallGraphBuilder]",
+        providers.Singleton(
+            "repomap_tool.dependencies.call_graph_builder.CallGraphBuilder",
+        ),
+    )
+
+    js_ts_analyzer: "providers.Factory[JavaScriptTypeScriptAnalyzer]" = cast(
+        "providers.Factory[JavaScriptTypeScriptAnalyzer]",
+        providers.Factory(
+            "repomap_tool.dependencies.js_ts_analyzer.JavaScriptTypeScriptAnalyzer",
+            project_root=str(config.project_root),
+        ),
+    )
+
+    js_analysis_context: "providers.Factory[JSAnalysisContext]" = cast(
+        "providers.Factory[JSAnalysisContext]",
+        providers.Factory(
+            "repomap_tool.dependencies.js_ts_analyzer.JSAnalysisContext",
+        ),
+    )
+
+    import_utils: "providers.Singleton[ImportUtils]" = cast(
+        "providers.Singleton[ImportUtils]",
+        providers.Singleton(
+            "repomap_tool.dependencies.import_utils.ImportUtils",
+        ),
+    )
+
+    analysis_context: "providers.Factory[AnalysisContext]" = cast(
+        "providers.Factory[AnalysisContext]",
+        providers.Factory(
+            "repomap_tool.dependencies.ast_visitors.AnalysisContext",
         ),
     )
 

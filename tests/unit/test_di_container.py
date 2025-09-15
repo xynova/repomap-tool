@@ -12,7 +12,13 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
 from repomap_tool.core.container import Container, create_container, get_container
-from repomap_tool.models import RepoMapConfig, FuzzyMatchConfig, SemanticMatchConfig, PerformanceConfig, DependencyConfig
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    DependencyConfig,
+)
 
 
 class TestContainer:
@@ -25,7 +31,7 @@ class TestContainer:
             os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
             with open(os.path.join(temp_dir, "src", "__init__.py"), "w") as f:
                 f.write("# Test project")
-            
+
             return RepoMapConfig(
                 project_root=temp_dir,
                 fuzzy_match=FuzzyMatchConfig(),
@@ -38,14 +44,14 @@ class TestContainer:
         """Test that container can be created."""
         container = Container()
         assert container is not None
-        assert hasattr(container, 'config')
-        assert hasattr(container, 'dependency_graph')
-        assert hasattr(container, 'fuzzy_matcher')
+        assert hasattr(container, "config")
+        assert hasattr(container, "dependency_graph")
+        assert hasattr(container, "fuzzy_matcher")
 
     def test_container_configuration(self):
         """Test container configuration."""
         config = self._create_test_config()
-        
+
         container = create_container(config)
         assert container is not None
         assert container.config.project_root() == config.project_root
@@ -53,10 +59,10 @@ class TestContainer:
     def test_dependency_graph_provider(self):
         """Test dependency graph provider."""
         config = self._create_test_config()
-        
+
         container = create_container(config)
         dependency_graph = container.dependency_graph()
-        
+
         assert dependency_graph is not None
         # Test that it's a singleton
         dependency_graph2 = container.dependency_graph()
@@ -66,21 +72,21 @@ class TestContainer:
         """Test fuzzy matcher provider."""
         config = self._create_test_config()
         config.fuzzy_match.threshold = 80
-        
+
         container = create_container(config)
         fuzzy_matcher = container.fuzzy_matcher()
-        
+
         assert fuzzy_matcher is not None
-        assert hasattr(fuzzy_matcher, 'threshold')
+        assert hasattr(fuzzy_matcher, "threshold")
 
     def test_semantic_matcher_provider(self):
         """Test semantic matcher provider."""
         config = self._create_test_config()
         config.semantic_match.enabled = True
-        
+
         container = create_container(config)
         semantic_matcher = container.adaptive_semantic_matcher()
-        
+
         assert semantic_matcher is not None
 
     def test_hybrid_matcher_provider(self):
@@ -89,19 +95,19 @@ class TestContainer:
         config.fuzzy_match.threshold = 70
         config.semantic_match.enabled = True
         config.semantic_match.threshold = 0.5
-        
+
         container = create_container(config)
         hybrid_matcher = container.hybrid_matcher()
-        
+
         assert hybrid_matcher is not None
 
     def test_console_provider(self):
         """Test console provider."""
         config = self._create_test_config()
-        
+
         container = create_container(config)
         console = container.console()
-        
+
         assert console is not None
         # Test that it's a singleton
         console2 = container.console()
@@ -110,21 +116,21 @@ class TestContainer:
     def test_llm_analyzer_provider(self):
         """Test LLM analyzer provider."""
         config = self._create_test_config()
-        
+
         container = create_container(config)
         llm_analyzer = container.llm_file_analyzer()
-        
+
         assert llm_analyzer is not None
-        assert hasattr(llm_analyzer, 'config')
-        assert hasattr(llm_analyzer, 'dependencies')
+        assert hasattr(llm_analyzer, "config")
+        assert hasattr(llm_analyzer, "dependencies")
 
     def test_centrality_calculator_provider(self):
         """Test centrality calculator provider."""
         config = self._create_test_config()
-        
+
         container = create_container(config)
         centrality_calculator = container.centrality_calculator()
-        
+
         assert centrality_calculator is not None
         # Test that it's a singleton
         centrality_calculator2 = container.centrality_calculator()
@@ -134,10 +140,10 @@ class TestContainer:
         """Test impact analyzer provider."""
         config = self._create_test_config()
         config.dependencies.enable_impact_analysis = True
-        
+
         container = create_container(config)
         impact_analyzer = container.impact_analyzer()
-        
+
         assert impact_analyzer is not None
         # Test that it's a singleton
         impact_analyzer2 = container.impact_analyzer()
@@ -147,10 +153,10 @@ class TestContainer:
         """Test parallel tag extractor provider."""
         config = self._create_test_config()
         config.performance.max_workers = 4
-        
+
         container = create_container(config)
         parallel_extractor = container.parallel_tag_extractor()
-        
+
         assert parallel_extractor is not None
 
     def test_container_error_handling(self):
@@ -173,9 +179,9 @@ class TestContainer:
         config.semantic_match.threshold = 0.6
         config.performance.max_workers = 2
         config.dependencies.enable_impact_analysis = True
-        
+
         container = create_container(config)
-        
+
         # Test that all major services can be created
         services = [
             container.console(),
@@ -187,7 +193,7 @@ class TestContainer:
             container.impact_analyzer(),
             container.llm_file_analyzer(),
         ]
-        
+
         for service in services:
             assert service is not None
 
@@ -198,38 +204,40 @@ class TestContainer:
         config.semantic_match.enabled = False
         config.performance.max_workers = 1
         config.dependencies.enable_impact_analysis = False
-        
+
         container = create_container(config)
-        
+
         # Test configuration values
         assert container.config.project_root() == config.project_root
         assert container.config.fuzzy_match.threshold() == 50
         assert container.config.semantic_match.threshold() == 0.1  # default
         assert container.config.performance.max_workers() == 1
-        assert container.config.dependencies.enable_impact_analysis() == False
+        assert container.config.dependencies.enable_impact_analysis() is False
 
-    @patch('repomap_tool.core.container.logger')
+    @patch("repomap_tool.core.container.logger")
     def test_container_logging(self, mock_logger):
         """Test that container creation is properly logged."""
         config = self._create_test_config()
-        
+
         container = create_container(config)
         assert container is not None
-        
+
         # Verify logging was called
-        mock_logger.info.assert_called_with("Dependency injection container created and configured")
+        mock_logger.info.assert_called_with(
+            "Dependency injection container created and configured"
+        )
 
     def test_container_with_missing_dependencies(self):
         """Test container behavior with missing optional dependencies."""
         config = self._create_test_config()
         config.semantic_match.enabled = False
         config.dependencies.enable_impact_analysis = False
-        
+
         container = create_container(config)
-        
+
         # Should still create container successfully
         assert container is not None
-        
+
         # Semantic matcher should not be available when disabled
         # (This would be handled by the service factory in practice)
         assert container.config.semantic_match.threshold() == 0.1  # default value

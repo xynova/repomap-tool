@@ -13,6 +13,6 @@ from .service_factory import (
 
 __all__ = [
     "ServiceFactory",
-    "get_service_factory", 
+    "get_service_factory",
     "clear_service_cache",
 ]

@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 class ServiceFactory:
     """Factory for creating services with dependency injection."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the service factory."""
         self._containers: dict[str, Any] = {}
         self._services: dict[str, Any] = {}
@@ -38,7 +38,7 @@ class ServiceFactory:
             RepoMapService instance with injected dependencies
         """
         cache_key = f"repomap_{config.project_root}"
-        
+
         if cache_key in self._services:
             return self._services[cache_key]
 
@@ -50,7 +50,7 @@ class ServiceFactory:
         console = container.console()
         parallel_extractor = container.parallel_tag_extractor()
         fuzzy_matcher = container.fuzzy_matcher()
-        
+
         semantic_matcher = None
         hybrid_matcher = None
         if config.semantic_match.enabled:
@@ -81,9 +81,7 @@ class ServiceFactory:
         return service
 
     def create_entrypoint_discoverer(
-        self, 
-        repo_map_service: RepoMapService,
-        config: RepoMapConfig
+        self, repo_map_service: RepoMapService, config: RepoMapConfig
     ) -> EntrypointDiscoverer:
         """Create an EntrypointDiscoverer with injected dependencies.
 
@@ -95,7 +93,7 @@ class ServiceFactory:
             EntrypointDiscoverer instance with injected dependencies
         """
         cache_key = f"discoverer_{config.project_root}"
-        
+
         if cache_key in self._services:
             return self._services[cache_key]
 
@@ -127,9 +125,7 @@ class ServiceFactory:
         return discoverer
 
     def create_tree_builder(
-        self, 
-        repo_map_service: RepoMapService,
-        config: RepoMapConfig
+        self, repo_map_service: RepoMapService, config: RepoMapConfig
     ) -> TreeBuilder:
         """Create a TreeBuilder with injected dependencies.
 
@@ -141,12 +137,14 @@ class ServiceFactory:
             TreeBuilder instance with injected dependencies
         """
         cache_key = f"tree_builder_{config.project_root}"
-        
+
         if cache_key in self._services:
             return self._services[cache_key]
 
         # Create entrypoint discoverer
-        entrypoint_discoverer = self.create_entrypoint_discoverer(repo_map_service, config)
+        entrypoint_discoverer = self.create_entrypoint_discoverer(
+            repo_map_service, config
+        )
 
         # Create TreeBuilder with injected dependencies
         tree_builder = TreeBuilder(
@@ -159,9 +157,7 @@ class ServiceFactory:
         return tree_builder
 
     def create_tree_manager(
-        self, 
-        repo_map_service: RepoMapService,
-        config: RepoMapConfig
+        self, repo_map_service: RepoMapService, config: RepoMapConfig
     ) -> TreeManager:
         """Create a TreeManager with injected dependencies.
 
@@ -173,7 +169,7 @@ class ServiceFactory:
             TreeManager instance with injected dependencies
         """
         cache_key = f"tree_manager_{config.project_root}"
-        
+
         if cache_key in self._services:
             return self._services[cache_key]
 
@@ -198,7 +194,7 @@ class ServiceFactory:
         logger.debug(f"Created TreeManager for {config.project_root}")
         return tree_manager
 
-    def get_llm_analyzer(self, config: RepoMapConfig):
+    def get_llm_analyzer(self, config: RepoMapConfig) -> Any:
         """Get LLM analyzer from container.
 
         Args:
@@ -208,7 +204,7 @@ class ServiceFactory:
             LLM analyzer instance
         """
         cache_key = f"llm_analyzer_{config.project_root}"
-        
+
         if cache_key in self._services:
             return self._services[cache_key]
 
