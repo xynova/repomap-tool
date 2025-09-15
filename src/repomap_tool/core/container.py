@@ -122,6 +122,8 @@ class Container(containers.DeclarativeContainer):
         providers.Factory(
             "repomap_tool.dependencies.impact_analysis_engine.ImpactAnalysisEngine",
             ast_analyzer=ast_analyzer,
+            dependency_graph=dependency_graph,
+            path_normalizer=path_normalizer,
         ),
     )
 

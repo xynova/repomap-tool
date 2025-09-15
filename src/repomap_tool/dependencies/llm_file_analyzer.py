@@ -132,8 +132,9 @@ class LLMFileAnalyzer:
         impact_analyses = []
         for i, file_path in enumerate(file_paths):
             resolved_path = resolved_paths[i]
+            # Pass the dependency graph from LLMFileAnalyzer to ensure it's the same populated instance
             impact_analysis = self.impact_engine.analyze_file_impact(
-                file_path, ast_results[resolved_path], all_files
+                file_path, ast_results[resolved_path], all_files, self.dependency_graph
             )
             impact_analyses.append(impact_analysis)
 

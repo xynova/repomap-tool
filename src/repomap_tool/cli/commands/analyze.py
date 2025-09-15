@@ -36,7 +36,7 @@ def analyze() -> None:
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="table",
+    default="llm_optimized",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
@@ -165,7 +165,7 @@ def centrality(
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="table",
+    default="llm_optimized",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
@@ -212,12 +212,37 @@ def impact(
         )
         console.print(f"📁 Target files: {', '.join(files)}")
 
-        # Placeholder for actual impact analysis
-        console.print("✅ Impact analysis completed")
-        console.print(f"📊 Output format: {output}")
-        console.print(f"🔢 Max tokens: {max_tokens}")
-
-        # TODO: Implement actual impact analysis using LLMFileAnalyzer
+        # Get service factory and create services
+        from repomap_tool.cli.services import get_service_factory
+        
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config_obj)
+        llm_analyzer = service_factory.get_llm_analyzer(config_obj)
+        
+        # Build dependency graph (required for reverse dependency analysis)
+        dependency_graph = repomap_service.build_dependency_graph()
+        
+        # Set max tokens for the analyzer
+        llm_analyzer.max_tokens = max_tokens
+        
+        # Perform impact analysis
+        try:
+            # Convert output format string to enum
+            from repomap_tool.dependencies import AnalysisFormat
+            format_enum = AnalysisFormat(output.lower())
+            
+            # Analyze impact for the specified files
+            result = llm_analyzer.analyze_file_impact(files, format_enum)
+            
+            # Display the result
+            console.print(result)
+            
+        except Exception as analysis_error:
+            console.print(f"[red]Error during impact analysis: {analysis_error}[/red]")
+            if verbose:
+                import traceback
+                console.print(f"[red]Traceback: {traceback.format_exc()}[/red]")
+            sys.exit(1)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ImpactAnalysisError")

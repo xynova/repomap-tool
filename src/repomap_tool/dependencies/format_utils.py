@@ -78,7 +78,7 @@ def format_single_file_impact_llm(
     output.append("REVERSE DEPENDENCIES (what imports/calls this file):")
     for dep in analysis.reverse_dependencies[:10]:  # Limit for token budget
         output.append(
-            f"├── {Path(dep['file']).name}:{dep['line']} ({dep['relationship']})"
+            f"├── {dep['file']}:{dep['line']} ({dep['relationship']})"
         )
     if len(analysis.reverse_dependencies) > 10:
         output.append(f"└── ... and {len(analysis.reverse_dependencies) - 10} more")
@@ -88,7 +88,11 @@ def format_single_file_impact_llm(
     if analysis.function_call_analysis:
         output.append("FUNCTION CALL ANALYSIS:")
         for call in analysis.function_call_analysis[:5]:  # Limit for token budget
-            output.append(f"├── {call['function']}() called at line {call['line']}")
+            source_info = call.get('source', 'unknown source')
+            if source_info != 'unknown source':
+                output.append(f"├── {call['function']}() called at line {call['line']} ({source_info})")
+            else:
+                output.append(f"├── {call['function']}() called at line {call['line']}")
         if len(analysis.function_call_analysis) > 5:
             output.append(
                 f"└── ... and {len(analysis.function_call_analysis) - 5} more calls"
@@ -138,7 +142,7 @@ def format_multiple_files_impact_llm(
         for dep in analysis.direct_dependencies:
             all_direct_deps.add(dep["file"])
         for dep in analysis.reverse_dependencies:
-            all_reverse_deps.add(Path(dep["file"]).name)
+            all_reverse_deps.add(dep["file"])
 
     output.append("COMBINED DEPENDENCIES:")
     for dep_name in list(all_direct_deps)[:10]:
@@ -529,72 +533,56 @@ def format_json_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
 
 
 def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
-    """Format impact analysis as table."""
-    from rich.console import Console
-    from rich.table import Table
-    from rich.text import Text
+    """Format impact analysis as simple ASCII table."""
+    if not analyses:
+        return "No impact analysis data available."
 
-    # Create console with fallback for terminals that don't support Unicode
-    console = Console(force_terminal=True)
+    # Calculate column widths
+    max_file_width = max(len(Path(analysis.file_path).name) for analysis in analyses) + 2
+    max_file_width = min(max_file_width, 50)  # Cap filename width
 
-    # Create table with ASCII-safe borders
-    from rich.box import SIMPLE, ASCII
+    # Create header
+    header = f"{'File':<{max_file_width}} {'Impact':<8} {'Direct':<8} {'Reverse':<8} {'Functions':<10} {'Classes':<8}"
+    separator = "─" * len(header)
 
-    table = Table(
-        title="Impact Analysis",
-        show_header=True,
-        header_style="bold magenta",
-        box=SIMPLE,  # Use simple ASCII borders that work in all terminals
-    )
+    # Build table
+    lines = []
+    lines.append("Impact Analysis")
+    lines.append(separator)
+    lines.append(header)
+    lines.append(separator)
 
-    # Add columns
-    table.add_column("File", style="cyan", no_wrap=True)
-    table.add_column("Impact Score", justify="right", style="green")
-    table.add_column("Direct Deps", justify="right", style="yellow")
-    table.add_column("Reverse Deps", justify="right", style="blue")
-    table.add_column("Functions", justify="right", style="red")
-    table.add_column("Classes", justify="right", style="magenta")
-
-    # Add rows
+    # Add data rows
     for analysis in analyses:
         file_name = Path(analysis.file_path).name
-
+        
         # Truncate long filenames
-        display_name = file_name if len(file_name) <= 30 else file_name[:27] + "..."
+        display_name = file_name if len(file_name) <= max_file_width - 2 else file_name[:max_file_width - 5] + "..."
 
         # Calculate impact score from structural impact
         impact_score = analysis.structural_impact.get("impact_score", 0.0)
+        impact_str = f"{impact_score:.3f}"
 
-        # Color code impact score
-        score_text = Text(f"{impact_score:.3f}")
-        if impact_score >= 0.1:
-            score_text.stylize("bold red")
-        elif impact_score >= 0.05:
-            score_text.stylize("yellow")
-        else:
-            score_text.stylize("dim")
+        # Get defined functions and classes from structural impact
+        defined_functions = analysis.structural_impact.get("defined_functions", 0)
+        defined_classes = analysis.structural_impact.get("defined_classes", 0)
 
-        # Get function call analysis data (it's a list, not a dict)
-        func_analysis = analysis.function_call_analysis
-        defined_functions = len(
-            [f for f in func_analysis if f.get("type") == "function"]
-        )
-        defined_classes = len([f for f in func_analysis if f.get("type") == "class"])
+        row = f"{display_name:<{max_file_width}} {impact_str:<8} {len(analysis.direct_dependencies):<8} {len(analysis.reverse_dependencies):<8} {defined_functions:<10} {defined_classes:<8}"
+        lines.append(row)
 
-        table.add_row(
-            display_name,
-            score_text,
-            f"{len(analysis.direct_dependencies)}",
-            f"{len(analysis.reverse_dependencies)}",
-            f"{defined_functions}",
-            f"{defined_classes}",
-        )
-
-    # Render table to string
-    with console.capture() as capture:
-        console.print(table)
-
-    return capture.get()
+    lines.append(separator)
+    
+    # Add column explanations
+    lines.append("")
+    lines.append("📊 COLUMN EXPLANATIONS:")
+    lines.append("├── File: File name")
+    lines.append("├── Impact: Impact score (0.0-1.0, higher = more impact)")
+    lines.append("├── Direct: Number of direct dependencies (imports)")
+    lines.append("├── Reverse: Number of reverse dependencies (imported by)")
+    lines.append("├── Functions: Number of functions defined in this file")
+    lines.append("└── Classes: Number of classes defined in this file")
+    
+    return "\n".join(lines)
 
 
 def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
