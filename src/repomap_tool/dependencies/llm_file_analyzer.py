@@ -178,11 +178,23 @@ class LLMFileAnalyzer:
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
 
-        # Analyze each file
+        # Sort files by centrality score (highest first) to process most important files first
+        if len(file_paths) > 1:
+            # Get centrality scores for all files to sort them
+            centrality_scores = self.centrality_calculator.calculate_composite_importance()
+            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in file_paths]
+            sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
+            sorted_file_paths = [fp for fp, _ in sorted_file_scores]
+        else:
+            sorted_file_paths = file_paths
+
+        # Analyze each file in order of importance
         centrality_analyses = []
-        for i, file_path in enumerate(file_paths):
+        for file_path in sorted_file_paths:
             try:
-                resolved_path = resolved_paths[i]
+                # Find the resolved path for this file
+                original_index = file_paths.index(file_path)
+                resolved_path = resolved_paths[original_index]
                 centrality_analysis = self.centrality_engine.analyze_file_centrality(
                     file_path, ast_results[resolved_path], all_files
                 )

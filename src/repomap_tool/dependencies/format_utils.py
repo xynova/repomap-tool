@@ -603,8 +603,9 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     if not analyses:
         return "No centrality analysis data available."
 
-    # Sort analyses by centrality score (highest first) to show most important files first
-    sorted_analyses = sorted(analyses, key=lambda x: x.centrality_score, reverse=True)
+    # Files should already be sorted by centrality score from the analyzer
+    # Keep them in the order they were processed (most important first)
+    sorted_analyses = analyses
 
     # Calculate column widths - give much more space for file names
     max_file_width = (
