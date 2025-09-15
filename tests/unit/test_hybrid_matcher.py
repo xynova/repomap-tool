@@ -128,9 +128,17 @@ def test_hybrid_matcher():
         "contraption_manager",
     }
 
-    # Initialize hybrid matcher
+    # Initialize fuzzy matcher first
+    from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+    fuzzy_matcher = FuzzyMatcher(
+        threshold=60,
+        strategies=["prefix", "substring", "levenshtein"],
+        verbose=False,
+    )
+    
+    # Initialize hybrid matcher with injected fuzzy matcher
     matcher = HybridMatcher(
-        fuzzy_threshold=60,
+        fuzzy_matcher=fuzzy_matcher,
         semantic_threshold=0.2,
         use_word_embeddings=True,
         verbose=False,

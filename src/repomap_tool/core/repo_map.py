@@ -79,19 +79,26 @@ class RepoMapService:
         self.config = config
         self.logger = self._setup_logging()
         
-        # Use injected dependencies or create DI container
-        if console is not None:
-            self.console = console
-            self.parallel_extractor = parallel_extractor
-            self.fuzzy_matcher = fuzzy_matcher
-            self.semantic_matcher = semantic_matcher
-            self.hybrid_matcher = hybrid_matcher
-            self.dependency_graph = dependency_graph
-            self.impact_analyzer = impact_analyzer
-            self.centrality_calculator = centrality_calculator
-        else:
-            # Fallback: create DI container and get dependencies
-            self._initialize_with_di_container()
+        # All dependencies must be injected - no fallback allowed
+        if console is None:
+            raise ValueError("Console must be injected - no fallback allowed")
+        if parallel_extractor is None:
+            raise ValueError("ParallelTagExtractor must be injected - no fallback allowed")
+        if fuzzy_matcher is None:
+            raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
+        if dependency_graph is None:
+            raise ValueError("DependencyGraph must be injected - no fallback allowed")
+        if centrality_calculator is None:
+            raise ValueError("CentralityCalculator must be injected - no fallback allowed")
+            
+        self.console = console
+        self.parallel_extractor = parallel_extractor
+        self.fuzzy_matcher = fuzzy_matcher
+        self.semantic_matcher = semantic_matcher
+        self.hybrid_matcher = hybrid_matcher
+        self.dependency_graph = dependency_graph
+        self.impact_analyzer = impact_analyzer
+        self.centrality_calculator = centrality_calculator
 
         # Initialize components
         self.repo_map: Optional[RepoMapProtocol] = None
@@ -124,35 +131,6 @@ class RepoMapService:
 
         return logger
 
-    def _initialize_with_di_container(self) -> None:
-        """Initialize dependencies using DI container."""
-        from .container import create_container
-
-        # Create DI container - this MUST work or fail fast
-        container = create_container(self.config)
-
-        # Get instances from DI container
-        self.console = container.console()
-        self.parallel_extractor = container.parallel_tag_extractor()
-        
-        # Get matchers from DI container
-        self.fuzzy_matcher = container.fuzzy_matcher()
-        if self.config.semantic_match.enabled:
-            self.semantic_matcher = container.adaptive_semantic_matcher()
-            self.hybrid_matcher = container.hybrid_matcher()
-        else:
-            self.semantic_matcher = None
-            self.hybrid_matcher = None
-
-        # Get dependency analysis components
-        self.dependency_graph = container.dependency_graph()
-        if self.config.dependencies.enable_impact_analysis:
-            self.impact_analyzer = container.impact_analyzer()
-        else:
-            self.impact_analyzer = None
-        self.centrality_calculator = container.centrality_calculator()
-
-        self.logger.info("Dependencies initialized using DI container")
 
 
     def _initialize_components(self) -> None:

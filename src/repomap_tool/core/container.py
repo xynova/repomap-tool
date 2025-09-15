@@ -256,7 +256,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[HybridMatcher]",
         providers.Factory(
             "repomap_tool.matchers.hybrid_matcher.HybridMatcher",
-            fuzzy_threshold=config.fuzzy_match.threshold,
+            fuzzy_matcher=fuzzy_matcher,
             semantic_threshold=config.semantic_match.threshold,
             verbose=config.verbose,
         ),

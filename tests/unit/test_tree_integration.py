@@ -39,7 +39,21 @@ class TestTreeDependencyIntegration:
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
-            discoverer = EntrypointDiscoverer(mock_repo_map)
+            # Create dependencies using service factory
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            
+            # Create discoverer with injected dependencies
+            from repomap_tool.core.container import create_container
+            container = create_container(config)
+            discoverer = EntrypointDiscoverer(
+                repo_map=repomap_service,
+                import_analyzer=container.import_analyzer(),
+                dependency_graph=container.dependency_graph(),
+                centrality_calculator=container.centrality_calculator(),
+                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+            )
 
             # Check that dependency components are initialized
             assert discoverer.import_analyzer is not None
@@ -67,7 +81,21 @@ class TestTreeDependencyIntegration:
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
-            discoverer = EntrypointDiscoverer(mock_repo_map)
+            # Create dependencies using service factory
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            
+            # Create discoverer with injected dependencies
+            from repomap_tool.core.container import create_container
+            container = create_container(config)
+            discoverer = EntrypointDiscoverer(
+                repo_map=repomap_service,
+                import_analyzer=container.import_analyzer(),
+                dependency_graph=container.dependency_graph(),
+                centrality_calculator=container.centrality_calculator(),
+                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+            )
 
             # Create test entrypoints
             entrypoint1 = Entrypoint(
@@ -112,7 +140,21 @@ class TestTreeDependencyIntegration:
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
-            discoverer = EntrypointDiscoverer(mock_repo_map)
+            # Create dependencies using service factory
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            
+            # Create discoverer with injected dependencies
+            from repomap_tool.core.container import create_container
+            container = create_container(config)
+            discoverer = EntrypointDiscoverer(
+                repo_map=repomap_service,
+                import_analyzer=container.import_analyzer(),
+                dependency_graph=container.dependency_graph(),
+                centrality_calculator=container.centrality_calculator(),
+                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+            )
 
             # Test with line number - should return None since file doesn't exist
             file_path = discoverer._extract_file_path_from_location(
@@ -165,7 +207,21 @@ class TestTreeDependencyIntegration:
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
-            discoverer = EntrypointDiscoverer(mock_repo_map)
+            # Create dependencies using service factory
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            
+            # Create discoverer with injected dependencies
+            from repomap_tool.core.container import create_container
+            container = create_container(config)
+            discoverer = EntrypointDiscoverer(
+                repo_map=repomap_service,
+                import_analyzer=container.import_analyzer(),
+                dependency_graph=container.dependency_graph(),
+                centrality_calculator=container.centrality_calculator(),
+                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+            )
 
             # Verify dependency graph is accessible
             assert discoverer.dependency_graph is not None
@@ -188,7 +244,21 @@ class TestTreeDependencyIntegration:
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
-            discoverer = EntrypointDiscoverer(mock_repo_map)
+            # Create dependencies using service factory
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            
+            # Create discoverer with injected dependencies
+            from repomap_tool.core.container import create_container
+            container = create_container(config)
+            discoverer = EntrypointDiscoverer(
+                repo_map=repomap_service,
+                import_analyzer=container.import_analyzer(),
+                dependency_graph=container.dependency_graph(),
+                centrality_calculator=container.centrality_calculator(),
+                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+            )
 
             # Verify import analyzer is accessible
             assert discoverer.import_analyzer is not None
@@ -210,7 +280,21 @@ class TestTreeDependencyIntegration:
             mock_repo_map = Mock()
             mock_repo_map.config = config
 
-            discoverer = EntrypointDiscoverer(mock_repo_map)
+            # Create dependencies using service factory
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            
+            # Create discoverer with injected dependencies
+            from repomap_tool.core.container import create_container
+            container = create_container(config)
+            discoverer = EntrypointDiscoverer(
+                repo_map=repomap_service,
+                import_analyzer=container.import_analyzer(),
+                dependency_graph=container.dependency_graph(),
+                centrality_calculator=container.centrality_calculator(),
+                impact_analyzer=container.impact_analyzer() if config.dependencies.enable_impact_analysis else None
+            )
 
             # With DI, these are now initialized immediately
             assert discoverer.centrality_calculator is not None

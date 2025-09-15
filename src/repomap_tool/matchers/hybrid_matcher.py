@@ -31,7 +31,7 @@ class HybridMatcher:
 
     def __init__(
         self,
-        fuzzy_threshold: int = 70,
+        fuzzy_matcher: FuzzyMatcher,
         semantic_threshold: float = 0.3,
         use_word_embeddings: bool = False,
         verbose: bool = True,
@@ -40,23 +40,17 @@ class HybridMatcher:
         Initialize the hybrid matcher.
 
         Args:
-            fuzzy_threshold: Threshold for fuzzy matching (0-100)
+            fuzzy_matcher: Injected FuzzyMatcher instance
             semantic_threshold: Threshold for semantic similarity (0.0-1.0)
             use_word_embeddings: Whether to use word embeddings (requires more dependencies)
             verbose: Whether to log matching details
         """
-        self.fuzzy_threshold = fuzzy_threshold
+        self.fuzzy_matcher = fuzzy_matcher
+        self.fuzzy_threshold = fuzzy_matcher.threshold
         self.semantic_threshold = semantic_threshold
         self.use_word_embeddings = use_word_embeddings
         self.verbose = verbose
         self.enabled = True  # Add enabled attribute for compatibility
-
-        # Initialize fuzzy matcher
-        self.fuzzy_matcher = FuzzyMatcher(
-            threshold=fuzzy_threshold,
-            strategies=["prefix", "substring", "levenshtein"],
-            verbose=verbose,
-        )
 
         # TF-IDF components
         self.word_frequencies: Counter[str] = Counter()
@@ -70,7 +64,7 @@ class HybridMatcher:
 
         if self.verbose:
             logger.info(
-                f"Initialized HybridMatcher (fuzzy: {fuzzy_threshold}, semantic: {semantic_threshold})"
+                f"Initialized HybridMatcher (fuzzy: {self.fuzzy_threshold}, semantic: {semantic_threshold})"
             )
 
     def _initialize_word_embeddings(self) -> None:
