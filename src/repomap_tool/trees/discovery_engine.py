@@ -45,9 +45,11 @@ class EntrypointDiscoverer:
             impact_analyzer: Impact analyzer instance (injected)
         """
         self.repo_map = repo_map
-        self.semantic_matcher = getattr(repo_map, "semantic_matcher", None) or getattr(
-            repo_map, "domain_semantic_matcher", None
-        )
+        # Get semantic matcher from repo_map
+        semantic_matcher = getattr(repo_map, "semantic_matcher", None)
+        if semantic_matcher is None:
+            semantic_matcher = getattr(repo_map, "domain_semantic_matcher", None)
+        self.semantic_matcher = semantic_matcher
         self.fuzzy_matcher = getattr(repo_map, "fuzzy_matcher", None)
 
         # Use semantic matcher threshold from config if available

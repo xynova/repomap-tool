@@ -13,7 +13,9 @@ from .console import get_console
 # Note: console should be obtained via get_console(ctx) in functions that need it
 
 
-def get_project_path_from_session(session_id: str, console: Optional[Console] = None) -> Optional[str]:
+def get_project_path_from_session(
+    session_id: str, console: Optional[Console] = None
+) -> Optional[str]:
     """Get project path from session data.
 
     Args:
@@ -55,7 +57,9 @@ def create_session_id() -> str:
     return f"explore_{int(time.time())}"
 
 
-def get_or_create_session(session: Optional[str], console: Optional[Console] = None) -> str:
+def get_or_create_session(
+    session: Optional[str], console: Optional[Console] = None
+) -> str:
     """Get existing session or create a new one.
 
     Args:

@@ -100,7 +100,9 @@ class ParallelTagExtractor:
         """
         self.max_workers = max_workers
         self.enable_progress = enable_progress
-        self.console = console or Console()
+        if console is None:
+            raise ValueError("Console must be injected - no fallback allowed")
+        self.console = console
         self.logger = logging.getLogger(__name__)
 
         # Thread safety

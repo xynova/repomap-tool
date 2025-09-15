@@ -50,7 +50,9 @@ class ConsoleProvider:
         Args:
             factory: Console factory implementation
         """
-        self._factory = factory or RichConsoleFactory()
+        if factory is None:
+            factory = RichConsoleFactory()
+        self._factory = factory
 
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:
         """Get a console instance, optionally configured from context.

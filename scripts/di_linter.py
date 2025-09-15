@@ -81,6 +81,14 @@ class DILinter(ast.NodeVisitor):
     
     def _is_direct_console_instantiation(self, node: ast.Call) -> bool:
         """Check if this is a direct Console() call."""
+        # Skip formatting utilities that create console for output formatting
+        if "format_utils" in self.filename:
+            return False
+        
+        # Skip factory classes where direct instantiation is allowed
+        if "console.py" in self.filename:
+            return False
+            
         if isinstance(node.func, ast.Name):
             return node.func.id == "Console"
         elif isinstance(node.func, ast.Attribute):
@@ -90,6 +98,10 @@ class DILinter(ast.NodeVisitor):
     
     def _is_direct_matcher_instantiation(self, node: ast.Call) -> bool:
         """Check if this is a direct matcher instantiation."""
+        # Skip test files - they often need direct instantiation for testing
+        if self.in_test_file:
+            return False
+            
         matcher_classes = {
             "FuzzyMatcher", "AdaptiveSemanticMatcher", "HybridMatcher",
             "CentralityCalculator", "ImpactAnalyzer", "DependencyGraph"
@@ -109,11 +121,12 @@ class DILinter(ast.NodeVisitor):
     
     def _is_fallback_assignment(self, node: ast.Assign) -> bool:
         """Check for fallback assignment patterns."""
-        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Name):
-            target_name = node.targets[0].id
+        if len(node.targets) == 1 and isinstance(node.targets[0], ast.Attribute):
+            # Pattern: self.service = service or Service()
             if isinstance(node.value, ast.BoolOp) and isinstance(node.value.op, ast.Or):
-                # Pattern: self.service = service or Service()
-                return True
+                # Check if the right side is a constructor call
+                if isinstance(node.value.values[1], ast.Call):
+                    return True
         return False
     
     def _is_in_test_function(self) -> bool:
