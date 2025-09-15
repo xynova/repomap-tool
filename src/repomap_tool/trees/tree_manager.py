@@ -211,7 +211,8 @@ class TreeManager:
                 return None
 
             if target_tree_id in session.exploration_trees:
-                return session.exploration_trees[target_tree_id]
+                tree: ExplorationTree = session.exploration_trees[target_tree_id]
+                return tree
 
             return None
 

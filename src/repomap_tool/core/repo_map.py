@@ -517,6 +517,8 @@ class RepoMapService:
             Exception: If parallel processing fails, with helpful debugging info
         """
         try:
+            identifiers: List[str]
+            stats: Any
             identifiers, stats = self.parallel_extractor.extract_tags_parallel(
                 files=project_files,
                 project_root=str(self.config.project_root),

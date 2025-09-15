@@ -6,7 +6,7 @@ to avoid direct instantiation and ensure consistent configuration patterns.
 """
 
 import logging
-from typing import Optional, List
+from typing import Optional, List, Any
 from pathlib import Path
 
 from repomap_tool.models import (
@@ -116,7 +116,7 @@ class ConfigFactory:
         semantic_match: Optional[SemanticMatchConfig] = None,
         performance: Optional[PerformanceConfig] = None,
         verbose: bool = False,
-        **kwargs,
+        **kwargs: Any,
     ) -> RepoMapConfig:
         """Create a RepoMapConfig with specified parameters.
 

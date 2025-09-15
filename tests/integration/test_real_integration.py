@@ -162,8 +162,11 @@ class DataProcessor:
             identifiers.update(found)
 
         # Initialize hybrid matcher
+        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+
+        fuzzy_matcher = FuzzyMatcher(threshold=60)
         matcher = HybridMatcher(
-            fuzzy_threshold=60, semantic_threshold=0.1, verbose=False
+            fuzzy_matcher=fuzzy_matcher, semantic_threshold=0.1, verbose=False
         )
 
         # Build TF-IDF model from identifiers
@@ -206,6 +209,8 @@ class DataProcessor:
         query = "user"
 
         # Fuzzy matcher
+        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+
         fuzzy_matcher = FuzzyMatcher(threshold=60, verbose=False)
         fuzzy_results = fuzzy_matcher.match_identifiers(query, identifiers)
 
@@ -217,8 +222,11 @@ class DataProcessor:
         )
 
         # Hybrid matcher
+        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+
+        fuzzy_matcher = FuzzyMatcher(threshold=60)
         hybrid_matcher = HybridMatcher(
-            fuzzy_threshold=60, semantic_threshold=0.1, verbose=False
+            fuzzy_matcher=fuzzy_matcher, semantic_threshold=0.1, verbose=False
         )
         hybrid_matcher.build_tfidf_model(identifiers)
         hybrid_results = hybrid_matcher.find_hybrid_matches(query, identifiers)

@@ -9,7 +9,7 @@ monitoring features.
 import pytest
 import tempfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, MagicMock
 
 from repomap_tool.models import RepoMapConfig, PerformanceConfig
 from repomap_tool.core.repo_map import RepoMapService
@@ -85,7 +85,11 @@ class TestParallelTagExtractor:
 
     def test_initialization(self):
         """Test ParallelTagExtractor initialization."""
-        extractor = ParallelTagExtractor(max_workers=6, enable_progress=True)
+        # Create a mock console for DI
+        mock_console = MagicMock()
+        extractor = ParallelTagExtractor(
+            max_workers=6, enable_progress=True, console=mock_console
+        )
 
         assert extractor.max_workers == 6
         assert extractor.enable_progress is True
@@ -94,7 +98,9 @@ class TestParallelTagExtractor:
 
     def test_extract_tags_parallel_empty_files(self):
         """Test parallel extraction with empty file list."""
-        extractor = ParallelTagExtractor()
+        # Create a mock console for DI
+        mock_console = MagicMock()
+        extractor = ParallelTagExtractor(console=mock_console)
         mock_repo_map = Mock()
 
         identifiers, stats = extractor.extract_tags_parallel(
@@ -109,7 +115,9 @@ class TestParallelTagExtractor:
 
     def test_extract_tags_parallel_single_file(self):
         """Test parallel extraction with single file."""
-        extractor = ParallelTagExtractor(max_workers=1)
+        # Create a mock console for DI
+        mock_console = MagicMock()
+        extractor = ParallelTagExtractor(max_workers=1, console=mock_console)
 
         # Mock repo_map that returns tags
         mock_repo_map = Mock()
@@ -130,7 +138,9 @@ class TestParallelTagExtractor:
 
     def test_extract_tags_parallel_error_handling(self):
         """Test parallel extraction error handling."""
-        extractor = ParallelTagExtractor(max_workers=1)
+        # Create a mock console for DI
+        mock_console = MagicMock()
+        extractor = ParallelTagExtractor(max_workers=1, console=mock_console)
 
         # Mock repo_map that raises an exception
         mock_repo_map = Mock()
@@ -165,7 +175,9 @@ class TestParallelTagExtractor:
 
     def test_get_performance_metrics(self):
         """Test performance metrics retrieval."""
-        extractor = ParallelTagExtractor(max_workers=4)
+        # Create a mock console for DI
+        mock_console = MagicMock()
+        extractor = ParallelTagExtractor(max_workers=4, console=mock_console)
 
         # Mock some processing
         extractor._stats = ProcessingStats(

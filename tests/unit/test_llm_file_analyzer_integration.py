@@ -12,7 +12,9 @@ from src.repomap_tool.dependencies.llm_file_analyzer import (
     LLMFileAnalyzer,
     AnalysisFormat,
 )
-from src.repomap_tool.dependencies.dependency_graph import DependencyGraph
+from src.repomap_tool.dependencies.advanced_dependency_graph import (
+    AdvancedDependencyGraph,
+)
 from src.repomap_tool.dependencies.models import DependencyNode, Import
 from src.repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
 from src.repomap_tool.dependencies.centrality_calculator import CentralityCalculator
@@ -117,7 +119,7 @@ export function anotherFunction() {
                 )
 
             # Build a dependency graph with relative paths
-            dependency_graph = DependencyGraph()
+            dependency_graph = AdvancedDependencyGraph()
             dependency_graph.project_path = temp_dir
 
             # Add nodes with relative paths (as the real system does)
@@ -190,7 +192,7 @@ def test_function():
                 )
 
             # Build a dependency graph
-            dependency_graph = DependencyGraph()
+            dependency_graph = AdvancedDependencyGraph()
             dependency_graph.project_path = temp_dir
 
             relative_py_file = "src/test.py"
@@ -214,7 +216,7 @@ def test_function():
     def test_path_conversion_logic(self):
         """Test the core path conversion logic that was broken."""
         with tempfile.TemporaryDirectory() as temp_dir:
-            dependency_graph = DependencyGraph()
+            dependency_graph = AdvancedDependencyGraph()
             dependency_graph.project_path = temp_dir
 
             llm_analyzer = self._create_llm_analyzer(dependency_graph, temp_dir)
@@ -239,7 +241,7 @@ def test_function():
         """Test that dependency graph lookup works with path conversion."""
         with tempfile.TemporaryDirectory() as temp_dir:
             # Create dependency graph with relative paths
-            dependency_graph = DependencyGraph()
+            dependency_graph = AdvancedDependencyGraph()
             dependency_graph.project_path = temp_dir
 
             relative_file = "src/test.py"

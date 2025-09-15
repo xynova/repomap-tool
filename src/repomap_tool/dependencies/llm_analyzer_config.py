@@ -5,8 +5,32 @@ This module provides a configuration object that groups related parameters
 for the LLM file analyzer, making it easier to manage and test.
 """
 
-from typing import Optional
+from typing import Optional, TYPE_CHECKING, Any
 from pydantic import BaseModel, Field, field_validator
+
+if TYPE_CHECKING:
+    from .advanced_dependency_graph import AdvancedDependencyGraph
+    from .ast_file_analyzer import ASTFileAnalyzer
+    from .centrality_calculator import CentralityCalculator
+    from .impact_analyzer import ImpactAnalyzer
+    from .impact_analysis_engine import ImpactAnalysisEngine
+    from .centrality_analysis_engine import CentralityAnalysisEngine
+    from .path_resolver import PathResolver
+    from ..llm.token_optimizer import TokenOptimizer
+    from ..llm.context_selector import ContextSelector
+    from ..llm.hierarchical_formatter import HierarchicalFormatter
+else:
+    # Import for runtime to avoid circular imports
+    from .advanced_dependency_graph import AdvancedDependencyGraph
+    from .ast_file_analyzer import ASTFileAnalyzer
+    from .centrality_calculator import CentralityCalculator
+    from .impact_analyzer import ImpactAnalyzer
+    from .impact_analysis_engine import ImpactAnalysisEngine
+    from .centrality_analysis_engine import CentralityAnalysisEngine
+    from .path_resolver import PathResolver
+    from ..llm.token_optimizer import TokenOptimizer
+    from ..llm.context_selector import ContextSelector
+    from ..llm.hierarchical_formatter import HierarchicalFormatter
 
 
 class LLMAnalyzerConfig(BaseModel):
@@ -43,24 +67,25 @@ class LLMAnalyzerConfig(BaseModel):
         validate_assignment = True
         extra = "forbid"
         frozen = True
+        arbitrary_types_allowed = True
 
 
 class LLMAnalyzerDependencies(BaseModel):
     """Dependency injection container for LLM analyzer components."""
 
     # Core dependencies
-    dependency_graph: object = Field(..., description="Advanced dependency graph")
+    dependency_graph: Any = Field(..., description="Advanced dependency graph")
     project_root: str = Field(..., description="Project root path")
 
     # Analysis engines
-    ast_analyzer: object = Field(..., description="AST file analyzer")
-    token_optimizer: object = Field(..., description="Token optimizer")
-    context_selector: object = Field(..., description="Context selector")
-    hierarchical_formatter: object = Field(..., description="Hierarchical formatter")
-    path_resolver: object = Field(..., description="Path resolver")
-    impact_engine: object = Field(..., description="Impact analysis engine")
-    centrality_engine: object = Field(..., description="Centrality analysis engine")
-    centrality_calculator: object = Field(..., description="Centrality calculator")
+    ast_analyzer: Any = Field(..., description="AST file analyzer")
+    token_optimizer: Any = Field(..., description="Token optimizer")
+    context_selector: Any = Field(..., description="Context selector")
+    hierarchical_formatter: Any = Field(..., description="Hierarchical formatter")
+    path_resolver: Any = Field(..., description="Path resolver")
+    impact_engine: Any = Field(..., description="Impact analysis engine")
+    centrality_engine: Any = Field(..., description="Centrality analysis engine")
+    centrality_calculator: Any = Field(..., description="Centrality calculator")
 
     @field_validator(
         "dependency_graph",
@@ -74,7 +99,7 @@ class LLMAnalyzerDependencies(BaseModel):
         "centrality_calculator",
     )
     @classmethod
-    def validate_not_none(cls, v):
+    def validate_not_none(cls, v: object) -> object:
         """Validate that dependency fields are not None."""
         if v is None:
             raise ValueError("Dependency fields cannot be None")
@@ -87,3 +112,4 @@ class LLMAnalyzerDependencies(BaseModel):
         validate_assignment = True
         extra = "forbid"
         frozen = True
+        arbitrary_types_allowed = True

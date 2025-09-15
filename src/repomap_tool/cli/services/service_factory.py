@@ -16,6 +16,10 @@ from repomap_tool.trees.discovery_engine import EntrypointDiscoverer
 from repomap_tool.trees.tree_builder import TreeBuilder
 from repomap_tool.trees.tree_manager import TreeManager
 from repomap_tool.trees.session_manager import SessionManager
+from repomap_tool.dependencies.advanced_dependency_graph import AdvancedDependencyGraph
+from repomap_tool.core.parallel_processor import ParallelTagExtractor
+from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+from rich.console import Console
 
 logger = logging.getLogger(__name__)
 
@@ -40,29 +44,26 @@ class ServiceFactory:
         cache_key = f"repomap_{config.project_root}"
 
         if cache_key in self._services:
-            return self._services[cache_key]
-
+            return self._services[cache_key]  # type: ignore
         # Create DI container
         container = create_container(config)
         self._containers[cache_key] = container
 
         # Get all dependencies from container
-        console = container.console()
-        parallel_extractor = container.parallel_tag_extractor()
-        fuzzy_matcher = container.fuzzy_matcher()
-
+        console: Console = container.console()
+        parallel_extractor: ParallelTagExtractor = container.parallel_tag_extractor()
+        fuzzy_matcher: FuzzyMatcher = container.fuzzy_matcher()
         semantic_matcher = None
         hybrid_matcher = None
         if config.semantic_match.enabled:
             semantic_matcher = container.adaptive_semantic_matcher()
             hybrid_matcher = container.hybrid_matcher()
 
-        dependency_graph = container.dependency_graph()
+        dependency_graph: AdvancedDependencyGraph = container.dependency_graph()
         impact_analyzer = None
         if config.dependencies.enable_impact_analysis:
             impact_analyzer = container.impact_analyzer()
         centrality_calculator = container.centrality_calculator()
-
         # Create RepoMapService with injected dependencies
         service = RepoMapService(
             config=config,
@@ -95,7 +96,7 @@ class ServiceFactory:
         cache_key = f"discoverer_{config.project_root}"
 
         if cache_key in self._services:
-            return self._services[cache_key]
+            return self._services[cache_key]  # type: ignore
 
         # Get container (reuse existing one for this project)
         container = self._containers.get(f"repomap_{config.project_root}")
@@ -105,12 +106,11 @@ class ServiceFactory:
 
         # Get dependencies from container
         import_analyzer = container.import_analyzer()
-        dependency_graph = container.dependency_graph()
+        dependency_graph: AdvancedDependencyGraph = container.dependency_graph()
         centrality_calculator = container.centrality_calculator()
         impact_analyzer = None
         if config.dependencies.enable_impact_analysis:
             impact_analyzer = container.impact_analyzer()
-
         # Create EntrypointDiscoverer with injected dependencies
         discoverer = EntrypointDiscoverer(
             repo_map=repo_map_service,
@@ -139,10 +139,10 @@ class ServiceFactory:
         cache_key = f"tree_builder_{config.project_root}"
 
         if cache_key in self._services:
-            return self._services[cache_key]
+            return self._services[cache_key]  # type: ignore
 
         # Create entrypoint discoverer
-        entrypoint_discoverer = self.create_entrypoint_discoverer(
+        entrypoint_discoverer: EntrypointDiscoverer = self.create_entrypoint_discoverer(
             repo_map_service, config
         )
 
@@ -171,7 +171,7 @@ class ServiceFactory:
         cache_key = f"tree_manager_{config.project_root}"
 
         if cache_key in self._services:
-            return self._services[cache_key]
+            return self._services[cache_key]  # type: ignore
 
         # Get container (reuse existing one for this project)
         container = self._containers.get(f"repomap_{config.project_root}")
@@ -181,7 +181,7 @@ class ServiceFactory:
 
         # Get dependencies from container
         session_manager = container.session_manager()
-        tree_builder = self.create_tree_builder(repo_map_service, config)
+        tree_builder: TreeBuilder = self.create_tree_builder(repo_map_service, config)
 
         # Create TreeManager with injected dependencies
         tree_manager = TreeManager(

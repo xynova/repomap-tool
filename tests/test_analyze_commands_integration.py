@@ -853,8 +853,14 @@ class TestLLMFileAnalyzerIntegration:
         hierarchical_formatter = HierarchicalFormatter()
         path_resolver = PathResolver(project_root)
 
-        # Create LLM analyzer with all dependencies
-        return LLMFileAnalyzer(
+        # Create LLM analyzer with all dependencies using new constructor pattern
+        from repomap_tool.dependencies.llm_analyzer_config import (
+            LLMAnalyzerConfig,
+            LLMAnalyzerDependencies,
+        )
+
+        config = LLMAnalyzerConfig()
+        dependencies = LLMAnalyzerDependencies(
             dependency_graph=dependency_graph,
             project_root=project_root,
             ast_analyzer=ast_analyzer,
@@ -866,6 +872,8 @@ class TestLLMFileAnalyzerIntegration:
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,
         )
+
+        return LLMFileAnalyzer(config=config, dependencies=dependencies)
 
     def setup_method(self):
         """Set up test environment."""
