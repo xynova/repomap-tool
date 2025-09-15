@@ -140,8 +140,10 @@ def create(
             log_level=log_level,
         )
 
-        # Initialize RepoMap
-        repomap = RepoMapService(config_obj)
+        # Initialize RepoMap using service factory
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config_obj)
 
         # Analyze project
         project_info = repomap.analyze_project()

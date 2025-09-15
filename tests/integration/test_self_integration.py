@@ -72,8 +72,10 @@ class TestSelfIntegration:
             project_root=str(self.project_root), verbose=True, output_format="json"
         )
 
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
+        # Initialize RepoMap using service factory
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Analyze the project
         project_info = repomap.analyze_project()
@@ -135,8 +137,10 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
+        # Initialize RepoMap using service factory
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Test fuzzy search for various terms
         test_queries = [
@@ -194,8 +198,10 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
+        # Initialize RepoMap using service factory
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Test semantic search for various concepts
         # Note: Semantic search works best with natural language that matches actual content
@@ -253,8 +259,10 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        # Initialize RepoMap
-        repomap = RepoMapService(config)
+        # Initialize RepoMap using service factory
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Test that both individual matchers work
         # First test fuzzy search
@@ -317,7 +325,9 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Test for specific known identifiers
         specific_queries = [
@@ -373,7 +383,9 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         search_request = SearchRequest(
             query="RepoMapService",
@@ -404,7 +416,9 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         search_request = SearchRequest(
             query="RepoMap", match_type="hybrid", max_results=10, include_context=True
@@ -433,7 +447,9 @@ class TestSelfIntegration:
             verbose=True,
         )
 
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         # Test with empty query - should raise validation error
         try:
@@ -467,7 +483,9 @@ class TestSelfIntegration:
             verbose=False,  # Disable verbose for performance test
         )
 
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
 
         test_queries = [
             "RepoMap",
@@ -487,7 +505,9 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=False,
         )
-        fuzzy_repomap = RepoMapService(fuzzy_config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        fuzzy_repomap = service_factory.create_repomap_service(fuzzy_config)
 
         start_time = time.time()
         for query in test_queries:
@@ -504,7 +524,7 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,
         )
-        semantic_repomap = RepoMapService(semantic_config)
+        semantic_repomap = service_factory.create_repomap_service(semantic_config)
 
         start_time = time.time()
         for query in test_queries:

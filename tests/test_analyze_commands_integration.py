@@ -951,7 +951,9 @@ class User:
             project_root=str(self.project_root),
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
 
         # Create analyzer with all dependencies
@@ -975,7 +977,9 @@ class User:
             project_root=str(self.project_root),
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
 
         # Create analyzer with all dependencies
@@ -1003,7 +1007,9 @@ class User:
             project_root=str(self.project_root),
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
 
         # Create analyzer with all dependencies
@@ -1030,7 +1036,9 @@ class User:
             project_root=str(self.project_root),
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
 
         # Create analyzer with all dependencies and token limit
@@ -1057,7 +1065,9 @@ class User:
             project_root=str(self.project_root),
             dependencies=DependencyConfig(enable_impact_analysis=True),
         )
-        repomap = RepoMapService(config)
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
         dependency_graph = repomap.build_dependency_graph()
 
         # Create analyzer with all dependencies

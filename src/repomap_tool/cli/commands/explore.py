@@ -60,8 +60,10 @@ def start(
         # Create configuration
         config_obj = create_tree_config(resolved_project_path, max_depth, verbose=True)
 
-        # Initialize RepoMap
-        repomap = RepoMapService(config_obj)
+        # Initialize RepoMap using service factory
+        from repomap_tool.cli.services import get_service_factory
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config_obj)
 
         console.print(f"🌳 Starting exploration session: [bold]{session_id}[/bold]")
         console.print(f"🎯 Intent: [green]{intent}[/green]")

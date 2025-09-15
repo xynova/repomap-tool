@@ -90,24 +90,19 @@ def centrality(
         else:
             console.print("📁 Analyzing all files")
 
-        # Initialize RepoMapService to build dependency graph
-        from repomap_tool.core.repo_map import RepoMapService
-        from repomap_tool.core.container import create_container
+        # Use service factory for proper dependency injection
+        from repomap_tool.cli.services import get_service_factory
         from repomap_tool.dependencies import AnalysisFormat
 
-        # Create RepoMapService and build dependency graph
-        repomap_service = RepoMapService(config_obj)
+        # Create services using DI
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config_obj)
+        
+        # Build dependency graph
         dependency_graph = repomap_service.build_dependency_graph()
 
-        # Use proper DI container instead of manual dependency injection
-        # Create and configure DI container
-        container = create_container(config_obj)
-
-        # Override the dependency graph with the one built by RepoMapService
-        container.dependency_graph.override(dependency_graph)
-
-        # Get LLM analyzer from DI container
-        llm_analyzer = container.llm_file_analyzer()
+        # Get LLM analyzer from service factory
+        llm_analyzer = service_factory.get_llm_analyzer(config_obj)
 
         # Debug logging
         console.print("🔧 DI Container: Using proper dependency injection")

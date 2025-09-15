@@ -19,15 +19,25 @@ logger = logging.getLogger(__name__)
 class TreeBuilder:
     """Builds exploration trees from entrypoints using existing aider infrastructure."""
 
-    def __init__(self, repo_map: RepoMapService):
-        """Initialize tree builder.
+    def __init__(
+        self, 
+        repo_map: RepoMapService,
+        entrypoint_discoverer: Optional[Any] = None,
+    ):
+        """Initialize tree builder with injected dependencies.
 
         Args:
             repo_map: RepoMapService instance with aider infrastructure
+            entrypoint_discoverer: Entrypoint discoverer instance (injected)
         """
         self.repo_map = repo_map
         self.entrypoint_cache: Dict[str, Any] = {}  # Cache discovered entrypoints
         self.tree_cache: Dict[str, Any] = {}  # Cache built trees
+
+        # Use injected entrypoint discoverer - no fallback
+        if entrypoint_discoverer is None:
+            raise ValueError("EntrypointDiscoverer must be injected - no fallback allowed")
+        self.entrypoint_discoverer = entrypoint_discoverer
 
         logger.debug("TreeBuilder initialized")
 

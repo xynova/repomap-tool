@@ -32,6 +32,16 @@ class TestLLMFileAnalyzerIntegration:
 
     def _create_llm_analyzer(self, dependency_graph, project_root):
         """Helper method to create LLM analyzer with all required dependencies."""
+        from src.repomap_tool.dependencies.llm_analyzer_config import LLMAnalyzerConfig, LLMAnalyzerDependencies
+        
+        # Create configuration
+        config = LLMAnalyzerConfig(
+            max_tokens=4000,
+            enable_impact_analysis=True,
+            enable_centrality_analysis=True,
+            verbose=False,
+        )
+        
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
         centrality_calculator = CentralityCalculator(dependency_graph)
@@ -48,8 +58,8 @@ class TestLLMFileAnalyzerIntegration:
         hierarchical_formatter = HierarchicalFormatter()
         path_resolver = PathResolver(project_root)
 
-        # Create LLM analyzer with all dependencies
-        return LLMFileAnalyzer(
+        # Create dependencies container
+        dependencies = LLMAnalyzerDependencies(
             dependency_graph=dependency_graph,
             project_root=project_root,
             ast_analyzer=ast_analyzer,
@@ -60,6 +70,12 @@ class TestLLMFileAnalyzerIntegration:
             impact_engine=impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,
+        )
+
+        # Create LLM analyzer with new DI-based constructor
+        return LLMFileAnalyzer(
+            config=config,
+            dependencies=dependencies,
         )
 
     def test_analyze_file_centrality_with_absolute_paths(self):

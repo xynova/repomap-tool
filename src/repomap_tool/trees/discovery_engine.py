@@ -10,7 +10,7 @@ import logging
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
-from repomap_tool.models import Entrypoint
+from repomap_tool.models import Entrypoint, RepoMapConfig
 from repomap_tool.core import RepoMapService
 from repomap_tool.matchers.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
@@ -30,11 +30,22 @@ logger = logging.getLogger(__name__)
 class EntrypointDiscoverer:
     """Discovers relevant entrypoints using existing semantic/fuzzy matching."""
 
-    def __init__(self, repo_map: RepoMapService):
-        """Initialize entrypoint discoverer.
+    def __init__(
+        self, 
+        repo_map: RepoMapService,
+        import_analyzer: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+        centrality_calculator: Optional[Any] = None,
+        impact_analyzer: Optional[Any] = None,
+    ):
+        """Initialize entrypoint discoverer with injected dependencies.
 
         Args:
             repo_map: RepoMapService instance with semantic/fuzzy matchers
+            import_analyzer: Import analyzer instance (injected)
+            dependency_graph: Dependency graph instance (injected)
+            centrality_calculator: Centrality calculator instance (injected)
+            impact_analyzer: Impact analyzer instance (injected)
         """
         self.repo_map = repo_map
         self.semantic_matcher = getattr(repo_map, "semantic_matcher", None) or getattr(
@@ -51,21 +62,39 @@ class EntrypointDiscoverer:
         # Fuzzy matching threshold (70% similarity)
         self.fuzzy_threshold = 0.7
 
-        # Phase 2: Initialize dependency analysis components
-        # Initialize import analyzer and dependency graph immediately
-        self.import_analyzer = ImportAnalyzer()
-        AdvancedDependencyGraph = get_advanced_dependency_graph()
-        self.dependency_graph = AdvancedDependencyGraph()
-
-        # Lazy initialization for more expensive components
-        self.centrality_calculator: Optional[Any] = (
-            None  # Will be initialized when needed
-        )
-        self.impact_analyzer: Optional[Any] = None  # Will be initialized when needed
+        # Use injected dependencies or create DI container
+        if import_analyzer is not None:
+            self.import_analyzer = import_analyzer
+            self.dependency_graph = dependency_graph
+            self.centrality_calculator = centrality_calculator
+            self.impact_analyzer = impact_analyzer
+        else:
+            # Fallback: create DI container
+            self._initialize_with_di_container()
 
         logger.debug(
             f"EntrypointDiscoverer initialized with semantic_threshold={self.semantic_threshold}, fuzzy_threshold={self.fuzzy_threshold}"
         )
+
+    def _initialize_with_di_container(self) -> None:
+        """Initialize dependencies using DI container."""
+        from repomap_tool.core.container import create_container
+
+        # Create DI container - this MUST work or fail fast
+        config = RepoMapConfig(project_root=str(self.repo_map.config.project_root))
+        container = create_container(config)
+
+        # Get instances from DI container
+        self.import_analyzer = container.import_analyzer()
+        self.dependency_graph = container.dependency_graph()
+        self.centrality_calculator = container.centrality_calculator()
+        if config.dependencies.enable_impact_analysis:
+            self.impact_analyzer = container.impact_analyzer()
+        else:
+            self.impact_analyzer = None
+
+        logger.debug("EntrypointDiscoverer dependencies initialized using DI container")
+
 
     def discover_entrypoints(self, project_path: str, intent: str) -> List[Entrypoint]:
         """Find relevant entrypoints using existing semantic/fuzzy matching.

@@ -8,7 +8,7 @@ about file relationships and impact.
 
 import logging
 import os
-from typing import List, Dict, Set, Optional, Any, Tuple
+from typing import List, Dict, Set, Optional, Any, Tuple, TYPE_CHECKING
 from pathlib import Path
 from dataclasses import dataclass
 from enum import Enum
@@ -30,6 +30,9 @@ from .models import (
     FileImpactAnalysis,
     FileCentralityAnalysis,
 )
+
+if TYPE_CHECKING:
+    from .llm_analyzer_config import LLMAnalyzerConfig, LLMAnalyzerDependencies
 from .format_utils import (
     format_llm_optimized_impact,
     format_llm_optimized_centrality,
@@ -55,49 +58,45 @@ class LLMFileAnalyzer:
 
     def __init__(
         self,
-        dependency_graph: AdvancedDependencyGraph,
-        project_root: str,
-        # Dependency injection parameters
-        ast_analyzer: ASTFileAnalyzer,
-        token_optimizer: TokenOptimizer,
-        context_selector: ContextSelector,
-        hierarchical_formatter: HierarchicalFormatter,
-        path_resolver: PathResolver,
-        impact_engine: ImpactAnalysisEngine,
-        centrality_engine: CentralityAnalysisEngine,
-        # DI container injected dependencies
-        centrality_calculator: CentralityCalculator,
-        max_tokens: int = 4000,
+        config: "LLMAnalyzerConfig",
+        dependencies: "LLMAnalyzerDependencies",
     ):
-        """Initialize the LLM file analyzer.
+        """Initialize the LLM file analyzer with configuration and dependencies.
 
         Args:
-            dependency_graph: Advanced dependency graph for analysis
-            project_root: Root path of the project
-            max_tokens: Maximum tokens for LLM-optimized output
-            ast_analyzer: AST analyzer instance (injected)
-            token_optimizer: Token optimizer instance (injected)
-            context_selector: Context selector instance (injected)
-            hierarchical_formatter: Hierarchical formatter instance (injected)
-            path_resolver: Path resolver instance (injected)
-            impact_engine: Impact analysis engine instance (injected)
-            centrality_engine: Centrality analysis engine instance (injected)
+            config: LLM analyzer configuration
+            dependencies: Injected dependencies container
         """
-        self.dependency_graph = dependency_graph
-        self.project_root = project_root
-        self.max_tokens = max_tokens
+        # Store configuration
+        self.config = config
+        self.max_tokens = config.max_tokens
+        self.enable_impact_analysis = config.enable_impact_analysis
+        self.enable_centrality_analysis = config.enable_centrality_analysis
+        self.enable_code_snippets = config.enable_code_snippets
+        self.max_snippets_per_file = config.max_snippets_per_file
+        self.snippet_max_lines = config.snippet_max_lines
+        self.analysis_timeout = config.analysis_timeout
+        self.cache_results = config.cache_results
+        self.verbose = config.verbose
 
-        # Use injected dependencies only
-        self.ast_analyzer = ast_analyzer
-        self.token_optimizer = token_optimizer
-        self.context_selector = context_selector
-        self.hierarchical_formatter = hierarchical_formatter
-        self.path_resolver = path_resolver
-        self.centrality_calculator = centrality_calculator
-        self.centrality_engine = centrality_engine
-        self.impact_engine = impact_engine
+        # Store dependencies container
+        self.dependencies = dependencies
 
-        logger.info("LLMFileAnalyzer initialized with all injected dependencies")
+        # Store core dependencies
+        self.dependency_graph = dependencies.dependency_graph
+        self.project_root = dependencies.project_root
+
+        # Store injected dependencies
+        self.ast_analyzer = dependencies.ast_analyzer
+        self.token_optimizer = dependencies.token_optimizer
+        self.context_selector = dependencies.context_selector
+        self.hierarchical_formatter = dependencies.hierarchical_formatter
+        self.path_resolver = dependencies.path_resolver
+        self.centrality_calculator = dependencies.centrality_calculator
+        self.centrality_engine = dependencies.centrality_engine
+        self.impact_engine = dependencies.impact_engine
+
+        logger.info("LLMFileAnalyzer initialized with configuration and injected dependencies")
 
         # Impact analyzer is now injected via DI container
         # No need for manual instantiation

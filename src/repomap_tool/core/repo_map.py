@@ -50,35 +50,52 @@ class RepoMapService:
     with improved configuration management using Pydantic models.
     """
 
-    def __init__(self, config: RepoMapConfig):
+    def __init__(
+        self, 
+        config: RepoMapConfig,
+        console: Optional[Any] = None,
+        parallel_extractor: Optional[Any] = None,
+        fuzzy_matcher: Optional[Any] = None,
+        semantic_matcher: Optional[Any] = None,
+        hybrid_matcher: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+        impact_analyzer: Optional[Any] = None,
+        centrality_calculator: Optional[Any] = None,
+    ):
         """
-        Initialize RepoMapService with validated configuration.
+        Initialize RepoMapService with validated configuration and injected dependencies.
 
         Args:
             config: Validated RepoMapConfig instance
+            console: Rich console instance (injected)
+            parallel_extractor: Parallel tag extractor (injected)
+            fuzzy_matcher: Fuzzy matcher instance (injected)
+            semantic_matcher: Semantic matcher instance (injected)
+            hybrid_matcher: Hybrid matcher instance (injected)
+            dependency_graph: Dependency graph instance (injected)
+            impact_analyzer: Impact analyzer instance (injected)
+            centrality_calculator: Centrality calculator instance (injected)
         """
         self.config = config
         self.logger = self._setup_logging()
-        self.console = Console()
+        
+        # Use injected dependencies or create DI container
+        if console is not None:
+            self.console = console
+            self.parallel_extractor = parallel_extractor
+            self.fuzzy_matcher = fuzzy_matcher
+            self.semantic_matcher = semantic_matcher
+            self.hybrid_matcher = hybrid_matcher
+            self.dependency_graph = dependency_graph
+            self.impact_analyzer = impact_analyzer
+            self.centrality_calculator = centrality_calculator
+        else:
+            # Fallback: create DI container and get dependencies
+            self._initialize_with_di_container()
 
         # Initialize components
         self.repo_map: Optional[RepoMapProtocol] = None
-        self.fuzzy_matcher: Optional[FuzzyMatcherProtocol] = None
-        self.semantic_matcher: Optional[SemanticMatcherProtocol] = None
-        self.hybrid_matcher: Optional[HybridMatcherProtocol] = None
-
-        # Phase 2: Initialize dependency analysis components
-        self.dependency_graph: Optional[Any] = None
-        self.impact_analyzer: Optional[Any] = None
-        self.centrality_calculator: Optional[Any] = None
         self.analysis_results: Optional[Any] = None
-
-        # Initialize parallel processing
-        self.parallel_extractor = ParallelTagExtractor(
-            max_workers=self.config.performance.max_workers,
-            enable_progress=self.config.performance.enable_progress,
-            console=self.console,
-        )
 
         # Initialize the system
         self._initialize_components()
@@ -106,6 +123,37 @@ class RepoMapService:
             logger.addHandler(handler)
 
         return logger
+
+    def _initialize_with_di_container(self) -> None:
+        """Initialize dependencies using DI container."""
+        from .container import create_container
+
+        # Create DI container - this MUST work or fail fast
+        container = create_container(self.config)
+
+        # Get instances from DI container
+        self.console = container.console()
+        self.parallel_extractor = container.parallel_tag_extractor()
+        
+        # Get matchers from DI container
+        self.fuzzy_matcher = container.fuzzy_matcher()
+        if self.config.semantic_match.enabled:
+            self.semantic_matcher = container.adaptive_semantic_matcher()
+            self.hybrid_matcher = container.hybrid_matcher()
+        else:
+            self.semantic_matcher = None
+            self.hybrid_matcher = None
+
+        # Get dependency analysis components
+        self.dependency_graph = container.dependency_graph()
+        if self.config.dependencies.enable_impact_analysis:
+            self.impact_analyzer = container.impact_analyzer()
+        else:
+            self.impact_analyzer = None
+        self.centrality_calculator = container.centrality_calculator()
+
+        self.logger.info("Dependencies initialized using DI container")
+
 
     def _initialize_components(self) -> None:
         """Initialize all components based on configuration."""
@@ -167,72 +215,8 @@ class RepoMapService:
             refresh="auto" if self.config.refresh_cache else "no",
         )
 
-        # Initialize matchers if available
-        if MATCHERS_AVAILABLE:
-            self._initialize_matchers()
-        else:
-            self.logger.warning("Matchers not available - matching features disabled")
-            # Type ignore for matcher assignments since they're not available
+        # Matchers are now initialized via DI container in _initialize_with_di_container
 
-    def _initialize_matchers(self) -> None:
-        """Initialize matching components."""
-        # Initialize fuzzy matcher
-        self.fuzzy_matcher = FuzzyMatcher(  # type: ignore
-            threshold=self.config.fuzzy_match.threshold,
-            strategies=self.config.fuzzy_match.strategies,
-            cache_results=self.config.fuzzy_match.cache_results,
-            verbose=self.config.verbose,
-        )
-        self.logger.info(f"Initialized FuzzyMatcher: {self.config.fuzzy_match}")
-
-        # Initialize semantic matcher
-        if self.config.semantic_match.enabled:
-            self.semantic_matcher = AdaptiveSemanticMatcher(verbose=self.config.verbose)  # type: ignore
-            self.logger.info(
-                f"Initialized SemanticMatcher: {self.config.semantic_match}"
-            )
-
-        # Initialize hybrid matcher if semantic matching is enabled
-        if self.config.semantic_match.enabled:
-            self.hybrid_matcher = HybridMatcher(  # type: ignore
-                fuzzy_threshold=self.config.fuzzy_match.threshold,
-                semantic_threshold=self.config.semantic_match.threshold,
-                verbose=self.config.verbose,
-            )
-            self.logger.info("Initialized HybridMatcher")
-
-        # Phase 2: Initialize dependency analysis components
-        self._initialize_dependency_analysis()
-        self.logger.info("Initialized dependency analysis components")
-
-    def _initialize_dependency_analysis(self) -> None:
-        """Initialize dependency analysis components using DI container."""
-        try:
-            from .container import create_container
-
-            # Create DI container for dependency analysis
-            container = create_container(self.config)
-
-            # Get instances from DI container
-            self.dependency_graph = container.dependency_graph()
-
-            # Initialize impact analyzer from DI container
-            if self.config.dependencies.enable_impact_analysis:
-                self.impact_analyzer = container.impact_analyzer()
-
-            # Initialize centrality calculator from DI container
-            self.centrality_calculator = container.centrality_calculator()
-
-            self.logger.info(
-                "Dependency analysis components initialized successfully using DI container"
-            )
-
-        except ImportError as e:
-            self.logger.warning(f"Failed to import dependency analysis components: {e}")
-            self.logger.warning("Dependency analysis features will be disabled")
-        except Exception as e:
-            self.logger.error(f"Error initializing dependency analysis: {e}")
-            self.logger.warning("Dependency analysis features will be disabled")
 
     def _invalidate_stale_caches(self) -> None:
         """Invalidate cache entries for files that have been modified since caching."""

@@ -126,7 +126,7 @@ def identifiers(
             strategies=list(strategies) if strategies else None,
         )
 
-        # Initialize RepoMap
+        # Initialize RepoMap using service factory
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -134,7 +134,10 @@ def identifiers(
         ) as progress:
             task = progress.add_task("Initializing RepoMap...", total=None)
 
-            repomap = RepoMapService(config_obj)
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config_obj)
+            
             progress.update(task, description="Searching identifiers...")
 
             # Perform search
@@ -230,7 +233,9 @@ def dependencies(
         ) as progress:
             task = progress.add_task("Analyzing dependencies...", total=None)
 
-            repomap = RepoMapService(config_obj)
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config_obj)
             progress.update(task, description="Building dependency graph...")
 
             # Perform dependency analysis
@@ -309,7 +314,9 @@ def cycles(
         ) as progress:
             task = progress.add_task("Finding circular dependencies...", total=None)
 
-            repomap = RepoMapService(config_obj)
+            from repomap_tool.cli.services import get_service_factory
+            service_factory = get_service_factory()
+            repomap = service_factory.create_repomap_service(config_obj)
             progress.update(task, description="Building dependency graph...")
 
             # Build dependency graph

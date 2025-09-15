@@ -141,9 +141,10 @@ class TestCLICore:
 
     def test_search_basic_usage(self, cli_runner, temp_project):
         """Test basic search command usage."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.search_identifiers.return_value = SearchResponse(
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
+            mock_factory = mock_get_factory.return_value
+            mock_repo_map = mock_factory.create_repomap_service.return_value
+            mock_repo_map.search_identifiers.return_value = SearchResponse(
                 query="test",
                 match_type="fuzzy",
                 threshold=0.7,

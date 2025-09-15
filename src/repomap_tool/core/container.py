@@ -24,10 +24,19 @@ if TYPE_CHECKING:
     from repomap_tool.dependencies.impact_analyzer import ImpactAnalyzer
     from repomap_tool.dependencies.llm_file_analyzer import LLMFileAnalyzer
     from repomap_tool.dependencies.path_resolver import PathResolver
+    from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
     from repomap_tool.llm.context_selector import ContextSelector
     from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
     from repomap_tool.llm.token_optimizer import TokenOptimizer
     from repomap_tool.utils.path_normalizer import PathNormalizer
+    from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+    from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+    from repomap_tool.matchers.hybrid_matcher import HybridMatcher
+    from repomap_tool.core.cache_manager import CacheManager
+    from repomap_tool.core.parallel_processor import ParallelTagExtractor
+    from repomap_tool.dependencies.llm_analyzer_config import LLMAnalyzerConfig, LLMAnalyzerDependencies
+    from repomap_tool.trees.session_manager import SessionManager
+    from rich.console import Console
 
 from ..dependencies import (
     get_advanced_dependency_graph,
@@ -61,7 +70,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[PathNormalizer]",
         providers.Singleton(
             "repomap_tool.utils.path_normalizer.PathNormalizer",
-            project_root=config.project_root,
+            project_root=str(config.project_root),
         ),
     )
 
@@ -70,7 +79,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[ASTFileAnalyzer]",
         providers.Singleton(
             "repomap_tool.dependencies.ast_file_analyzer.ASTFileAnalyzer",
-            project_root=config.project_root,
+            project_root=str(config.project_root),
         ),
     )
 
@@ -138,17 +147,46 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[PathResolver]",
         providers.Singleton(
             "repomap_tool.dependencies.path_resolver.PathResolver",
-            project_root=config.project_root,
+            project_root=str(config.project_root),
         ),
     )
 
-    # LLM file analyzer with proper dependency injection
-    llm_file_analyzer: "providers.Factory[LLMFileAnalyzer]" = cast(
-        "providers.Factory[LLMFileAnalyzer]",
-        providers.Factory(
-            "repomap_tool.dependencies.llm_file_analyzer.LLMFileAnalyzer",
+    # Import analyzer
+    import_analyzer: "providers.Singleton[ImportAnalyzer]" = cast(
+        "providers.Singleton[ImportAnalyzer]",
+        providers.Singleton(
+            "repomap_tool.dependencies.import_analyzer.ImportAnalyzer",
+            project_root=str(config.project_root),
+        ),
+    )
+
+    # Session manager
+    session_manager: "providers.Singleton[SessionManager]" = cast(
+        "providers.Singleton[SessionManager]",
+        providers.Singleton(
+            "repomap_tool.trees.session_manager.SessionManager",
+        ),
+    )
+
+    # LLM analyzer configuration
+    llm_analyzer_config: "providers.Singleton[LLMAnalyzerConfig]" = cast(
+        "providers.Singleton[LLMAnalyzerConfig]",
+        providers.Singleton(
+            "repomap_tool.dependencies.llm_analyzer_config.LLMAnalyzerConfig",
+            max_tokens=4000,  # Default value
+            enable_impact_analysis=config.dependencies.enable_impact_analysis,
+            enable_centrality_analysis=True,
+            verbose=config.verbose,
+        ),
+    )
+
+    # LLM analyzer dependencies
+    llm_analyzer_dependencies: "providers.Singleton[LLMAnalyzerDependencies]" = cast(
+        "providers.Singleton[LLMAnalyzerDependencies]",
+        providers.Singleton(
+            "repomap_tool.dependencies.llm_analyzer_config.LLMAnalyzerDependencies",
             dependency_graph=dependency_graph,
-            project_root=config.project_root,
+            project_root=str(config.project_root),
             ast_analyzer=ast_analyzer,
             token_optimizer=token_optimizer,
             context_selector=context_selector,
@@ -157,6 +195,70 @@ class Container(containers.DeclarativeContainer):
             impact_engine=impact_analysis_engine,
             centrality_engine=centrality_analysis_engine,
             centrality_calculator=centrality_calculator,
+        ),
+    )
+
+    # LLM file analyzer with proper dependency injection
+    llm_file_analyzer: "providers.Factory[LLMFileAnalyzer]" = cast(
+        "providers.Factory[LLMFileAnalyzer]",
+        providers.Factory(
+            "repomap_tool.dependencies.llm_file_analyzer.LLMFileAnalyzer",
+            config=llm_analyzer_config,
+            dependencies=llm_analyzer_dependencies,
+        ),
+    )
+
+    # Core services
+    console: "providers.Singleton[Console]" = cast(
+        "providers.Singleton[Console]",
+        providers.Singleton("rich.console.Console"),
+    )
+
+    cache_manager: "providers.Singleton[CacheManager]" = cast(
+        "providers.Singleton[CacheManager]",
+        providers.Singleton(
+            "repomap_tool.core.cache_manager.CacheManager",
+            project_root=str(config.project_root),
+        ),
+    )
+
+    parallel_tag_extractor: "providers.Factory[ParallelTagExtractor]" = cast(
+        "providers.Factory[ParallelTagExtractor]",
+        providers.Factory(
+            "repomap_tool.core.parallel_processor.ParallelTagExtractor",
+            max_workers=config.performance.max_workers,
+            enable_progress=config.performance.enable_progress,
+            console=console,
+        ),
+    )
+
+    # Matchers with proper dependency injection
+    fuzzy_matcher: "providers.Factory[FuzzyMatcher]" = cast(
+        "providers.Factory[FuzzyMatcher]",
+        providers.Factory(
+            "repomap_tool.matchers.fuzzy_matcher.FuzzyMatcher",
+            threshold=config.fuzzy_match.threshold,
+            strategies=config.fuzzy_match.strategies,
+            cache_results=config.fuzzy_match.cache_results,
+            verbose=config.verbose,
+        ),
+    )
+
+    adaptive_semantic_matcher: "providers.Factory[AdaptiveSemanticMatcher]" = cast(
+        "providers.Factory[AdaptiveSemanticMatcher]",
+        providers.Factory(
+            "repomap_tool.matchers.adaptive_semantic_matcher.AdaptiveSemanticMatcher",
+            verbose=config.verbose,
+        ),
+    )
+
+    hybrid_matcher: "providers.Factory[HybridMatcher]" = cast(
+        "providers.Factory[HybridMatcher]",
+        providers.Factory(
+            "repomap_tool.matchers.hybrid_matcher.HybridMatcher",
+            fuzzy_threshold=config.fuzzy_match.threshold,
+            semantic_threshold=config.semantic_match.threshold,
+            verbose=config.verbose,
         ),
     )
 
@@ -183,6 +285,18 @@ def create_container(config: RepoMapConfig) -> Container:
                         if config.dependencies
                         else False
                     ),
+                },
+                "fuzzy_match": {
+                    "threshold": config.fuzzy_match.threshold,
+                    "strategies": config.fuzzy_match.strategies,
+                    "cache_results": config.fuzzy_match.cache_results,
+                },
+                "semantic_match": {
+                    "threshold": config.semantic_match.threshold,
+                },
+                "performance": {
+                    "max_workers": config.performance.max_workers,
+                    "enable_progress": config.performance.enable_progress,
                 },
                 "verbose": config.verbose,
             }
