@@ -43,51 +43,47 @@ run_test() {
 
 # Test 1: Search for identifiers in the real repomap-tool codebase
 run_test "Test 1: Search for DockerRepoMap Class" \
-    search identifiers "DockerRepoMap" /project --match-type hybrid --threshold 0.5 --verbose --output json || exit 1
+    inspect find "DockerRepoMap" /project --match-type hybrid --threshold 0.5 --verbose --output json || exit 1
 
 # Test 2: Search for function names
 run_test "Test 2: Search for analyze_project Function" \
-    search identifiers "analyze_project" /project --match-type fuzzy --threshold 0.6 --verbose --output json || exit 1
+    inspect find "analyze_project" /project --match-type fuzzy --threshold 0.6 --verbose --output json || exit 1
 
 # Test 3: Search for matcher classes
 run_test "Test 3: Search for FuzzyMatcher Class" \
-    search identifiers "FuzzyMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    inspect find "FuzzyMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 4: Search for SemanticMatcher
 run_test "Test 4: Search for SemanticMatcher Class" \
-    search identifiers "SemanticMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    inspect find "SemanticMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 5: Search for CLI commands
 run_test "Test 5: Search for CLI Commands" \
-    search identifiers "analyze" /project --match-type semantic --threshold 0.4 --verbose --output json || exit 1
+    inspect find "analyze" /project --match-type semantic --threshold 0.4 --verbose --output json || exit 1
 
 # Test 6: Search for configuration related code
 run_test "Test 6: Search for Configuration Code" \
-    search identifiers "config" /project --match-type semantic --threshold 0.3 --verbose --output json || exit 1
+    inspect find "config" /project --match-type semantic --threshold 0.3 --verbose --output json || exit 1
 
 # Test 7: Search for test related code
 run_test "Test 7: Search for Test Code" \
-    search identifiers "test" /project --match-type hybrid --threshold 0.4 --verbose --output json || exit 1
+    inspect find "test" /project --match-type hybrid --threshold 0.4 --verbose --output json || exit 1
 
 # Test 8: Search for specific function types
 run_test "Test 8: Search for Function Definitions" \
-    search identifiers "def" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    inspect find "def" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 9: Search for class definitions
 run_test "Test 9: Search for Class Definitions" \
-    search identifiers "class" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    inspect find "class" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
-# Test 10: Analyze project dependencies
-run_test "Test 10: Analyze Project Dependencies" \
-    search dependencies /project --verbose --output json || exit 1
+# Test 10: Find circular dependencies
+run_test "Test 10: Find Circular Dependencies" \
+    inspect cycles /project --verbose --output json || exit 1
 
-# Test 11: Find circular dependencies
-run_test "Test 11: Find Circular Dependencies" \
-    search cycles /project --verbose --output json || exit 1
-
-# Test 12: Analyze centrality
-run_test "Test 12: Analyze File Centrality" \
-    analyze centrality /project --verbose --output json || exit 1
+# Test 11: Analyze centrality
+run_test "Test 11: Analyze File Centrality" \
+    inspect centrality /project --verbose --output json || exit 1
 
 echo ""
 echo "✅ All Docker tests against real codebase completed successfully!"

@@ -187,8 +187,8 @@ def my_function():
             cli,
             [
                 "--no-color",
-                "search",
-                "identifiers",
+                "inspect",
+                "find",
                 "main",
                 temp_project,
                 "--match-type",
@@ -207,30 +207,28 @@ def my_function():
         output = result.output
         assert "Search Results" in output
 
-    def test_analyze_dependencies_real_integration(self, cli_runner, temp_project):
-        """Test dependency analysis with real project structure."""
+    def test_analyze_centrality_real_integration(self, cli_runner, temp_project):
+        """Test centrality analysis with real project structure."""
         result = cli_runner.invoke(
             cli,
             [
                 "--no-color",
-                "search",
-                "dependencies",
+                "inspect",
+                "centrality",
                 temp_project,
-                "--max-files",
-                "100",
                 "--output",
                 "table",
             ],
         )
 
-        # Dependency analysis may fail with small test projects (real behavior)
+        # Centrality analysis may fail with small test projects (real behavior)
         # This is actually good - it shows the real error handling works
         if result.exit_code == 0:
-            # Should contain dependency analysis results
+            # Should contain centrality analysis results
             output = result.output
-            assert "Dependency Analysis Results" in output
-            assert "Total Files" in output
-            assert "Total Dependencies" in output
+            assert "Centrality Analysis" in output
+            assert "Score" in output
+            assert "Rank" in output
         else:
             # Should show proper error message for small projects
             assert "Error:" in result.output or "Failed" in result.output
@@ -511,7 +509,7 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "centrality",
                 temp_project_with_dependencies,
                 "--output",
@@ -525,8 +523,8 @@ def utility_function():
         # Should contain centrality analysis results
         output = result.output
         assert (
-            "Analyzing centrality for project" in output
-            or "Centrality analysis completed" in output
+            "Inspecting centrality for project" in output
+            or "Centrality inspection completed" in output
         )
 
         # Test with specific file - use a simple approach
@@ -537,7 +535,7 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "centrality",
                 temp_project_with_dependencies,
                 "--files",
@@ -568,7 +566,7 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "impact",
                 temp_project_with_dependencies,
                 "--files",
@@ -590,7 +588,7 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "impact",
                 temp_project_with_dependencies,
                 "--files",
@@ -614,7 +612,7 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "search",
+                "inspect",
                 "cycles",
                 temp_project_with_dependencies,
                 "--output",
@@ -637,7 +635,7 @@ def utility_function():
             cli,
             [
                 "--no-color",
-                "search",
+                "inspect",
                 "cycles",
                 temp_project_with_dependencies,
                 "--output",
@@ -656,7 +654,7 @@ def utility_function():
         """Test error handling for advanced dependency commands."""
         # Test with non-existent directory
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", "centrality", "/non/existent/directory"]
+            cli, ["--no-color", "inspect", "centrality", "/non/existent/directory"]
         )
 
         # Should fail with proper error
@@ -666,7 +664,7 @@ def utility_function():
         # Test impact-analysis without files
         with tempfile.TemporaryDirectory() as temp_dir:
             result = cli_runner.invoke(
-                cli, ["--no-color", "analyze", "impact", temp_dir]
+                cli, ["--no-color", "inspect", "impact", temp_dir]
             )
 
             # Should fail with proper error
@@ -679,7 +677,7 @@ def utility_function():
                 cli,
                 [
                     "--no-color",
-                    "analyze",
+                    "inspect",
                     "centrality",
                     temp_dir,
                     "--file",
@@ -891,14 +889,14 @@ def handle_authentication_request():
 
         # Test with empty query
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "identifiers", "", empty_project]
+            cli, ["--no-color", "inspect", "find", "", empty_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with very long query
         long_query = "a" * 1000
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "identifiers", long_query, large_project]
+            cli, ["--no-color", "inspect", "find", long_query, large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -907,8 +905,8 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "search",
-                "identifiers",
+                "inspect",
+                "find",
                 "!@#$%^&*()_+-=[]{}|;':\",./<>?",
                 large_project,
             ],
@@ -918,46 +916,40 @@ def handle_authentication_request():
     def test_dependency_analysis_edge_cases(
         self, cli_runner, empty_project, large_project
     ):
-        """Test dependency analysis with edge cases."""
+        """Test centrality analysis with edge cases."""
 
         # Test with empty project
         result = cli_runner.invoke(
             cli,
             [
                 "--no-color",
-                "search",
-                "dependencies",
+                "inspect",
+                "centrality",
                 empty_project,
-                "--max-files",
-                "1000",
             ],
         )
         assert result.exit_code in [0, 1]
 
-        # Test with large project and low file limit
+        # Test with large project
         result = cli_runner.invoke(
             cli,
             [
                 "--no-color",
-                "search",
-                "dependencies",
+                "inspect",
+                "centrality",
                 large_project,
-                "--max-files",
-                "5",  # Very low limit
             ],
         )
         assert result.exit_code in [0, 1]
 
-        # Test with invalid max-files
+        # Test with invalid project path
         result = cli_runner.invoke(
             cli,
             [
                 "--no-color",
-                "search",
-                "dependencies",
-                large_project,
-                "--max-files",
-                "-1",
+                "inspect",
+                "centrality",
+                "/nonexistent/path",
             ],
         )
         assert result.exit_code != 0
@@ -967,13 +959,13 @@ def handle_authentication_request():
 
         # Test with empty project
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", "centrality", empty_project]
+            cli, ["--no-color", "inspect", "centrality", empty_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", "centrality", large_project]
+            cli, ["--no-color", "inspect", "centrality", large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -982,7 +974,7 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "centrality",
                 large_project,
                 "--file",
@@ -1000,7 +992,7 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "impact",
                 empty_project,
                 "--files",
@@ -1012,7 +1004,7 @@ def handle_authentication_request():
         # Test with large project and many files
         files = [f"src/module_{i:02d}.py" for i in range(10)]
         result = cli_runner.invoke(
-            cli, ["--no-color", "analyze", "impact", large_project, "--files"] + files
+            cli, ["--no-color", "inspect", "impact", large_project, "--files"] + files
         )
         assert result.exit_code in [0, 1, 2]  # Accept various exit codes for edge cases
 
@@ -1021,7 +1013,7 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "analyze",
+                "inspect",
                 "impact",
                 large_project,
                 "--files",
@@ -1036,13 +1028,13 @@ def handle_authentication_request():
 
         # Test with empty project
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "cycles", empty_project]
+            cli, ["--no-color", "inspect", "cycles", empty_project]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner.invoke(
-            cli, ["--no-color", "search", "cycles", large_project]
+            cli, ["--no-color", "inspect", "cycles", large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -1117,7 +1109,7 @@ def handle_authentication_request():
         assert result.exit_code == 0
 
         # Test search without query (should fail because query is required)
-        result = cli_runner.invoke(cli, ["--no-color", "search", "identifiers"])
+        result = cli_runner.invoke(cli, ["--no-color", "inspect", "find"])
         assert result.exit_code != 0
 
         # Test explore without intent (intent is now required as first argument)

@@ -16,8 +16,19 @@ from ..utils.console import get_console
 
 @click.group()
 def analyze() -> None:
-    """Advanced analysis commands."""
-    pass
+    """Advanced analysis commands.
+
+    ⚠️  DEPRECATED: This command is deprecated and will be removed in a future version.
+    Use 'repomap-tool inspect' instead for all analysis functionality.
+    """
+    import warnings
+
+    warnings.warn(
+        "The 'analyze' command is deprecated. Use 'inspect' instead. "
+        "This command will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
 
 @analyze.command()

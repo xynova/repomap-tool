@@ -135,9 +135,9 @@ class TestCLICore:
 
     def test_search_command_exists(self, cli_runner):
         """Test that search command exists and shows help."""
-        result = cli_runner.invoke(cli, ["search", "identifiers", "--help"])
+        result = cli_runner.invoke(cli, ["inspect", "find", "--help"])
         assert result.exit_code == 0
-        assert "search" in result.output.lower()
+        assert "inspect" in result.output.lower()
 
     def test_search_basic_usage(self, cli_runner, temp_project):
         """Test basic search command usage."""
@@ -166,8 +166,8 @@ class TestCLICore:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "search",
-                    "identifiers",
+                    "inspect",
+                    "find",
                     "test",
                     temp_project,
                     "--match-type",
@@ -197,8 +197,8 @@ class TestCLICore:
             result = cli_runner.invoke(
                 cli,
                 [
-                    "search",
-                    "identifiers",
+                    "inspect",
+                    "find",
                     "test",
                     temp_project,
                     "--match-type",
