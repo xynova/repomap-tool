@@ -182,7 +182,9 @@ class LLMFileAnalyzer:
         # Sort files by centrality score (highest first) to process most important files first
         if len(file_paths) > 1:
             # Get centrality scores for all files to sort them
-            centrality_scores = self.centrality_calculator.calculate_composite_importance()
+            centrality_scores = (
+                self.centrality_calculator.calculate_composite_importance()
+            )
             file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in file_paths]
             sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
             sorted_file_paths = [fp for fp, _ in sorted_file_scores]

@@ -214,33 +214,41 @@ def impact(
 
         # Get service factory and create services
         from repomap_tool.cli.services import get_service_factory
-        
+
         service_factory = get_service_factory()
         repomap_service = service_factory.create_repomap_service(config_obj)
         llm_analyzer = service_factory.get_llm_analyzer(config_obj)
-        
+
         # Build dependency graph (required for reverse dependency analysis)
         dependency_graph = repomap_service.build_dependency_graph()
-        
+
         # Set max tokens for the analyzer
         llm_analyzer.max_tokens = max_tokens
-        
+
         # Perform impact analysis
         try:
+            # Print output format
+            console.print(f"📊 Output format: {output}")
+
             # Convert output format string to enum
             from repomap_tool.dependencies import AnalysisFormat
+
             format_enum = AnalysisFormat(output.lower())
-            
+
             # Analyze impact for the specified files
             result = llm_analyzer.analyze_file_impact(files, format_enum)
-            
+
             # Display the result
             console.print(result)
-            
+
+            # Print completion message
+            console.print("✅ Impact analysis completed")
+
         except Exception as analysis_error:
             console.print(f"[red]Error during impact analysis: {analysis_error}[/red]")
             if verbose:
                 import traceback
+
                 console.print(f"[red]Traceback: {traceback.format_exc()}[/red]")
             sys.exit(1)
 

@@ -77,9 +77,7 @@ def format_single_file_impact_llm(
     # Reverse dependencies
     output.append("REVERSE DEPENDENCIES (what imports/calls this file):")
     for dep in analysis.reverse_dependencies[:10]:  # Limit for token budget
-        output.append(
-            f"├── {dep['file']}:{dep['line']} ({dep['relationship']})"
-        )
+        output.append(f"├── {dep['file']}:{dep['line']} ({dep['relationship']})")
     if len(analysis.reverse_dependencies) > 10:
         output.append(f"└── ... and {len(analysis.reverse_dependencies) - 10} more")
     output.append("")
@@ -88,9 +86,11 @@ def format_single_file_impact_llm(
     if analysis.function_call_analysis:
         output.append("FUNCTION CALL ANALYSIS:")
         for call in analysis.function_call_analysis[:5]:  # Limit for token budget
-            source_info = call.get('source', 'unknown source')
-            if source_info != 'unknown source':
-                output.append(f"├── {call['function']}() called at line {call['line']} ({source_info})")
+            source_info = call.get("source", "unknown source")
+            if source_info != "unknown source":
+                output.append(
+                    f"├── {call['function']}() called at line {call['line']} ({source_info})"
+                )
             else:
                 output.append(f"├── {call['function']}() called at line {call['line']}")
         if len(analysis.function_call_analysis) > 5:
@@ -538,7 +538,9 @@ def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
         return "No impact analysis data available."
 
     # Calculate column widths
-    max_file_width = max(len(Path(analysis.file_path).name) for analysis in analyses) + 2
+    max_file_width = (
+        max(len(Path(analysis.file_path).name) for analysis in analyses) + 2
+    )
     max_file_width = min(max_file_width, 50)  # Cap filename width
 
     # Create header
@@ -555,9 +557,13 @@ def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
     # Add data rows
     for analysis in analyses:
         file_name = Path(analysis.file_path).name
-        
+
         # Truncate long filenames
-        display_name = file_name if len(file_name) <= max_file_width - 2 else file_name[:max_file_width - 5] + "..."
+        display_name = (
+            file_name
+            if len(file_name) <= max_file_width - 2
+            else file_name[: max_file_width - 5] + "..."
+        )
 
         # Calculate impact score from structural impact
         impact_score = analysis.structural_impact.get("impact_score", 0.0)
@@ -571,7 +577,7 @@ def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
         lines.append(row)
 
     lines.append(separator)
-    
+
     # Add column explanations
     lines.append("")
     lines.append("📊 COLUMN EXPLANATIONS:")
@@ -581,7 +587,7 @@ def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
     lines.append("├── Reverse: Number of reverse dependencies (imported by)")
     lines.append("├── Functions: Number of functions defined in this file")
     lines.append("└── Classes: Number of classes defined in this file")
-    
+
     return "\n".join(lines)
 
 
@@ -599,7 +605,9 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     max_file_width = (
         max(len(analysis.file_path) for analysis in sorted_analyses[:50]) + 2
     )
-    max_file_width = min(max_file_width, 120)  # Increased cap to 120 chars for full relative paths
+    max_file_width = min(
+        max_file_width, 120
+    )  # Increased cap to 120 chars for full relative paths
 
     # Create header with working data - File column moved to last position
     header = f"{'Score':<8} {'Rank':<6} {'Conn':<6} {'Imports':<8} {'Rev Deps':<8} {'Functions':<8} {'File':<{max_file_width}}"
@@ -615,7 +623,9 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     # Add data rows (now sorted by importance)
     displayed_count = 0
     for analysis in sorted_analyses:
-        if analysis.centrality_score <= 0.001 and displayed_count >= 10:  # Cut off after 10 important files
+        if (
+            analysis.centrality_score <= 0.001 and displayed_count >= 10
+        ):  # Cut off after 10 important files
             remaining_count = len(sorted_analyses) - displayed_count
             lines.append(
                 f"... and {remaining_count} more files with very low centrality scores (≤ 0.001)"
@@ -640,7 +650,7 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
         displayed_count += 1
 
     lines.append(separator)
-    
+
     # Add column explanations
     lines.append("")
     lines.append("📊 COLUMN EXPLANATIONS:")
@@ -651,7 +661,7 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
     lines.append("├── Rev Deps: Number of files that import this file")
     lines.append("├── Functions: Number of functions defined in this file")
     lines.append("└── File: File path (relative to project root)")
-    
+
     return "\n".join(lines)
 
 
