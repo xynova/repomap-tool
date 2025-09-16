@@ -17,7 +17,14 @@ sys.path.append(
 )
 
 # flake8: noqa: E402
-from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    DependencyConfig,
+)
+from repomap_tool.cli.services import get_service_factory
 
 
 def test_adaptive_matcher():
@@ -141,8 +148,22 @@ def test_adaptive_matcher():
         "security_audit_trail",
     }
 
+    # Clear service cache to avoid conflicts with other tests
+    from repomap_tool.cli.services import clear_service_cache
+
+    clear_service_cache()
+
     # Initialize adaptive matcher
-    matcher = AdaptiveSemanticMatcher(verbose=False)
+    config = RepoMapConfig(
+        project_root=".",
+        fuzzy_match=FuzzyMatchConfig(),
+        semantic_match=SemanticMatchConfig(enabled=True),
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    matcher = repomap_service.semantic_matcher
 
     # Learn from the codebase
     print("📊 Learning from codebase...")

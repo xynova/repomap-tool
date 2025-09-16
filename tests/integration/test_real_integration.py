@@ -19,9 +19,14 @@ import pytest
 sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 
 # flake8: noqa: E402
-from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-from repomap_tool.matchers.hybrid_matcher import HybridMatcher
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    DependencyConfig,
+)
+from repomap_tool.cli.services import get_service_factory
 
 
 class TestRealIntegration:
@@ -104,7 +109,16 @@ class DataProcessor:
             identifiers.update(found)
 
         # Test fuzzy matching
-        matcher = FuzzyMatcher(threshold=60, verbose=False)
+        config = RepoMapConfig(
+            project_root=str(self.test_project),
+            fuzzy_match=FuzzyMatchConfig(threshold=60),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        matcher = repomap_service.fuzzy_matcher
 
         # Test authentication-related queries
         auth_matches = matcher.match_identifiers("auth", identifiers)
@@ -130,7 +144,16 @@ class DataProcessor:
             identifiers.update(found)
 
         # Initialize matcher
-        matcher = AdaptiveSemanticMatcher(verbose=False)
+        config = RepoMapConfig(
+            project_root=str(self.test_project),
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(enabled=True),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        matcher = repomap_service.semantic_matcher
 
         # Learn from the identifiers
         matcher.learn_from_identifiers(identifiers)
@@ -162,12 +185,16 @@ class DataProcessor:
             identifiers.update(found)
 
         # Initialize hybrid matcher
-        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-
-        fuzzy_matcher = FuzzyMatcher(threshold=60)
-        matcher = HybridMatcher(
-            fuzzy_matcher=fuzzy_matcher, semantic_threshold=0.1, verbose=False
+        config = RepoMapConfig(
+            project_root=str(self.test_project),
+            fuzzy_match=FuzzyMatchConfig(threshold=60),
+            semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
         )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        matcher = repomap_service.hybrid_matcher
 
         # Build TF-IDF model from identifiers
         matcher.build_tfidf_model(identifiers)
@@ -208,26 +235,30 @@ class DataProcessor:
         # Test multiple matchers on same query
         query = "user"
 
-        # Fuzzy matcher
-        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+        # Create config and service factory
+        config = RepoMapConfig(
+            project_root=str(self.test_project),
+            fuzzy_match=FuzzyMatchConfig(threshold=60),
+            semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
 
-        fuzzy_matcher = FuzzyMatcher(threshold=60, verbose=False)
+        # Fuzzy matcher
+        fuzzy_matcher = repomap_service.fuzzy_matcher
         fuzzy_results = fuzzy_matcher.match_identifiers(query, identifiers)
 
         # Adaptive semantic matcher
-        semantic_matcher = AdaptiveSemanticMatcher(verbose=False)
+        semantic_matcher = repomap_service.semantic_matcher
         semantic_matcher.learn_from_identifiers(identifiers)
         semantic_results = semantic_matcher.find_semantic_matches(
             query, identifiers, threshold=0.1
         )
 
         # Hybrid matcher
-        from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-
-        fuzzy_matcher = FuzzyMatcher(threshold=60)
-        hybrid_matcher = HybridMatcher(
-            fuzzy_matcher=fuzzy_matcher, semantic_threshold=0.1, verbose=False
-        )
+        hybrid_matcher = repomap_service.hybrid_matcher
         hybrid_matcher.build_tfidf_model(identifiers)
         hybrid_results = hybrid_matcher.find_hybrid_matches(query, identifiers)
 

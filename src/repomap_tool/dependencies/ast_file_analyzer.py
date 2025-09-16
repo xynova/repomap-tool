@@ -46,12 +46,13 @@ class ASTFileAnalyzer:
         Args:
             project_root: Root path of the project for resolving relative imports
         """
-        self.project_root = project_root
+        # Ensure project_root is always a string, not a ConfigurationOption
+        self.project_root = str(project_root) if project_root is not None else None
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
         # Initialize extracted components
-        self.import_utils = ImportUtils(project_root)
+        self.import_utils = ImportUtils(self.project_root)
         self.js_ts_analyzer = JavaScriptTypeScriptAnalyzer()
 
         logger.info(f"ASTFileAnalyzer initialized for project: {self.project_root}")

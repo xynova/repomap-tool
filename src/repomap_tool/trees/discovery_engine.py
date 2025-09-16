@@ -168,14 +168,8 @@ class EntrypointDiscoverer:
 
         logger.info("Enhancing entrypoints with dependency scores...")
         try:
-            from ..core.container import create_container
-
-            # Create DI container for dependency analysis
-            config = RepoMapConfig(project_root=str(self.repo_map.config.project_root))
-            container = create_container(config)
-
-            # Get centrality calculator from DI container
-            calculator = container.centrality_calculator()
+            # Use injected centrality calculator instance
+            calculator = self.centrality_calculator
             centrality_scores = calculator.calculate_composite_importance()
 
             for entrypoint in entrypoints:

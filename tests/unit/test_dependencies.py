@@ -24,7 +24,14 @@ from repomap_tool.dependencies import (
     ImpactReport,
 )
 from repomap_tool.core.container import create_container
-from repomap_tool.models import RepoMapConfig
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    DependencyConfig,
+)
+from repomap_tool.cli.services import get_service_factory
 
 
 class TestImportAnalyzer:
@@ -83,14 +90,34 @@ class TestDependencyGraph:
 
     def test_initialization(self):
         """Test DependencyGraph initialization."""
-        graph = DependencyGraph()
+        # Create config and use service factory
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        graph = repomap_service.dependency_graph
         assert graph is not None
         assert len(graph.nodes) == 0
         assert len(graph.graph.edges) == 0
 
     def test_add_file(self):
         """Test adding files to the graph."""
-        graph = DependencyGraph()
+        # Create config and use service factory
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        graph = repomap_service.dependency_graph
         graph.add_file("test.py")
         assert "test.py" in graph.nodes
         assert graph.nodes["test.py"].file_path == "test.py"
@@ -116,7 +143,16 @@ class TestDependencyGraph:
             project_imports = analyzer.analyze_project_imports(temp_dir)
 
             # Build dependency graph
-            graph = DependencyGraph()
+            config = RepoMapConfig(
+                project_root=temp_dir,
+                fuzzy_match=FuzzyMatchConfig(),
+                semantic_match=SemanticMatchConfig(),
+                performance=PerformanceConfig(),
+                dependencies=DependencyConfig(),
+            )
+            service_factory = get_service_factory()
+            repomap_service = service_factory.create_repomap_service(config)
+            graph = repomap_service.dependency_graph
             graph.build_graph(project_imports)
 
             # Check that dependencies were added
@@ -125,7 +161,17 @@ class TestDependencyGraph:
 
     def test_get_dependencies(self):
         """Test getting file dependencies."""
-        graph = DependencyGraph()
+        # Create config and use service factory
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        graph = repomap_service.dependency_graph
         graph.add_file("file1.py")
         graph.add_file("file2.py")
         graph.add_file("file3.py")
@@ -136,7 +182,17 @@ class TestDependencyGraph:
 
     def test_get_dependents(self):
         """Test getting files that depend on a given file."""
-        graph = DependencyGraph()
+        # Create config and use service factory
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        graph = repomap_service.dependency_graph
         graph.add_file("file1.py")
         graph.add_file("file2.py")
         graph.add_file("file3.py")

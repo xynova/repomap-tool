@@ -23,7 +23,8 @@ class ImportUtils:
         Args:
             project_root: Root path of the project for resolving relative imports
         """
-        self.project_root = project_root
+        # Ensure project_root is always a string, not a ConfigurationOption
+        self.project_root = str(project_root) if project_root is not None else None
 
     def file_path_to_module_name(self, file_path: str) -> Optional[str]:
         """Convert a file path to its corresponding Python module name.
@@ -41,7 +42,7 @@ class ImportUtils:
 
             # Convert to absolute path
             abs_file_path = Path(file_path).resolve()
-            abs_project_root = Path(self.project_root).resolve()
+            abs_project_root = Path(str(self.project_root)).resolve()
 
             # Check if the file is within the project root
             try:
@@ -240,7 +241,7 @@ class ImportUtils:
 
         # Simple heuristic: check if the module path exists in the project
         try:
-            module_path = Path(self.project_root) / module_name.replace(".", "/")
+            module_path = Path(str(self.project_root)) / module_name.replace(".", "/")
             return module_path.exists() or (module_path.with_suffix(".py")).exists()
         except Exception:
             return False

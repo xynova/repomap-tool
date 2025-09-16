@@ -36,11 +36,8 @@ class DILinter(ast.NodeVisitor):
     
     def visit_Call(self, node: ast.Call) -> None:
         """Check for direct service instantiation."""
-        # Skip if this is in a test file and it's a test function
-        if self.in_test_file and self._is_in_test_function():
-            self.generic_visit(node)
-            return
-            
+        # Note: Direct instantiation is flagged even in test files per DI rules
+        
         # Check for direct Console() instantiation
         if self._is_direct_console_instantiation(node):
             self.violations.append((
@@ -98,10 +95,7 @@ class DILinter(ast.NodeVisitor):
     
     def _is_direct_matcher_instantiation(self, node: ast.Call) -> bool:
         """Check if this is a direct matcher instantiation."""
-        # Skip test files - they often need direct instantiation for testing
-        if self.in_test_file:
-            return False
-            
+        # Note: Direct instantiation is flagged even in test files per DI rules
         matcher_classes = {
             "FuzzyMatcher", "AdaptiveSemanticMatcher", "HybridMatcher",
             "CentralityCalculator", "ImpactAnalyzer", "DependencyGraph"
@@ -116,7 +110,13 @@ class DILinter(ast.NodeVisitor):
     
     def _is_fallback_instantiation(self, node: ast.Call) -> bool:
         """Check for fallback instantiation patterns like 'service or Service()'."""
-        # This is a simplified check - in practice, you'd need more sophisticated AST analysis
+        # Check if this is part of a binary operation (e.g., 'service or Service()')
+        if hasattr(node, '_parent') and isinstance(node._parent, ast.BoolOp):
+            if isinstance(node._parent.op, ast.Or):
+                return True
+        
+        # Check for patterns like 'service or Service()' by looking at the parent node
+        # This is a simplified check for common fallback patterns
         return False
     
     def _is_fallback_assignment(self, node: ast.Assign) -> bool:
