@@ -166,15 +166,31 @@ def display_search_results(
         table = Table(title=f"🔍 Search Results ({len(search_response.results)} found)")
         table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
         table.add_column("Identifier", style="green")
+        table.add_column("File Path", style="yellow")
+        table.add_column("Line", justify="right", style="blue", no_wrap=True)
         table.add_column("Score", justify="right", style="magenta")
-        table.add_column("Type", style="blue")
+        table.add_column("Strategy", style="dim")
 
         for i, result in enumerate(search_response.results, 1):
+            # Format file path - show relative path or just filename if it's long
+            file_display = "N/A"
+            if result.file_path:
+                # Show relative path, truncate if too long
+                if len(result.file_path) > 40:
+                    file_display = "..." + result.file_path[-37:]
+                else:
+                    file_display = result.file_path
+
+            # Format line number
+            line_display = str(result.line_number) if result.line_number else "N/A"
+
             table.add_row(
                 str(i),
                 result.identifier,
+                file_display,
+                line_display,
                 f"{result.score:.3f}",
-                result.match_type,
+                result.strategy,
             )
 
         console.print(table)
@@ -198,11 +214,32 @@ def display_search_results(
         console.print(f"\n🔍 Search Results ({len(search_response.results)} found)\n")
 
         for i, result in enumerate(search_response.results, 1):
+            # Build the main identifier line
+            identifier_line = f"{i:2d}. [green]{result.identifier}[/green]"
+
+            # Add file and line info if available
+            location_info = []
+            if result.file_path:
+                location_info.append(f"file: [yellow]{result.file_path}[/yellow]")
+            if result.line_number:
+                location_info.append(f"line: [blue]{result.line_number}[/blue]")
+
+            if location_info:
+                identifier_line += f" ({', '.join(location_info)})"
+
+            console.print(identifier_line)
+
+            # Add score and strategy info
             console.print(
-                f"{i:2d}. [green]{result.identifier}[/green] "
-                f"(score: [magenta]{result.score:.3f}[/magenta], "
-                f"type: [blue]{result.match_type}[/blue])"
+                f"    score: [magenta]{result.score:.3f}[/magenta], "
+                f"strategy: [dim]{result.strategy}[/dim]"
             )
+
+            # Add context if available
+            if result.context:
+                console.print(f"    context: [dim]{result.context}[/dim]")
+
+            console.print()
 
         # Show performance metrics
         if search_response.performance_metrics:

@@ -23,6 +23,7 @@ from ..models import (
     SearchRequest,
     SearchResponse,
     ProjectInfo,
+    MatchResult,
 )
 from .file_scanner import get_project_files
 from .analyzer import analyze_file_types, analyze_identifier_types, get_cache_size
@@ -336,20 +337,25 @@ class RepoMapService:
         """Perform search based on request configuration."""
         start_time = time.time()
 
-        # Try to use cached identifiers first, fallback to re-parsing if needed
-        identifiers = self._get_cached_identifiers()
+        # Try to use cached tags first, fallback to re-parsing if needed
+        tags = self._get_cached_tags()
 
-        if not identifiers:
+        if not tags:
             # Fallback: Get project files and extract identifiers from tags
             self.logger.info("Cache miss or empty cache, re-parsing files")
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
             identifiers = self._extract_identifiers_from_files(project_files)
+            # Convert identifiers to tags format for consistency
+            tags = [
+                {"name": identifier, "type": None, "file": None, "line": None}
+                for identifier in identifiers
+            ]
         else:
-            self.logger.info(f"Using cached identifiers: {len(identifiers)} found")
+            self.logger.info(f"Using cached tags: {len(tags)} found")
 
-        if not identifiers:
+        if not tags:
             return SearchResponse(
                 query=request.query,
                 match_type=request.match_type,
@@ -358,6 +364,9 @@ class RepoMapService:
                 results=[],
                 search_time_ms=(time.time() - start_time) * 1000,
             )
+
+        # Extract identifiers for search
+        identifiers = [tag["name"] for tag in tags]
 
         # Perform search based on type
         if request.match_type == "fuzzy" and self.fuzzy_matcher:
@@ -376,14 +385,44 @@ class RepoMapService:
             # Fallback to basic search
             results = basic_search(request.query, identifiers, request.max_results)
 
+        # Enhance results with file path and line number information
+        enhanced_results = []
+        for result in results:
+            # Find the corresponding tag for this identifier
+            matching_tag = None
+            for tag in tags:
+                if tag["name"] == result.identifier:
+                    matching_tag = tag
+                    break
+
+            # Create enhanced result with file path and line number
+            # Filter out invalid line numbers (must be >= 1)
+            line_number = None
+            if matching_tag and matching_tag["line"] is not None:
+                line_num = matching_tag["line"]
+                if isinstance(line_num, int) and line_num >= 1:
+                    line_number = line_num
+
+            enhanced_result = MatchResult(
+                identifier=result.identifier,
+                score=result.score,
+                strategy=result.strategy,
+                match_type=result.match_type,
+                file_path=matching_tag["file"] if matching_tag else None,
+                line_number=line_number,
+                context=result.context,
+                metadata=result.metadata,
+            )
+            enhanced_results.append(enhanced_result)
+
         processing_time = time.time() - start_time
 
         return SearchResponse(
             query=request.query,
             match_type=request.match_type,
             threshold=request.threshold,
-            total_results=len(results),
-            results=results,
+            total_results=len(enhanced_results),
+            results=enhanced_results,
             search_time_ms=processing_time * 1000,  # Convert to milliseconds
         )
 
@@ -424,6 +463,55 @@ class RepoMapService:
 
         except Exception as e:
             self.logger.warning(f"Failed to retrieve identifiers from cache: {e}")
+            return []
+
+    def _get_cached_tags(self) -> List[Dict[str, Any]]:
+        """
+        Get all tags with full information from the aider cache.
+
+        Returns:
+            List of tag dictionaries with name, type, file, and line information
+        """
+        if not self.repo_map or not hasattr(self.repo_map, "TAGS_CACHE"):
+            self.logger.debug("No aider cache available")
+            return []
+
+        try:
+            cache = self.repo_map.TAGS_CACHE
+            all_tags = []
+
+            # Iterate through all cached files
+            for key in cache:
+                try:
+                    value = cache[key]
+                    if isinstance(value, dict) and "data" in value:
+                        data = value["data"]
+                        if isinstance(data, list):
+                            for tag in data:
+                                if hasattr(tag, "name") and tag.name:
+                                    # Extract full tag information
+                                    # Use the cache key as the file path if tag.file is not available
+                                    file_path = getattr(tag, "file", None)
+                                    if not file_path:
+                                        # The cache key is likely the file path
+                                        file_path = key
+
+                                    tag_info = {
+                                        "name": tag.name,
+                                        "type": getattr(tag, "type", None),
+                                        "file": file_path,
+                                        "line": getattr(tag, "line", None),
+                                    }
+                                    all_tags.append(tag_info)
+                except Exception as e:
+                    self.logger.debug(f"Error processing cache entry {key}: {e}")
+                    continue
+
+            self.logger.debug(f"Retrieved {len(all_tags)} tags from cache")
+            return all_tags
+
+        except Exception as e:
+            self.logger.warning(f"Failed to retrieve tags from cache: {e}")
             return []
 
     def get_tags(self) -> List[str]:
