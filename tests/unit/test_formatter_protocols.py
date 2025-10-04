@@ -427,9 +427,10 @@ class TestSearchResponseFormatter:
         result = formatter.format(search_response, OutputFormat.TEXT)
 
         assert result is not None
-        assert "Search Results (1 found)" in result
+        assert "Search Results" in result
+        assert "Total Results: 1" in result
         assert "test_function" in result
-        assert "Performance Metrics" in result
+        assert "Score: 95.0%" in result
 
 
 class TestDictFormatter:

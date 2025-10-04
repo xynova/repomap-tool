@@ -16,12 +16,8 @@ from .formats import (
     get_supported_formats,
     is_valid_format,
 )
-from .formatters import (
-    display_project_info,
-    display_search_results,
-    display_dependency_results,
-    display_cycles_results,
-)
+
+# Legacy formatters removed - all output now handled by OutputManager
 from .console_manager import (
     ConsoleManager,
     DefaultConsoleManager,
@@ -50,8 +46,19 @@ from .standard_formatters import (
     SearchResponseFormatter,
     DictFormatter,
     ListFormatter,
+    StringFormatter,
     FormatterRegistry,
     get_formatter_registry,
+)
+from .template_formatter import TemplateBasedFormatter
+from .manager import OutputManager, OutputManagerFactory, get_output_manager
+from .templates import (
+    TemplateEngine,
+    TemplateEngineFactory,
+    TemplateRegistry,
+    get_template_registry,
+    TemplateConfig,
+    TemplateOptions,
 )
 
 __all__ = [
@@ -66,11 +73,7 @@ __all__ = [
     "validate_output_format",
     "get_supported_formats",
     "is_valid_format",
-    # Legacy formatters
-    "display_project_info",
-    "display_search_results",
-    "display_dependency_results",
-    "display_cycles_results",
+    # Legacy formatters removed - all output now handled by OutputManager
     # Console management
     "ConsoleManager",
     "DefaultConsoleManager",
@@ -86,6 +89,7 @@ __all__ = [
     "BaseFormatter",
     "DataFormatter",
     "TemplateFormatter",
+    "TemplateBasedFormatter",
     "FormatterRegistryProtocol",
     "FormatterFactory",
     "OutputHandler",
@@ -97,6 +101,18 @@ __all__ = [
     "SearchResponseFormatter",
     "DictFormatter",
     "ListFormatter",
+    "StringFormatter",
     "FormatterRegistry",
     "get_formatter_registry",
+    # Template system
+    "TemplateEngine",
+    "TemplateEngineFactory",
+    "TemplateRegistry",
+    "get_template_registry",
+    "TemplateConfig",
+    "TemplateOptions",
+    # Output manager
+    "OutputManager",
+    "OutputManagerFactory",
+    "get_output_manager",
 ]

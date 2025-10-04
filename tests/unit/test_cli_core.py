@@ -72,9 +72,7 @@ class TestCLICore:
                 cli, ["index", "create", temp_project, "--fuzzy"]
             )
             assert result.exit_code == 0
-            assert (
-                "LLM-Optimized Project Analysis" in result.output
-            )  # Check for TEXT output
+            assert "LLM-Optimized Project" in result.output  # Check for TEXT output
 
     def test_analyze_with_config_file(self, cli_runner, temp_project):
         """Test analyze command with config file."""
@@ -117,9 +115,7 @@ class TestCLICore:
                     cli, ["index", "create", temp_project, "--config", config_file]
                 )
                 assert result.exit_code == 0
-                assert (
-                    "LLM-Optimized Project Analysis" in result.output
-                )  # Check for TEXT output
+                assert "LLM-Optimized Project" in result.output  # Check for TEXT output
         finally:
             os.unlink(config_file)
 

@@ -19,6 +19,7 @@ from tabulate import tabulate
 from .protocols import BaseFormatter, DataFormatter, FormatterProtocol
 from .formats import OutputFormat, OutputConfig
 from .console_manager import ConsoleManager
+from .template_formatter import TemplateBasedFormatter
 
 from ...models import ProjectInfo, SearchResponse
 
@@ -34,6 +35,10 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter):
         """Initialize the ProjectInfo formatter."""
         super().__init__(console_manager, enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
 
     def format(
         self,
@@ -50,7 +55,8 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
-            return self._format_to_text(data, config)
+            # Use template formatter for text output
+            return self._template_formatter.format(data, output_format, config, ctx)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -137,6 +143,10 @@ class SearchResponseFormatter(BaseFormatter, DataFormatter):
         """Initialize the SearchResponse formatter."""
         super().__init__(console_manager, enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
 
     def format(
         self,
@@ -153,7 +163,8 @@ class SearchResponseFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
-            return self._format_to_text(data, config)
+            # Use template formatter for text output
+            return self._template_formatter.format(data, output_format, config, ctx)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -242,6 +253,10 @@ class DictFormatter(BaseFormatter, DataFormatter):
         """Initialize the Dict formatter."""
         super().__init__(console_manager, enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
 
     def format(
         self,
@@ -258,7 +273,11 @@ class DictFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
-            return self._format_to_text(data, config)
+            # Check if this is error/success data that should use templates
+            if "error" in data or "success" in data:
+                return self._template_formatter.format(data, output_format, config, ctx)
+            else:
+                return self._format_to_text(data, config)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -424,6 +443,48 @@ class ListFormatter(BaseFormatter, DataFormatter):
         return list
 
 
+class StringFormatter(BaseFormatter, DataFormatter):
+    """Formatter for string data."""
+
+    def __init__(self, console_manager: Optional[ConsoleManager] = None) -> None:
+        super().__init__(console_manager)
+        self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> str:
+        """Format string data."""
+        if not isinstance(data, str):
+            raise ValueError(f"Expected string, got {type(data)}")
+
+        if output_format == OutputFormat.JSON:
+            return json.dumps(data, indent=2)
+        elif output_format == OutputFormat.TEXT:
+            return data
+
+        raise ValueError(f"Unsupported format: {output_format}")
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if formatter supports the given format."""
+        return output_format in self._supported_formats
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported formats."""
+        return self._supported_formats.copy()
+
+    def validate_data(self, data: Any) -> bool:
+        """Validate that data is a string."""
+        return isinstance(data, str)
+
+    def get_data_type(self) -> Type[Any]:
+        """Get data type."""
+        return str
+
+
 class FormatterRegistry:
     """Registry for managing formatters."""
 
@@ -461,7 +522,7 @@ class FormatterRegistry:
         for formatter in self._formatters:
             if (
                 hasattr(formatter, "validate_data")
-                and formatter.validate_data
+                and hasattr(formatter, "supports_format")
                 and formatter.supports_format(output_format)
             ):
                 return formatter
@@ -506,3 +567,4 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
     registry.register_formatter(SearchResponseFormatter(), SearchResponse)
     registry.register_formatter(DictFormatter(), dict)
     registry.register_formatter(ListFormatter(), list)
+    registry.register_formatter(StringFormatter(), str)

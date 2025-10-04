@@ -17,10 +17,8 @@ from .config.loader import (
     apply_environment_overrides,
     apply_cli_overrides,
 )
-from .output.formatters import (
-    display_project_info,
-    display_search_results,
-)
+
+# Legacy formatter functions removed - all output now handled by OutputManager
 from .utils.session import (
     get_project_path_from_session,
 )
@@ -46,9 +44,7 @@ __all__ = [
     "resolve_project_path",
     "apply_environment_overrides",
     "apply_cli_overrides",
-    # Output functions
-    "display_project_info",
-    "display_search_results",
+    # Legacy output functions removed - all output now handled by OutputManager
     # Session functions
     "get_project_path_from_session",
     # Core classes for test compatibility

@@ -9,10 +9,10 @@ import sys
 from typing import Optional
 
 import click
-from rich.panel import Panel
 
 from ...models import RepoMapConfig, create_error_response
 from ..config.loader import resolve_project_path, create_default_config
+from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
 
 
@@ -74,20 +74,25 @@ def config(
             # Write to file
             with open(output, "w") as f:
                 json.dump(config_dict, f, indent=2)
-            console.print(f"[green]Configuration saved to: {output}[/green]")
+            # Use OutputManager for success message
+            output_manager = get_output_manager()
+            output_config = OutputConfig(format=OutputFormat.TEXT)
+            output_manager.display_success(
+                f"Configuration saved to: {output}", output_config
+            )
         else:
             # Display configuration
-            console.print(
-                Panel(
-                    json.dumps(config_dict, indent=2),
-                    title="Generated Configuration",
-                    border_style="blue",
-                )
-            )
+            output_manager = get_output_manager()
+            output_config = OutputConfig(format=OutputFormat.TEXT)
+            config_text = f"Generated Configuration\n{'=' * 50}\n{json.dumps(config_dict, indent=2)}"
+            output_manager.display(config_text, output_config)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ConfigError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
+        # Use OutputManager for error message
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(error_response, output_config)
         sys.exit(1)
 
 
@@ -98,13 +103,14 @@ def version(ctx: click.Context) -> None:
     # Get console instance (automatically handles dependency injection from context)
     console = get_console(ctx)
 
-    console.print(
-        Panel(
-            "[bold blue]RepoMap-Tool[/bold blue]\n"
-            "Version: 0.1.0\n"
-            "A portable code analysis tool using aider libraries\n"
-            "with fuzzy and semantic matching capabilities.",
-            title="Version Info",
-            border_style="green",
-        )
-    )
+    # Use OutputManager for version display
+    output_manager = get_output_manager()
+    output_config = OutputConfig(format=OutputFormat.TEXT)
+
+    version_info = {
+        "tool": "RepoMap-Tool",
+        "version": "0.1.0",
+        "description": "A portable code analysis tool using aider libraries with fuzzy and semantic matching capabilities.",
+    }
+
+    output_manager.display(version_info, output_config)

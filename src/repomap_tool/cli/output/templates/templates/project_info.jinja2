@@ -1,0 +1,30 @@
+{# Project Info Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{% if emoji %}🧠 LLM-Optimized Project Analysis{% else %}Project Analysis{% endif %}
+{{ "=" * 60 }}
+
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Project Root: {{ data.project_root }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Files: {{ data.total_files }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Identifiers: {{ data.total_identifiers }}
+{% if hierarchical %}└──{% else %}•{% endif %} Analysis Time: {{ data.analysis_time_ms | format_duration }}
+
+{% if data.file_types %}
+{% if emoji %}📁{% endif %} FILE TYPES:
+{% for ext, count in data.file_types.items() %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ ext }}: {{ count }} files
+{% endfor %}
+{% endif %}
+
+{% if data.identifier_types %}
+{% if emoji %}🏷️{% endif %} IDENTIFIER TYPES:
+{% for id_type, count in data.identifier_types.items() %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ id_type }}: {{ count }} identifiers
+{% endfor %}
+{% endif %}
+
+{% if data.last_updated %}
+{% if emoji %}🕒{% endif %} Last Updated: {{ data.last_updated }}
+{% endif %}

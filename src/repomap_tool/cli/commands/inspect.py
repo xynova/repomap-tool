@@ -23,10 +23,7 @@ from ..config.loader import (
     create_search_config,
     create_tree_config,
 )
-from ..output.formatters import (
-    display_search_results,
-    display_cycles_results,
-)
+from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
 
 
@@ -146,12 +143,16 @@ def find(
 
             progress.update(task, description="Search complete!")
 
-        # Display results
-        display_search_results(response, output)  # type: ignore[arg-type]
+        # Display results using OutputManager
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat(output))
+        output_manager.display(response, output_config)
 
     except Exception as e:
-        error_response = create_error_response(str(e), "SearchError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
+        # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(e, output_config)
         sys.exit(1)
 
 
@@ -225,12 +226,16 @@ def cycles(
 
             progress.update(task, description="Analysis complete!")
 
-        # Display results
-        display_cycles_results(cycles, output)  # type: ignore[arg-type]
+        # Display results using OutputManager
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat(output))
+        output_manager.display(cycles, output_config)
 
     except Exception as e:
-        error_response = create_error_response(str(e), "CycleDetectionError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
+        # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(e, output_config)
         sys.exit(1)
 
 
@@ -294,14 +299,18 @@ def centrality(
             verbose=verbose,
         )
 
-        console.print(
-            f"🎯 Inspecting centrality for project: [blue]{resolved_project_path}[/blue]"
+        # Use OutputManager for progress messages
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+
+        output_manager.display_progress(
+            f"🎯 Inspecting centrality for project: {resolved_project_path}"
         )
 
         if files:
-            console.print(f"📁 Files: {', '.join(files)}")
+            output_manager.display_progress(f"📁 Files: {', '.join(files)}")
         else:
-            console.print("📁 Inspecting all files")
+            output_manager.display_progress("📁 Inspecting all files")
 
         # Use service factory for proper dependency injection
         from repomap_tool.cli.services import get_service_factory
@@ -337,20 +346,22 @@ def centrality(
         # Perform centrality analysis
         try:
             result = llm_analyzer.analyze_file_centrality(file_paths, analysis_format)
-            console.print(result)
+            output_manager.display(result, output_config)
         except Exception as analysis_error:
-            console.print(f"[yellow]Warning: {analysis_error}[/yellow]")
-            console.print(
-                "[yellow]This might be due to missing dependency analysis. Try running dependency analysis first.[/yellow]"
+            output_manager.display_error(analysis_error, output_config)
+            output_manager.display_progress(
+                "This might be due to missing dependency analysis. Try running dependency analysis first."
             )
 
-        console.print("✅ Centrality inspection completed")
-        console.print(f"📊 Output format: {output}")
-        console.print(f"🔢 Max tokens: {max_tokens}")
+        output_manager.display_success("Centrality inspection completed", output_config)
+        output_manager.display_progress(f"📊 Output format: {output}")
+        output_manager.display_progress(f"🔢 Max tokens: {max_tokens}")
 
     except Exception as e:
-        error_response = create_error_response(str(e), "CentralityAnalysisError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
+        # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(e, output_config)
         sys.exit(1)
 
 
@@ -403,7 +414,12 @@ def impact(
     console = get_console(ctx)
 
     if not files:
-        console.print("[red]Error: Must specify at least one file with --files[/red]")
+        # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(
+            ValueError("Must specify at least one file with --files"), output_config
+        )
         sys.exit(1)
 
     try:
@@ -419,10 +435,14 @@ def impact(
             verbose=verbose,
         )
 
-        console.print(
-            f"🎯 Inspecting impact for project: [blue]{resolved_project_path}[/blue]"
+        # Use OutputManager for progress messages
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+
+        output_manager.display_progress(
+            f"🎯 Inspecting impact for project: {resolved_project_path}"
         )
-        console.print(f"📁 Target files: {', '.join(files)}")
+        output_manager.display_progress(f"📁 Target files: {', '.join(files)}")
 
         # Get service factory and create services
         from repomap_tool.cli.services import get_service_factory
@@ -437,10 +457,14 @@ def impact(
         # Set max tokens for the analyzer
         llm_analyzer.max_tokens = max_tokens
 
+        # Use OutputManager for progress messages
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+
         # Perform impact analysis
         try:
             # Print output format
-            console.print(f"📊 Output format: {output}")
+            output_manager.display_progress(f"📊 Output format: {output}")
 
             # Convert output format string to enum - text uses TEXT for best LLM consumption
             from repomap_tool.dependencies import AnalysisFormat
@@ -454,21 +478,23 @@ def impact(
             # Analyze impact for the specified files
             result = llm_analyzer.analyze_file_impact(files, format_enum)
 
-            # Display the result
-            console.print(result)
+            # Display the result using OutputManager
+            output_manager.display(result, output_config)
 
             # Print completion message
-            console.print("✅ Impact inspection completed")
+            output_manager.display_success("Impact inspection completed", output_config)
 
         except Exception as analysis_error:
-            console.print(f"[red]Error during impact analysis: {analysis_error}[/red]")
+            output_manager.display_error(analysis_error, output_config)
             if verbose:
                 import traceback
 
-                console.print(f"[red]Traceback: {traceback.format_exc()}[/red]")
+                output_manager.display_progress(f"Traceback: {traceback.format_exc()}")
             sys.exit(1)
 
     except Exception as e:
-        error_response = create_error_response(str(e), "ImpactAnalysisError")
-        console.print(f"[red]Error: {error_response.error}[/red]")
+        # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(e, output_config)
         sys.exit(1)

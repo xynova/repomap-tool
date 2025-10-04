@@ -1,0 +1,12 @@
+{# Error Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+
+{% if emoji %}❌ Error{% else %}Error{% endif %}: {{ data.error.type }}
+{{ "=" * 60 }}
+
+{% if emoji %}💬{% endif %} Message: {{ data.error.message }}
+
+{% if data.error.details %}
+{% if emoji %}📋{% endif %} Details:
+{{ data.error.details | indent(2) }}
+{% endif %}
