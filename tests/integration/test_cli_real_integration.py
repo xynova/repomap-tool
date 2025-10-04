@@ -196,7 +196,7 @@ def my_function():
                 "--max-results",
                 "5",
                 "--output",
-                "table",
+                "text",
             ],
         )
 
@@ -217,7 +217,7 @@ def my_function():
                 "centrality",
                 temp_project,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
@@ -513,7 +513,7 @@ def utility_function():
                 "centrality",
                 temp_project_with_dependencies,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
@@ -572,7 +572,7 @@ def utility_function():
                 "--files",
                 main_file,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
@@ -616,7 +616,7 @@ def utility_function():
                 "cycles",
                 temp_project_with_dependencies,
                 "--output",
-                "table",
+                "text",
             ],
         )
 

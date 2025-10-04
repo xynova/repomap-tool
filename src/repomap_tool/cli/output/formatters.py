@@ -9,6 +9,7 @@ from typing import Optional, Literal, Dict, Any, List
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
+from tabulate import tabulate
 
 from ...models import ProjectInfo, SearchResponse
 
@@ -144,7 +145,7 @@ def display_project_info(
 
 def display_search_results(
     search_response: SearchResponse,
-    output_format: Literal["json", "text", "table"],
+    output_format: Literal["json", "text"],
     template_config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Display search results."""
@@ -162,38 +163,33 @@ def display_search_results(
         )
         return
 
-    if output_format == "table":
-        table = Table(title=f"🔍 Search Results ({len(search_response.results)} found)")
-        table.add_column("Rank", justify="right", style="cyan", no_wrap=True)
-        table.add_column("Identifier", style="green")
-        table.add_column("File Path", style="yellow")
-        table.add_column("Line", justify="right", style="blue", no_wrap=True)
-        table.add_column("Score", justify="right", style="magenta")
-        table.add_column("Strategy", style="dim")
-
+    # For 'text' format, use clean ASCII table (LLM-friendly, no ANSI codes)
+    if output_format == "text":
+        # Prepare table data
+        table_data = []
         for i, result in enumerate(search_response.results, 1):
-            # Format file path - show relative path or just filename if it's long
-            file_display = "N/A"
-            if result.file_path:
-                # Show relative path, truncate if too long
-                if len(result.file_path) > 40:
-                    file_display = "..." + result.file_path[-37:]
-                else:
-                    file_display = result.file_path
+            # Format file path - show full path for LLM consumption
+            file_display = result.file_path if result.file_path else "N/A"
 
             # Format line number
             line_display = str(result.line_number) if result.line_number else "N/A"
 
-            table.add_row(
+            table_data.append([
                 str(i),
                 result.identifier,
                 file_display,
                 line_display,
                 f"{result.score:.3f}",
                 result.strategy,
-            )
+            ])
 
-        console.print(table)
+        # Create clean ASCII table
+        headers = ["Rank", "Identifier", "File Path", "Line", "Score", "Strategy"]
+        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
+        
+        # Print with title
+        console.print(f"🔍 Search Results ({len(search_response.results)} found)")
+        console.print(table_str)
 
         # Show performance metrics if available
         if search_response.performance_metrics:
@@ -210,51 +206,10 @@ def display_search_results(
 
             console.print(metrics_table)
 
-    elif output_format == "text":
-        console.print(f"\n🔍 Search Results ({len(search_response.results)} found)\n")
-
-        for i, result in enumerate(search_response.results, 1):
-            # Build the main identifier line
-            identifier_line = f"{i:2d}. [green]{result.identifier}[/green]"
-
-            # Add file and line info if available
-            location_info = []
-            if result.file_path:
-                location_info.append(f"file: [yellow]{result.file_path}[/yellow]")
-            if result.line_number:
-                location_info.append(f"line: [blue]{result.line_number}[/blue]")
-
-            if location_info:
-                identifier_line += f" ({', '.join(location_info)})"
-
-            console.print(identifier_line)
-
-            # Add score and strategy info
-            console.print(
-                f"    score: [magenta]{result.score:.3f}[/magenta], "
-                f"strategy: [dim]{result.strategy}[/dim]"
-            )
-
-            # Add context if available
-            if result.context:
-                console.print(f"    context: [dim]{result.context}[/dim]")
-
-            console.print()
-
-        # Show performance metrics
-        if search_response.performance_metrics:
-            console.print("\n⚡ Performance Metrics:")
-            for key, value in search_response.performance_metrics.items():
-                if isinstance(value, float):
-                    formatted_value = f"{value:.3f}"
-                else:
-                    formatted_value = str(value)
-                console.print(f"  {key.replace('_', ' ').title()}: {formatted_value}")
-
 
 def display_dependency_results(
     results: Dict[str, Any],
-    output_format: Literal["json", "text", "table"],
+    output_format: Literal["json", "text"],
 ) -> None:
     """Display dependency analysis results."""
     # Get console from Click context
@@ -267,32 +222,27 @@ def display_dependency_results(
         console.print(json.dumps(results, indent=2, default=str))
         return
 
-    if output_format == "table":
-        # Create summary table
-        table = Table(title="📊 Dependency Analysis Results")
-        table.add_column("Metric", style="cyan", no_wrap=True)
-        table.add_column("Value", style="magenta")
+    # For 'text' format, use clean ASCII table (LLM-friendly, no ANSI codes)
+    if output_format == "text":
+        # Prepare table data
+        table_data = [
+            ["Total Files", str(results.get("total_files", 0))],
+            ["Total Dependencies", str(results.get("total_dependencies", 0))],
+            ["Circular Dependencies", str(results.get("circular_dependencies", 0))]
+        ]
 
-        table.add_row("Total Files", str(results.get("total_files", 0)))
-        table.add_row("Total Dependencies", str(results.get("total_dependencies", 0)))
-        table.add_row(
-            "Circular Dependencies", str(results.get("circular_dependencies", 0))
-        )
-
-        console.print(table)
-
-    elif output_format == "text":
-        console.print(f"\n📊 Dependency Analysis Results\n")
-        console.print(f"Total Files: {results.get('total_files', 0)}")
-        console.print(f"Total Dependencies: {results.get('total_dependencies', 0)}")
-        console.print(
-            f"Circular Dependencies: {results.get('circular_dependencies', 0)}"
-        )
+        # Create clean ASCII table
+        headers = ["Metric", "Value"]
+        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
+        
+        # Print with title
+        console.print("📊 Dependency Analysis Results")
+        console.print(table_str)
 
 
 def display_cycles_results(
     cycles: List[List[str]],
-    output_format: Literal["json", "text", "table"],
+    output_format: Literal["json", "text"],
 ) -> None:
     """Display circular dependency results."""
     # Get console from Click context
@@ -315,20 +265,18 @@ def display_cycles_results(
         )
         return
 
-    if output_format == "table":
-        table = Table(title=f"🔄 Circular Dependencies ({len(cycles)} found)")
-        table.add_column("Cycle #", justify="right", style="cyan", no_wrap=True)
-        table.add_column("Dependencies", style="red")
-
+    # For 'text' format, use clean ASCII table (LLM-friendly, no ANSI codes)
+    if output_format == "text":
+        # Prepare table data
+        table_data = []
         for i, cycle in enumerate(cycles, 1):
             cycle_str = " → ".join(cycle + [cycle[0]])  # Close the cycle
-            table.add_row(str(i), cycle_str)
+            table_data.append([str(i), cycle_str])
 
-        console.print(table)
-
-    elif output_format == "text":
-        console.print(f"\n🔄 Circular Dependencies ({len(cycles)} found)\n")
-
-        for i, cycle in enumerate(cycles, 1):
-            cycle_str = " → ".join(cycle + [cycle[0]])  # Close the cycle
-            console.print(f"{i:2d}. [red]{cycle_str}[/red]")
+        # Create clean ASCII table
+        headers = ["Cycle #", "Dependencies"]
+        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
+        
+        # Print with title
+        console.print(f"🔄 Circular Dependencies ({len(cycles)} found)")
+        console.print(table_str)

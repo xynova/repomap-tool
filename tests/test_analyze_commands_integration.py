@@ -313,7 +313,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
@@ -340,7 +340,7 @@ class TestUserService:
                 "--files",
                 auth_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
@@ -364,7 +364,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
@@ -391,7 +391,7 @@ class TestUserService:
                 "--files",
                 auth_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
@@ -465,7 +465,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--max-tokens",
                 "2000",
             ],
@@ -490,7 +490,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--max-tokens",
                 "2000",
             ],
@@ -504,7 +504,7 @@ class TestUserService:
         """Test analyze impact command without specifying files."""
         result = self.runner.invoke(
             cli,
-            ["inspect", "impact", str(self.project_root), "--output", "llm_optimized"],
+            ["inspect", "impact", str(self.project_root), "--output", "text"],
         )
 
         assert result.exit_code == 2
@@ -513,7 +513,7 @@ class TestUserService:
     def test_analyze_centrality_no_files_fallback(self):
         """Test analyze centrality command without files falls back to top files."""
         result = self.runner.invoke(
-            cli, ["inspect", "centrality", str(self.project_root), "--output", "table"]
+            cli, ["inspect", "centrality", str(self.project_root), "--output", "text"]
         )
 
         assert result.exit_code == 0
@@ -535,7 +535,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
@@ -558,7 +558,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
@@ -581,7 +581,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--verbose",
             ],
         )
@@ -605,7 +605,7 @@ class TestUserService:
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--verbose",
             ],
         )

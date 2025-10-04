@@ -206,7 +206,7 @@ class TestCLICore:
                     "--max-results",
                     "10",
                     "--output",
-                    "table",
+                    "text",
                 ],
             )
             assert result.exit_code == 0

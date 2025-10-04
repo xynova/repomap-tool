@@ -66,9 +66,9 @@ def inspect(ctx: click.Context) -> None:
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "text", "table"]),
-    default="table",
-    help="Output format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option(
@@ -170,9 +170,9 @@ def find(
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "table", "text"]),
-    default="table",
-    help="Output format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 def cycles(
@@ -249,9 +249,9 @@ def cycles(
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="llm_optimized",
-    help="Output format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option(
@@ -327,14 +327,12 @@ def centrality(
             all_files = get_project_files(resolved_project_path, verbose=verbose)
             file_paths = all_files
 
-        # Convert output format
+        # Convert output format - text uses TABLE for list of files, json for structured data
         format_mapping = {
+            "text": AnalysisFormat.TABLE,  # Shows list of files with centrality scores (most informative)
             "json": AnalysisFormat.JSON,
-            "table": AnalysisFormat.TABLE,
-            "text": AnalysisFormat.TEXT,
-            "llm_optimized": AnalysisFormat.LLM_OPTIMIZED,
         }
-        analysis_format = format_mapping.get(output, AnalysisFormat.TABLE)
+        analysis_format = format_mapping.get(output, AnalysisFormat.LLM_OPTIMIZED)
 
         # Perform centrality analysis
         try:
@@ -378,9 +376,9 @@ def centrality(
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="llm_optimized",
-    help="Output format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option(
@@ -444,10 +442,14 @@ def impact(
             # Print output format
             console.print(f"📊 Output format: {output}")
 
-            # Convert output format string to enum
+            # Convert output format string to enum - text uses LLM_OPTIMIZED for best LLM consumption
             from repomap_tool.dependencies import AnalysisFormat
 
-            format_enum = AnalysisFormat(output.lower())
+            format_mapping = {
+                "text": AnalysisFormat.LLM_OPTIMIZED,  # Most informative for LLM
+                "json": AnalysisFormat.JSON,
+            }
+            format_enum = format_mapping.get(output, AnalysisFormat.LLM_OPTIMIZED)
 
             # Analyze impact for the specified files
             result = llm_analyzer.analyze_file_impact(files, format_enum)
