@@ -174,19 +174,21 @@ def display_search_results(
             # Format line number
             line_display = str(result.line_number) if result.line_number else "N/A"
 
-            table_data.append([
-                str(i),
-                result.identifier,
-                file_display,
-                line_display,
-                f"{result.score:.3f}",
-                result.strategy,
-            ])
+            table_data.append(
+                [
+                    str(i),
+                    result.identifier,
+                    file_display,
+                    line_display,
+                    f"{result.score:.3f}",
+                    result.strategy,
+                ]
+            )
 
         # Create clean ASCII table
         headers = ["Rank", "Identifier", "File Path", "Line", "Score", "Strategy"]
         table_str = tabulate(table_data, headers=headers, tablefmt="grid")
-        
+
         # Print with title
         console.print(f"🔍 Search Results ({len(search_response.results)} found)")
         console.print(table_str)
@@ -228,13 +230,13 @@ def display_dependency_results(
         table_data = [
             ["Total Files", str(results.get("total_files", 0))],
             ["Total Dependencies", str(results.get("total_dependencies", 0))],
-            ["Circular Dependencies", str(results.get("circular_dependencies", 0))]
+            ["Circular Dependencies", str(results.get("circular_dependencies", 0))],
         ]
 
         # Create clean ASCII table
         headers = ["Metric", "Value"]
         table_str = tabulate(table_data, headers=headers, tablefmt="grid")
-        
+
         # Print with title
         console.print("📊 Dependency Analysis Results")
         console.print(table_str)
@@ -276,7 +278,7 @@ def display_cycles_results(
         # Create clean ASCII table
         headers = ["Cycle #", "Dependencies"]
         table_str = tabulate(table_data, headers=headers, tablefmt="grid")
-        
+
         # Print with title
         console.print(f"🔄 Circular Dependencies ({len(cycles)} found)")
         console.print(table_str)
