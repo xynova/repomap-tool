@@ -33,8 +33,19 @@ from ..utils.console import get_console
 @click.group()
 @click.pass_context
 def search(ctx: click.Context) -> None:
-    """Search and discovery commands."""
-    pass
+    """Search and discovery commands.
+
+    ⚠️  DEPRECATED: This command is deprecated and will be removed in a future version.
+    Use 'repomap-tool inspect' instead for all search and analysis functionality.
+    """
+    import warnings
+
+    warnings.warn(
+        "The 'search' command is deprecated. Use 'inspect' instead. "
+        "This command will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
 
 @search.command()

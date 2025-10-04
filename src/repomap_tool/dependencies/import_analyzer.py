@@ -276,7 +276,8 @@ class ImportAnalyzer:
 
     def __init__(self, project_root: Optional[str] = None):
         """Initialize the import analyzer with language parsers."""
-        self.project_root = project_root
+        # Ensure project_root is always a string, not a ConfigurationOption
+        self.project_root = str(project_root) if project_root is not None else None
         self.language_parsers: Dict[str, ImportParser] = {
             "py": PythonImportParser(),
             "js": JavaScriptImportParser(),

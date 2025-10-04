@@ -20,11 +20,14 @@ docker run --rm -v $(pwd):/project repomap-tool analyze /project
 
 ### **Basic Usage**
 ```bash
-# Analyze a project
-repomap-tool analyze /path/to/project
+# Inspect a project (comprehensive analysis)
+repomap-tool inspect overview /path/to/project
 
-# Search for identifiers
-repomap-tool search /path/to/project "user authentication"
+# Find identifiers
+repomap-tool inspect find /path/to/project "user authentication"
+
+# Inspect centrality analysis
+repomap-tool inspect centrality /path/to/project
 
 # Generate configuration
 repomap-tool config /path/to/project
@@ -35,53 +38,48 @@ repomap-tool version
 
 ## 📋 Available Commands
 
-### **`analyze`** - Project Analysis
-Analyzes a project and generates a comprehensive code map.
+### **`inspect`** - Code Inspection and Analysis
+Inspect and analyze code repository structure, dependencies, and patterns.
 
 ```bash
-repomap-tool analyze /path/to/project [OPTIONS]
+repomap-tool inspect <subcommand> [OPTIONS]
 ```
 
-**Options:**
-- `--fuzzy` - Enable fuzzy matching
-- `--semantic` - Enable semantic matching
-- `--hybrid` - Enable hybrid matching (default)
-- `--output FILE` - Output file path (default: stdout)
-- `--verbose` - Verbose output
+**Subcommands:**
+- `find` - Find identifiers using intelligent matching
+- `cycles` - Inspect for circular dependencies
+- `centrality` - Inspect file importance and centrality
+- `impact` - Inspect change impact analysis
+- `overview` - Comprehensive project inspection
 
 **Examples:**
 ```bash
-# Basic analysis
+# Find identifiers with fuzzy matching
+repomap-tool inspect find /path/to/project "user authentication" --match-type fuzzy
+
+# Inspect centrality analysis
+repomap-tool inspect centrality /path/to/project --files auth.py,user.py
+
+# Inspect impact of changes
+repomap-tool inspect impact /path/to/project --files auth.py
+```
+
+## ⚠️ Deprecated Commands
+
+The following commands are deprecated and will be removed in a future version:
+
+- `repomap-tool analyze` → Use `repomap-tool inspect` instead
+- `repomap-tool search` → Use `repomap-tool inspect find` instead
+
+**Migration Guide:**
+```bash
+# Old commands (deprecated)
 repomap-tool analyze /path/to/project
+repomap-tool search /path/to/project "query"
 
-# With fuzzy matching
-repomap-tool analyze /path/to/project --fuzzy
-
-# With semantic matching
-repomap-tool analyze /path/to/project --semantic
-
-# Hybrid analysis (recommended)
-repomap-tool analyze /path/to/project --hybrid --verbose
-```
-
-### **`search`** - Identifier Search
-Search for identifiers using fuzzy and semantic matching.
-
-```bash
-repomap-tool search /path/to/project "query" [OPTIONS]
-```
-
-**Options:**
-- `--match-type TYPE` - Matching strategy (fuzzy, semantic, hybrid)
-- `--fuzzy-threshold N` - Fuzzy matching threshold (0-100, default: 80)
-- `--semantic-threshold N` - Semantic matching threshold (0-100, default: 70)
-- `--limit N` - Maximum number of results (default: 10)
-- `--output FORMAT` - Output format (table, json, text)
-
-**Examples:**
-```bash
-# Search for authentication-related code
-repomap-tool search /path/to/project "user authentication"
+# New commands (recommended)
+repomap-tool inspect overview /path/to/project
+repomap-tool inspect find /path/to/project "query"
 
 # Fuzzy search with custom threshold
 repomap-tool search /path/to/project "auth" --match-type fuzzy --fuzzy-threshold 60

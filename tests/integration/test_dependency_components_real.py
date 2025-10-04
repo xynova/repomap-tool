@@ -182,10 +182,27 @@ class ComplexProcessor:
 
     def test_dependency_graph_real(self, temp_project_with_dependencies):
         """Test dependency graph construction with real files."""
-        from repomap_tool.dependencies.dependency_graph import DependencyGraph
         from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
+        from repomap_tool.models import (
+            RepoMapConfig,
+            FuzzyMatchConfig,
+            SemanticMatchConfig,
+            PerformanceConfig,
+            DependencyConfig,
+        )
+        from repomap_tool.cli.services import get_service_factory
 
-        graph = DependencyGraph()
+        # Use service factory for dependency graph
+        config = RepoMapConfig(
+            project_root=str(temp_project_with_dependencies),
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        graph = repomap_service.dependency_graph
 
         # Use ImportAnalyzer to get ProjectImports
         analyzer = ImportAnalyzer()

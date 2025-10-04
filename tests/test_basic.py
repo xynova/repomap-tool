@@ -11,8 +11,14 @@ sys.path.append(
 )
 
 # flake8: noqa: E402
-from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    DependencyConfig,
+)
+from repomap_tool.cli.services import get_service_factory
 
 
 def test_imports():
@@ -42,7 +48,17 @@ def test_imports():
 def test_fuzzy_matcher():
     """Test basic fuzzy matching functionality."""
     try:
-        matcher = FuzzyMatcher(threshold=70, verbose=False)
+        # Create config and use service factory
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=FuzzyMatchConfig(threshold=70),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        matcher = repomap_service.fuzzy_matcher
 
         # Test data
         identifiers = {
@@ -74,7 +90,22 @@ def test_fuzzy_matcher():
 def test_adaptive_matcher():
     """Test basic adaptive semantic matching functionality."""
     try:
-        matcher = AdaptiveSemanticMatcher(verbose=False)
+        # Clear service cache to avoid conflicts with other tests
+        from repomap_tool.cli.services import clear_service_cache
+
+        clear_service_cache()
+
+        # Create config and use service factory
+        config = RepoMapConfig(
+            project_root=".",
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(enabled=True),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        matcher = repomap_service.semantic_matcher
 
         # Test data
         identifiers = {

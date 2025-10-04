@@ -17,7 +17,14 @@ sys.path.append(
 )
 
 # flake8: noqa: E402
-from repomap_tool.matchers.hybrid_matcher import HybridMatcher
+from repomap_tool.models import (
+    RepoMapConfig,
+    FuzzyMatchConfig,
+    SemanticMatchConfig,
+    PerformanceConfig,
+    DependencyConfig,
+)
+from repomap_tool.cli.services import get_service_factory
 
 
 def test_hybrid_matcher():
@@ -128,22 +135,24 @@ def test_hybrid_matcher():
         "contraption_manager",
     }
 
-    # Initialize fuzzy matcher first
-    from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+    # Clear service cache to avoid conflicts with other tests
+    from repomap_tool.cli.services import clear_service_cache
 
-    fuzzy_matcher = FuzzyMatcher(
-        threshold=60,
-        strategies=["prefix", "substring", "levenshtein"],
-        verbose=False,
-    )
+    clear_service_cache()
 
-    # Initialize hybrid matcher with injected fuzzy matcher
-    matcher = HybridMatcher(
-        fuzzy_matcher=fuzzy_matcher,
-        semantic_threshold=0.2,
-        use_word_embeddings=True,
-        verbose=False,
+    # Create config and use service factory
+    config = RepoMapConfig(
+        project_root=".",
+        fuzzy_match=FuzzyMatchConfig(
+            threshold=60, strategies=["prefix", "substring", "levenshtein"]
+        ),
+        semantic_match=SemanticMatchConfig(enabled=True, threshold=0.2),
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
     )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    matcher = repomap_service.hybrid_matcher
 
     # Build TF-IDF model
     print("📊 Building TF-IDF model from codebase...")

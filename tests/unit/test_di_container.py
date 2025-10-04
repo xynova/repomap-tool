@@ -54,7 +54,7 @@ class TestContainer:
 
         container = create_container(config)
         assert container is not None
-        assert container.config.project_root() == config.project_root
+        assert str(container.config.project_root()) == str(config.project_root)
 
     def test_dependency_graph_provider(self):
         """Test dependency graph provider."""
@@ -208,7 +208,7 @@ class TestContainer:
         container = create_container(config)
 
         # Test configuration values
-        assert container.config.project_root() == config.project_root
+        assert str(container.config.project_root()) == str(config.project_root)
         assert container.config.fuzzy_match.threshold() == 50
         assert container.config.semantic_match.threshold() == 0.1  # default
         assert container.config.performance.max_workers() == 1

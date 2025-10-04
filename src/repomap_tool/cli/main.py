@@ -10,9 +10,8 @@ import click
 # Import command groups
 from .commands.system import system
 from .commands.index import index
-from .commands.search import search
 from .commands.explore import explore
-from .commands.analyze import analyze
+from .commands.inspect import inspect
 from .utils.console import ConsoleProvider, RichConsoleFactory
 
 
@@ -32,9 +31,8 @@ def cli(ctx: click.Context, no_color: bool) -> None:
 # Register command groups
 cli.add_command(system)
 cli.add_command(index)
-cli.add_command(search)
 cli.add_command(explore)
-cli.add_command(analyze)
+cli.add_command(inspect)
 
 
 if __name__ == "__main__":

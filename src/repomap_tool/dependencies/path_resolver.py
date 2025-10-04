@@ -21,7 +21,8 @@ class PathResolver:
         Args:
             project_root: Root path of the project
         """
-        self.project_root = project_root
+        # Ensure project_root is always a string, not a ConfigurationOption
+        self.project_root = str(project_root) if project_root is not None else None
 
     def resolve_file_paths(self, file_paths: List[str]) -> List[str]:
         """Resolve file paths relative to project root.

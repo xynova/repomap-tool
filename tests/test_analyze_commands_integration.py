@@ -307,20 +307,20 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "impact",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing impact for project" in result.output
+        assert "Inspecting impact for project" in result.output
         assert "Target files" in result.output
-        assert "Impact analysis completed" in result.output
+        assert "Impact inspection completed" in result.output
 
     def test_analyze_impact_multiple_files(self):
         """Test analyze impact command with multiple files."""
@@ -332,7 +332,7 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "impact",
                 str(self.project_root),
                 "--files",
@@ -340,14 +340,14 @@ class TestUserService:
                 "--files",
                 auth_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing impact for project" in result.output
+        assert "Inspecting impact for project" in result.output
         assert "Target files" in result.output
-        assert "Impact analysis completed" in result.output
+        assert "Impact inspection completed" in result.output
 
     def test_analyze_centrality_single_file(self):
         """Test analyze centrality command with a single file."""
@@ -358,20 +358,20 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "centrality",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing centrality for project" in result.output
+        assert "Inspecting centrality for project" in result.output
         assert "Files" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Centrality inspection completed" in result.output
 
     def test_analyze_centrality_multiple_files(self):
         """Test analyze centrality command with multiple files."""
@@ -383,7 +383,7 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "centrality",
                 str(self.project_root),
                 "--files",
@@ -391,14 +391,14 @@ class TestUserService:
                 "--files",
                 auth_path,
                 "--output",
-                "llm_optimized",
+                "text",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing centrality for project" in result.output
+        assert "Inspecting centrality for project" in result.output
         assert "Files" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Centrality inspection completed" in result.output
 
     def test_analyze_impact_json_output(self):
         """Test analyze impact command with JSON output."""
@@ -409,7 +409,7 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "impact",
                 str(self.project_root),
                 "--files",
@@ -421,8 +421,8 @@ class TestUserService:
 
         assert result.exit_code == 0
         # Analyze commands are placeholder implementations that show status messages
-        assert "Analyzing impact for project" in result.output
-        assert "Impact analysis completed" in result.output
+        assert "Inspecting impact for project" in result.output
+        assert "Impact inspection completed" in result.output
         assert "Output format: json" in result.output
 
     def test_analyze_centrality_json_output(self):
@@ -434,7 +434,7 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "centrality",
                 str(self.project_root),
                 "--files",
@@ -446,8 +446,8 @@ class TestUserService:
 
         assert result.exit_code == 0
         # Analyze commands are placeholder implementations that show status messages
-        assert "Analyzing centrality for project" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Inspecting centrality for project" in result.output
+        assert "Centrality inspection completed" in result.output
         assert "Output format: json" in result.output
 
     def test_analyze_impact_with_token_budget(self):
@@ -459,21 +459,21 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "impact",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--max-tokens",
                 "2000",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing impact for project" in result.output
-        assert "Impact analysis completed" in result.output
+        assert "Inspecting impact for project" in result.output
+        assert "Impact inspection completed" in result.output
 
     def test_analyze_centrality_with_token_budget(self):
         """Test analyze centrality command with custom token budget."""
@@ -484,27 +484,27 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "centrality",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--max-tokens",
                 "2000",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing centrality for project" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Inspecting centrality for project" in result.output
+        assert "Centrality inspection completed" in result.output
 
     def test_analyze_impact_no_files_specified(self):
         """Test analyze impact command without specifying files."""
         result = self.runner.invoke(
             cli,
-            ["analyze", "impact", str(self.project_root), "--output", "llm_optimized"],
+            ["inspect", "impact", str(self.project_root), "--output", "text"],
         )
 
         assert result.exit_code == 2
@@ -513,12 +513,12 @@ class TestUserService:
     def test_analyze_centrality_no_files_fallback(self):
         """Test analyze centrality command without files falls back to top files."""
         result = self.runner.invoke(
-            cli, ["analyze", "centrality", str(self.project_root), "--output", "table"]
+            cli, ["inspect", "centrality", str(self.project_root), "--output", "text"]
         )
 
         assert result.exit_code == 0
-        assert "Analyzing centrality for project" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Inspecting centrality for project" in result.output
+        assert "Centrality inspection completed" in result.output
 
     def test_analyze_impact_table_output(self):
         """Test analyze impact command with table output."""
@@ -529,19 +529,19 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "impact",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing impact for project" in result.output
-        assert "Impact analysis completed" in result.output
+        assert "Inspecting impact for project" in result.output
+        assert "Impact inspection completed" in result.output
 
     def test_analyze_centrality_table_output(self):
         """Test analyze centrality command with table output."""
@@ -552,19 +552,19 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "centrality",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "table",
+                "text",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing centrality for project" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Inspecting centrality for project" in result.output
+        assert "Centrality inspection completed" in result.output
 
     def test_analyze_impact_verbose_output(self):
         """Test analyze impact command with verbose output."""
@@ -575,20 +575,20 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "impact",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--verbose",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing impact for project" in result.output
-        assert "Impact analysis completed" in result.output
+        assert "Inspecting impact for project" in result.output
+        assert "Impact inspection completed" in result.output
 
     def test_analyze_centrality_verbose_output(self):
         """Test analyze centrality command with verbose output."""
@@ -599,20 +599,20 @@ class TestUserService:
         result = self.runner.invoke(
             cli,
             [
-                "analyze",
+                "inspect",
                 "centrality",
                 str(self.project_root),
                 "--files",
                 user_service_path,
                 "--output",
-                "llm_optimized",
+                "text",
                 "--verbose",
             ],
         )
 
         assert result.exit_code == 0
-        assert "Analyzing centrality for project" in result.output
-        assert "Centrality analysis completed" in result.output
+        assert "Inspecting centrality for project" in result.output
+        assert "Centrality inspection completed" in result.output
 
 
 class TestASTFileAnalyzerIntegration:
@@ -839,7 +839,30 @@ class TestLLMFileAnalyzerIntegration:
 
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
-        centrality_calculator = CentralityCalculator(dependency_graph)
+        # Use service factory for centrality calculator
+        from repomap_tool.models import (
+            RepoMapConfig,
+            FuzzyMatchConfig,
+            SemanticMatchConfig,
+            PerformanceConfig,
+            DependencyConfig,
+        )
+        from repomap_tool.cli.services import get_service_factory
+
+        config = RepoMapConfig(
+            project_root=project_root,
+            fuzzy_match=FuzzyMatchConfig(),
+            semantic_match=SemanticMatchConfig(),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(
+                enable_impact_analysis=True,
+                enable_centrality_analysis=True,
+            ),
+            verbose=False,
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        centrality_calculator = repomap_service.centrality_calculator
         path_normalizer = PathNormalizer(project_root)
         centrality_engine = CentralityAnalysisEngine(
             ast_analyzer=ast_analyzer,

@@ -16,8 +16,19 @@ from ..utils.console import get_console
 
 @click.group()
 def analyze() -> None:
-    """Advanced analysis commands."""
-    pass
+    """Advanced analysis commands.
+
+    ⚠️  DEPRECATED: This command is deprecated and will be removed in a future version.
+    Use 'repomap-tool inspect' instead for all analysis functionality.
+    """
+    import warnings
+
+    warnings.warn(
+        "The 'analyze' command is deprecated. Use 'inspect' instead. "
+        "This command will be removed in a future version.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
 
 
 @analyze.command()
@@ -36,7 +47,7 @@ def analyze() -> None:
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="table",
+    default="llm_optimized",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
@@ -103,20 +114,6 @@ def centrality(
         # Get LLM analyzer from service factory
         llm_analyzer = service_factory.get_llm_analyzer(config_obj)
 
-        # Debug logging
-        console.print("🔧 DI Container: Using proper dependency injection")
-        console.print(f"🔧 LLM Analyzer created: {type(llm_analyzer)}")
-        console.print(f"🔧 Centrality Engine: {type(llm_analyzer.centrality_engine)}")
-        console.print(
-            f"🔧 Centrality Calculator: {type(llm_analyzer.centrality_calculator)}"
-        )
-        console.print(
-            f"🔧 Centrality Engine instance: {llm_analyzer.centrality_engine}"
-        )
-        console.print(
-            f"🔧 Centrality Calculator instance: {llm_analyzer.centrality_calculator}"
-        )
-
         # Determine files to analyze
         if files:
             file_paths = list(files)
@@ -179,7 +176,7 @@ def centrality(
     "--output",
     "-o",
     type=click.Choice(["json", "table", "text", "llm_optimized"]),
-    default="table",
+    default="llm_optimized",
     help="Output format",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
@@ -226,12 +223,45 @@ def impact(
         )
         console.print(f"📁 Target files: {', '.join(files)}")
 
-        # Placeholder for actual impact analysis
-        console.print("✅ Impact analysis completed")
-        console.print(f"📊 Output format: {output}")
-        console.print(f"🔢 Max tokens: {max_tokens}")
+        # Get service factory and create services
+        from repomap_tool.cli.services import get_service_factory
 
-        # TODO: Implement actual impact analysis using LLMFileAnalyzer
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config_obj)
+        llm_analyzer = service_factory.get_llm_analyzer(config_obj)
+
+        # Build dependency graph (required for reverse dependency analysis)
+        dependency_graph = repomap_service.build_dependency_graph()
+
+        # Set max tokens for the analyzer
+        llm_analyzer.max_tokens = max_tokens
+
+        # Perform impact analysis
+        try:
+            # Print output format
+            console.print(f"📊 Output format: {output}")
+
+            # Convert output format string to enum
+            from repomap_tool.dependencies import AnalysisFormat
+
+            format_enum = AnalysisFormat(output.lower())
+
+            # Analyze impact for the specified files
+            result = llm_analyzer.analyze_file_impact(files, format_enum)
+
+            # Display the result
+            console.print(result)
+
+            # Print completion message
+            console.print("✅ Impact analysis completed")
+
+        except Exception as analysis_error:
+            console.print(f"[red]Error during impact analysis: {analysis_error}[/red]")
+            if verbose:
+                import traceback
+
+                console.print(f"[red]Traceback: {traceback.format_exc()}[/red]")
+            sys.exit(1)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ImpactAnalysisError")
