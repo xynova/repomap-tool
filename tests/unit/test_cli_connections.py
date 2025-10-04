@@ -96,11 +96,11 @@ class TestCLIConnections:
             semantic=True,
             threshold=0.7,
             max_results=50,
-            output="table",
+            output="text",
             verbose=True,
         )
 
-        assert config.output_format == "table"
+        assert config.output_format == "text"
 
         config = create_default_config(
             project_path=".",
@@ -108,11 +108,11 @@ class TestCLIConnections:
             semantic=True,
             threshold=0.7,
             max_results=50,
-            output="markdown",
+            output="text",
             verbose=True,
         )
 
-        assert config.output_format == "markdown"
+        assert config.output_format == "text"
 
     def test_no_progress_connection(self):
         """Test that --no-progress properly disables progress bars."""
@@ -324,7 +324,7 @@ class TestConfigFileLoading:
                     "enable_monitoring": True,
                 },
                 "max_results": 100,
-                "output_format": "table",
+                "output_format": "text",
                 "verbose": True,
                 "log_level": "DEBUG",
             }
@@ -342,7 +342,7 @@ class TestConfigFileLoading:
             assert config.performance.max_workers == 8
             assert config.performance.cache_size == 2000
             assert config.max_results == 100
-            assert config.output_format == "table"
+            assert config.output_format == "text"
             assert config.verbose is True
             assert config.log_level == "DEBUG"
 
@@ -423,7 +423,7 @@ class TestConfigurationValidation:
 
     def test_output_format_validation(self):
         """Test that output format validation works."""
-        valid_formats = ["json", "text", "markdown", "table"]
+        valid_formats = ["text", "json"]
 
         for fmt in valid_formats:
             config = create_default_config(

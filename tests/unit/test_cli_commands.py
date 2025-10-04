@@ -83,7 +83,7 @@ class TestDisplayFunctions:
         )
 
         # Call the display function - should not raise an exception
-        display_project_info(project_info, "table")
+        display_project_info(project_info, "text")
 
         # Test passes if no exception is raised
 
@@ -102,7 +102,7 @@ class TestDisplayFunctions:
         )
 
         # Call the display function - should not raise an exception
-        display_project_info(project_info, "markdown")
+        display_project_info(project_info, "text")
 
         # Test passes if no exception is raised
 
@@ -167,7 +167,7 @@ class TestDisplayFunctions:
         )
 
         # Call the display function - should not raise an exception
-        display_search_results(search_response, "table")
+        display_search_results(search_response, "text")
 
         # Test passes if no exception is raised
 
@@ -210,7 +210,7 @@ class TestDisplayFunctions:
         )
 
         # Call the display function - should not raise an exception
-        display_search_results(search_response, "table")
+        display_search_results(search_response, "text")
 
         # Test passes if no exception is raised
 
@@ -279,7 +279,7 @@ class TestCLIHelperFunctions:
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.display_search_results")
     @patch("src.repomap_tool.cli.SearchRequest")
-    def test_search_command_logic(
+    def test_inspect_find_command_logic(
         self,
         mock_search_request,
         mock_display,
@@ -287,7 +287,7 @@ class TestCLIHelperFunctions:
         mock_repo_map,
         mock_create_search_config,
     ):
-        """Test the logic that would be executed by the search command."""
+        """Test the logic that would be executed by the inspect find command."""
         # Mock the configuration
         mock_config = Mock()
         mock_create_search_config.return_value = mock_config
@@ -309,7 +309,7 @@ class TestCLIHelperFunctions:
         mock_progress.return_value.__enter__.return_value = mock_progress_context
         mock_progress.return_value.__exit__.return_value = None
 
-        # This simulates what the search command would do
+        # This simulates what the inspect find command would do
         config = mock_create_search_config(
             project_path=".",
             match_type="fuzzy",
@@ -328,14 +328,14 @@ class TestCLIHelperFunctions:
 
         repomap = mock_repo_map(config)
         response = repomap.search_identifiers(request)
-        mock_display(response, "table")
+        mock_display(response, "text")
 
         # Verify the function calls
         mock_create_search_config.assert_called_once()
         mock_search_request.assert_called_once()
         mock_repo_map.assert_called_once_with(mock_config)
         mock_repomap_instance.search_identifiers.assert_called_once_with(mock_request)
-        mock_display.assert_called_once_with(mock_response, "table")
+        mock_display.assert_called_once_with(mock_response, "text")
 
     @patch("src.repomap_tool.cli.create_default_config")
     @patch(CONSOLE_PATCH_PATH)

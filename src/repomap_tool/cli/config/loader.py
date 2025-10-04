@@ -162,7 +162,7 @@ def create_default_config(
     semantic: bool = True,
     threshold: float = 0.7,
     max_results: int = 50,
-    output: Literal["json", "text", "table", "markdown"] = "json",
+    output: Literal["text", "json"] = "text",
     verbose: bool = False,
     cache_size: int = 1000,
     no_progress: Optional[bool] = None,

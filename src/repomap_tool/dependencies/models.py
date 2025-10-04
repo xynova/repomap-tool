@@ -322,10 +322,8 @@ class CrossFileRelationship:
 class AnalysisFormat(str, Enum):
     """Output formats for analysis results."""
 
-    TEXT = "text"
-    JSON = "json"
-    TABLE = "table"
-    LLM_OPTIMIZED = "llm_optimized"
+    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
+    JSON = "json"  # Raw data for programmatic consumption
 
 
 @dataclass

@@ -162,7 +162,7 @@ def test_main():
 
         # Get centrality analysis in table format
         table_result = llm_analyzer.analyze_file_centrality(
-            project_files, AnalysisFormat.TABLE
+            project_files, AnalysisFormat.TEXT
         )
 
         # Parse table result to extract rankings
@@ -172,7 +172,7 @@ def test_main():
         individual_rankings = {}
         for file_path in project_files:
             individual_result = llm_analyzer.analyze_file_centrality(
-                [file_path], AnalysisFormat.TABLE
+                [file_path], AnalysisFormat.TEXT
             )
             individual_rankings[file_path] = self._parse_table_rankings(
                 individual_result
@@ -193,7 +193,7 @@ def test_main():
 
         # Get table analysis
         table_result = llm_analyzer.analyze_file_centrality(
-            project_files, AnalysisFormat.TABLE
+            project_files, AnalysisFormat.TEXT
         )
         table_scores = self._parse_table_scores(table_result)
 
@@ -201,7 +201,7 @@ def test_main():
         individual_scores = {}
         for file_path in project_files:
             individual_result = llm_analyzer.analyze_file_centrality(
-                [file_path], AnalysisFormat.TABLE
+                [file_path], AnalysisFormat.TEXT
             )
             individual_scores[file_path] = self._parse_table_scores(individual_result)
 
@@ -227,7 +227,7 @@ def test_main():
 
         # Get table analysis
         table_result = llm_analyzer.analyze_file_centrality(
-            project_files, AnalysisFormat.TABLE
+            project_files, AnalysisFormat.TEXT
         )
 
         # Parse the table to get files in order
@@ -341,7 +341,7 @@ def test_main():
 
         # Get table analysis for these files
         table_result = llm_analyzer.analyze_file_centrality(
-            important_files, AnalysisFormat.TABLE
+            important_files, AnalysisFormat.TEXT
         )
         table_rankings = self._parse_table_rankings(table_result)
 
@@ -349,7 +349,7 @@ def test_main():
         individual_rankings = {}
         for file_path in important_files:
             individual_result = llm_analyzer.analyze_file_centrality(
-                [file_path], AnalysisFormat.TABLE
+                [file_path], AnalysisFormat.TEXT
             )
             individual_rankings[file_path] = self._parse_table_rankings(
                 individual_result

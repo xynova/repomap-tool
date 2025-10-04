@@ -20,7 +20,7 @@ import click
 
 def display_project_info(
     project_info: ProjectInfo,
-    output_format: Literal["json", "text", "markdown", "table"],
+    output_format: Literal["text", "json"],
     template_config: Optional[Dict[str, Any]] = None,
 ) -> None:
     """Display project analysis results."""
@@ -32,115 +32,49 @@ def display_project_info(
         console.print(project_info.model_dump_json(indent=2))
         return
 
-    # Handle text and markdown formats
-    if output_format in ["markdown", "text"]:
+    # Handle text format (rich, hierarchical, LLM-optimized)
+    if output_format == "text":
         use_emojis = not (template_config and template_config.get("no_emojis", False))
 
-        if output_format == "markdown":
-            # Markdown format
-            lines = []
-            lines.append(
-                "# 📊 Project Analysis Results"
-                if use_emojis
-                else "# Project Analysis Results"
-            )
-            lines.append("")
-            lines.append(f"**Project Root:** {project_info.project_root}")
-            lines.append(f"**Total Files:** {project_info.total_files}")
-            lines.append(f"**Total Identifiers:** {project_info.total_identifiers}")
-            lines.append(f"**Analysis Time:** {project_info.analysis_time_ms:.2f}ms")
-            lines.append("")
+        # Rich hierarchical format for LLM consumption
+        lines = []
+        lines.append(
+            "🧠 LLM-Optimized Project Analysis" if use_emojis else "Project Analysis"
+        )
+        lines.append("=" * 60)
+        lines.append("")
 
-            if project_info.file_types:
-                lines.append("## File Types")
-                for ext, count in project_info.file_types.items():
-                    lines.append(f"- **{ext}:** {count}")
-                lines.append("")
+        # Summary section
+        lines.append("📊 SUMMARY:")
+        lines.append(f"├── Project Root: {project_info.project_root}")
+        lines.append(f"├── Total Files: {project_info.total_files}")
+        lines.append(f"├── Total Identifiers: {project_info.total_identifiers}")
+        lines.append(f"└── Analysis Time: {project_info.analysis_time_ms:.2f}ms")
+        lines.append("")
 
-            if project_info.identifier_types:
-                lines.append("## Identifier Types")
-                for id_type, count in project_info.identifier_types.items():
-                    lines.append(f"- **{id_type}:** {count}")
-                lines.append("")
-
-            if project_info.cache_stats:
-                lines.append("## Cache Statistics")
-                for key, value in project_info.cache_stats.items():
-                    lines.append(f"- **{key.replace('_', ' ').title()}:** {value}")
-
-            output = "\n".join(lines)
-        else:  # text
-            # Text format
-            lines = []
-            lines.append(
-                "📊 Project Analysis Results"
-                if use_emojis
-                else "Project Analysis Results"
-            )
-            lines.append("=" * 30)
-            lines.append(f"Project Root: {project_info.project_root}")
-            lines.append(f"Total Files: {project_info.total_files}")
-            lines.append(f"Total Identifiers: {project_info.total_identifiers}")
-            lines.append(f"Analysis Time: {project_info.analysis_time_ms:.2f}ms")
-            lines.append("")
-
-            if project_info.file_types:
-                lines.append("File Types:")
-                for ext, count in project_info.file_types.items():
-                    lines.append(f"  {ext}: {count}")
-                lines.append("")
-
-            if project_info.identifier_types:
-                lines.append("Identifier Types:")
-                for id_type, count in project_info.identifier_types.items():
-                    lines.append(f"  {id_type}: {count}")
-                lines.append("")
-
-            if project_info.cache_stats:
-                lines.append("Cache Statistics:")
-                for key, value in project_info.cache_stats.items():
-                    lines.append(f"  {key.replace('_', ' ').title()}: {value}")
-
-            output = "\n".join(lines)
-
-        console.print(output)
-        return
-
-    # Table format
-    if output_format == "table":
-        table = Table(title="📊 Project Analysis Results")
-        table.add_column("Metric", style="cyan", no_wrap=True)
-        table.add_column("Value", style="magenta")
-
-        table.add_row("Project Root", str(project_info.project_root))
-        table.add_row("Total Files", str(project_info.total_files))
-        table.add_row("Total Identifiers", str(project_info.total_identifiers))
-
-        # File types
+        # File types breakdown
         if project_info.file_types:
-            file_types_str = ", ".join(
-                [f"{ext}: {count}" for ext, count in project_info.file_types.items()]
-            )
-            table.add_row("File Types", file_types_str)
+            lines.append("📁 FILE TYPES:")
+            for ext, count in project_info.file_types.items():
+                lines.append(f"├── {ext}: {count} files")
+            lines.append("")
 
-        # Identifier types
+        # Identifier types breakdown
         if project_info.identifier_types:
-            id_types_str = ", ".join(
-                [
-                    f"{id_type}: {count}"
-                    for id_type, count in project_info.identifier_types.items()
-                ]
-            )
-            table.add_row("Identifier Types", id_types_str)
+            lines.append("🏷️ IDENTIFIER TYPES:")
+            for id_type, count in project_info.identifier_types.items():
+                lines.append(f"├── {id_type}: {count} identifiers")
+            lines.append("")
 
-        # Cache stats
+        # Cache statistics
         if project_info.cache_stats:
-            cache_str = ", ".join(
-                [f"{key}: {value}" for key, value in project_info.cache_stats.items()]
-            )
-            table.add_row("Cache Stats", cache_str)
+            lines.append("💾 CACHE STATISTICS:")
+            for key, value in project_info.cache_stats.items():
+                lines.append(f"├── {key.replace('_', ' ').title()}: {value}")
+            lines.append("")
 
-        console.print(table)
+        console.print("\n".join(lines))
+        return
 
 
 def display_search_results(

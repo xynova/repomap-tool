@@ -59,9 +59,9 @@ def index() -> None:
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "text", "markdown", "table"]),
-    default="json",
-    help="Output format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option("--max-workers", type=int, default=4, help="Maximum worker threads")

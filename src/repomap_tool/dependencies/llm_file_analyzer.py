@@ -107,7 +107,7 @@ class LLMFileAnalyzer:
     def analyze_file_impact(
         self,
         file_paths: List[str],
-        format_type: AnalysisFormat = AnalysisFormat.LLM_OPTIMIZED,
+        format_type: AnalysisFormat = AnalysisFormat.TEXT,
     ) -> str:
         """Analyze impact for one or more files.
 
@@ -139,23 +139,20 @@ class LLMFileAnalyzer:
             impact_analyses.append(impact_analysis)
 
         # Format output
-        if format_type == AnalysisFormat.LLM_OPTIMIZED:
+        if format_type == AnalysisFormat.TEXT:
             return format_llm_optimized_impact(
                 impact_analyses, self.token_optimizer, self.max_tokens
             )
         elif format_type == AnalysisFormat.JSON:
             return format_json_impact(impact_analyses)
-        elif format_type == AnalysisFormat.TABLE:
-            return format_table_impact(impact_analyses)
         else:
-            return format_text_impact(
-                impact_analyses, self.token_optimizer, self.max_tokens
-            )
+            # This should never happen with current format types
+            raise ValueError(f"Unsupported format type: {format_type}")
 
     def analyze_file_centrality(
         self,
         file_paths: List[str],
-        format_type: AnalysisFormat = AnalysisFormat.LLM_OPTIMIZED,
+        format_type: AnalysisFormat = AnalysisFormat.TEXT,
     ) -> str:
         """Analyze centrality for one or more files.
 
@@ -242,7 +239,7 @@ class LLMFileAnalyzer:
                 centrality_analyses.append(centrality_analysis)
 
         # Format output
-        if format_type == AnalysisFormat.LLM_OPTIMIZED:
+        if format_type == AnalysisFormat.TEXT:
             return format_llm_optimized_centrality(
                 centrality_analyses,
                 self.token_optimizer,
@@ -252,16 +249,9 @@ class LLMFileAnalyzer:
             )
         elif format_type == AnalysisFormat.JSON:
             return format_json_centrality(centrality_analyses)
-        elif format_type == AnalysisFormat.TABLE:
-            return format_table_centrality(centrality_analyses)
         else:
-            return format_text_centrality(
-                centrality_analyses,
-                self.token_optimizer,
-                self.max_tokens,
-                self.project_root or "",
-                self.ast_analyzer,
-            )
+            # This should never happen with current format types
+            raise ValueError(f"Unsupported format type: {format_type}")
 
     # Formatting methods moved to format_utils.py
 

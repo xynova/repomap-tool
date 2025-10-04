@@ -160,7 +160,7 @@ class TestDisplayFunctionsErrorHandling:
         )
 
         # Should not crash
-        display_search_results(search_response, "table")
+        display_search_results(search_response, "text")
 
         # Test passes if no exception is raised
 
@@ -186,7 +186,7 @@ class TestDisplayFunctionsErrorHandling:
         )
 
         # Should not crash
-        display_search_results(search_response, "table")
+        display_search_results(search_response, "text")
 
         # Test passes if no exception is raised
 
@@ -238,10 +238,10 @@ class TestCLICommandErrorScenarios:
     @patch("src.repomap_tool.cli.Progress")
     @patch("src.repomap_tool.cli.create_search_config")
     @patch("src.repomap_tool.cli.display_search_results")
-    def test_search_command_exception_handling(
+    def test_inspect_find_command_exception_handling(
         self, mock_display, mock_create_search_config, mock_progress, mock_repo_map
     ):
-        """Test search command exception handling."""
+        """Test inspect find command exception handling."""
         # Mock an exception in create_search_config
         mock_create_search_config.side_effect = Exception("Search error")
 
@@ -250,7 +250,7 @@ class TestCLICommandErrorScenarios:
         mock_progress.return_value.__enter__.return_value = mock_progress_context
         mock_progress.return_value.__exit__.return_value = None
 
-        # This simulates the exception path in search command
+        # This simulates the exception path in inspect find command
         try:
             config = mock_create_search_config(
                 project_path=".",
@@ -260,7 +260,7 @@ class TestCLICommandErrorScenarios:
                 cache_size=1000,
             )
         except Exception as e:
-            # This simulates the exception handling in the search command
+            # This simulates the exception handling in the inspect find command
             error_message = str(e)
             assert "Search error" in error_message
 

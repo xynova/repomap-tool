@@ -242,7 +242,7 @@ if __name__ == "__main__":
 
         # Test impact analysis for task.py
         result = llm_analyzer.analyze_file_impact(
-            ["src/core/task.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py"], AnalysisFormat.TEXT
         )
 
         # Verify the result contains expected sections
@@ -281,7 +281,7 @@ if __name__ == "__main__":
 
         # Test impact analysis for config.py (should have many reverse dependencies)
         result = llm_analyzer.analyze_file_impact(
-            ["src/core/config.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/config.py"], AnalysisFormat.TEXT
         )
 
         # Verify reverse dependencies section exists
@@ -308,7 +308,7 @@ if __name__ == "__main__":
 
         # Test impact analysis
         result = llm_analyzer.analyze_file_impact(
-            ["src/core/task.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py"], AnalysisFormat.TEXT
         )
 
         # Verify the reverse dependencies section exists
@@ -353,7 +353,7 @@ if __name__ == "__main__":
 
         # Test impact analysis for multiple files
         result = llm_analyzer.analyze_file_impact(
-            ["src/core/task.py", "src/core/config.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py", "src/core/config.py"], AnalysisFormat.TEXT
         )
 
         # Verify the result contains expected sections
@@ -381,7 +381,7 @@ if __name__ == "__main__":
 
         # Perform centrality analysis
         centrality_result = llm_analyzer.analyze_file_centrality(
-            ["src/core/task.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py"], AnalysisFormat.TEXT
         )
 
         # Build dependency graph for impact analysis (should be the same instance)
@@ -389,7 +389,7 @@ if __name__ == "__main__":
 
         # Perform impact analysis
         impact_result = llm_analyzer.analyze_file_impact(
-            ["src/core/task.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py"], AnalysisFormat.TEXT
         )
 
         # Verify both analyses use the same dependency graph
@@ -457,7 +457,7 @@ if __name__ == "__main__":
 
         # Test impact analysis
         result = llm_analyzer.analyze_file_impact(
-            ["src/core/task.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py"], AnalysisFormat.TEXT
         )
 
         # Verify function call analysis is present
@@ -492,7 +492,7 @@ if __name__ == "__main__":
 
         # Test impact analysis
         result = llm_analyzer.analyze_file_impact(
-            ["src/core/task.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["src/core/task.py"], AnalysisFormat.TEXT
         )
 
         # Verify structural impact is present
@@ -552,10 +552,8 @@ if __name__ == "__main__":
 
         # Test different output formats
         formats_to_test = [
-            AnalysisFormat.LLM_OPTIMIZED,
-            AnalysisFormat.JSON,
-            AnalysisFormat.TABLE,
             AnalysisFormat.TEXT,
+            AnalysisFormat.JSON,
         ]
 
         for format_type in formats_to_test:
@@ -566,15 +564,11 @@ if __name__ == "__main__":
             assert len(result.strip()) > 0
 
             # Verify format-specific content
-            if format_type == AnalysisFormat.LLM_OPTIMIZED:
+            if format_type == AnalysisFormat.TEXT:
                 assert "=== Impact Analysis:" in result
             elif format_type == AnalysisFormat.JSON:
                 # JSON format returns an array, not an object
                 assert result.strip().startswith("[")
-            elif format_type == AnalysisFormat.TABLE:
-                assert "|" in result or "File" in result
-            elif format_type == AnalysisFormat.TEXT:
-                assert "Impact Analysis" in result
 
     def test_impact_analysis_error_handling(self, test_project):
         """Test that impact analysis handles errors gracefully."""
@@ -595,7 +589,7 @@ if __name__ == "__main__":
 
         # Test with non-existent file
         result = llm_analyzer.analyze_file_impact(
-            ["non_existent_file.py"], AnalysisFormat.LLM_OPTIMIZED
+            ["non_existent_file.py"], AnalysisFormat.TEXT
         )
 
         # Should handle gracefully (either return empty result or error message)
