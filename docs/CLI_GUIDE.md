@@ -39,7 +39,7 @@ repomap-tool version
 ## 📋 Available Commands
 
 ### **`inspect`** - Code Inspection and Analysis
-Inspect and analyze code repository structure, dependencies, and patterns.
+Inspect and analyze code repository structure, code analysis, and patterns.
 
 ```bash
 repomap-tool inspect <subcommand> [OPTIONS]
@@ -47,7 +47,7 @@ repomap-tool inspect <subcommand> [OPTIONS]
 
 **Subcommands:**
 - `find` - Find identifiers using intelligent matching
-- `cycles` - Inspect for circular dependencies
+- `cycles` - Inspect for circular code dependencies
 - `centrality` - Inspect file importance and centrality
 - `impact` - Inspect change impact analysis
 - `overview` - Comprehensive project inspection

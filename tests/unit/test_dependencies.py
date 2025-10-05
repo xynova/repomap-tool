@@ -12,7 +12,7 @@ import os
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from repomap_tool.dependencies import (
+from repomap_tool.code_analysis import (
     ImportAnalyzer,
     DependencyGraph,
     Import,

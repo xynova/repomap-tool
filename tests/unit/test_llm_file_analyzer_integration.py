@@ -8,24 +8,24 @@ from pathlib import Path
 
 import pytest
 
-from src.repomap_tool.dependencies.llm_file_analyzer import (
+from src.repomap_tool.code_analysis.llm_file_analyzer import (
     LLMFileAnalyzer,
     AnalysisFormat,
 )
-from src.repomap_tool.dependencies.advanced_dependency_graph import (
+from src.repomap_tool.code_analysis.advanced_dependency_graph import (
     AdvancedDependencyGraph,
 )
-from src.repomap_tool.dependencies.models import DependencyNode, Import
-from src.repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
-from src.repomap_tool.dependencies.centrality_calculator import CentralityCalculator
-from src.repomap_tool.dependencies.centrality_analysis_engine import (
+from src.repomap_tool.code_analysis.models import DependencyNode, Import
+from src.repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
+from src.repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from src.repomap_tool.code_analysis.centrality_analysis_engine import (
     CentralityAnalysisEngine,
 )
-from src.repomap_tool.dependencies.impact_analysis_engine import ImpactAnalysisEngine
+from src.repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
 from src.repomap_tool.llm.token_optimizer import TokenOptimizer
 from src.repomap_tool.llm.context_selector import ContextSelector
 from src.repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
-from src.repomap_tool.dependencies.path_resolver import PathResolver
+from src.repomap_tool.code_analysis.path_resolver import PathResolver
 from src.repomap_tool.utils.path_normalizer import PathNormalizer
 
 
@@ -34,7 +34,7 @@ class TestLLMFileAnalyzerIntegration:
 
     def _create_llm_analyzer(self, dependency_graph, project_root):
         """Helper method to create LLM analyzer with all required dependencies."""
-        from src.repomap_tool.dependencies.llm_analyzer_config import (
+        from src.repomap_tool.code_analysis.llm_analyzer_config import (
             LLMAnalyzerConfig,
             LLMAnalyzerDependencies,
         )

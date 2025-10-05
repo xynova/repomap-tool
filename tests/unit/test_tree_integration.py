@@ -13,7 +13,7 @@ from pathlib import Path
 
 from repomap_tool.trees.discovery_engine import EntrypointDiscoverer
 from repomap_tool.models import Entrypoint, RepoMapConfig
-from repomap_tool.dependencies import (
+from repomap_tool.code_analysis import (
     ImportAnalyzer,
     DependencyGraph,
 )

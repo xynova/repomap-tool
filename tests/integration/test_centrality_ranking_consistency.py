@@ -13,9 +13,9 @@ from typing import List, Dict, Any
 
 from repomap_tool.core.config_factory import get_config_factory
 from repomap_tool.cli.services import get_service_factory
-from repomap_tool.dependencies import AnalysisFormat
-from repomap_tool.dependencies.format_utils import format_table_centrality
-from repomap_tool.dependencies.llm_file_analyzer import LLMFileAnalyzer
+from repomap_tool.code_analysis import AnalysisFormat
+from repomap_tool.code_analysis.format_utils import format_table_centrality
+from repomap_tool.code_analysis.llm_file_analyzer import LLMFileAnalyzer
 
 
 class TestCentralityRankingConsistency:

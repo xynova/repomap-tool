@@ -9,7 +9,7 @@ import pytest
 from unittest.mock import Mock
 from pydantic import ValidationError
 
-from repomap_tool.dependencies.llm_analyzer_config import (
+from repomap_tool.code_analysis.llm_analyzer_config import (
     LLMAnalyzerConfig,
     LLMAnalyzerDependencies,
 )

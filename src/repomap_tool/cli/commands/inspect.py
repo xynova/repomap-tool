@@ -314,7 +314,7 @@ def centrality(
 
         # Use service factory for proper dependency injection
         from repomap_tool.cli.services import get_service_factory
-        from repomap_tool.dependencies import AnalysisFormat
+        from repomap_tool.code_analysis import AnalysisFormat
 
         # Create services using DI
         service_factory = get_service_factory()
@@ -467,7 +467,7 @@ def impact(
             output_manager.display_progress(f"📊 Output format: {output}")
 
             # Convert output format string to enum - text uses TEXT for best LLM consumption
-            from repomap_tool.dependencies import AnalysisFormat
+            from repomap_tool.code_analysis import AnalysisFormat
 
             format_mapping = {
                 "text": AnalysisFormat.TEXT,  # Most informative for LLM

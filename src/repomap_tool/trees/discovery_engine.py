@@ -16,7 +16,7 @@ from repomap_tool.matchers.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
 
 # Phase 2: Dependency analysis integration
-from repomap_tool.dependencies import (
+from repomap_tool.code_analysis import (
     ImportAnalyzer,
     DependencyGraph,
 )

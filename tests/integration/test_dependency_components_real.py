@@ -162,7 +162,7 @@ class ComplexProcessor:
 
     def test_import_analyzer_real(self, temp_project_with_dependencies):
         """Test import analysis with real Python files."""
-        from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
+        from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
 
         analyzer = ImportAnalyzer()
 
@@ -182,7 +182,7 @@ class ComplexProcessor:
 
     def test_dependency_graph_real(self, temp_project_with_dependencies):
         """Test dependency graph construction with real files."""
-        from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
+        from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
         from repomap_tool.models import (
             RepoMapConfig,
             FuzzyMatchConfig,
@@ -221,7 +221,7 @@ class ComplexProcessor:
 
     def test_call_graph_builder_real(self, temp_project_with_dependencies):
         """Test call graph building with real Python code."""
-        from repomap_tool.dependencies.call_graph_builder import CallGraphBuilder
+        from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
 
         builder = CallGraphBuilder()
 
@@ -243,7 +243,7 @@ class ComplexProcessor:
 
     def test_dependency_models_real(self, temp_project_with_dependencies):
         """Test dependency models with real data."""
-        from repomap_tool.dependencies.models import (
+        from repomap_tool.code_analysis.models import (
             Import,
             FileImports,
             ProjectImports,

@@ -13,7 +13,7 @@ from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
 
 from repomap_tool.cli import cli
-from repomap_tool.dependencies import (
+from repomap_tool.code_analysis import (
     ASTFileAnalyzer,
     AnalysisFormat,
 )
@@ -822,20 +822,22 @@ class TestLLMFileAnalyzerIntegration:
 
     def _create_llm_analyzer(self, dependency_graph, project_root):
         """Helper method to create LLM analyzer with all required dependencies."""
-        from repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
-        from repomap_tool.dependencies.centrality_calculator import CentralityCalculator
-        from repomap_tool.dependencies.centrality_analysis_engine import (
+        from repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
+        from repomap_tool.code_analysis.centrality_calculator import (
+            CentralityCalculator,
+        )
+        from repomap_tool.code_analysis.centrality_analysis_engine import (
             CentralityAnalysisEngine,
         )
-        from repomap_tool.dependencies.impact_analysis_engine import (
+        from repomap_tool.code_analysis.impact_analysis_engine import (
             ImpactAnalysisEngine,
         )
         from repomap_tool.llm.token_optimizer import TokenOptimizer
         from repomap_tool.llm.context_selector import ContextSelector
         from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
-        from repomap_tool.dependencies.path_resolver import PathResolver
+        from repomap_tool.code_analysis.path_resolver import PathResolver
         from repomap_tool.utils.path_normalizer import PathNormalizer
-        from repomap_tool.dependencies.llm_file_analyzer import LLMFileAnalyzer
+        from repomap_tool.code_analysis.llm_file_analyzer import LLMFileAnalyzer
 
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
@@ -877,7 +879,7 @@ class TestLLMFileAnalyzerIntegration:
         path_resolver = PathResolver(project_root)
 
         # Create LLM analyzer with all dependencies using new constructor pattern
-        from repomap_tool.dependencies.llm_analyzer_config import (
+        from repomap_tool.code_analysis.llm_analyzer_config import (
             LLMAnalyzerConfig,
             LLMAnalyzerDependencies,
         )
