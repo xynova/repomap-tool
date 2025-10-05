@@ -22,7 +22,6 @@ if TYPE_CHECKING:
     from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
     from repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
     from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
-    from repomap_tool.code_analysis.llm_file_analyzer import LLMFileAnalyzer
     from repomap_tool.code_analysis.path_resolver import PathResolver
     from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
     from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
@@ -32,9 +31,6 @@ if TYPE_CHECKING:
     )
     from repomap_tool.code_analysis.import_utils import ImportUtils
     from repomap_tool.code_analysis.ast_visitors import AnalysisContext
-    from repomap_tool.llm.context_selector import ContextSelector
-    from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
-    from repomap_tool.llm.token_optimizer import TokenOptimizer
     from repomap_tool.utils.path_normalizer import PathNormalizer
     from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
     from repomap_tool.code_search.adaptive_semantic_matcher import (
@@ -43,10 +39,6 @@ if TYPE_CHECKING:
     from repomap_tool.code_search.hybrid_matcher import HybridMatcher
     from repomap_tool.core.cache_manager import CacheManager
     from repomap_tool.core.parallel_processor import ParallelTagExtractor
-    from repomap_tool.code_analysis.llm_analyzer_config import (
-        LLMAnalyzerConfig,
-        LLMAnalyzerDependencies,
-    )
     from repomap_tool.code_exploration.session_manager import (
         SessionManager,
         SessionStore,
@@ -134,29 +126,6 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    # LLM services
-    token_optimizer: "providers.Singleton[TokenOptimizer]" = cast(
-        "providers.Singleton[TokenOptimizer]",
-        providers.Singleton(
-            "repomap_tool.llm.token_optimizer.TokenOptimizer",
-        ),
-    )
-
-    context_selector: "providers.Singleton[ContextSelector]" = cast(
-        "providers.Singleton[ContextSelector]",
-        providers.Singleton(
-            "repomap_tool.llm.context_selector.ContextSelector",
-            dependency_graph=dependency_graph,
-        ),
-    )
-
-    hierarchical_formatter: "providers.Singleton[HierarchicalFormatter]" = cast(
-        "providers.Singleton[HierarchicalFormatter]",
-        providers.Singleton(
-            "repomap_tool.llm.hierarchical_formatter.HierarchicalFormatter",
-        ),
-    )
-
     path_resolver: "providers.Singleton[PathResolver]" = cast(
         "providers.Singleton[PathResolver]",
         providers.Singleton(
@@ -179,47 +148,6 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[SessionManager]",
         providers.Singleton(
             "repomap_tool.code_exploration.session_manager.SessionManager",
-        ),
-    )
-
-    # LLM analyzer configuration
-    llm_analyzer_config: "providers.Singleton[LLMAnalyzerConfig]" = cast(
-        "providers.Singleton[LLMAnalyzerConfig]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.llm_analyzer_config.LLMAnalyzerConfig",
-            max_tokens=4000,  # Default value
-            enable_impact_analysis=config.dependencies.enable_impact_analysis,
-            enable_centrality_analysis=True,
-            verbose=config.verbose,
-        ),
-    )
-
-    # LLM analyzer dependencies
-    llm_analyzer_dependencies: "providers.Singleton[LLMAnalyzerDependencies]" = cast(
-        "providers.Singleton[LLMAnalyzerDependencies]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.llm_analyzer_config.LLMAnalyzerDependencies",
-            dependency_graph=dependency_graph,
-            project_root=config.project_root,
-            ast_analyzer=ast_analyzer,
-            token_optimizer=token_optimizer,
-            context_selector=context_selector,
-            hierarchical_formatter=hierarchical_formatter,
-            path_resolver=path_resolver,
-            impact_analyzer=impact_analyzer,
-            impact_engine=impact_analysis_engine,
-            centrality_engine=centrality_analysis_engine,
-            centrality_calculator=centrality_calculator,
-        ),
-    )
-
-    # LLM file analyzer with proper dependency injection
-    llm_file_analyzer: "providers.Factory[LLMFileAnalyzer]" = cast(
-        "providers.Factory[LLMFileAnalyzer]",
-        providers.Factory(
-            "repomap_tool.code_analysis.llm_file_analyzer.LLMFileAnalyzer",
-            config=llm_analyzer_config,
-            dependencies=llm_analyzer_dependencies,
         ),
     )
 
@@ -341,11 +269,11 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[CentralityController]",
         providers.Factory(
             "repomap_tool.cli.controllers.centrality_controller.CentralityController",
-            code_analysis_service=llm_file_analyzer,
-            code_exploration_service=session_manager,
-            code_search_service=fuzzy_matcher,
-            token_optimizer=token_optimizer,
-            context_selector=context_selector,
+            dependency_graph=dependency_graph,
+            centrality_calculator=centrality_calculator,
+            centrality_engine=centrality_analysis_engine,
+            ast_analyzer=ast_analyzer,
+            path_resolver=path_resolver,
         ),
     )
 
@@ -353,11 +281,11 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[ImpactController]",
         providers.Factory(
             "repomap_tool.cli.controllers.impact_controller.ImpactController",
-            code_analysis_service=llm_file_analyzer,
-            code_exploration_service=session_manager,
-            code_search_service=fuzzy_matcher,
-            token_optimizer=token_optimizer,
-            context_selector=context_selector,
+            dependency_graph=dependency_graph,
+            impact_analyzer=impact_analyzer,
+            impact_engine=impact_analysis_engine,
+            ast_analyzer=ast_analyzer,
+            path_resolver=path_resolver,
         ),
     )
 

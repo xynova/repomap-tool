@@ -34,40 +34,42 @@ class ImpactController(BaseController):
 
     def __init__(
         self,
-        code_analysis_service: Optional[Any] = None,
-        code_exploration_service: Optional[Any] = None,
-        code_search_service: Optional[Any] = None,
-        token_optimizer: Optional[Any] = None,
-        context_selector: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+        impact_analyzer: Optional[Any] = None,
+        impact_engine: Optional[Any] = None,
+        ast_analyzer: Optional[Any] = None,
+        path_resolver: Optional[Any] = None,
         config: Optional[ControllerConfig] = None,
     ):
         """Initialize the ImpactController.
 
         Args:
-            code_analysis_service: Service for code analysis operations
-            code_exploration_service: Service for code exploration operations
-            code_search_service: Service for code search operations
-            token_optimizer: Service for token optimization
-            context_selector: Service for context selection
+            dependency_graph: Dependency graph for impact analysis
+            impact_analyzer: Impact analysis service
+            impact_engine: Impact analysis engine
+            ast_analyzer: AST analysis service
+            path_resolver: Path resolution service
             config: Controller configuration
         """
         super().__init__(config)
 
         # Validate dependencies
-        if code_analysis_service is None:
-            raise ValueError(
-                "code_analysis_service must be injected - no fallback allowed"
-            )
-        if token_optimizer is None:
-            raise ValueError("token_optimizer must be injected - no fallback allowed")
-        if context_selector is None:
-            raise ValueError("context_selector must be injected - no fallback allowed")
+        if dependency_graph is None:
+            raise ValueError("dependency_graph must be injected - no fallback allowed")
+        if impact_analyzer is None:
+            raise ValueError("impact_analyzer must be injected - no fallback allowed")
+        if impact_engine is None:
+            raise ValueError("impact_engine must be injected - no fallback allowed")
+        if ast_analyzer is None:
+            raise ValueError("ast_analyzer must be injected - no fallback allowed")
+        if path_resolver is None:
+            raise ValueError("path_resolver must be injected - no fallback allowed")
 
-        self.code_analysis_service = code_analysis_service
-        self.code_exploration = code_exploration_service
-        self.code_search = code_search_service
-        self.token_optimizer = token_optimizer
-        self.context_selector = context_selector
+        self.dependency_graph = dependency_graph
+        self.impact_analyzer = impact_analyzer
+        self.impact_engine = impact_engine
+        self.ast_analyzer = ast_analyzer
+        self.path_resolver = path_resolver
 
     def execute(self, changed_files: List[str]) -> ImpactViewModel:
         """Execute impact analysis for the specified changed files.
@@ -111,7 +113,7 @@ class ImpactController(BaseController):
             raise
 
     def _get_impact_data(self, changed_files: List[str]) -> List[FileImpactAnalysis]:
-        """Get structured impact data from code_analysis service.
+        """Get structured impact data by performing analysis directly.
 
         Args:
             changed_files: List of files that have changed
@@ -119,12 +121,43 @@ class ImpactController(BaseController):
         Returns:
             List of FileImpactAnalysis objects
         """
-        # Use LLM analyzer to get structured impact analysis
-        impact_analyses = self.code_analysis_service.analyze_file_impact_structured(
-            file_paths=changed_files
-        )
+        # Resolve file paths relative to project root
+        resolved_paths = self.path_resolver.resolve_file_paths(changed_files)
 
-        return impact_analyses  # type: ignore[no-any-return]
+        # Perform AST analysis for all files
+        ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
+
+        # Analyze each file for impact
+        impact_analyses = []
+        for file_path in changed_files:
+            try:
+                # Find the resolved path for this file
+                original_index = changed_files.index(file_path)
+                resolved_path = resolved_paths[original_index]
+                impact_analysis = self.impact_engine.analyze_file_impact(
+                    file_path, ast_results[resolved_path]
+                )
+                impact_analyses.append(impact_analysis)
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+                # Create a minimal impact analysis for this file
+                impact_analysis = FileImpactAnalysis(
+                    file_path=file_path,
+                    impact_score=0.0,
+                    affected_files=[],
+                    dependency_chain_length=0,
+                    risk_level="low",
+                    impact_categories=[],
+                    suggested_tests=[],
+                    direct_dependencies=[],
+                    reverse_dependencies=[],
+                    function_call_analysis=[],
+                    structural_impact={},
+                    risk_assessment={},
+                )
+                impact_analyses.append(impact_analysis)
+
+        return impact_analyses
 
     # Note: Related symbols methods removed - Controllers focus on LLM analysis
 
