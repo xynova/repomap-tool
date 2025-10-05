@@ -1,0 +1,70 @@
+{# Centrality Analysis Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}🎯 Centrality Analysis{% else %}Centrality Analysis{% endif %}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Total Files: {{ data.total_files }}
+{% if hierarchical %}├──{% else %}•{% endif %} Analysis Type: {{ data.analysis_summary.analysis_type }}
+{% if hierarchical %}├──{% else %}•{% endif %} Token Count: {{ data.token_count }}/{{ data.max_tokens }}
+{% if hierarchical %}└──{% else %}•{% endif %} Compression: {{ data.compression_level }}
+
+{# Rankings section #}
+{% if data.rankings %}
+{% if emoji %}🏆{% endif %} CENTRALITY RANKINGS:
+{% for ranking in data.rankings %}
+{% if hierarchical %}├──{% else %}•{% endif %} #{{ ranking.rank }} {{ ranking.file_path }}
+{% if hierarchical %}│   {% else %}  {% endif %}Score: {{ ranking.centrality_score | format_percentage }}
+{% if hierarchical %}│   {% else %}  {% endif %}Importance: {{ ranking.relative_importance | format_percentage }}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No rankings available
+{% endif %}
+
+{# File Analysis section #}
+{% if data.files %}
+{% if emoji %}📁{% endif %} FILE ANALYSIS:
+{% for file in data.files %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ file.file_path }}
+{% if hierarchical %}│   {% else %}  {% endif %}Lines: {{ file.line_count }}
+{% if hierarchical %}│   {% else %}  {% endif %}Symbols: {{ file.symbols | length }}
+{% if file.centrality_score %}
+{% if hierarchical %}│   {% else %}  {% endif %}Centrality: {{ file.centrality_score | format_percentage }}
+{% endif %}
+{% if file.symbols %}
+{% for symbol in file.symbols[:3] %}
+{% if hierarchical %}│   ├──{% else %}  •{% endif %} {{ symbol.name }} ({{ symbol.symbol_type }})
+{% if symbol.centrality_score %}
+{% if hierarchical %}│   │   {% else %}    {% endif %}Centrality: {{ symbol.centrality_score | format_percentage }}
+{% endif %}
+{% if symbol.importance_score %}
+{% if hierarchical %}│   │   {% else %}    {% endif %}Importance: {{ symbol.importance_score | format_percentage }}
+{% endif %}
+{% endfor %}
+{% if file.symbols | length > 3 %}
+{% if hierarchical %}│   └──{% else %}  •{% endif %} ... and {{ file.symbols | length - 3 }} more symbols
+{% endif %}
+{% endif %}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No file analysis available
+{% endif %}
+
+{# Analysis Summary section #}
+{% if data.analysis_summary %}
+{% if emoji %}📈{% endif %} ANALYSIS METRICS:
+{% if hierarchical %}├──{% else %}•{% endif %} Average Centrality: {{ data.analysis_summary.average_centrality | format_percentage }}
+{% if hierarchical %}├──{% else %}•{% endif %} Max Centrality: {{ data.analysis_summary.max_centrality | format_percentage }}
+{% if hierarchical %}├──{% else %}•{% endif %} Min Centrality: {{ data.analysis_summary.min_centrality | format_percentage }}
+{% if hierarchical %}└──{% else %}•{% endif %} Token Optimization: {{ "Enabled" if data.analysis_summary.token_optimization else "Disabled" }}
+{% endif %}

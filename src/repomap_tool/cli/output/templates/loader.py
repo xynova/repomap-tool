@@ -88,9 +88,9 @@ class FileTemplateLoader(TemplateLoader):
         if not self._template_dirs:
             # Add default template directory
             current_dir = Path(__file__).parent
-            templates_dir = current_dir / "templates"
-            if templates_dir.exists():
-                self._template_dirs.append(templates_dir)
+            jinja_dir = current_dir / "jinja"
+            if jinja_dir.exists():
+                self._template_dirs.append(jinja_dir)
 
     def load_template(
         self, template_name: str, config: Optional[TemplateConfig] = None

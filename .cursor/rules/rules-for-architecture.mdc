@@ -53,8 +53,8 @@ alwaysApply: true
 - **Signature Enhancement** with type inference and usage patterns
 - **Hierarchical Formatting** for LLM-friendly structure
 
-### **Tree Exploration Architecture**
-- **Session-Based State Management** for persistent tree operations
+### **Code Exploration Architecture**
+- **Session-Based State Management** for persistent exploration operations
 - **Tree Builder Pattern** for constructing exploration trees
 - **Tree Manager Pattern** for tree operations (expand, prune, focus)
 - **Entrypoint Discovery** for finding code entry points
@@ -191,9 +191,9 @@ class TokenOptimizer:
         return ContextSelection(data=selected, tokens_used=self.token_estimator.estimate_tokens(selected))
 ```
 
-### **Tree Exploration Pattern**
+### **Code Exploration Pattern**
 ```python
-# Session-based tree management
+# Session-based exploration management
 class TreeManager:
     def __init__(self, session_manager: SessionManager, tree_builder: TreeBuilder):
         if session_manager is None:
@@ -545,7 +545,7 @@ class BadLLMOptimizer:
         return "\n".join([str(item) for item in data])
 ```
 
-### **❌ Tree Exploration Anti-Patterns**
+### **❌ Code Exploration Anti-Patterns**
 ```python
 # WRONG - No session management
 class BadTreeManager:
@@ -797,7 +797,7 @@ class GoodLLMOptimizer:
         return formatter.format(data)
 ```
 
-### **✅ Tree Exploration Best Practices**
+### **✅ Code Exploration Best Practices**
 ```python
 # CORRECT - Session-based with dependency awareness
 class GoodTreeManager:
@@ -1058,7 +1058,7 @@ class DataFormatter(BaseFormatter):
 - [ ] **ALL matchers implement `MatcherProtocol` with caching** - AI must follow matcher interface
 - [ ] **ALL matchers support multiple strategies** - AI must implement strategy pattern
 - [ ] **ALL LLM optimizers use token budget management** - AI must respect token limits
-- [ ] **ALL tree operations use session-based state management** - AI must use sessions
+- [ ] **ALL code exploration operations use session-based state management** - AI must use sessions
 - [ ] **ALL dependency analysis uses graph-based representation** - AI must use NetworkX
 - [ ] **ALL caching systems use TTL and size limits** - AI must implement proper caching
 - [ ] **ALL code has comprehensive tests** - AI must maintain >80% test coverage
@@ -1124,7 +1124,7 @@ class DataFormatter(BaseFormatter):
 5. Test with various data sizes and token limits
 6. Document strategy behavior and performance characteristics
 
-### **Adding New Tree Operations**
+### **Adding New Code Exploration Operations**
 1. Implement operation in `TreeManager` class
 2. Ensure operation uses session-based state management
 3. Add dependency-aware logic where appropriate

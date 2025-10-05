@@ -370,3 +370,19 @@ class TemplateRenderError(Exception):
     """Raised when template rendering fails."""
 
     pass
+
+
+# Global template engine instance
+_global_template_engine: Optional[TemplateEngine] = None
+
+
+def get_template_engine() -> TemplateEngine:
+    """Get the global template engine instance.
+
+    Returns:
+        Global template engine instance
+    """
+    global _global_template_engine
+    if _global_template_engine is None:
+        _global_template_engine = TemplateEngineFactory.create_template_engine()
+    return _global_template_engine

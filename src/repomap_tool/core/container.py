@@ -53,6 +53,8 @@ if TYPE_CHECKING:
     )
     from repomap_tool.code_exploration.tree_mapper import TreeMapper
     from repomap_tool.code_exploration.tree_clusters import TreeClusterer
+    from repomap_tool.cli.controllers.centrality_controller import CentralityController
+    from repomap_tool.cli.controllers.impact_controller import ImpactController
     from rich.console import Console
 
 # Legacy factory functions removed - using DI container instead
@@ -330,6 +332,31 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[AnalysisContext]",
         providers.Factory(
             "repomap_tool.code_analysis.ast_visitors.AnalysisContext",
+        ),
+    )
+
+    # Controllers
+    centrality_controller: "providers.Factory[CentralityController]" = cast(
+        "providers.Factory[CentralityController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.centrality_controller.CentralityController",
+            code_analysis_service=llm_file_analyzer,
+            code_exploration_service=session_manager,
+            code_search_service=fuzzy_matcher,
+            token_optimizer=token_optimizer,
+            context_selector=context_selector,
+        ),
+    )
+
+    impact_controller: "providers.Factory[ImpactController]" = cast(
+        "providers.Factory[ImpactController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.impact_controller.ImpactController",
+            code_analysis_service=llm_file_analyzer,
+            code_exploration_service=session_manager,
+            code_search_service=fuzzy_matcher,
+            token_optimizer=token_optimizer,
+            context_selector=context_selector,
         ),
     )
 

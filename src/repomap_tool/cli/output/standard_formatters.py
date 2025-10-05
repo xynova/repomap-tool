@@ -20,6 +20,10 @@ from .protocols import BaseFormatter, DataFormatter, FormatterProtocol
 from .formats import OutputFormat, OutputConfig
 from .console_manager import ConsoleManager
 from .template_formatter import TemplateBasedFormatter
+from .controller_formatters import (
+    CentralityViewModelFormatter,
+    ImpactViewModelFormatter,
+)
 
 from ...models import ProjectInfo, SearchResponse
 
@@ -568,3 +572,9 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
     registry.register_formatter(DictFormatter(), dict)
     registry.register_formatter(ListFormatter(), list)
     registry.register_formatter(StringFormatter(), str)
+
+    # Register controller ViewModel formatters
+    from ..controllers.view_models import CentralityViewModel, ImpactViewModel
+
+    registry.register_formatter(CentralityViewModelFormatter(), CentralityViewModel)
+    registry.register_formatter(ImpactViewModelFormatter(), ImpactViewModel)
