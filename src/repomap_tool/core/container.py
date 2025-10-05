@@ -36,18 +36,23 @@ if TYPE_CHECKING:
     from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
     from repomap_tool.llm.token_optimizer import TokenOptimizer
     from repomap_tool.utils.path_normalizer import PathNormalizer
-    from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-    from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-    from repomap_tool.matchers.hybrid_matcher import HybridMatcher
+    from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+    from repomap_tool.code_search.adaptive_semantic_matcher import (
+        AdaptiveSemanticMatcher,
+    )
+    from repomap_tool.code_search.hybrid_matcher import HybridMatcher
     from repomap_tool.core.cache_manager import CacheManager
     from repomap_tool.core.parallel_processor import ParallelTagExtractor
     from repomap_tool.code_analysis.llm_analyzer_config import (
         LLMAnalyzerConfig,
         LLMAnalyzerDependencies,
     )
-    from repomap_tool.trees.session_manager import SessionManager, SessionStore
-    from repomap_tool.trees.tree_mapper import TreeMapper
-    from repomap_tool.trees.tree_clusters import TreeClusterer
+    from repomap_tool.code_exploration.session_manager import (
+        SessionManager,
+        SessionStore,
+    )
+    from repomap_tool.code_exploration.tree_mapper import TreeMapper
+    from repomap_tool.code_exploration.tree_clusters import TreeClusterer
     from rich.console import Console
 
 # Legacy factory functions removed - using DI container instead
@@ -171,7 +176,7 @@ class Container(containers.DeclarativeContainer):
     session_manager: "providers.Singleton[SessionManager]" = cast(
         "providers.Singleton[SessionManager]",
         providers.Singleton(
-            "repomap_tool.trees.session_manager.SessionManager",
+            "repomap_tool.code_exploration.session_manager.SessionManager",
         ),
     )
 
@@ -243,7 +248,7 @@ class Container(containers.DeclarativeContainer):
     fuzzy_matcher: "providers.Factory[FuzzyMatcher]" = cast(
         "providers.Factory[FuzzyMatcher]",
         providers.Factory(
-            "repomap_tool.matchers.fuzzy_matcher.FuzzyMatcher",
+            "repomap_tool.code_search.fuzzy_matcher.FuzzyMatcher",
             threshold=config.fuzzy_match.threshold,
             strategies=config.fuzzy_match.strategies,
             cache_results=config.fuzzy_match.cache_results,
@@ -254,7 +259,7 @@ class Container(containers.DeclarativeContainer):
     adaptive_semantic_matcher: "providers.Factory[AdaptiveSemanticMatcher]" = cast(
         "providers.Factory[AdaptiveSemanticMatcher]",
         providers.Factory(
-            "repomap_tool.matchers.adaptive_semantic_matcher.AdaptiveSemanticMatcher",
+            "repomap_tool.code_search.adaptive_semantic_matcher.AdaptiveSemanticMatcher",
             verbose=config.verbose,
         ),
     )
@@ -262,7 +267,7 @@ class Container(containers.DeclarativeContainer):
     hybrid_matcher: "providers.Factory[HybridMatcher]" = cast(
         "providers.Factory[HybridMatcher]",
         providers.Factory(
-            "repomap_tool.matchers.hybrid_matcher.HybridMatcher",
+            "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
             fuzzy_matcher=fuzzy_matcher,
             semantic_threshold=config.semantic_match.threshold,
             verbose=config.verbose,
@@ -273,21 +278,21 @@ class Container(containers.DeclarativeContainer):
     session_store: "providers.Singleton[SessionStore]" = cast(
         "providers.Singleton[SessionStore]",
         providers.Singleton(
-            "repomap_tool.trees.session_manager.SessionStore",
+            "repomap_tool.code_exploration.session_manager.SessionStore",
         ),
     )
 
     tree_mapper: "providers.Factory[TreeMapper]" = cast(
         "providers.Factory[TreeMapper]",
         providers.Factory(
-            "repomap_tool.trees.tree_mapper.TreeMapper",
+            "repomap_tool.code_exploration.tree_mapper.TreeMapper",
         ),
     )
 
     tree_clusterer: "providers.Factory[TreeClusterer]" = cast(
         "providers.Factory[TreeClusterer]",
         providers.Factory(
-            "repomap_tool.trees.tree_clusters.TreeClusterer",
+            "repomap_tool.code_exploration.tree_clusters.TreeClusterer",
         ),
     )
 

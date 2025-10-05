@@ -14,7 +14,7 @@ from click.testing import CliRunner
 
 from repomap_tool.cli import cli, get_project_path_from_session
 from repomap_tool.models import ExplorationSession
-from repomap_tool.trees import SessionManager
+from repomap_tool.code_exploration import SessionManager
 
 
 class TestCLIProjectPathFix:
@@ -47,7 +47,9 @@ class TestCLIProjectPathFix:
         session = ExplorationSession(session_id=session_id, project_path=project_path)
 
         # Mock SessionManager
-        with patch("repomap_tool.trees.SessionManager") as mock_session_manager_class:
+        with patch(
+            "repomap_tool.code_exploration.SessionManager"
+        ) as mock_session_manager_class:
             mock_session_manager = MagicMock()
             mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = session
@@ -63,7 +65,9 @@ class TestCLIProjectPathFix:
         session_id = "nonexistent_session"
 
         # Mock SessionManager
-        with patch("repomap_tool.trees.SessionManager") as mock_session_manager_class:
+        with patch(
+            "repomap_tool.code_exploration.SessionManager"
+        ) as mock_session_manager_class:
             mock_session_manager = MagicMock()
             mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = None
@@ -78,7 +82,9 @@ class TestCLIProjectPathFix:
         session_id = "error_session"
 
         # Mock SessionManager to raise an exception
-        with patch("repomap_tool.trees.SessionManager") as mock_session_manager_class:
+        with patch(
+            "repomap_tool.code_exploration.SessionManager"
+        ) as mock_session_manager_class:
             mock_session_manager = MagicMock()
             mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.side_effect = Exception("Session error")
@@ -98,8 +104,12 @@ class TestCLIProjectPathFix:
 
         # Mock the session manager and tree manager
         with (
-            patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
-            patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
+            patch(
+                "repomap_tool.code_exploration.SessionManager"
+            ) as mock_session_manager_class,
+            patch(
+                "repomap_tool.code_exploration.TreeManager"
+            ) as mock_tree_manager_class,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
@@ -148,8 +158,12 @@ class TestCLIProjectPathFix:
 
         # Mock the session manager and tree manager
         with (
-            patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
-            patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
+            patch(
+                "repomap_tool.code_exploration.SessionManager"
+            ) as mock_session_manager_class,
+            patch(
+                "repomap_tool.code_exploration.TreeManager"
+            ) as mock_tree_manager_class,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
@@ -196,8 +210,12 @@ class TestCLIProjectPathFix:
 
         # Mock the session manager and tree manager
         with (
-            patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
-            patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
+            patch(
+                "repomap_tool.code_exploration.SessionManager"
+            ) as mock_session_manager_class,
+            patch(
+                "repomap_tool.code_exploration.TreeManager"
+            ) as mock_tree_manager_class,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
@@ -244,9 +262,13 @@ class TestCLIProjectPathFix:
 
         # Mock the session manager and tree manager
         with (
-            patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
-            patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
-            patch("repomap_tool.trees.TreeMapper") as mock_tree_mapper_class,
+            patch(
+                "repomap_tool.code_exploration.SessionManager"
+            ) as mock_session_manager_class,
+            patch(
+                "repomap_tool.code_exploration.TreeManager"
+            ) as mock_tree_manager_class,
+            patch("repomap_tool.code_exploration.TreeMapper") as mock_tree_mapper_class,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
@@ -298,7 +320,9 @@ class TestCLIProjectPathFix:
 
         # Mock the session manager
         with (
-            patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
+            patch(
+                "repomap_tool.code_exploration.SessionManager"
+            ) as mock_session_manager_class,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
@@ -335,7 +359,9 @@ class TestCLIProjectPathFix:
         session_id = "nonexistent_session"
 
         # Mock SessionManager to return None
-        with patch("repomap_tool.trees.SessionManager") as mock_session_manager_class:
+        with patch(
+            "repomap_tool.code_exploration.SessionManager"
+        ) as mock_session_manager_class:
             mock_session_manager = MagicMock()
             mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = None
@@ -379,8 +405,12 @@ class TestCLIProjectPathFix:
 
         # Mock the session manager and tree manager
         with (
-            patch("repomap_tool.trees.SessionManager") as mock_session_manager_class,
-            patch("repomap_tool.trees.TreeManager") as mock_tree_manager_class,
+            patch(
+                "repomap_tool.code_exploration.SessionManager"
+            ) as mock_session_manager_class,
+            patch(
+                "repomap_tool.code_exploration.TreeManager"
+            ) as mock_tree_manager_class,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 

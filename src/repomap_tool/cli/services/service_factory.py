@@ -12,13 +12,13 @@ from pathlib import Path
 from repomap_tool.models import RepoMapConfig
 from repomap_tool.core.container import create_container
 from repomap_tool.core.repo_map import RepoMapService
-from repomap_tool.trees.discovery_engine import EntrypointDiscoverer
-from repomap_tool.trees.tree_builder import TreeBuilder
-from repomap_tool.trees.tree_manager import TreeManager
-from repomap_tool.trees.session_manager import SessionManager
+from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
+from repomap_tool.code_exploration.tree_builder import TreeBuilder
+from repomap_tool.code_exploration.tree_manager import TreeManager
+from repomap_tool.code_exploration.session_manager import SessionManager
 from repomap_tool.code_analysis.advanced_dependency_graph import AdvancedDependencyGraph
 from repomap_tool.core.parallel_processor import ParallelTagExtractor
-from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from rich.console import Console
 
 logger = logging.getLogger(__name__)

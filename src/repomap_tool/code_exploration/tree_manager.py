@@ -12,8 +12,8 @@ import os
 
 from repomap_tool.models import ExplorationTree, TreeNode, ExplorationSession
 from repomap_tool.core import RepoMapService
-from repomap_tool.trees.session_manager import SessionManager
-from repomap_tool.trees.tree_builder import TreeBuilder
+from repomap_tool.code_exploration.session_manager import SessionManager
+from repomap_tool.code_exploration.tree_builder import TreeBuilder
 
 logger = logging.getLogger(__name__)
 
