@@ -22,6 +22,7 @@ from src.repomap_tool.code_analysis.centrality_analysis_engine import (
     CentralityAnalysisEngine,
 )
 from src.repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
+from src.repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
 from src.repomap_tool.llm.token_optimizer import TokenOptimizer
 from src.repomap_tool.llm.context_selector import ContextSelector
 from src.repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
@@ -76,6 +77,13 @@ class TestLLMFileAnalyzerIntegration:
             dependency_graph=dependency_graph,
             path_normalizer=path_normalizer,
         )
+        # Create impact analyzer using DI container
+        from repomap_tool.core.container import create_container
+        from repomap_tool.models import RepoMapConfig
+
+        config = RepoMapConfig(project_root=project_root)
+        container = create_container(config)
+        impact_analyzer = container.impact_analyzer()
         impact_engine = ImpactAnalysisEngine(ast_analyzer)
         token_optimizer = TokenOptimizer()
         context_selector = ContextSelector(dependency_graph)
@@ -91,6 +99,7 @@ class TestLLMFileAnalyzerIntegration:
             context_selector=context_selector,
             hierarchical_formatter=hierarchical_formatter,
             path_resolver=path_resolver,
+            impact_analyzer=impact_analyzer,
             impact_engine=impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,
@@ -109,6 +118,7 @@ class TestLLMFileAnalyzerIntegration:
         mock_token_optimizer = Mock()
         mock_context_selector = Mock()
         mock_hierarchical_formatter = Mock()
+        mock_impact_analyzer = Mock()
         mock_impact_engine = Mock()
 
         llm_dependencies = LLMAnalyzerDependencies(
@@ -119,6 +129,7 @@ class TestLLMFileAnalyzerIntegration:
             context_selector=mock_context_selector,
             hierarchical_formatter=mock_hierarchical_formatter,
             path_resolver=PathResolver(project_root),
+            impact_analyzer=mock_impact_analyzer,
             impact_engine=mock_impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,

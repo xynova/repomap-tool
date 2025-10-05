@@ -206,6 +206,7 @@ class Container(containers.DeclarativeContainer):
             context_selector=context_selector,
             hierarchical_formatter=hierarchical_formatter,
             path_resolver=path_resolver,
+            impact_analyzer=impact_analyzer,
             impact_engine=impact_analysis_engine,
             centrality_engine=centrality_analysis_engine,
             centrality_calculator=centrality_calculator,

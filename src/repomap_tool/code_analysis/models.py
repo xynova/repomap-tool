@@ -331,12 +331,17 @@ class FileImpactAnalysis:
     """Comprehensive impact analysis for a file."""
 
     file_path: str
+    impact_score: float
+    affected_files: List[str]
+    dependency_chain_length: int
+    risk_level: str
+    impact_categories: List[str]
+    suggested_tests: List[str]
     direct_dependencies: List[Dict[str, Any]]
     reverse_dependencies: List[Dict[str, Any]]
     function_call_analysis: List[Dict[str, Any]]
     structural_impact: Dict[str, Any]
     risk_assessment: Dict[str, Any]
-    suggested_tests: List[str]
 
 
 @dataclass

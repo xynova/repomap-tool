@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import List, Dict, Any, Optional
 
-from ...code_analysis.models import AnalysisFormat
+from ...code_analysis.models import AnalysisFormat, FileImpactAnalysis
 from .base_controller import BaseController
 from .view_models import (
     ImpactViewModel,
@@ -89,11 +89,11 @@ class ImpactController(BaseController):
         self._log_operation("impact_analysis", {"changed_files": changed_files})
 
         try:
-            # 1. Get raw impact data from code_analysis service
-            raw_impact_data = self._get_impact_data(changed_files)
+            # 1. Get structured impact data from code_analysis service
+            impact_analyses = self._get_impact_data(changed_files)
 
-            # 2. Build simple ViewModel
-            view_model = self._build_simple_view_model(raw_impact_data, changed_files)
+            # 2. Build ViewModel from structured data
+            view_model = self._build_simple_view_model(impact_analyses, changed_files)
 
             self._log_operation(
                 "impact_analysis_complete",
@@ -110,29 +110,21 @@ class ImpactController(BaseController):
             self.logger.error(f"Impact analysis failed: {e}")
             raise
 
-    def _get_impact_data(self, changed_files: List[str]) -> Dict[str, Any]:
-        """Get raw impact data from code_analysis service.
+    def _get_impact_data(self, changed_files: List[str]) -> List[FileImpactAnalysis]:
+        """Get structured impact data from code_analysis service.
 
         Args:
             changed_files: List of files that have changed
 
         Returns:
-            Raw impact analysis data
+            List of FileImpactAnalysis objects
         """
-        # Use LLM analyzer to get impact analysis
-        impact_results = self.code_analysis_service.analyze_file_impact(
-            file_paths=changed_files,
-            format_type=AnalysisFormat.TEXT,  # Always get raw data for controller processing
+        # Use LLM analyzer to get structured impact analysis
+        impact_analyses = self.code_analysis_service.analyze_file_impact_structured(
+            file_paths=changed_files
         )
 
-        return {
-            "changed_files": changed_files,
-            "impact_results": impact_results,
-            "analysis_metadata": {
-                "total_changed": len(changed_files),
-                "analysis_type": "impact",
-            },
-        }
+        return impact_analyses  # type: ignore[no-any-return]
 
     # Note: Related symbols methods removed - Controllers focus on LLM analysis
 
@@ -153,49 +145,85 @@ class ImpactController(BaseController):
     # Note: All remaining methods removed - Controllers focus on LLM analysis
 
     def _build_simple_view_model(
-        self, raw_data: Dict[str, Any], changed_files: List[str]
+        self, impact_analyses: List[FileImpactAnalysis], changed_files: List[str]
     ) -> ImpactViewModel:
-        """Build simple ImpactViewModel from raw data.
+        """Build ImpactViewModel from structured impact analysis data.
 
         Args:
-            raw_data: Raw impact analysis data
+            impact_analyses: List of FileImpactAnalysis objects
             changed_files: Original changed files
 
         Returns:
             ImpactViewModel instance
         """
-        # Create simple affected files list
+        # Create affected files list from structured data
         affected_files = []
-        for file_path in changed_files:
+        all_affected_files = set()
+
+        for analysis in impact_analyses:
+            # Create FileAnalysisViewModel from structured data
             file_analysis = FileAnalysisViewModel(
-                file_path=file_path,
-                line_count=0,  # Not available from LLM analyzer
-                symbols=[],  # Not available from LLM analyzer
-                imports=[],  # Not available from LLM analyzer
-                dependencies=[],  # Not available from LLM analyzer
-                impact_risk=None,
+                file_path=analysis.file_path,
+                line_count=0,  # Not available in FileImpactAnalysis
+                symbols=[],  # Not available in FileImpactAnalysis
+                imports=[],  # Not available in FileImpactAnalysis
+                dependencies=[],  # Not available in FileImpactAnalysis
+                impact_risk=analysis.impact_score,  # Use impact score as impact risk
                 analysis_type=AnalysisType.IMPACT,
             )
             affected_files.append(file_analysis)
 
-        # Create simple impact scope
+            # Collect all affected files
+            all_affected_files.update(analysis.affected_files)
+
+        # Calculate impact scope from structured data
+        impact_scores = [analysis.impact_score for analysis in impact_analyses]
+        high_impact = len([s for s in impact_scores if s >= 0.7])
+        medium_impact = len([s for s in impact_scores if 0.3 <= s < 0.7])
+        low_impact = len([s for s in impact_scores if s < 0.3])
+
         impact_scope = {
-            "total_affected_files": len(affected_files),
-            "total_related_symbols": 0,
-            "impact_depth": 1,
+            "total_affected_files": len(all_affected_files),
+            "total_related_symbols": sum(
+                len(analysis.impact_categories) for analysis in impact_analyses
+            ),
+            "impact_depth": (
+                max(analysis.dependency_chain_length for analysis in impact_analyses)
+                if impact_analyses
+                else 1
+            ),
             "scope_categories": {
-                "high_impact": 0,
-                "medium_impact": 0,
-                "low_impact": len(affected_files),
+                "high_impact": high_impact,
+                "medium_impact": medium_impact,
+                "low_impact": low_impact,
             },
         }
 
-        # Create simple risk assessment
+        # Create risk assessment from structured data
+        risk_levels = [analysis.risk_level for analysis in impact_analyses]
+        overall_risk = (
+            "high"
+            if "high" in risk_levels
+            else "medium" if "medium" in risk_levels else "low"
+        )
+
         risk_assessment = {
-            "overall_risk_level": "low",
-            "risk_factors": [],
-            "mitigation_suggestions": [],
-            "confidence_score": 0.5,
+            "overall_risk_level": overall_risk,
+            "risk_factors": [
+                f"Impact score: {analysis.impact_score:.2f}"
+                for analysis in impact_analyses
+            ],
+            "mitigation_suggestions": [
+                suggestion
+                for analysis in impact_analyses
+                for suggestion in analysis.suggested_tests
+            ],
+            "confidence_score": (
+                sum(analysis.impact_score for analysis in impact_analyses)
+                / len(impact_analyses)
+                if impact_analyses
+                else 0.5
+            ),
         }
 
         return ImpactViewModel(
@@ -203,8 +231,8 @@ class ImpactController(BaseController):
             affected_files=affected_files,
             impact_scope=impact_scope,
             risk_assessment=risk_assessment,
-            total_affected=len(affected_files),
-            token_count=len(str(raw_data)),
+            total_affected=len(all_affected_files),
+            token_count=len(str(impact_analyses)),
             max_tokens=self.config.max_tokens if self.config else 4000,
             compression_level=(
                 self.config.compression_level if self.config else "medium"

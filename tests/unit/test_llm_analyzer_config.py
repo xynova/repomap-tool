@@ -145,6 +145,7 @@ class TestLLMAnalyzerDependencies:
         mock_context_selector = Mock()
         mock_hierarchical_formatter = Mock()
         mock_path_resolver = Mock()
+        mock_impact_analyzer = Mock()
         mock_impact_engine = Mock()
         mock_centrality_engine = Mock()
         mock_centrality_calculator = Mock()
@@ -157,6 +158,7 @@ class TestLLMAnalyzerDependencies:
             context_selector=mock_context_selector,
             hierarchical_formatter=mock_hierarchical_formatter,
             path_resolver=mock_path_resolver,
+            impact_analyzer=mock_impact_analyzer,
             impact_engine=mock_impact_engine,
             centrality_engine=mock_centrality_engine,
             centrality_calculator=mock_centrality_calculator,
@@ -191,6 +193,7 @@ class TestLLMAnalyzerDependencies:
             "context_selector": Mock(),
             "hierarchical_formatter": Mock(),
             "path_resolver": Mock(),
+            "impact_analyzer": Mock(),
             "impact_engine": Mock(),
             "centrality_engine": Mock(),
             "centrality_calculator": Mock(),
@@ -216,6 +219,7 @@ class TestLLMAnalyzerDependencies:
             context_selector=Mock(),
             hierarchical_formatter=Mock(),
             path_resolver=Mock(),
+            impact_analyzer=Mock(),
             impact_engine=Mock(),
             centrality_engine=Mock(),
             centrality_calculator=Mock(),
@@ -236,6 +240,7 @@ class TestLLMAnalyzerDependencies:
                 context_selector=Mock(),
                 hierarchical_formatter=Mock(),
                 path_resolver=Mock(),
+                impact_analyzer=Mock(),
                 impact_engine=Mock(),
                 centrality_engine=Mock(),
                 centrality_calculator=Mock(),
@@ -253,6 +258,7 @@ class TestLLMAnalyzerDependencies:
                 context_selector=Mock(),
                 hierarchical_formatter=Mock(),
                 path_resolver=Mock(),
+                impact_analyzer=Mock(),
                 impact_engine=Mock(),
                 centrality_engine=Mock(),
                 centrality_calculator=Mock(),
@@ -278,6 +284,7 @@ class TestLLMAnalyzerConfigIntegration:
             context_selector=Mock(),
             hierarchical_formatter=Mock(),
             path_resolver=Mock(),
+            impact_analyzer=Mock(),
             impact_engine=Mock(),
             centrality_engine=Mock(),
             centrality_calculator=Mock(),

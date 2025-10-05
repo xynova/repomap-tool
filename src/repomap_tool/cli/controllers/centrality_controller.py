@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 from typing import List, Dict, Any, Optional
 
-from ...code_analysis.models import AnalysisFormat
+from ...code_analysis.models import AnalysisFormat, FileCentralityAnalysis
 from .base_controller import BaseController
 from .view_models import (
     CentralityViewModel,
@@ -89,11 +89,11 @@ class CentralityController(BaseController):
         self._log_operation("centrality_analysis", {"files": file_paths})
 
         try:
-            # 1. Get raw centrality data from code_analysis service
-            raw_centrality_data = self._get_centrality_data(file_paths)
+            # 1. Get structured centrality data from code_analysis service
+            centrality_analyses = self._get_centrality_data(file_paths)
 
-            # 2. Build simple ViewModel
-            view_model = self._build_simple_view_model(raw_centrality_data, file_paths)
+            # 2. Build ViewModel from structured data
+            view_model = self._build_simple_view_model(centrality_analyses, file_paths)
 
             self._log_operation(
                 "centrality_analysis_complete",
@@ -109,77 +109,97 @@ class CentralityController(BaseController):
             self.logger.error(f"Centrality analysis failed: {e}")
             raise
 
-    def _get_centrality_data(self, file_paths: List[str]) -> Dict[str, Any]:
-        """Get raw centrality data from code_analysis service.
+    def _get_centrality_data(
+        self, file_paths: List[str]
+    ) -> List[FileCentralityAnalysis]:
+        """Get structured centrality data from code_analysis service.
 
         Args:
             file_paths: List of file paths to analyze
 
         Returns:
-            Raw centrality analysis data
+            List of FileCentralityAnalysis objects
         """
-        # Use LLM analyzer to get centrality analysis
-        centrality_results = self.code_analysis_service.analyze_file_centrality(
-            file_paths=file_paths,
-            format_type=AnalysisFormat.TEXT,  # Always get raw data for controller processing
+        # Use LLM analyzer to get structured centrality analysis
+        centrality_analyses = (
+            self.code_analysis_service.analyze_file_centrality_structured(
+                file_paths=file_paths
+            )
         )
 
-        return {
-            "files": file_paths,
-            "centrality_results": centrality_results,
-            "analysis_metadata": {
-                "total_files": len(file_paths),
-                "analysis_type": "centrality",
-            },
-        }
+        return centrality_analyses  # type: ignore[no-any-return]
 
     # Note: Exploration context methods removed - Controllers focus on LLM analysis
 
     def _build_simple_view_model(
-        self, raw_data: Dict[str, Any], file_paths: List[str]
+        self, centrality_analyses: List[FileCentralityAnalysis], file_paths: List[str]
     ) -> CentralityViewModel:
-        """Build simple CentralityViewModel from raw data.
+        """Build CentralityViewModel from structured centrality analysis data.
 
         Args:
-            raw_data: Raw centrality analysis data
+            centrality_analyses: List of FileCentralityAnalysis objects
             file_paths: Original file paths
 
         Returns:
             CentralityViewModel instance
         """
-        # Create simple file analysis list
+        # Create file analysis list from structured data
         file_analyses = []
-        for file_path in file_paths:
+        rankings = []
+
+        for analysis in centrality_analyses:
+            # Create FileAnalysisViewModel from structured data
             file_analysis = FileAnalysisViewModel(
-                file_path=file_path,
-                line_count=0,  # Not available from LLM analyzer
-                symbols=[],  # Not available from LLM analyzer
-                imports=[],  # Not available from LLM analyzer
-                dependencies=[],  # Not available from LLM analyzer
-                impact_risk=None,
+                file_path=analysis.file_path,
+                line_count=0,  # Not available in FileCentralityAnalysis
+                symbols=[],  # Not available in FileCentralityAnalysis
+                imports=[],  # Not available in FileCentralityAnalysis
+                dependencies=[],  # Not available in FileCentralityAnalysis
+                impact_risk=analysis.centrality_score,  # Use centrality score as impact risk
                 analysis_type=AnalysisType.CENTRALITY,
             )
             file_analyses.append(file_analysis)
 
-        # Create simple centrality summary
+            # Create ranking entry
+            rankings.append(
+                {
+                    "rank": analysis.rank,
+                    "file_path": analysis.file_path,
+                    "centrality_score": analysis.centrality_score,
+                    "total_files": analysis.total_files,
+                }
+            )
+
+        # Calculate summary statistics from structured data
+        centrality_scores = [
+            analysis.centrality_score for analysis in centrality_analyses
+        ]
+        high_centrality = len([s for s in centrality_scores if s >= 0.7])
+        medium_centrality = len([s for s in centrality_scores if 0.3 <= s < 0.7])
+        low_centrality = len([s for s in centrality_scores if s < 0.3])
+
         centrality_summary = {
             "analysis_type": "centrality",
-            "total_files": len(file_paths),
-            "high_centrality_files": 0,
-            "medium_centrality_files": 0,
-            "low_centrality_files": len(file_paths),
-            "average_centrality": 0.5,
-            "max_centrality": 0.8,
-            "min_centrality": 0.2,
+            "total_files": len(centrality_analyses),
+            "high_centrality_files": high_centrality,
+            "medium_centrality_files": medium_centrality,
+            "low_centrality_files": low_centrality,
+            "average_centrality": (
+                sum(centrality_scores) / len(centrality_scores)
+                if centrality_scores
+                else 0.0
+            ),
+            "max_centrality": max(centrality_scores) if centrality_scores else 0.0,
+            "min_centrality": min(centrality_scores) if centrality_scores else 0.0,
             "token_optimization": True,
         }
 
         return CentralityViewModel(
             files=file_analyses,
-            rankings=[],  # Empty rankings for now
-            total_files=len(file_paths),
+            rankings=rankings,
+            total_files=len(centrality_analyses),
             analysis_summary=centrality_summary,
-            token_count=len(str(raw_data)),
+            token_count=len(str(centrality_analyses)),
             max_tokens=self.config.max_tokens if self.config else 4000,
             compression_level=(
                 self.config.compression_level if self.config else "medium"

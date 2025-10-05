@@ -884,6 +884,14 @@ class TestLLMFileAnalyzerIntegration:
             LLMAnalyzerDependencies,
         )
 
+        # Create impact analyzer using DI container
+        from repomap_tool.core.container import create_container
+        from repomap_tool.models import RepoMapConfig
+
+        config = RepoMapConfig(project_root=project_root)
+        container = create_container(config)
+        impact_analyzer = container.impact_analyzer()
+
         config = LLMAnalyzerConfig()
         dependencies = LLMAnalyzerDependencies(
             dependency_graph=dependency_graph,
@@ -893,6 +901,7 @@ class TestLLMFileAnalyzerIntegration:
             context_selector=context_selector,
             hierarchical_formatter=hierarchical_formatter,
             path_resolver=path_resolver,
+            impact_analyzer=impact_analyzer,
             impact_engine=impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,

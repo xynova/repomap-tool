@@ -94,15 +94,12 @@ class LLMFileAnalyzer:
         self.path_resolver = dependencies.path_resolver
         self.centrality_calculator = dependencies.centrality_calculator
         self.centrality_engine = dependencies.centrality_engine
+        self.impact_analyzer = dependencies.impact_analyzer
         self.impact_engine = dependencies.impact_engine
 
         logger.info(
             "LLMFileAnalyzer initialized with configuration and injected dependencies"
         )
-
-        # Impact analyzer is now injected via DI container
-        # No need for manual instantiation
-        self.impact_analyzer = None  # Will be set by DI container if needed
 
     def analyze_file_impact(
         self,
@@ -252,6 +249,155 @@ class LLMFileAnalyzer:
         else:
             # This should never happen with current format types
             raise ValueError(f"Unsupported format type: {format_type}")
+
+    def analyze_file_centrality_structured(
+        self,
+        file_paths: List[str],
+    ) -> List[FileCentralityAnalysis]:
+        """Analyze centrality for one or more files and return structured data.
+
+        Args:
+            file_paths: List of file paths to analyze
+
+        Returns:
+            List of FileCentralityAnalysis objects
+        """
+
+        if not self.centrality_calculator:
+            raise ValueError(
+                "Centrality analysis requires dependency graph. Please run dependency analysis first."
+            )
+
+        # Resolve file paths relative to project root
+        resolved_paths = self.path_resolver.resolve_file_paths(file_paths)
+
+        # Perform AST analysis for all files
+        ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
+
+        # Get all files in project for comprehensive analysis
+        all_files = self.path_resolver.get_all_project_files()
+
+        # Sort files by centrality score (highest first) to process most important files first
+        if len(file_paths) > 1:
+            # Get centrality scores for all files to sort them
+            centrality_scores = (
+                self.centrality_calculator.calculate_composite_importance()
+            )
+            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in file_paths]
+            sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
+            sorted_file_paths = [fp for fp, _ in sorted_file_scores]
+        else:
+            sorted_file_paths = file_paths
+
+        # Analyze each file in order of importance
+        centrality_analyses = []
+        for file_path in sorted_file_paths:
+            try:
+                # Find the resolved path for this file
+                original_index = file_paths.index(file_path)
+                resolved_path = resolved_paths[original_index]
+                centrality_analysis = self.centrality_engine.analyze_file_centrality(
+                    file_path, ast_results[resolved_path], all_files
+                )
+                centrality_analyses.append(centrality_analysis)
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+                # Create a minimal centrality analysis for this file
+                centrality_analysis = FileCentralityAnalysis(
+                    file_path=file_path,
+                    centrality_score=0.0,
+                    rank=1,
+                    total_files=len(file_paths),
+                    dependency_analysis={
+                        "total_connections": 0,
+                        "incoming_connections": 0,
+                        "outgoing_connections": 0,
+                        "connection_ratio": 0.0,
+                        "direct_imports": 0,
+                        "reverse_dependencies": 0,
+                    },
+                    function_call_analysis={
+                        "defined_functions": 0,
+                        "called_functions": 0,
+                        "external_calls": 0,
+                        "internal_calls": 0,
+                    },
+                    centrality_breakdown={
+                        "degree_centrality": 0.0,
+                        "betweenness_centrality": 0.0,
+                        "pagerank": 0.0,
+                        "eigenvector_centrality": 0.0,
+                        "closeness_centrality": 0.0,
+                    },
+                    structural_impact={
+                        "complexity_score": 0.0,
+                        "dependency_depth": 0,
+                        "fan_in": 0,
+                        "fan_out": 0,
+                    },
+                )
+                centrality_analyses.append(centrality_analysis)
+
+        return centrality_analyses
+
+    def analyze_file_impact_structured(
+        self,
+        file_paths: List[str],
+    ) -> List[FileImpactAnalysis]:
+        """Analyze impact for one or more files and return structured data.
+
+        Args:
+            file_paths: List of file paths to analyze
+
+        Returns:
+            List of FileImpactAnalysis objects
+        """
+
+        if not self.impact_analyzer:
+            raise ValueError(
+                "Impact analysis requires dependency graph. Please run dependency analysis first."
+            )
+
+        # Resolve file paths relative to project root
+        resolved_paths = self.path_resolver.resolve_file_paths(file_paths)
+
+        # Perform AST analysis for all files
+        ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
+
+        # Get all files in project for comprehensive analysis
+        all_files = self.path_resolver.get_all_project_files()
+
+        # Analyze each file
+        impact_analyses = []
+        for file_path in file_paths:
+            try:
+                # Find the resolved path for this file
+                original_index = file_paths.index(file_path)
+                resolved_path = resolved_paths[original_index]
+                impact_analysis = self.impact_engine.analyze_file_impact(
+                    file_path, ast_results[resolved_path], all_files
+                )
+                impact_analyses.append(impact_analysis)
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+                # Create a minimal impact analysis for this file
+                impact_analysis = FileImpactAnalysis(
+                    file_path=file_path,
+                    impact_score=0.0,
+                    affected_files=[],
+                    dependency_chain_length=0,
+                    risk_level="low",
+                    impact_categories=[],
+                    suggested_tests=[],
+                    direct_dependencies=[],
+                    reverse_dependencies=[],
+                    function_call_analysis=[],
+                    structural_impact={},
+                    risk_assessment={},
+                )
+                impact_analyses.append(impact_analysis)
+
+        return impact_analyses
 
     # Formatting methods moved to format_utils.py
 
