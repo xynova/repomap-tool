@@ -39,6 +39,9 @@ alwaysApply: true
 - **ALWAYS use the existing DI container** - don't create new service factories
 - **ALWAYS follow the caching patterns** - use TTL-based caching with statistics
 - **ALWAYS use the existing matcher protocols** - implement MatcherProtocol interface
+- **ALWAYS use MVC controller pattern** - controllers return ViewModels, not strings
+- **ALWAYS use ViewModels for structured data** - don't return raw dictionaries or strings
+- **ALWAYS use template-based formatters** - inherit from TemplateBasedFormatter for ViewModels
 
 ### **Matching Algorithm Architecture**
 - **Strategy Pattern** for multiple matching approaches (fuzzy, semantic, hybrid)
@@ -53,6 +56,13 @@ alwaysApply: true
 - **Signature Enhancement** with type inference and usage patterns
 - **Hierarchical Formatting** for LLM-friendly structure
 
+### **MVC Controller Architecture**
+- **Controller Pattern** for business logic orchestration (`cli/controllers/`)
+- **ViewModel Pattern** for structured data representation
+- **Template-Based Rendering** using Jinja2 for consistent output formatting
+- **Dependency Injection** for all controller dependencies
+- **Separation of Concerns** between business logic and presentation
+
 ### **Code Exploration Architecture**
 - **Session-Based State Management** for persistent exploration operations
 - **Tree Builder Pattern** for constructing exploration trees
@@ -60,7 +70,7 @@ alwaysApply: true
 - **Entrypoint Discovery** for finding code entry points
 - **Dependency-Aware Construction** using dependency analysis
 
-### **Dependency Analysis Architecture**
+### **Code Analysis Architecture** (formerly Dependencies)
 - **Graph-Based Representation** using NetworkX for dependency graphs
 - **Import Analysis** using AST-based parsing
 - **Centrality Analysis** for identifying critical nodes
@@ -109,8 +119,13 @@ class FormatterRegistry:
 ```python
 # Jinja2-based templating for flexible output generation
 class TemplateEngine:
-    def render_template(self, template_name: str, context: Dict[str, Any]) -> str
+    def render_template(self, template_name: str, data: Any, config: Optional[TemplateConfig] = None) -> str
     def register_template(self, name: str, template: str) -> None
+
+# Template-based formatters for ViewModels
+class TemplateBasedFormatter(BaseFormatter):
+    def _create_template_config(self, config: Optional[OutputConfig]) -> TemplateConfig
+    def _format_fallback(self, data: Any, template_config: Optional[Any] = None) -> str
 ```
 
 ### **Output Format Hierarchy**
@@ -298,6 +313,60 @@ class CacheManager:
         return time.time() - entry.created_at > self.ttl
 ```
 
+### **MVC Controller Pattern**
+```python
+# Controller for business logic orchestration
+class BaseController(ABC):
+    """Abstract base class for all controllers."""
+    
+    def __init__(self, config: Optional[ControllerConfig] = None):
+        self.config = config
+        self.logger = logging.getLogger(self.__class__.__name__)
+    
+    @abstractmethod
+    def execute(self, *args: Any, **kwargs: Any) -> Any:
+        """Execute the controller's main operation."""
+        pass
+
+class CentralityController(BaseController):
+    """Controller for centrality analysis operations."""
+    
+    def __init__(
+        self,
+        llm_analyzer: LLMFileAnalyzer,
+        token_optimizer: TokenOptimizer,
+        context_selector: ContextSelector,
+        config: Optional[ControllerConfig] = None,
+    ) -> None:
+        super().__init__(config)
+        self.llm_analyzer = llm_analyzer
+        self.token_optimizer = token_optimizer
+        self.context_selector = context_selector
+    
+    def execute(self, file_paths: List[str]) -> CentralityViewModel:
+        """Execute centrality analysis and return ViewModel."""
+        if self.config is None:
+            raise ValueError("ControllerConfig must be set before executing")
+        
+        # Perform business logic
+        raw_data = self.llm_analyzer.analyze_file_centrality(file_paths)
+        
+        # Build and return ViewModel
+        return self._build_view_model(raw_data, file_paths)
+    
+    def _build_view_model(self, raw_data: Dict[str, Any], file_paths: List[str]) -> CentralityViewModel:
+        """Build ViewModel from raw analysis data."""
+        return CentralityViewModel(
+            files=self._build_file_analyses(file_paths),
+            rankings=[],
+            total_files=len(file_paths),
+            analysis_summary=self._build_analysis_summary(raw_data),
+            token_count=len(str(raw_data)),
+            max_tokens=self.config.max_tokens if self.config else 4000,
+            compression_level=self.config.compression_level if self.config else "medium",
+        )
+```
+
 ### **Constructor DI Pattern**
 ```python
 # PREFERRED - Constructor injection with strict validation
@@ -331,20 +400,34 @@ class ExampleService:
 ### **CLI Command Pattern**
 ```python
 @click.command()
-def example_command(ctx: click.Context, format: str) -> None:
-    """Example command using proper output architecture."""
-    # Get services via DI
-    service_factory = get_service_factory()
-    repomap_service = service_factory.create_repomap_service(config)
+def centrality_command(ctx: click.Context, file_paths: List[str], format: str) -> None:
+    """Centrality analysis command using MVC controller pattern."""
+    # Get services via DI container
+    from repomap_tool.core.container import create_container
+    from repomap_tool.cli.controllers import ControllerConfig
+    
+    # Create DI container and get controller
+    container = create_container(config_obj)
+    centrality_controller = container.centrality_controller()
+    
+    # Prepare controller configuration
+    controller_config = ControllerConfig(
+        max_tokens=max_tokens, 
+        output_format=OutputFormat(format)
+    )
+    
+    # Get output manager
     output_manager = get_output_manager()
     
     try:
-        # Perform business logic
-        result = repomap_service.analyze_project()
+        # Execute business logic via controller
+        result_view_model = centrality_controller.execute(
+            config=controller_config, 
+            file_paths=file_paths
+        )
         
-        # Display via OutputManager
-        output_format = OutputFormat(format)
-        output_manager.display(result, output_format, ctx)
+        # Display ViewModel via OutputManager
+        output_manager.display(result_view_model, OutputFormat(format), ctx)
         
     except Exception as e:
         # Error handling via OutputManager
@@ -983,27 +1066,50 @@ def test_cli_command_integration():
 
 ## 📁 **FILE ORGANIZATION**
 
-### **Output Module Structure**
+### **Module Organization Structure**
 ```
-src/repomap_tool/cli/output/
-├── __init__.py                 # Public API exports
-├── manager.py                  # OutputManager (main entry point)
-├── console_manager.py          # Console management
-├── protocols.py                # Formatter protocols and interfaces
-├── formats.py                  # Output format definitions
-├── standard_formatters.py      # Built-in formatters
-├── template_formatter.py       # Template-based formatter
-└── templates/                  # Template system
-    ├── __init__.py
-    ├── config.py               # Template configuration
-    ├── engine.py               # Jinja2 template engine
-    ├── loader.py               # Template loading
-    ├── registry.py             # Template registry
-    └── templates/              # Jinja2 template files
-        ├── project_info.jinja2
-        ├── search_response.jinja2
-        ├── success.jinja2
-        └── error.jinja2
+src/repomap_tool/
+├── core/                       # Core orchestration and infrastructure
+│   ├── container.py            # DI container
+│   ├── repo_map.py             # Main service orchestration
+│   └── search_engine.py        # Search orchestration
+├── code_analysis/              # Code analysis and dependency analysis
+│   ├── dependency_graph.py     # Graph-based dependency analysis
+│   ├── centrality_calculator.py # Centrality analysis
+│   └── impact_analyzer.py      # Impact analysis
+├── code_search/                # Code search and matching
+│   ├── fuzzy_matcher.py        # Fuzzy string matching
+│   ├── semantic_matcher.py     # Semantic matching
+│   └── hybrid_matcher.py       # Hybrid matching strategies
+├── code_exploration/           # Tree exploration and session management
+│   ├── tree_manager.py         # Tree operations
+│   ├── session_manager.py      # Session state management
+│   └── tree_builder.py         # Tree construction
+├── cli/                        # CLI interface and controllers
+│   ├── controllers/            # MVC controllers
+│   │   ├── base_controller.py  # Base controller class
+│   │   ├── centrality_controller.py # Centrality analysis controller
+│   │   ├── impact_controller.py # Impact analysis controller
+│   │   └── view_models.py      # ViewModel definitions
+│   └── output/                 # Output management system
+│       ├── manager.py          # OutputManager (main entry point)
+│       ├── console_manager.py  # Console management
+│       ├── protocols.py        # Formatter protocols
+│       ├── standard_formatters.py # Built-in formatters
+│       ├── controller_formatters.py # ViewModel formatters
+│       └── templates/          # Template system
+│           ├── engine.py       # Jinja2 template engine
+│           ├── loader.py       # Template loading
+│           ├── registry.py     # Template registry
+│           └── jinja/          # Jinja2 template files
+│               ├── centrality_analysis.jinja2
+│               ├── impact_analysis.jinja2
+│               ├── project_info.jinja2
+│               └── search_response.jinja2
+└── llm/                        # LLM optimization and enhancement
+    ├── token_optimizer.py      # Token budget management
+    ├── context_selector.py     # Context selection strategies
+    └── hierarchical_formatter.py # LLM-friendly formatting
 ```
 
 ## 🔄 **MIGRATION GUIDELINES**
@@ -1061,6 +1167,10 @@ class DataFormatter(BaseFormatter):
 - [ ] **ALL code exploration operations use session-based state management** - AI must use sessions
 - [ ] **ALL dependency analysis uses graph-based representation** - AI must use NetworkX
 - [ ] **ALL caching systems use TTL and size limits** - AI must implement proper caching
+- [ ] **ALL controllers inherit from `BaseController`** - AI must follow MVC controller pattern
+- [ ] **ALL controllers return ViewModels** - AI must not return raw strings or dictionaries
+- [ ] **ALL ViewModels use template-based formatters** - AI must inherit from TemplateBasedFormatter
+- [ ] **ALL controllers are registered in DI container** - AI must use existing DI container
 - [ ] **ALL code has comprehensive tests** - AI must maintain >80% test coverage
 - [ ] **ALL code passes MyPy type checking** - AI must ensure type safety
 - [ ] **ALL code follows existing patterns** - AI must not reinvent the wheel
@@ -1094,6 +1204,17 @@ class DataFormatter(BaseFormatter):
 3. Register in `FormatterRegistry`
 4. Add comprehensive tests
 5. Update documentation
+
+### **Adding New Controllers**
+1. Create controller class inheriting from `BaseController`
+2. Implement `execute` method with proper business logic orchestration
+3. Define ViewModel classes for structured data representation
+4. Create corresponding formatters inheriting from `TemplateBasedFormatter`
+5. Register controller in DI container (`core/container.py`)
+6. Create Jinja2 templates for ViewModel rendering
+7. Update CLI commands to use new controller
+8. Add comprehensive tests for controller and ViewModel
+9. Document controller behavior and usage patterns
 
 ### **Adding New Templates**
 1. Create Jinja2 template file following the standard pattern:
