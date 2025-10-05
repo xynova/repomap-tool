@@ -181,8 +181,8 @@ def my_function():
         assert data["total_identifiers"] > 0
         assert data["total_files"] > 0
 
-    def test_search_command_real_integration(self, cli_runner, temp_project):
-        """Test search command with real fuzzy matching."""
+    def test_inspect_find_command_real_integration(self, cli_runner, temp_project):
+        """Test inspect find command with real fuzzy matching."""
         result = cli_runner.invoke(
             cli,
             [
@@ -203,7 +203,7 @@ def my_function():
         # Should succeed
         assert result.exit_code == 0
 
-        # Should contain search results (may be empty for temp directories)
+        # Should contain find results (may be empty for temp directories)
         output = result.output
         assert "Search Results" in output
 
@@ -226,9 +226,9 @@ def my_function():
         if result.exit_code == 0:
             # Should contain centrality analysis results
             output = result.output
-            assert "Centrality Analysis" in output
-            assert "Score" in output
-            assert "Rank" in output
+            assert "Centrality" in output and "Analysis" in output
+            assert "Centrality" in output
+            assert "rankings" in output.lower()
         else:
             # Should show proper error message for small projects
             assert "Error:" in result.output or "Failed" in result.output
@@ -343,8 +343,8 @@ def my_function():
         assert data1["identifier_types"] == data2["identifier_types"]
 
     def test_llm_friendly_output_real(self, cli_runner, temp_project):
-        """Test LLM-friendly output formats (markdown, text)."""
-        # Test markdown output
+        """Test LLM-friendly output formats (text, json)."""
+        # Test text output (rich, hierarchical format)
         result = cli_runner.invoke(
             cli,
             [
@@ -354,7 +354,7 @@ def my_function():
                 temp_project,
                 "--fuzzy",
                 "--output",
-                "markdown",
+                "text",
                 "--no-progress",
             ],
         )
@@ -367,8 +367,8 @@ def my_function():
         assert "Project Root:" in output
         assert "Total Files:" in output
         assert "Total Identifiers:" in output
-        assert "## File Types" in output
-        assert "## Identifier Types" in output
+        assert "FILE TYPES:" in output
+        assert "IDENTIFIER TYPES:" in output
 
         # Test text output
         result_text = cli_runner.invoke(
@@ -884,8 +884,10 @@ def handle_authentication_request():
         )
         assert result.exit_code != 0  # Should fail with invalid output format
 
-    def test_search_command_edge_cases(self, cli_runner, empty_project, large_project):
-        """Test search command with edge cases."""
+    def test_inspect_find_command_edge_cases(
+        self, cli_runner, empty_project, large_project
+    ):
+        """Test inspect find command with edge cases."""
 
         # Test with empty query
         result = cli_runner.invoke(
@@ -1108,7 +1110,7 @@ def handle_authentication_request():
         result = cli_runner.invoke(cli, ["--no-color", "index", "create"])
         assert result.exit_code == 0
 
-        # Test search without query (should fail because query is required)
+        # Test inspect find without query (should fail because query is required)
         result = cli_runner.invoke(cli, ["--no-color", "inspect", "find"])
         assert result.exit_code != 0
 

@@ -1,0 +1,308 @@
+"""
+Formatters for Controller ViewModels.
+
+This module provides formatters for the ViewModels returned by Controllers,
+following proper MVC architecture patterns.
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Any, List, Optional
+
+import click
+
+from .protocols import DataFormatter
+from .formats import OutputFormat
+from .template_formatter import TemplateBasedFormatter
+from .templates.engine import get_template_engine
+
+
+logger = logging.getLogger(__name__)
+
+
+class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
+    """Formatter for CentralityViewModel objects."""
+
+    def __init__(self, template_engine: Optional[Any] = None):
+        """Initialize the formatter.
+
+        Args:
+            template_engine: Template engine for rendering
+        """
+        super().__init__(template_engine=template_engine)
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if this formatter supports the given output format.
+
+        Args:
+            output_format: Output format to check
+
+        Returns:
+            True if format is supported
+        """
+        return output_format in [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported output formats.
+
+        Returns:
+            List of supported output formats
+        """
+        return [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[Any] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> str:
+        """Format CentralityViewModel data.
+
+        Args:
+            data: CentralityViewModel to format
+            output_format: Desired output format
+            config: Output configuration
+            ctx: Click context
+
+        Returns:
+            Formatted string
+        """
+        if output_format == OutputFormat.JSON:
+            return self._format_json(data)
+        elif output_format == OutputFormat.TEXT:
+            return self._format_text(data, config)
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def _format_json(self, data: Any) -> str:
+        """Format data as JSON.
+
+        Args:
+            data: CentralityViewModel to format
+
+        Returns:
+            JSON string
+        """
+        import json
+
+        # Convert ViewModel to dictionary
+        json_data = {
+            "files": [
+                {
+                    "file_path": file.file_path,
+                    "line_count": file.line_count,
+                    "centrality_score": file.centrality_score,
+                    "symbols": [
+                        {
+                            "name": symbol.name,
+                            "line_number": symbol.line_number,
+                            "symbol_type": symbol.symbol_type,
+                            "centrality_score": symbol.centrality_score,
+                            "importance_score": symbol.importance_score,
+                        }
+                        for symbol in file.symbols
+                    ],
+                }
+                for file in data.files
+            ],
+            "rankings": data.rankings,
+            "total_files": data.total_files,
+            "analysis_summary": data.analysis_summary,
+            "token_count": data.token_count,
+            "max_tokens": data.max_tokens,
+            "compression_level": data.compression_level,
+        }
+
+        return json.dumps(json_data, indent=2)
+
+    def _format_text(self, data: Any, config: Optional[Any] = None) -> str:
+        """Format data as text using template.
+
+        Args:
+            data: CentralityViewModel to format
+            config: Output configuration
+
+        Returns:
+            Formatted text string
+        """
+        try:
+            # Convert OutputConfig to TemplateConfig
+            template_config = self._create_template_config(config)
+            return self._template_engine.render_template(
+                "centrality_analysis", data, template_config
+            )
+        except Exception as e:
+            logger.error(f"Template rendering failed: {e}")
+            return self._format_fallback(data)
+
+    def _format_fallback(self, data: Any, template_config: Optional[Any] = None) -> str:
+        """Fallback formatting if template fails.
+
+        Args:
+            data: CentralityViewModel to format
+
+        Returns:
+            Simple formatted string
+        """
+        output = []
+        output.append("Centrality Analysis")
+        output.append("=" * 40)
+        output.append(f"Total Files: {data.total_files}")
+        output.append(f"Token Count: {data.token_count}/{data.max_tokens}")
+
+        if data.rankings:
+            output.append("\nRankings:")
+            for ranking in data.rankings[:5]:  # Show top 5
+                output.append(
+                    f"  {ranking['rank']}. {ranking['file_path']} ({ranking['centrality_score']:.2f})"
+                )
+
+        return "\n".join(output)
+
+
+class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
+    """Formatter for ImpactViewModel objects."""
+
+    def __init__(self, template_engine: Optional[Any] = None):
+        """Initialize the formatter.
+
+        Args:
+            template_engine: Template engine for rendering
+        """
+        super().__init__(template_engine=template_engine)
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if this formatter supports the given output format.
+
+        Args:
+            output_format: Output format to check
+
+        Returns:
+            True if format is supported
+        """
+        return output_format in [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported output formats.
+
+        Returns:
+            List of supported output formats
+        """
+        return [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[Any] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> str:
+        """Format ImpactViewModel data.
+
+        Args:
+            data: ImpactViewModel to format
+            output_format: Desired output format
+            config: Output configuration
+            ctx: Click context
+
+        Returns:
+            Formatted string
+        """
+        if output_format == OutputFormat.JSON:
+            return self._format_json(data)
+        elif output_format == OutputFormat.TEXT:
+            return self._format_text(data, config)
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def _format_json(self, data: Any) -> str:
+        """Format data as JSON.
+
+        Args:
+            data: ImpactViewModel to format
+
+        Returns:
+            JSON string
+        """
+        import json
+
+        # Convert ViewModel to dictionary
+        json_data = {
+            "changed_files": data.changed_files,
+            "affected_files": [
+                {
+                    "file_path": file.file_path,
+                    "line_count": file.line_count,
+                    "impact_risk": file.impact_risk,
+                    "symbols": [
+                        {
+                            "name": symbol.name,
+                            "line_number": symbol.line_number,
+                            "symbol_type": symbol.symbol_type,
+                            "impact_risk": symbol.impact_risk,
+                            "importance_score": symbol.importance_score,
+                        }
+                        for symbol in file.symbols
+                    ],
+                }
+                for file in data.affected_files
+            ],
+            "impact_scope": data.impact_scope,
+            "risk_assessment": data.risk_assessment,
+            "total_affected": data.total_affected,
+            "token_count": data.token_count,
+            "max_tokens": data.max_tokens,
+            "compression_level": data.compression_level,
+        }
+
+        return json.dumps(json_data, indent=2)
+
+    def _format_text(self, data: Any, config: Optional[Any] = None) -> str:
+        """Format data as text using template.
+
+        Args:
+            data: ImpactViewModel to format
+            config: Output configuration
+
+        Returns:
+            Formatted text string
+        """
+        try:
+            # Convert OutputConfig to TemplateConfig
+            template_config = self._create_template_config(config)
+            return self._template_engine.render_template(
+                "impact_analysis", data, template_config
+            )
+        except Exception as e:
+            logger.error(f"Template rendering failed: {e}")
+            return self._format_fallback(data)
+
+    def _format_fallback(self, data: Any, template_config: Optional[Any] = None) -> str:
+        """Fallback formatting if template fails.
+
+        Args:
+            data: ImpactViewModel to format
+
+        Returns:
+            Simple formatted string
+        """
+        output = []
+        output.append("Impact Analysis")
+        output.append("=" * 40)
+        output.append(f"Changed Files: {len(data.changed_files)}")
+        output.append(f"Affected Files: {data.total_affected}")
+        output.append(f"Token Count: {data.token_count}/{data.max_tokens}")
+
+        if data.changed_files:
+            output.append("\nChanged Files:")
+            for file in data.changed_files:
+                output.append(f"  - {file}")
+
+        if data.risk_assessment:
+            output.append(
+                f"\nRisk Level: {data.risk_assessment.get('overall_risk_level', 'unknown').upper()}"
+            )
+
+        return "\n".join(output)

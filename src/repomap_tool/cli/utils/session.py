@@ -26,7 +26,7 @@ def get_project_path_from_session(
         Project path from session or None if session not found
     """
     try:
-        from ...trees import SessionManager
+        from ...code_exploration import SessionManager
 
         # Initialize session manager with storage directory from environment
         session_storage_dir = os.environ.get("REPOMAP_SESSION_DIR")

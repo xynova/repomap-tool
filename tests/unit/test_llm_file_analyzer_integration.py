@@ -8,24 +8,25 @@ from pathlib import Path
 
 import pytest
 
-from src.repomap_tool.dependencies.llm_file_analyzer import (
+from src.repomap_tool.code_analysis.llm_file_analyzer import (
     LLMFileAnalyzer,
     AnalysisFormat,
 )
-from src.repomap_tool.dependencies.advanced_dependency_graph import (
+from src.repomap_tool.code_analysis.advanced_dependency_graph import (
     AdvancedDependencyGraph,
 )
-from src.repomap_tool.dependencies.models import DependencyNode, Import
-from src.repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
-from src.repomap_tool.dependencies.centrality_calculator import CentralityCalculator
-from src.repomap_tool.dependencies.centrality_analysis_engine import (
+from src.repomap_tool.code_analysis.models import DependencyNode, Import
+from src.repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
+from src.repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from src.repomap_tool.code_analysis.centrality_analysis_engine import (
     CentralityAnalysisEngine,
 )
-from src.repomap_tool.dependencies.impact_analysis_engine import ImpactAnalysisEngine
+from src.repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
+from src.repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
 from src.repomap_tool.llm.token_optimizer import TokenOptimizer
 from src.repomap_tool.llm.context_selector import ContextSelector
 from src.repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
-from src.repomap_tool.dependencies.path_resolver import PathResolver
+from src.repomap_tool.code_analysis.path_resolver import PathResolver
 from src.repomap_tool.utils.path_normalizer import PathNormalizer
 
 
@@ -34,7 +35,7 @@ class TestLLMFileAnalyzerIntegration:
 
     def _create_llm_analyzer(self, dependency_graph, project_root):
         """Helper method to create LLM analyzer with all required dependencies."""
-        from src.repomap_tool.dependencies.llm_analyzer_config import (
+        from src.repomap_tool.code_analysis.llm_analyzer_config import (
             LLMAnalyzerConfig,
             LLMAnalyzerDependencies,
         )
@@ -76,6 +77,13 @@ class TestLLMFileAnalyzerIntegration:
             dependency_graph=dependency_graph,
             path_normalizer=path_normalizer,
         )
+        # Create impact analyzer using DI container
+        from repomap_tool.core.container import create_container
+        from repomap_tool.models import RepoMapConfig
+
+        config = RepoMapConfig(project_root=project_root)
+        container = create_container(config)
+        impact_analyzer = container.impact_analyzer()
         impact_engine = ImpactAnalysisEngine(ast_analyzer)
         token_optimizer = TokenOptimizer()
         context_selector = ContextSelector(dependency_graph)
@@ -91,6 +99,7 @@ class TestLLMFileAnalyzerIntegration:
             context_selector=context_selector,
             hierarchical_formatter=hierarchical_formatter,
             path_resolver=path_resolver,
+            impact_analyzer=impact_analyzer,
             impact_engine=impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,
@@ -109,6 +118,7 @@ class TestLLMFileAnalyzerIntegration:
         mock_token_optimizer = Mock()
         mock_context_selector = Mock()
         mock_hierarchical_formatter = Mock()
+        mock_impact_analyzer = Mock()
         mock_impact_engine = Mock()
 
         llm_dependencies = LLMAnalyzerDependencies(
@@ -119,6 +129,7 @@ class TestLLMFileAnalyzerIntegration:
             context_selector=mock_context_selector,
             hierarchical_formatter=mock_hierarchical_formatter,
             path_resolver=PathResolver(project_root),
+            impact_analyzer=mock_impact_analyzer,
             impact_engine=mock_impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,

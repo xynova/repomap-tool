@@ -12,42 +12,49 @@ from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 
 if TYPE_CHECKING:
-    from repomap_tool.dependencies.advanced_dependency_graph import (
+    from repomap_tool.code_analysis.advanced_dependency_graph import (
         AdvancedDependencyGraph,
     )
-    from repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
-    from repomap_tool.dependencies.centrality_analysis_engine import (
+    from repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
+    from repomap_tool.code_analysis.centrality_analysis_engine import (
         CentralityAnalysisEngine,
     )
-    from repomap_tool.dependencies.centrality_calculator import CentralityCalculator
-    from repomap_tool.dependencies.impact_analysis_engine import ImpactAnalysisEngine
-    from repomap_tool.dependencies.impact_analyzer import ImpactAnalyzer
-    from repomap_tool.dependencies.llm_file_analyzer import LLMFileAnalyzer
-    from repomap_tool.dependencies.path_resolver import PathResolver
-    from repomap_tool.dependencies.import_analyzer import ImportAnalyzer
-    from repomap_tool.dependencies.call_graph_builder import CallGraphBuilder
-    from repomap_tool.dependencies.js_ts_analyzer import (
+    from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+    from repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
+    from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
+    from repomap_tool.code_analysis.llm_file_analyzer import LLMFileAnalyzer
+    from repomap_tool.code_analysis.path_resolver import PathResolver
+    from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+    from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
+    from repomap_tool.code_analysis.js_ts_analyzer import (
         JavaScriptTypeScriptAnalyzer,
         JSAnalysisContext,
     )
-    from repomap_tool.dependencies.import_utils import ImportUtils
-    from repomap_tool.dependencies.ast_visitors import AnalysisContext
+    from repomap_tool.code_analysis.import_utils import ImportUtils
+    from repomap_tool.code_analysis.ast_visitors import AnalysisContext
     from repomap_tool.llm.context_selector import ContextSelector
     from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
     from repomap_tool.llm.token_optimizer import TokenOptimizer
     from repomap_tool.utils.path_normalizer import PathNormalizer
-    from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-    from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-    from repomap_tool.matchers.hybrid_matcher import HybridMatcher
+    from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+    from repomap_tool.code_search.adaptive_semantic_matcher import (
+        AdaptiveSemanticMatcher,
+    )
+    from repomap_tool.code_search.hybrid_matcher import HybridMatcher
     from repomap_tool.core.cache_manager import CacheManager
     from repomap_tool.core.parallel_processor import ParallelTagExtractor
-    from repomap_tool.dependencies.llm_analyzer_config import (
+    from repomap_tool.code_analysis.llm_analyzer_config import (
         LLMAnalyzerConfig,
         LLMAnalyzerDependencies,
     )
-    from repomap_tool.trees.session_manager import SessionManager, SessionStore
-    from repomap_tool.trees.tree_mapper import TreeMapper
-    from repomap_tool.trees.tree_clusters import TreeClusterer
+    from repomap_tool.code_exploration.session_manager import (
+        SessionManager,
+        SessionStore,
+    )
+    from repomap_tool.code_exploration.tree_mapper import TreeMapper
+    from repomap_tool.code_exploration.tree_clusters import TreeClusterer
+    from repomap_tool.cli.controllers.centrality_controller import CentralityController
+    from repomap_tool.cli.controllers.impact_controller import ImpactController
     from rich.console import Console
 
 # Legacy factory functions removed - using DI container instead
@@ -66,7 +73,7 @@ class Container(containers.DeclarativeContainer):
     dependency_graph: "providers.Singleton[AdvancedDependencyGraph]" = cast(
         "providers.Singleton[AdvancedDependencyGraph]",
         providers.Singleton(
-            "repomap_tool.dependencies.advanced_dependency_graph.AdvancedDependencyGraph",
+            "repomap_tool.code_analysis.advanced_dependency_graph.AdvancedDependencyGraph",
         ),
     )
 
@@ -83,7 +90,7 @@ class Container(containers.DeclarativeContainer):
     ast_analyzer: "providers.Singleton[ASTFileAnalyzer]" = cast(
         "providers.Singleton[ASTFileAnalyzer]",
         providers.Singleton(
-            "repomap_tool.dependencies.ast_file_analyzer.ASTFileAnalyzer",
+            "repomap_tool.code_analysis.ast_file_analyzer.ASTFileAnalyzer",
             project_root=config.project_root,
         ),
     )
@@ -92,7 +99,7 @@ class Container(containers.DeclarativeContainer):
     centrality_calculator: "providers.Singleton[CentralityCalculator]" = cast(
         "providers.Singleton[CentralityCalculator]",
         providers.Singleton(
-            "repomap_tool.dependencies.centrality_calculator.CentralityCalculator",
+            "repomap_tool.code_analysis.centrality_calculator.CentralityCalculator",
             dependency_graph=dependency_graph,
         ),
     )
@@ -100,7 +107,7 @@ class Container(containers.DeclarativeContainer):
     centrality_analysis_engine: "providers.Factory[CentralityAnalysisEngine]" = cast(
         "providers.Factory[CentralityAnalysisEngine]",
         providers.Factory(
-            "repomap_tool.dependencies.centrality_analysis_engine.CentralityAnalysisEngine",
+            "repomap_tool.code_analysis.centrality_analysis_engine.CentralityAnalysisEngine",
             ast_analyzer=ast_analyzer,
             centrality_calculator=centrality_calculator,
             dependency_graph=dependency_graph,
@@ -112,7 +119,7 @@ class Container(containers.DeclarativeContainer):
     impact_analyzer: "providers.Singleton[ImpactAnalyzer]" = cast(
         "providers.Singleton[ImpactAnalyzer]",
         providers.Singleton(
-            "repomap_tool.dependencies.impact_analyzer.ImpactAnalyzer",
+            "repomap_tool.code_analysis.impact_analyzer.ImpactAnalyzer",
             dependency_graph=dependency_graph,
         ),
     )
@@ -120,7 +127,7 @@ class Container(containers.DeclarativeContainer):
     impact_analysis_engine: "providers.Factory[ImpactAnalysisEngine]" = cast(
         "providers.Factory[ImpactAnalysisEngine]",
         providers.Factory(
-            "repomap_tool.dependencies.impact_analysis_engine.ImpactAnalysisEngine",
+            "repomap_tool.code_analysis.impact_analysis_engine.ImpactAnalysisEngine",
             ast_analyzer=ast_analyzer,
             dependency_graph=dependency_graph,
             path_normalizer=path_normalizer,
@@ -153,7 +160,7 @@ class Container(containers.DeclarativeContainer):
     path_resolver: "providers.Singleton[PathResolver]" = cast(
         "providers.Singleton[PathResolver]",
         providers.Singleton(
-            "repomap_tool.dependencies.path_resolver.PathResolver",
+            "repomap_tool.code_analysis.path_resolver.PathResolver",
             project_root=config.project_root,
         ),
     )
@@ -162,7 +169,7 @@ class Container(containers.DeclarativeContainer):
     import_analyzer: "providers.Singleton[ImportAnalyzer]" = cast(
         "providers.Singleton[ImportAnalyzer]",
         providers.Singleton(
-            "repomap_tool.dependencies.import_analyzer.ImportAnalyzer",
+            "repomap_tool.code_analysis.import_analyzer.ImportAnalyzer",
             project_root=config.project_root,
         ),
     )
@@ -171,7 +178,7 @@ class Container(containers.DeclarativeContainer):
     session_manager: "providers.Singleton[SessionManager]" = cast(
         "providers.Singleton[SessionManager]",
         providers.Singleton(
-            "repomap_tool.trees.session_manager.SessionManager",
+            "repomap_tool.code_exploration.session_manager.SessionManager",
         ),
     )
 
@@ -179,7 +186,7 @@ class Container(containers.DeclarativeContainer):
     llm_analyzer_config: "providers.Singleton[LLMAnalyzerConfig]" = cast(
         "providers.Singleton[LLMAnalyzerConfig]",
         providers.Singleton(
-            "repomap_tool.dependencies.llm_analyzer_config.LLMAnalyzerConfig",
+            "repomap_tool.code_analysis.llm_analyzer_config.LLMAnalyzerConfig",
             max_tokens=4000,  # Default value
             enable_impact_analysis=config.dependencies.enable_impact_analysis,
             enable_centrality_analysis=True,
@@ -191,7 +198,7 @@ class Container(containers.DeclarativeContainer):
     llm_analyzer_dependencies: "providers.Singleton[LLMAnalyzerDependencies]" = cast(
         "providers.Singleton[LLMAnalyzerDependencies]",
         providers.Singleton(
-            "repomap_tool.dependencies.llm_analyzer_config.LLMAnalyzerDependencies",
+            "repomap_tool.code_analysis.llm_analyzer_config.LLMAnalyzerDependencies",
             dependency_graph=dependency_graph,
             project_root=config.project_root,
             ast_analyzer=ast_analyzer,
@@ -199,6 +206,7 @@ class Container(containers.DeclarativeContainer):
             context_selector=context_selector,
             hierarchical_formatter=hierarchical_formatter,
             path_resolver=path_resolver,
+            impact_analyzer=impact_analyzer,
             impact_engine=impact_analysis_engine,
             centrality_engine=centrality_analysis_engine,
             centrality_calculator=centrality_calculator,
@@ -209,7 +217,7 @@ class Container(containers.DeclarativeContainer):
     llm_file_analyzer: "providers.Factory[LLMFileAnalyzer]" = cast(
         "providers.Factory[LLMFileAnalyzer]",
         providers.Factory(
-            "repomap_tool.dependencies.llm_file_analyzer.LLMFileAnalyzer",
+            "repomap_tool.code_analysis.llm_file_analyzer.LLMFileAnalyzer",
             config=llm_analyzer_config,
             dependencies=llm_analyzer_dependencies,
         ),
@@ -243,7 +251,7 @@ class Container(containers.DeclarativeContainer):
     fuzzy_matcher: "providers.Factory[FuzzyMatcher]" = cast(
         "providers.Factory[FuzzyMatcher]",
         providers.Factory(
-            "repomap_tool.matchers.fuzzy_matcher.FuzzyMatcher",
+            "repomap_tool.code_search.fuzzy_matcher.FuzzyMatcher",
             threshold=config.fuzzy_match.threshold,
             strategies=config.fuzzy_match.strategies,
             cache_results=config.fuzzy_match.cache_results,
@@ -254,7 +262,7 @@ class Container(containers.DeclarativeContainer):
     adaptive_semantic_matcher: "providers.Factory[AdaptiveSemanticMatcher]" = cast(
         "providers.Factory[AdaptiveSemanticMatcher]",
         providers.Factory(
-            "repomap_tool.matchers.adaptive_semantic_matcher.AdaptiveSemanticMatcher",
+            "repomap_tool.code_search.adaptive_semantic_matcher.AdaptiveSemanticMatcher",
             verbose=config.verbose,
         ),
     )
@@ -262,7 +270,7 @@ class Container(containers.DeclarativeContainer):
     hybrid_matcher: "providers.Factory[HybridMatcher]" = cast(
         "providers.Factory[HybridMatcher]",
         providers.Factory(
-            "repomap_tool.matchers.hybrid_matcher.HybridMatcher",
+            "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
             fuzzy_matcher=fuzzy_matcher,
             semantic_threshold=config.semantic_match.threshold,
             verbose=config.verbose,
@@ -273,21 +281,21 @@ class Container(containers.DeclarativeContainer):
     session_store: "providers.Singleton[SessionStore]" = cast(
         "providers.Singleton[SessionStore]",
         providers.Singleton(
-            "repomap_tool.trees.session_manager.SessionStore",
+            "repomap_tool.code_exploration.session_manager.SessionStore",
         ),
     )
 
     tree_mapper: "providers.Factory[TreeMapper]" = cast(
         "providers.Factory[TreeMapper]",
         providers.Factory(
-            "repomap_tool.trees.tree_mapper.TreeMapper",
+            "repomap_tool.code_exploration.tree_mapper.TreeMapper",
         ),
     )
 
     tree_clusterer: "providers.Factory[TreeClusterer]" = cast(
         "providers.Factory[TreeClusterer]",
         providers.Factory(
-            "repomap_tool.trees.tree_clusters.TreeClusterer",
+            "repomap_tool.code_exploration.tree_clusters.TreeClusterer",
         ),
     )
 
@@ -295,14 +303,14 @@ class Container(containers.DeclarativeContainer):
     call_analyzer: "providers.Singleton[CallGraphBuilder]" = cast(
         "providers.Singleton[CallGraphBuilder]",
         providers.Singleton(
-            "repomap_tool.dependencies.call_graph_builder.CallGraphBuilder",
+            "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
         ),
     )
 
     js_ts_analyzer: "providers.Factory[JavaScriptTypeScriptAnalyzer]" = cast(
         "providers.Factory[JavaScriptTypeScriptAnalyzer]",
         providers.Factory(
-            "repomap_tool.dependencies.js_ts_analyzer.JavaScriptTypeScriptAnalyzer",
+            "repomap_tool.code_analysis.js_ts_analyzer.JavaScriptTypeScriptAnalyzer",
             project_root=config.project_root,
         ),
     )
@@ -310,21 +318,46 @@ class Container(containers.DeclarativeContainer):
     js_analysis_context: "providers.Factory[JSAnalysisContext]" = cast(
         "providers.Factory[JSAnalysisContext]",
         providers.Factory(
-            "repomap_tool.dependencies.js_ts_analyzer.JSAnalysisContext",
+            "repomap_tool.code_analysis.js_ts_analyzer.JSAnalysisContext",
         ),
     )
 
     import_utils: "providers.Singleton[ImportUtils]" = cast(
         "providers.Singleton[ImportUtils]",
         providers.Singleton(
-            "repomap_tool.dependencies.import_utils.ImportUtils",
+            "repomap_tool.code_analysis.import_utils.ImportUtils",
         ),
     )
 
     analysis_context: "providers.Factory[AnalysisContext]" = cast(
         "providers.Factory[AnalysisContext]",
         providers.Factory(
-            "repomap_tool.dependencies.ast_visitors.AnalysisContext",
+            "repomap_tool.code_analysis.ast_visitors.AnalysisContext",
+        ),
+    )
+
+    # Controllers
+    centrality_controller: "providers.Factory[CentralityController]" = cast(
+        "providers.Factory[CentralityController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.centrality_controller.CentralityController",
+            code_analysis_service=llm_file_analyzer,
+            code_exploration_service=session_manager,
+            code_search_service=fuzzy_matcher,
+            token_optimizer=token_optimizer,
+            context_selector=context_selector,
+        ),
+    )
+
+    impact_controller: "providers.Factory[ImpactController]" = cast(
+        "providers.Factory[ImpactController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.impact_controller.ImpactController",
+            code_analysis_service=llm_file_analyzer,
+            code_exploration_service=session_manager,
+            code_search_service=fuzzy_matcher,
+            token_optimizer=token_optimizer,
+            context_selector=context_selector,
         ),
     )
 

@@ -83,6 +83,7 @@ class LLMAnalyzerDependencies(BaseModel):
     context_selector: Any = Field(..., description="Context selector")
     hierarchical_formatter: Any = Field(..., description="Hierarchical formatter")
     path_resolver: Any = Field(..., description="Path resolver")
+    impact_analyzer: Any = Field(..., description="Impact analyzer")
     impact_engine: Any = Field(..., description="Impact analysis engine")
     centrality_engine: Any = Field(..., description="Centrality analysis engine")
     centrality_calculator: Any = Field(..., description="Centrality calculator")
@@ -94,6 +95,7 @@ class LLMAnalyzerDependencies(BaseModel):
         "context_selector",
         "hierarchical_formatter",
         "path_resolver",
+        "impact_analyzer",
         "impact_engine",
         "centrality_engine",
         "centrality_calculator",

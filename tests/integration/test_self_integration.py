@@ -33,9 +33,9 @@ from repomap_tool.models import (
     SearchResponse,
     ProjectInfo,
 )
-from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
-from repomap_tool.matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-from repomap_tool.matchers.hybrid_matcher import HybridMatcher
+from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_search.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+from repomap_tool.code_search.hybrid_matcher import HybridMatcher
 
 
 class TestSelfIntegration:

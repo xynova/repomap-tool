@@ -49,9 +49,13 @@ class TestCLICore:
 
     def test_analyze_basic_usage(self, cli_runner, temp_project):
         """Test basic analyze command usage."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
+            mock_factory = mock_get_factory.return_value
+            mock_repo_map = mock_factory.create_repomap_service.return_value
+            mock_instance = mock_repo_map
+
+            # Create a mock ProjectInfo that returns proper JSON
+            mock_project_info = ProjectInfo(
                 project_root=temp_project,
                 total_files=1,
                 total_identifiers=1,
@@ -61,11 +65,14 @@ class TestCLICore:
                 last_updated=datetime.now(),
             )
 
+            # Mock the analyze_project method to return the ProjectInfo
+            mock_instance.analyze_project.return_value = mock_project_info
+
             result = cli_runner.invoke(
                 cli, ["index", "create", temp_project, "--fuzzy"]
             )
             assert result.exit_code == 0
-            assert "project_root" in result.output  # Check for JSON output
+            assert "LLM-Optimized Project" in result.output  # Check for TEXT output
 
     def test_analyze_with_config_file(self, cli_runner, temp_project):
         """Test analyze command with config file."""
@@ -83,10 +90,14 @@ class TestCLICore:
 
         try:
             with patch(
-                "repomap_tool.cli.commands.search.RepoMapService"
-            ) as mock_repo_map:
-                mock_instance = mock_repo_map.return_value
-                mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
+                "repomap_tool.cli.services.get_service_factory"
+            ) as mock_get_factory:
+                mock_factory = mock_get_factory.return_value
+                mock_repo_map = mock_factory.create_repomap_service.return_value
+                mock_instance = mock_repo_map
+
+                # Create a mock ProjectInfo that returns proper JSON
+                mock_project_info = ProjectInfo(
                     project_root=temp_project,
                     total_files=1,
                     total_identifiers=1,
@@ -96,20 +107,25 @@ class TestCLICore:
                     last_updated=datetime.now(),
                 )
 
+                # Mock the analyze_project method to return the ProjectInfo
+                mock_instance.analyze_project.return_value = mock_project_info
+
                 # CLI still requires project_path even with config file
                 result = cli_runner.invoke(
                     cli, ["index", "create", temp_project, "--config", config_file]
                 )
                 assert result.exit_code == 0
-                assert "project_root" in result.output  # Check for JSON output
+                assert "LLM-Optimized Project" in result.output  # Check for TEXT output
         finally:
             os.unlink(config_file)
 
     def test_analyze_with_options(self, cli_runner, temp_project):
         """Test analyze command with various options."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
+            mock_factory = mock_get_factory.return_value
+            mock_repo_map = mock_factory.create_repomap_service.return_value
+            mock_instance = mock_repo_map
+            mock_instance.analyze_project.return_value = ProjectInfo(
                 project_root=temp_project,
                 total_files=1,
                 total_identifiers=1,
@@ -133,14 +149,14 @@ class TestCLICore:
             )
             assert result.exit_code == 0
 
-    def test_search_command_exists(self, cli_runner):
-        """Test that search command exists and shows help."""
+    def test_inspect_find_command_exists(self, cli_runner):
+        """Test that inspect find command exists and shows help."""
         result = cli_runner.invoke(cli, ["inspect", "find", "--help"])
         assert result.exit_code == 0
         assert "inspect" in result.output.lower()
 
-    def test_search_basic_usage(self, cli_runner, temp_project):
-        """Test basic search command usage."""
+    def test_inspect_find_basic_usage(self, cli_runner, temp_project):
+        """Test basic inspect find command usage."""
         with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_factory = mock_get_factory.return_value
             mock_repo_map = mock_factory.create_repomap_service.return_value
@@ -162,7 +178,7 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
+            # CLI signature: inspect find QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
@@ -180,11 +196,12 @@ class TestCLICore:
             assert result.exit_code == 0
             assert "test_function" in result.output
 
-    def test_search_with_options(self, cli_runner, temp_project):
-        """Test search command with various options."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.search_identifiers.return_value = SearchResponse(
+    def test_inspect_find_with_options(self, cli_runner, temp_project):
+        """Test inspect find command with various options."""
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
+            mock_factory = mock_get_factory.return_value
+            mock_repo_map = mock_factory.create_repomap_service.return_value
+            mock_repo_map.search_identifiers.return_value = SearchResponse(
                 query="test",
                 match_type="fuzzy",
                 threshold=0.7,
@@ -193,7 +210,7 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
+            # CLI signature: inspect find QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
@@ -364,9 +381,11 @@ class TestCLICore:
 
     def test_cli_verbose_output(self, cli_runner, temp_project):
         """Test CLI verbose output."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
+            mock_factory = mock_get_factory.return_value
+            mock_repo_map = mock_factory.create_repomap_service.return_value
+            mock_instance = mock_repo_map
+            mock_instance.analyze_project.return_value = ProjectInfo(
                 project_root=temp_project,
                 total_files=1,
                 total_identifiers=1,
@@ -383,9 +402,11 @@ class TestCLICore:
 
     def test_cli_configuration_integration(self, cli_runner, temp_project):
         """Test CLI configuration integration."""
-        with patch("repomap_tool.cli.commands.search.RepoMapService") as mock_repo_map:
-            mock_instance = mock_repo_map.return_value
-            mock_instance.analyze_project_with_progress.return_value = ProjectInfo(
+        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
+            mock_factory = mock_get_factory.return_value
+            mock_repo_map = mock_factory.create_repomap_service.return_value
+            mock_instance = mock_repo_map
+            mock_instance.analyze_project.return_value = ProjectInfo(
                 project_root=temp_project,
                 total_files=1,
                 total_identifiers=1,

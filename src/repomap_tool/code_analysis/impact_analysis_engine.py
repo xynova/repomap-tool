@@ -81,14 +81,41 @@ class ImpactAnalysisEngine:
         # Suggested tests
         suggested_tests = suggest_test_files(file_path)
 
+        # Calculate impact score based on risk assessment
+        impact_score = risk_assessment.get("overall_risk", 0.5)
+
+        # Calculate affected files count
+        affected_files = list(
+            set([dep["file"] for dep in direct_dependencies + reverse_dependencies])
+        )
+
+        # Calculate dependency chain length
+        dependency_chain_length = len(direct_dependencies) + len(reverse_dependencies)
+
+        # Determine risk level
+        if impact_score >= 0.7:
+            risk_level = "high"
+        elif impact_score >= 0.3:
+            risk_level = "medium"
+        else:
+            risk_level = "low"
+
+        # Extract impact categories from risk assessment
+        impact_categories = risk_assessment.get("risk_factors", [])
+
         return FileImpactAnalysis(
             file_path=file_path,
+            impact_score=impact_score,
+            affected_files=affected_files,
+            dependency_chain_length=dependency_chain_length,
+            risk_level=risk_level,
+            impact_categories=impact_categories,
+            suggested_tests=suggested_tests,
             direct_dependencies=direct_dependencies,
             reverse_dependencies=reverse_dependencies,
             function_call_analysis=function_call_analysis,
             structural_impact=structural_impact,
             risk_assessment=risk_assessment,
-            suggested_tests=suggested_tests,
         )
 
     def _analyze_direct_dependencies(self, imports: List[Any]) -> List[Dict[str, Any]]:

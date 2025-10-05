@@ -1,7 +1,7 @@
 """
-Integration tests for the enhanced analyze commands.
+Integration tests for the inspect commands.
 
-This module tests the new LLM-optimized analyze impact and centrality commands
+This module tests the LLM-optimized inspect impact and centrality commands
 with real project structures to ensure they work correctly end-to-end.
 """
 
@@ -13,14 +13,14 @@ from click.testing import CliRunner
 from unittest.mock import patch, MagicMock
 
 from repomap_tool.cli import cli
-from repomap_tool.dependencies import (
+from repomap_tool.code_analysis import (
     ASTFileAnalyzer,
     AnalysisFormat,
 )
 
 
-class TestAnalyzeCommandsIntegration:
-    """Integration tests for analyze commands with real project structures."""
+class TestInspectCommandsIntegration:
+    """Integration tests for inspect commands with real project structures."""
 
     def setup_method(self):
         """Set up test environment with a real project structure."""
@@ -298,8 +298,8 @@ class TestUserService:
 """
         )
 
-    def test_analyze_impact_single_file(self):
-        """Test analyze impact command with a single file."""
+    def test_inspect_impact_single_file(self):
+        """Test inspect impact command with a single file."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -322,8 +322,8 @@ class TestUserService:
         assert "Target files" in result.output
         assert "Impact inspection completed" in result.output
 
-    def test_analyze_impact_multiple_files(self):
-        """Test analyze impact command with multiple files."""
+    def test_inspect_impact_multiple_files(self):
+        """Test inspect impact command with multiple files."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -349,8 +349,8 @@ class TestUserService:
         assert "Target files" in result.output
         assert "Impact inspection completed" in result.output
 
-    def test_analyze_centrality_single_file(self):
-        """Test analyze centrality command with a single file."""
+    def test_inspect_centrality_single_file(self):
+        """Test inspect centrality command with a single file."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -373,8 +373,8 @@ class TestUserService:
         assert "Files" in result.output
         assert "Centrality inspection completed" in result.output
 
-    def test_analyze_centrality_multiple_files(self):
-        """Test analyze centrality command with multiple files."""
+    def test_inspect_centrality_multiple_files(self):
+        """Test inspect centrality command with multiple files."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -400,8 +400,8 @@ class TestUserService:
         assert "Files" in result.output
         assert "Centrality inspection completed" in result.output
 
-    def test_analyze_impact_json_output(self):
-        """Test analyze impact command with JSON output."""
+    def test_inspect_impact_json_output(self):
+        """Test inspect impact command with JSON output."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -420,13 +420,13 @@ class TestUserService:
         )
 
         assert result.exit_code == 0
-        # Analyze commands are placeholder implementations that show status messages
+        # Inspect commands show status messages and perform analysis
         assert "Inspecting impact for project" in result.output
         assert "Impact inspection completed" in result.output
         assert "Output format: json" in result.output
 
-    def test_analyze_centrality_json_output(self):
-        """Test analyze centrality command with JSON output."""
+    def test_inspect_centrality_json_output(self):
+        """Test inspect centrality command with JSON output."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -445,13 +445,13 @@ class TestUserService:
         )
 
         assert result.exit_code == 0
-        # Analyze commands are placeholder implementations that show status messages
+        # Inspect commands show status messages and perform analysis
         assert "Inspecting centrality for project" in result.output
         assert "Centrality inspection completed" in result.output
         assert "Output format: json" in result.output
 
-    def test_analyze_impact_with_token_budget(self):
-        """Test analyze impact command with custom token budget."""
+    def test_inspect_impact_with_token_budget(self):
+        """Test inspect impact command with custom token budget."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -475,8 +475,8 @@ class TestUserService:
         assert "Inspecting impact for project" in result.output
         assert "Impact inspection completed" in result.output
 
-    def test_analyze_centrality_with_token_budget(self):
-        """Test analyze centrality command with custom token budget."""
+    def test_inspect_centrality_with_token_budget(self):
+        """Test inspect centrality command with custom token budget."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -500,8 +500,8 @@ class TestUserService:
         assert "Inspecting centrality for project" in result.output
         assert "Centrality inspection completed" in result.output
 
-    def test_analyze_impact_no_files_specified(self):
-        """Test analyze impact command without specifying files."""
+    def test_inspect_impact_no_files_specified(self):
+        """Test inspect impact command without specifying files."""
         result = self.runner.invoke(
             cli,
             ["inspect", "impact", str(self.project_root), "--output", "text"],
@@ -510,8 +510,8 @@ class TestUserService:
         assert result.exit_code == 2
         assert "Missing option '--files' / '-f'" in result.output
 
-    def test_analyze_centrality_no_files_fallback(self):
-        """Test analyze centrality command without files falls back to top files."""
+    def test_inspect_centrality_no_files_fallback(self):
+        """Test inspect centrality command without files falls back to top files."""
         result = self.runner.invoke(
             cli, ["inspect", "centrality", str(self.project_root), "--output", "text"]
         )
@@ -520,8 +520,8 @@ class TestUserService:
         assert "Inspecting centrality for project" in result.output
         assert "Centrality inspection completed" in result.output
 
-    def test_analyze_impact_table_output(self):
-        """Test analyze impact command with table output."""
+    def test_inspect_impact_table_output(self):
+        """Test inspect impact command with table output."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -543,8 +543,8 @@ class TestUserService:
         assert "Inspecting impact for project" in result.output
         assert "Impact inspection completed" in result.output
 
-    def test_analyze_centrality_table_output(self):
-        """Test analyze centrality command with table output."""
+    def test_inspect_centrality_table_output(self):
+        """Test inspect centrality command with table output."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -566,8 +566,8 @@ class TestUserService:
         assert "Inspecting centrality for project" in result.output
         assert "Centrality inspection completed" in result.output
 
-    def test_analyze_impact_verbose_output(self):
-        """Test analyze impact command with verbose output."""
+    def test_inspect_impact_verbose_output(self):
+        """Test inspect impact command with verbose output."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -590,8 +590,8 @@ class TestUserService:
         assert "Inspecting impact for project" in result.output
         assert "Impact inspection completed" in result.output
 
-    def test_analyze_centrality_verbose_output(self):
-        """Test analyze centrality command with verbose output."""
+    def test_inspect_centrality_verbose_output(self):
+        """Test inspect centrality command with verbose output."""
         user_service_path = str(
             self.project_root / "src" / "test_project" / "user_service.py"
         )
@@ -822,20 +822,22 @@ class TestLLMFileAnalyzerIntegration:
 
     def _create_llm_analyzer(self, dependency_graph, project_root):
         """Helper method to create LLM analyzer with all required dependencies."""
-        from repomap_tool.dependencies.ast_file_analyzer import ASTFileAnalyzer
-        from repomap_tool.dependencies.centrality_calculator import CentralityCalculator
-        from repomap_tool.dependencies.centrality_analysis_engine import (
+        from repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
+        from repomap_tool.code_analysis.centrality_calculator import (
+            CentralityCalculator,
+        )
+        from repomap_tool.code_analysis.centrality_analysis_engine import (
             CentralityAnalysisEngine,
         )
-        from repomap_tool.dependencies.impact_analysis_engine import (
+        from repomap_tool.code_analysis.impact_analysis_engine import (
             ImpactAnalysisEngine,
         )
         from repomap_tool.llm.token_optimizer import TokenOptimizer
         from repomap_tool.llm.context_selector import ContextSelector
         from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
-        from repomap_tool.dependencies.path_resolver import PathResolver
+        from repomap_tool.code_analysis.path_resolver import PathResolver
         from repomap_tool.utils.path_normalizer import PathNormalizer
-        from repomap_tool.dependencies.llm_file_analyzer import LLMFileAnalyzer
+        from repomap_tool.code_analysis.llm_file_analyzer import LLMFileAnalyzer
 
         # Create all required dependencies
         ast_analyzer = ASTFileAnalyzer(project_root)
@@ -877,10 +879,18 @@ class TestLLMFileAnalyzerIntegration:
         path_resolver = PathResolver(project_root)
 
         # Create LLM analyzer with all dependencies using new constructor pattern
-        from repomap_tool.dependencies.llm_analyzer_config import (
+        from repomap_tool.code_analysis.llm_analyzer_config import (
             LLMAnalyzerConfig,
             LLMAnalyzerDependencies,
         )
+
+        # Create impact analyzer using DI container
+        from repomap_tool.core.container import create_container
+        from repomap_tool.models import RepoMapConfig
+
+        config = RepoMapConfig(project_root=project_root)
+        container = create_container(config)
+        impact_analyzer = container.impact_analyzer()
 
         config = LLMAnalyzerConfig()
         dependencies = LLMAnalyzerDependencies(
@@ -891,6 +901,7 @@ class TestLLMFileAnalyzerIntegration:
             context_selector=context_selector,
             hierarchical_formatter=hierarchical_formatter,
             path_resolver=path_resolver,
+            impact_analyzer=impact_analyzer,
             impact_engine=impact_engine,
             centrality_engine=centrality_engine,
             centrality_calculator=centrality_calculator,
@@ -989,7 +1000,7 @@ class User:
 
         # Create analyzer with all dependencies
         analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.LLM_OPTIMIZED)
+        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.TEXT)
 
         assert "Impact Analysis: main.py" in result
         assert "DIRECT DEPENDENCIES" in result
@@ -1016,9 +1027,7 @@ class User:
 
         # Create analyzer with all dependencies
         analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        result = analyzer.analyze_file_centrality(
-            [main_file], AnalysisFormat.LLM_OPTIMIZED
-        )
+        result = analyzer.analyze_file_centrality([main_file], AnalysisFormat.TEXT)
 
         assert "Centrality Analysis: main.py" in result
         assert "IMPORTANCE SCORE" in result
@@ -1079,7 +1088,7 @@ class User:
         analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
         # Set max_tokens on the analyzer
         analyzer.max_tokens = 500
-        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.LLM_OPTIMIZED)
+        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.TEXT)
 
         # Result should be optimized for token budget
         assert "Impact Analysis: main.py" in result
@@ -1108,7 +1117,7 @@ class User:
         # Create analyzer with all dependencies
         analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
         result = analyzer.analyze_file_impact(
-            [main_file, utils_file], AnalysisFormat.LLM_OPTIMIZED
+            [main_file, utils_file], AnalysisFormat.TEXT
         )
 
         assert "Impact Analysis: main.py, utils.py" in result

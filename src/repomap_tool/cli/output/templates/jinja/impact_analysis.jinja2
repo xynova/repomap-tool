@@ -1,0 +1,87 @@
+{# Impact Analysis Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}⚠️ Impact Analysis{% else %}Impact Analysis{% endif %}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Changed Files: {{ data.changed_files | length }}
+{% if hierarchical %}├──{% else %}•{% endif %} Affected Files: {{ data.total_affected }}
+{% if hierarchical %}├──{% else %}•{% endif %} Token Count: {{ data.token_count }}/{{ data.max_tokens }}
+{% if hierarchical %}└──{% else %}•{% endif %} Compression: {{ data.compression_level }}
+
+{# Changed Files section #}
+{% if data.changed_files %}
+{% if emoji %}📝{% endif %} CHANGED FILES:
+{% for file in data.changed_files %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ file }}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No changed files specified
+{% endif %}
+
+{# Impact Scope section #}
+{% if data.impact_scope %}
+{% if emoji %}🎯{% endif %} IMPACT SCOPE:
+{% if hierarchical %}├──{% else %}•{% endif %} Total Affected: {{ data.impact_scope.total_affected_files }}
+{% if hierarchical %}├──{% else %}•{% endif %} Related Symbols: {{ data.impact_scope.total_related_symbols }}
+{% if hierarchical %}├──{% else %}•{% endif %} Impact Depth: {{ data.impact_scope.impact_depth }}
+{% if hierarchical %}└──{% else %}•{% endif %} Scope Categories:
+{% for category, count in data.impact_scope.scope_categories.items() %}
+{% if hierarchical %}    ├──{% else %}  •{% endif %} {{ category.replace('_', ' ').title() }}: {{ count }}
+{% endfor %}
+{% endif %}
+
+{# Risk Assessment section #}
+{% if data.risk_assessment %}
+{% if emoji %}🚨{% endif %} RISK ASSESSMENT:
+{% if hierarchical %}├──{% else %}•{% endif %} Overall Risk: {{ data.risk_assessment.overall_risk_level.upper() }}
+{% if hierarchical %}├──{% else %}•{% endif %} Confidence: {{ data.risk_assessment.confidence_score | format_percentage }}
+{% if data.risk_assessment.risk_factors %}
+{% if hierarchical %}├──{% else %}•{% endif %} Risk Factors:
+{% for factor in data.risk_assessment.risk_factors %}
+{% if hierarchical %}│   ├──{% else %}  •{% endif %} {{ factor }}
+{% endfor %}
+{% endif %}
+{% if data.risk_assessment.mitigation_suggestions %}
+{% if hierarchical %}└──{% else %}•{% endif %} Mitigation Suggestions:
+{% for suggestion in data.risk_assessment.mitigation_suggestions %}
+{% if hierarchical %}    ├──{% else %}  •{% endif %} {{ suggestion }}
+{% endfor %}
+{% endif %}
+{% endif %}
+
+{# Affected Files section #}
+{% if data.affected_files %}
+{% if emoji %}📁{% endif %} AFFECTED FILES:
+{% for file in data.affected_files %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ file.file_path }}
+{% if hierarchical %}│   {% else %}  {% endif %}Lines: {{ file.line_count }}
+{% if hierarchical %}│   {% else %}  {% endif %}Symbols: {{ file.symbols | length }}
+{% if file.impact_risk %}
+{% if hierarchical %}│   {% else %}  {% endif %}Impact Risk: {{ file.impact_risk | format_percentage }}
+{% endif %}
+{% if file.symbols %}
+{% for symbol in file.symbols[:3] %}
+{% if hierarchical %}│   ├──{% else %}  •{% endif %} {{ symbol.name }} ({{ symbol.symbol_type }})
+{% if symbol.impact_risk %}
+{% if hierarchical %}│   │   {% else %}    {% endif %}Risk: {{ symbol.impact_risk | format_percentage }}
+{% endif %}
+{% if symbol.importance_score %}
+{% if hierarchical %}│   │   {% else %}    {% endif %}Importance: {{ symbol.importance_score | format_percentage }}
+{% endif %}
+{% endfor %}
+{% if file.symbols | length > 3 %}
+{% if hierarchical %}│   └──{% else %}  •{% endif %} ... and {{ file.symbols | length - 3 }} more symbols
+{% endif %}
+{% endif %}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No affected files found
+{% endif %}

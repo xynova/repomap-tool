@@ -12,11 +12,11 @@ from pathlib import Path
 
 from repomap_tool.models import Entrypoint, RepoMapConfig
 from repomap_tool.core import RepoMapService
-from repomap_tool.matchers.semantic_matcher import DomainSemanticMatcher
-from repomap_tool.matchers.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
+from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 
 # Phase 2: Dependency analysis integration
-from repomap_tool.dependencies import (
+from repomap_tool.code_analysis import (
     ImportAnalyzer,
     DependencyGraph,
 )

@@ -1,0 +1,7 @@
+{# Success Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+
+{% if emoji %}✅{% endif %} {{ data.success.message }}
+{{ "=" * 60 }}
+
+{% if emoji %}📊{% endif %} Status: {{ data.success.status }}

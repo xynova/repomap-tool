@@ -33,9 +33,9 @@ from rich.console import Console
 
 # Import matchers
 try:
-    from ..matchers.fuzzy_matcher import FuzzyMatcher
-    from ..matchers.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-    from ..matchers.hybrid_matcher import HybridMatcher
+    from ..code_search.fuzzy_matcher import FuzzyMatcher
+    from ..code_search.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+    from ..code_search.hybrid_matcher import HybridMatcher
 
     MATCHERS_AVAILABLE = True
 except ImportError as e:

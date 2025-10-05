@@ -158,7 +158,7 @@ class RepoMapConfig(BaseModel):
 
     # Advanced options
     refresh_cache: bool = Field(default=False, description="Refresh cache")
-    output_format: Literal["json", "text", "markdown", "table"] = "json"
+    output_format: Literal["text", "json"] = "text"
     max_results: int = Field(
         default=50, ge=1, le=1000, description="Maximum results to return"
     )

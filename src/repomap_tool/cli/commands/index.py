@@ -17,7 +17,7 @@ from ..config.loader import (
     create_default_config,
     load_or_create_config,
 )
-from ..output.formatters import display_project_info
+from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
 
 
@@ -59,9 +59,9 @@ def index() -> None:
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["json", "text", "markdown", "table"]),
-    default="json",
-    help="Output format",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.option("--max-workers", type=int, default=4, help="Maximum worker threads")
@@ -155,23 +155,28 @@ def create(
         # Analyze project
         project_info = repomap.analyze_project()
 
-        # Create template configuration
-        template_config = {
-            "no_emojis": no_emojis,
-            "no_hierarchy": no_hierarchy,
-            "no_line_numbers": no_line_numbers,
-            "no_centrality": no_centrality,
-            "no_impact_risk": no_impact_risk,
-            "max_critical_lines": max_critical_lines,
-            "max_dependencies": max_dependencies,
-            "compression": compression,
-        }
+        # Create output configuration
+        output_config = OutputConfig(
+            format=OutputFormat(output),
+            template_config={
+                "no_emojis": no_emojis,
+                "no_hierarchy": no_hierarchy,
+                "no_line_numbers": no_line_numbers,
+                "no_centrality": no_centrality,
+                "no_impact_risk": no_impact_risk,
+                "max_critical_lines": max_critical_lines,
+                "max_dependencies": max_dependencies,
+                "compression": compression,
+            },
+        )
 
-        # Display results
-        display_project_info(project_info, output, template_config)  # type: ignore[arg-type]
+        # Display results using OutputManager
+        output_manager = get_output_manager()
+        output_manager.display(project_info, output_config)
 
     except Exception as e:
-        error_response = create_error_response(str(e), "AnalysisError")
-        console = get_index_console()
-        console.print(f"[red]Error: {error_response.error}[/red]")
+        # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(e, output_config)
         sys.exit(1)

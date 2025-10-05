@@ -11,7 +11,7 @@ from typing import List, Dict, Optional
 from uuid import uuid4
 
 from repomap_tool.models import Entrypoint, TreeCluster
-from repomap_tool.matchers.semantic_matcher import DomainSemanticMatcher
+from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
 
 logger = logging.getLogger(__name__)
 
