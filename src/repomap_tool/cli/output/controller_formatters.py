@@ -154,7 +154,7 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
                 )
 
                 # Use the file path directly without cleaning to preserve special characters like [id]
-                file_path = ranking["file_path"].replace("[", "\[")
+                file_path = ranking["file_path"].replace("[", r"\[")
 
                 # Format the data for the table - keep full file paths
                 row = [

@@ -242,7 +242,7 @@ def cycles(
 
             progress.update(task, description="Analysis complete!")
 
-        # Display results using OutputManager
+        # Display results using OutputManager (with improved formatting)
         output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display(cycles, output_config)

@@ -554,8 +554,6 @@ def load_or_create_config(
     return config, was_created
 
 
-
-
 def create_tree_config(
     project_path: Optional[str],
     max_depth: int = get_config("MAX_DEPTH", 3),

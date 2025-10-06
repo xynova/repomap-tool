@@ -415,18 +415,29 @@ class ListFormatter(BaseFormatter, DataFormatter):
             no_cycles_icon = "🔄" if use_emojis else ""
             return f"{no_cycles_icon} No circular dependencies found! 🎉"
 
-        table_data = []
-        for i, cycle in enumerate(data, 1):
-            cycle_str = " → ".join(cycle + [cycle[0]])  # Close the cycle
-            table_data.append([str(i), cycle_str])
-
-        headers = ["Cycle #", "Dependencies"]
-        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
-
         lines = []
         cycle_icon = "🔄" if use_emojis else ""
         lines.append(f"{cycle_icon} Circular Dependencies ({len(data)} found)")
-        lines.append(table_str)
+        lines.append("")
+
+        for i, cycle in enumerate(data, 1):
+            lines.append(f"Cycle #{i}:")
+
+            # Format each file in the cycle with proper indentation
+            for j, file_path in enumerate(cycle):
+                if j == 0:
+                    # First file
+                    lines.append(f"  {file_path}")
+                else:
+                    # Subsequent files with arrow and indentation
+                    lines.append(f"    → {file_path}")
+
+            # Close the cycle by showing the first file again
+            lines.append(f"    → {cycle[0]}")
+
+            # Add spacing between cycles (except for the last one)
+            if i < len(data):
+                lines.append("")
 
         return "\n".join(lines)
 

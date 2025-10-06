@@ -516,7 +516,10 @@ class TestListFormatter:
 
         assert result is not None
         assert "Circular Dependencies (2 found)" in result
-        assert "file1.py → file2.py → file1.py" in result
+        assert "Cycle #1:" in result
+        assert "file1.py" in result
+        assert "→ file2.py" in result
+        assert "→ file1.py" in result
 
     def test_list_formatter_empty_list(self):
         """Test formatting empty list."""

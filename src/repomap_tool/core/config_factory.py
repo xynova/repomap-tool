@@ -155,7 +155,6 @@ class ConfigFactory:
         )
 
 
-
 # Global config factory instance
 _config_factory: Optional[ConfigFactory] = None
 

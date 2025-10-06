@@ -709,9 +709,11 @@ class RepoMapService:
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"
             cache_key = f"import_analysis_{self.config.project_root}_maxsize_{self.config.dependencies.max_graph_size}_{refresh_flag}"
-            self.logger.info(f"Cache key: {cache_key}")
-            self.logger.info(f"Config max_graph_size: {self.config.dependencies.max_graph_size}")
-            self.logger.info(f"Config refresh_cache: {self.config.refresh_cache}")
+            self.logger.debug(f"Cache key: {cache_key}")
+            self.logger.debug(
+                f"Config max_graph_size: {self.config.dependencies.max_graph_size}"
+            )
+            self.logger.debug(f"Config refresh_cache: {self.config.refresh_cache}")
 
             if cache_key in cache:
                 cached_data = cache[cache_key]
@@ -777,8 +779,10 @@ class RepoMapService:
                 self._cache_import_analysis(project_imports)
 
             # Limit files if configured
-            self.logger.info(f"Configuration max_graph_size: {self.config.dependencies.max_graph_size}")
-            self.logger.info(f"Project imports count: {len(project_imports)}")
+            self.logger.debug(
+                f"Configuration max_graph_size: {self.config.dependencies.max_graph_size}"
+            )
+            self.logger.debug(f"Project imports count: {len(project_imports)}")
             if len(project_imports) > self.config.dependencies.max_graph_size:
                 self.logger.warning(
                     f"Project has {len(project_imports)} files, limiting to "
