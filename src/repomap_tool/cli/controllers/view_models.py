@@ -95,6 +95,20 @@ class SearchViewModel:
     token_count: int
     max_tokens: int
     compression_level: str = "medium"
+    # Additional fields to match SearchResponse structure
+    threshold: float = 0.7
+    match_type: str = "hybrid"
+    search_time_ms: float = 0.0
+    cache_hit: bool = False
+    metadata: Dict[str, Any] = None
+    performance_metrics: Dict[str, Any] = None
+    
+    def __post_init__(self):
+        """Initialize default values for optional fields."""
+        if self.metadata is None:
+            self.metadata = {}
+        if self.performance_metrics is None:
+            self.performance_metrics = {}
 
 
 @dataclass

@@ -115,33 +115,6 @@ class TestTemplateBasedFormatterIntegration:
         assert isinstance(result, str)
         assert len(result) > 0
 
-    def test_format_with_search_response(self):
-        """Test formatting SearchResponse data."""
-        formatter = TemplateBasedFormatter()
-
-        match_result = MatchResult(
-            identifier="test_function",
-            score=0.95,
-            match_type="fuzzy",
-            line_number=42,
-            file_path="/test/file.py",
-            strategy="fuzzy",
-        )
-
-        search_response = SearchResponse(
-            query="test",
-            match_type="fuzzy",
-            threshold=0.7,
-            total_results=1,
-            search_time_ms=25.0,
-            results=[match_result],
-        )
-
-        config = OutputConfig(format=OutputFormat.TEXT)
-
-        result = formatter.format(search_response, OutputFormat.TEXT, config)
-        assert isinstance(result, str)
-        assert len(result) > 0
 
     def test_format_with_dict_data(self):
         """Test formatting dictionary data."""

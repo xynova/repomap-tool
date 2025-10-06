@@ -43,7 +43,6 @@ from .protocols import (
 )
 from .standard_formatters import (
     ProjectInfoFormatter,
-    SearchResponseFormatter,
     DictFormatter,
     ListFormatter,
     StringFormatter,
@@ -98,7 +97,6 @@ __all__ = [
     "create_formatter_config",
     # Standard formatters
     "ProjectInfoFormatter",
-    "SearchResponseFormatter",
     "DictFormatter",
     "ListFormatter",
     "StringFormatter",

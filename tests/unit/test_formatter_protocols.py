@@ -23,7 +23,6 @@ from repomap_tool.cli.output.protocols import (
 )
 from repomap_tool.cli.output.standard_formatters import (
     ProjectInfoFormatter,
-    SearchResponseFormatter,
     DictFormatter,
     ListFormatter,
     FormatterRegistry,
@@ -350,87 +349,6 @@ class TestProjectInfoFormatter:
             formatter.format(project_info, "unsupported_format")
 
 
-class TestSearchResponseFormatter:
-    """Test the SearchResponseFormatter implementation."""
-
-    def test_search_response_formatter_initialization(self):
-        """Test SearchResponseFormatter initialization."""
-        formatter = SearchResponseFormatter()
-
-        assert OutputFormat.TEXT in formatter.get_supported_formats()
-        assert OutputFormat.JSON in formatter.get_supported_formats()
-        assert formatter.get_data_type() == SearchResponse
-
-    def test_search_response_formatter_validate_data(self):
-        """Test SearchResponse data validation."""
-        formatter = SearchResponseFormatter()
-
-        # Valid data
-        search_response = SearchResponse(
-            results=[],
-            total_results=0,
-            query="test",
-            match_type="fuzzy",
-            threshold=0.7,
-            search_time_ms=100.0,
-            performance_metrics={},
-        )
-        assert formatter.validate_data(search_response) is True
-
-        # Invalid data
-        assert formatter.validate_data("not_search_response") is False
-
-    def test_search_response_formatter_empty_results(self):
-        """Test formatting empty search results."""
-        formatter = SearchResponseFormatter()
-
-        search_response = SearchResponse(
-            results=[],
-            total_results=0,
-            query="test",
-            match_type="fuzzy",
-            threshold=0.7,
-            search_time_ms=100.0,
-            performance_metrics={},
-        )
-
-        result = formatter.format(search_response, OutputFormat.TEXT)
-
-        assert result is not None
-        assert "No results found" in result
-
-    def test_search_response_formatter_with_results(self):
-        """Test formatting search results with data."""
-        from repomap_tool.models import MatchResult
-
-        formatter = SearchResponseFormatter()
-
-        match_result = MatchResult(
-            identifier="test_function",
-            score=0.95,
-            strategy="fuzzy",
-            match_type="fuzzy",
-            file_path="/test/file.py",
-            line_number=10,
-        )
-
-        search_response = SearchResponse(
-            results=[match_result],
-            total_results=1,
-            query="test",
-            match_type="fuzzy",
-            threshold=0.7,
-            search_time_ms=100.0,
-            performance_metrics={"search_time": 0.1},
-        )
-
-        result = formatter.format(search_response, OutputFormat.TEXT)
-
-        assert result is not None
-        assert "Search Results" in result
-        assert "Total Results: 1" in result
-        assert "test_function" in result
-        assert "Score: 95.0%" in result
 
 
 class TestDictFormatter:

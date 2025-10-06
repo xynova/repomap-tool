@@ -17,6 +17,7 @@ from .protocols import DataFormatter
 from .formats import OutputFormat
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import get_template_engine
+from ..controllers.view_models import SearchViewModel
 
 
 logger = get_logger(__name__)
@@ -369,5 +370,163 @@ class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             output.append(
                 f"\nRisk Level: {data.risk_assessment.get('overall_risk_level', 'unknown').upper()}"
             )
+
+        return "\n".join(output)
+
+
+class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
+    """Formatter for SearchViewModel objects."""
+
+    def __init__(self, template_engine: Optional[Any] = None):
+        """Initialize the formatter.
+
+        Args:
+            template_engine: Template engine for rendering
+        """
+        super().__init__(template_engine=template_engine)
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if this formatter supports the given output format.
+
+        Args:
+            output_format: Output format to check
+
+        Returns:
+            True if format is supported
+        """
+        return output_format in [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported output formats.
+
+        Returns:
+            List of supported output formats
+        """
+        return [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[Any] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> str:
+        """Format SearchViewModel data.
+
+        Args:
+            data: SearchViewModel to format
+            output_format: Output format (TEXT or JSON)
+            config: Output configuration
+            ctx: Click context
+
+        Returns:
+            Formatted string
+        """
+        if not isinstance(data, SearchViewModel):
+            raise ValueError(f"Expected SearchViewModel, got {type(data)}")
+
+        if output_format == OutputFormat.JSON:
+            return self._format_json(data)
+        elif output_format == OutputFormat.TEXT:
+            return self._format_text(data, config)
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def _format_json(self, data: SearchViewModel) -> str:
+        """Format data as JSON.
+
+        Args:
+            data: SearchViewModel to format
+
+        Returns:
+            JSON string
+        """
+        import json
+        
+        # Convert to dictionary for JSON serialization
+        result_dict = {
+            "query": data.query,
+            "total_results": data.total_results,
+            "search_strategy": data.search_strategy,
+            "execution_time": data.execution_time,
+            "threshold": data.threshold,
+            "match_type": data.match_type,
+            "search_time_ms": data.search_time_ms,
+            "cache_hit": data.cache_hit,
+            "token_count": data.token_count,
+            "max_tokens": data.max_tokens,
+            "compression_level": data.compression_level,
+            "results": [
+                {
+                    "name": result.name,
+                    "file_path": result.file_path,
+                    "line_number": result.line_number,
+                    "symbol_type": result.symbol_type,
+                    "importance_score": result.importance_score,
+                    "is_critical": result.is_critical,
+                    "centrality_score": result.centrality_score,
+                    "impact_risk": result.impact_risk,
+                }
+                for result in data.results
+            ],
+            "metadata": data.metadata,
+            "performance_metrics": data.performance_metrics,
+        }
+        
+        return json.dumps(result_dict, indent=2)
+
+    def _format_text(self, data: SearchViewModel, config: Optional[Any] = None) -> str:
+        """Format data as text using template.
+
+        Args:
+            data: SearchViewModel to format
+            config: Output configuration
+
+        Returns:
+            Formatted text string
+        """
+        try:
+            # Convert OutputConfig to TemplateConfig
+            template_config = self._create_template_config(config)
+            return self._template_engine.render_template(
+                "search_results", data, template_config
+            )
+        except Exception as e:
+            logger.error(f"Template rendering failed: {e}")
+            return self._format_fallback(data)
+
+    def _format_fallback(self, data: SearchViewModel, template_config: Optional[Any] = None) -> str:
+        """Fallback formatting if template fails.
+
+        Args:
+            data: SearchViewModel to format
+
+        Returns:
+            Simple formatted string
+        """
+        output = []
+        output.append("Search Results")
+        output.append("=" * 40)
+        output.append(f"Query: {data.query}")
+        output.append(f"Total Results: {data.total_results}")
+        output.append(f"Search Strategy: {data.search_strategy}")
+        output.append(f"Execution Time: {data.execution_time:.3f}s")
+        output.append(f"Token Count: {data.token_count}/{data.max_tokens}")
+
+        if data.results:
+            output.append("\nResults:")
+            for i, result in enumerate(data.results, 1):
+                output.append(f"  {i}. {result.name}")
+                output.append(f"     File: {result.file_path}")
+                output.append(f"     Line: {result.line_number}")
+                output.append(f"     Score: {result.importance_score:.3f}")
+                if result.is_critical:
+                    output.append(f"     Critical: Yes")
+                output.append("")
+
+        if data.performance_metrics:
+            output.append("Performance Metrics:")
+            for key, value in data.performance_metrics.items():
+                output.append(f"  {key}: {value}")
 
         return "\n".join(output)

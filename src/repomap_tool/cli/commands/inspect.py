@@ -138,30 +138,60 @@ def find(
             strategies=list(strategies) if strategies else None,
         )
 
-        # Initialize RepoMap using service factory
+        # Initialize services using service factory
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            task = progress.add_task("Initializing RepoMap...", total=None)
+            task = progress.add_task("Initializing services...", total=None)
 
             from repomap_tool.cli.services import get_service_factory
+            from repomap_tool.cli.controllers.search_controller import SearchController
+            from repomap_tool.cli.controllers.view_models import ControllerConfig, AnalysisType
+            from repomap_tool.core.container import create_container
 
             service_factory = get_service_factory()
             repomap = service_factory.create_repomap_service(config_obj)
+            
+            # Get matchers from the container
+            container = create_container(config_obj)
+            fuzzy_matcher = container.fuzzy_matcher()
+            semantic_matcher = container.adaptive_semantic_matcher() if config_obj.semantic_match.enabled else None
+
+            progress.update(task, description="Creating search controller...")
+
+            # Create controller configuration
+            controller_config = ControllerConfig(
+                max_tokens=get_config("MAX_TOKENS", 4000),
+                compression_level="medium",
+                verbose=verbose,
+                output_format=output,
+                analysis_type=AnalysisType.SEARCH,
+                search_strategy=match_type,
+                context_selection="centrality_based"
+            )
+
+            # Create search controller
+            search_controller = SearchController(
+                repomap_service=repomap,
+                search_engine=None,  # Not needed for search controller
+                fuzzy_matcher=fuzzy_matcher,
+                semantic_matcher=semantic_matcher,
+                config=controller_config
+            )
 
             progress.update(task, description="Searching identifiers...")
 
-            # Perform search
-            response = repomap.search_identifiers(request)
+            # Execute search using controller
+            search_view_model = search_controller.execute(request)
 
             progress.update(task, description="Search complete!")
 
         # Display results using OutputManager
         output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
-        output_manager.display(response, output_config)
+        output_manager.display(search_view_model, output_config)
 
     except Exception as e:
         # Use OutputManager for error handling
