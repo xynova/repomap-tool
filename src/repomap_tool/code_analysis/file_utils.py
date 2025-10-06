@@ -12,27 +12,76 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 
-def get_all_project_files(project_root: str) -> List[str]:
-    """Get all Python files in the project for analysis.
+def get_all_project_files(project_root: str, max_files: int = 100) -> List[str]:
+    """Get all analyzable files in the project for analysis.
 
     Args:
         project_root: Root path of the project
+        max_files: Maximum number of files to return (for performance)
 
     Returns:
-        List of Python file paths
+        List of file paths for supported languages (Python, TypeScript, JavaScript, etc.)
     """
     if not project_root:
         return []
 
     # Ensure project_root is always a string, not a ConfigurationOption
     project_path = Path(str(project_root))
-    python_files = []
 
-    for py_file in project_path.rglob("*.py"):
-        if not any(part.startswith(".") for part in py_file.parts):
-            python_files.append(str(py_file))
+    # Supported file extensions for centrality analysis (exclude data files)
+    supported_extensions = {".py", ".ts", ".tsx", ".js", ".jsx", ".java", ".go"}
 
-    return python_files
+    # Exclude directories and file patterns that don't need centrality analysis
+    exclude_patterns = {
+        "node_modules",
+        ".git",
+        ".vscode",
+        "dist",
+        "build",
+        "coverage",
+        "*.min.js",
+        "*.bundle.js",
+        "*.d.ts",
+        "*.spec.ts",
+        "*.test.ts",
+        "*.test.js",
+    }
+
+    all_files = []
+
+    for file_path in project_path.rglob("*"):
+        if not any(part.startswith(".") for part in file_path.parts):
+            if file_path.is_file() and file_path.suffix in supported_extensions:
+                # Skip excluded patterns
+                if any(pattern in str(file_path) for pattern in exclude_patterns):
+                    continue
+
+                # Skip test files and generated files for performance
+                file_name = file_path.name.lower()
+                if any(
+                    skip in file_name
+                    for skip in [".spec.", ".test.", ".min.", ".bundle.", ".d.ts"]
+                ):
+                    continue
+
+                # Convert to relative path from project root
+                try:
+                    rel_path = file_path.relative_to(project_path)
+                    all_files.append(str(rel_path))
+
+                    # Stop if we've reached the maximum number of files
+                    if len(all_files) >= max_files:
+                        logger.info(
+                            f"Reached maximum file limit ({max_files}), stopping file discovery"
+                        )
+                        break
+
+                except ValueError:
+                    # File is not relative to project root, skip it
+                    continue
+
+    logger.info(f"Found {len(all_files)} files for analysis (limit: {max_files})")
+    return all_files
 
 
 def suggest_test_files(file_path: str) -> List[str]:

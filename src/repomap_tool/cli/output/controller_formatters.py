@@ -118,7 +118,7 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
         return json.dumps(json_data, indent=2)
 
     def _format_text(self, data: Any, config: Optional[Any] = None) -> str:
-        """Format data as text using template.
+        """Format data as text using tabulate for table format.
 
         Args:
             data: CentralityViewModel to format
@@ -128,13 +128,87 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             Formatted text string
         """
         try:
-            # Convert OutputConfig to TemplateConfig
-            template_config = self._create_template_config(config)
-            return self._template_engine.render_template(
-                "centrality_analysis", data, template_config
+            from tabulate import tabulate
+
+            # Build table data from rankings
+            if not data.rankings:
+                return "No centrality analysis data available."
+
+            # Prepare table headers and data
+            headers = [
+                "Rank",
+                "File",
+                "Score",
+                "Connections",
+                "Imports",
+                "Rev Deps",
+                "Functions",
+            ]
+            table_data = []
+
+            for ranking in data.rankings:
+                # Get additional data from files if available
+                file_info = next(
+                    (f for f in data.files if f.file_path == ranking["file_path"]), None
+                )
+
+                # Clean file path to handle special characters and double slashes
+                file_path = ranking["file_path"]
+                # Normalize double slashes and other path issues
+                import re
+
+                file_path = re.sub(
+                    r"/+", "/", file_path
+                )  # Replace multiple slashes with single slash
+                file_path = file_path.replace(
+                    "//", "/"
+                )  # Handle double slashes specifically
+
+                # Format the data for the table - keep full file paths
+                row = [
+                    ranking["rank"],
+                    file_path,
+                    f"{ranking['centrality_score']:.3f}",
+                    ranking.get("connections", 0),
+                    ranking.get("imports", 0),
+                    ranking.get("reverse_dependencies", 0),
+                    ranking.get("functions", 0),
+                ]
+                table_data.append(row)
+
+            # Create the table with fixed column widths for consistent alignment
+            table = tabulate(
+                table_data,
+                headers=headers,
+                tablefmt="grid",  # Use grid format for better alignment
+                stralign="left",
+                numalign="right",
+                maxcolwidths=[6, 80, 8, 12, 10, 10, 10],  # Fixed column widths
             )
+
+            # Add summary information
+            summary = f"""
+Centrality Analysis
+==================
+Total Files: {data.total_files}
+Token Count: {data.token_count}/{data.max_tokens}
+Compression: {data.compression_level}
+
+{table}
+
+Column Explanations:
+- Rank: Position in importance ranking (1 = most important)
+- Score: Centrality score (0.0-1.0, higher = more important)
+- Connections: Total connections to other files
+- Imports: Number of files this file imports
+- Rev Deps: Number of files that import this file
+- Functions: Number of functions defined in this file
+- File: File path (relative to project root)
+"""
+            return summary
+
         except Exception as e:
-            logger.error(f"Template rendering failed: {e}")
+            logger.error(f"Table formatting failed: {e}")
             return self._format_fallback(data)
 
     def _format_fallback(self, data: Any, template_config: Optional[Any] = None) -> str:

@@ -5,6 +5,7 @@ This module contains commands for code inspection, analysis, and discovery.
 Merges functionality from the previous 'analyze' and 'search' commands.
 """
 
+import os
 import sys
 from typing import Optional, Literal
 
@@ -296,6 +297,7 @@ def centrality(
         config_factory = get_config_factory()
         config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
+            max_graph_size=100,  # Limit dependency graph to 100 files for performance
             verbose=verbose,
         )
 
@@ -334,7 +336,11 @@ def centrality(
             from repomap_tool.core.file_scanner import get_project_files
 
             all_files = get_project_files(resolved_project_path, verbose=verbose)
-            file_paths = all_files
+            # Convert relative paths to absolute paths for analysis
+            file_paths = [
+                os.path.join(resolved_project_path, file_path)
+                for file_path in all_files
+            ]
 
         # Perform centrality analysis using Controller
         try:
@@ -428,6 +434,7 @@ def impact(
         config_factory = get_config_factory()
         config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
+            max_graph_size=100,  # Limit dependency graph to 100 files for performance
             verbose=verbose,
         )
 

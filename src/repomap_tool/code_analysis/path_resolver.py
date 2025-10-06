@@ -9,7 +9,7 @@ import os
 from typing import List, Optional
 from pathlib import Path
 
-from .file_utils import get_all_project_files
+from ..core.file_scanner import get_project_files
 
 
 class PathResolver:
@@ -45,13 +45,78 @@ class PathResolver:
                     resolved_paths.append(resolved_path)
         return resolved_paths
 
-    def get_all_project_files(self) -> List[str]:
+    def get_all_project_files(self, max_files: int = 100) -> List[str]:
         """Get all files in the project.
+
+        Args:
+            max_files: Maximum number of files to return (for performance)
 
         Returns:
             List of all project files
         """
-        return get_all_project_files(self.project_root) if self.project_root else []
+        if not self.project_root:
+            return []
+
+        # Use the original aider repomap file discovery with gitignore support
+        all_files = get_project_files(self.project_root, verbose=False)
+
+        # Filter to only include code files for centrality analysis
+        code_extensions = {
+            ".py",
+            ".ts",
+            ".tsx",
+            ".js",
+            ".jsx",
+            ".java",
+            ".go",
+            ".cpp",
+            ".c",
+            ".h",
+            ".hpp",
+        }
+        code_files = []
+
+        for file_path in all_files:
+            if any(file_path.endswith(ext) for ext in code_extensions):
+                # Skip test files and generated files for performance
+                if not any(
+                    test_pattern in file_path.lower()
+                    for test_pattern in [
+                        ".test.",
+                        ".spec.",
+                        "__test__",
+                        "test_",
+                        ".min.",
+                        ".bundle.",
+                    ]
+                ):
+                    code_files.append(file_path)
+
+        # Apply file limit for performance
+        if len(code_files) > max_files:
+            # Sort by importance (prioritize main files)
+            important_files = []
+            other_files = []
+
+            for file_path in code_files:
+                # Prioritize main entry points and core files
+                if any(
+                    priority in file_path.lower()
+                    for priority in ["main.", "index.", "app.", "core/", "src/"]
+                ):
+                    important_files.append(file_path)
+                else:
+                    other_files.append(file_path)
+
+            # Take important files first, then other files
+            selected_files = important_files[:max_files]
+            if len(selected_files) < max_files:
+                remaining_slots = max_files - len(selected_files)
+                selected_files.extend(other_files[:remaining_slots])
+
+            return selected_files
+
+        return code_files
 
     def convert_to_relative_path(self, file_path: str) -> str:
         """Convert absolute path to relative path.

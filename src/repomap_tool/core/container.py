@@ -25,12 +25,6 @@ if TYPE_CHECKING:
     from repomap_tool.code_analysis.path_resolver import PathResolver
     from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
     from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
-    from repomap_tool.code_analysis.js_ts_analyzer import (
-        JavaScriptTypeScriptAnalyzer,
-        JSAnalysisContext,
-    )
-    from repomap_tool.code_analysis.import_utils import ImportUtils
-    from repomap_tool.code_analysis.ast_visitors import AnalysisContext
     from repomap_tool.utils.path_normalizer import PathNormalizer
     from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
     from repomap_tool.code_search.adaptive_semantic_matcher import (
@@ -232,35 +226,6 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[CallGraphBuilder]",
         providers.Singleton(
             "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
-        ),
-    )
-
-    js_ts_analyzer: "providers.Factory[JavaScriptTypeScriptAnalyzer]" = cast(
-        "providers.Factory[JavaScriptTypeScriptAnalyzer]",
-        providers.Factory(
-            "repomap_tool.code_analysis.js_ts_analyzer.JavaScriptTypeScriptAnalyzer",
-            project_root=config.project_root,
-        ),
-    )
-
-    js_analysis_context: "providers.Factory[JSAnalysisContext]" = cast(
-        "providers.Factory[JSAnalysisContext]",
-        providers.Factory(
-            "repomap_tool.code_analysis.js_ts_analyzer.JSAnalysisContext",
-        ),
-    )
-
-    import_utils: "providers.Singleton[ImportUtils]" = cast(
-        "providers.Singleton[ImportUtils]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.import_utils.ImportUtils",
-        ),
-    )
-
-    analysis_context: "providers.Factory[AnalysisContext]" = cast(
-        "providers.Factory[AnalysisContext]",
-        providers.Factory(
-            "repomap_tool.code_analysis.ast_visitors.AnalysisContext",
         ),
     )
 

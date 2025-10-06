@@ -77,6 +77,14 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating betweenness centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's betweenness centrality
             betweenness_scores: Dict[str, float] = nx.betweenness_centrality(
                 self.graph.graph
@@ -119,6 +127,14 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating PageRank centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's PageRank
             pagerank_scores: Dict[str, float] = nx.pagerank(
                 self.graph.graph, alpha=alpha, max_iter=max_iter
@@ -198,6 +214,14 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating eigenvector centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's eigenvector centrality
             eigenvector_scores: Dict[str, float] = nx.eigenvector_centrality(
                 self.graph.graph, max_iter=1000
@@ -216,6 +240,7 @@ class CentralityCalculator:
             return eigenvector_scores
 
         except Exception as e:
+            logger.warning("Empty centrality scores dictionary")
             logger.error(f"Error calculating eigenvector centrality: {e}")
             return {}
 
@@ -234,6 +259,14 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating closeness centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's closeness centrality
             closeness_scores: Dict[str, float] = nx.closeness_centrality(
                 self.graph.graph
@@ -284,6 +317,14 @@ class CentralityCalculator:
             weights = {k: v / total_weight for k, v in weights.items()}
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating composite importance: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Calculate all centrality measures
             centrality_scores = {}
 

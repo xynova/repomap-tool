@@ -19,7 +19,7 @@
 {% for ranking in data.rankings %}
 {% if hierarchical %}├──{% else %}•{% endif %} #{{ ranking.rank }} {{ ranking.file_path }}
 {% if hierarchical %}│   {% else %}  {% endif %}Score: {{ ranking.centrality_score | format_percentage }}
-{% if hierarchical %}│   {% else %}  {% endif %}Importance: {{ ranking.relative_importance | format_percentage }}
+{% if hierarchical %}│   {% else %}  {% endif %}Total Files: {{ ranking.total_files }}
 {% if not loop.last %}
 {% if hierarchical %}│{% endif %}
 {% endif %}

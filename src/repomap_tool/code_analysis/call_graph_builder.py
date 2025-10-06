@@ -133,70 +133,80 @@ class PythonCallAnalyzer(CallAnalyzer):
 
 
 class JavaScriptCallAnalyzer(CallAnalyzer):
-    """Parser for JavaScript/TypeScript function calls using regex patterns."""
+    """Parser for JavaScript/TypeScript function calls using aider's tree-sitter."""
+
+    def __init__(self, project_root: Optional[str] = None):
+        """Initialize with project root for aider's RepoMap."""
+        super().__init__()
+        self.project_root = project_root
+        self._repo_map = None
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
-        """Extract JavaScript/TypeScript function calls using regex patterns."""
+        """Extract JavaScript/TypeScript function calls using aider's tree-sitter."""
         calls = []
 
-        # Pattern for function calls: functionName()
-        function_call_pattern = r"(\w+)\s*\([^)]*\)"
-
-        # Pattern for method calls: object.method()
-        method_call_pattern = r"(\w+)\.(\w+)\s*\([^)]*\)"
-
-        # Pattern for function declarations to identify callers
-        function_decl_pattern = r"(?:function\s+)?(\w+)\s*\([^)]*\)\s*\{"
-
         try:
-            # Find function declarations to map line numbers to function names
-            function_lines = {}
-            for match in re.finditer(function_decl_pattern, file_content):
-                func_name = match.group(1)
-                line_num = self._get_line_number(file_content, match.start())
-                if line_num is not None:
-                    function_lines[line_num] = func_name
+            # Get aider's RepoMap for tree-sitter parsing
+            repo_map = self._get_repo_map()
 
-            # Find function calls
-            for match in re.finditer(function_call_pattern, file_content):
-                callee = match.group(1)
-                line_num = self._get_line_number(file_content, match.start()) or 0
+            # Get relative path for aider
+            rel_path = self._get_relative_path(file_path)
 
-                # Find the calling function
-                caller = self._find_calling_function(function_lines, line_num)
+            # Use aider's tree-sitter to get tags
+            tags = repo_map.get_tags(file_path, rel_path)
 
-                call = FunctionCall(
-                    caller=caller or "unknown",
-                    callee=callee,
-                    file_path=file_path,
-                    line_number=line_num,
-                    is_method_call=False,
-                )
-                calls.append(call)
+            # Extract function calls from tags
+            for tag in tags:
+                if tag.kind in ["ref"]:  # References to functions
+                    calls.append(
+                        FunctionCall(
+                            caller="unknown",  # TODO: Extract caller from context
+                            callee=tag.name,
+                            file_path=file_path,
+                            line_number=tag.line,
+                            is_method_call=False,  # TODO: Determine if it's a method call
+                            object_name=None,
+                        )
+                    )
 
-            # Find method calls
-            for match in re.finditer(method_call_pattern, file_content):
-                object_name = match.group(1)
-                method_name = match.group(2)
-                line_num = self._get_line_number(file_content, match.start()) or 0
-
-                # Find the calling function
-                caller = self._find_calling_function(function_lines, line_num)
-
-                call = FunctionCall(
-                    caller=caller or "unknown",
-                    callee=method_name,
-                    file_path=file_path,
-                    line_number=line_num,
-                    is_method_call=True,
-                    object_name=object_name,
-                )
-                calls.append(call)
+            logger.debug(
+                f"Tree-sitter extracted {len(calls)} function calls from {file_path}"
+            )
 
         except Exception as e:
-            logger.error(f"Error parsing JavaScript file {file_path}: {e}")
+            logger.error(
+                f"Error extracting function calls from {file_path} with tree-sitter: {e}"
+            )
 
         return calls
+
+    def _get_repo_map(self) -> Any:
+        """Get or create aider's RepoMap instance."""
+        if self._repo_map is None:
+            try:
+                from aider.repomap import RepoMap
+                from aider.io import InputOutput
+
+                io = InputOutput()
+                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
+                logger.debug(
+                    "Created aider RepoMap instance for JavaScript call analysis"
+                )
+            except ImportError as e:
+                logger.error(f"Failed to import aider modules: {e}")
+                raise RuntimeError(
+                    "aider modules not available for tree-sitter parsing"
+                )
+
+        return self._repo_map
+
+    def _get_relative_path(self, file_path: str) -> str:
+        """Get relative path for aider's RepoMap."""
+        import os
+
+        if self.project_root and file_path.startswith(self.project_root):
+            return os.path.relpath(file_path, self.project_root)
+        return os.path.basename(file_path)
 
     def _get_line_number(self, content: str, position: int) -> Optional[int]:
         """Get line number for a given position in content."""

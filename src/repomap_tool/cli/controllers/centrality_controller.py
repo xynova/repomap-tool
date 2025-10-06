@@ -124,6 +124,11 @@ class CentralityController(BaseController):
         Returns:
             List of FileCentralityAnalysis objects
         """
+        # Build dependency graph if it's empty
+        if self.dependency_graph.graph.number_of_nodes() == 0:
+            logger.info("Building dependency graph for centrality analysis")
+            self._build_dependency_graph()
+
         # Resolve file paths relative to project root
         resolved_paths = self.path_resolver.resolve_file_paths(file_paths)
 
@@ -214,7 +219,12 @@ class CentralityController(BaseController):
         file_analyses = []
         rankings = []
 
-        for analysis in centrality_analyses:
+        # Sort analyses by centrality score to calculate proper rankings
+        sorted_analyses = sorted(
+            centrality_analyses, key=lambda x: x.centrality_score, reverse=True
+        )
+
+        for rank, analysis in enumerate(sorted_analyses, 1):
             # Create FileAnalysisViewModel from structured data
             file_analysis = FileAnalysisViewModel(
                 file_path=analysis.file_path,
@@ -227,13 +237,28 @@ class CentralityController(BaseController):
             )
             file_analyses.append(file_analysis)
 
-            # Create ranking entry
+            # Clean file path to handle special characters and double slashes
+            import re
+
+            cleaned_file_path = re.sub(r"/+", "/", analysis.file_path)
+
+            # Create ranking entry with additional data and proper rank
             rankings.append(
                 {
-                    "rank": analysis.rank,
-                    "file_path": analysis.file_path,
+                    "rank": rank,  # Use calculated rank instead of analysis.rank
+                    "file_path": cleaned_file_path,
                     "centrality_score": analysis.centrality_score,
                     "total_files": analysis.total_files,
+                    "connections": analysis.dependency_analysis.get(
+                        "total_connections", 0
+                    ),
+                    "imports": analysis.dependency_analysis.get("direct_imports", 0),
+                    "reverse_dependencies": analysis.dependency_analysis.get(
+                        "reverse_dependencies", 0
+                    ),
+                    "functions": analysis.function_call_analysis.get(
+                        "defined_functions", 0
+                    ),
                 }
             )
 
@@ -418,3 +443,46 @@ class CentralityController(BaseController):
             ),
             "token_optimization": True,
         }
+
+    def _build_dependency_graph(self) -> None:
+        """Build the dependency graph if it's empty."""
+        try:
+            # Get project root from path resolver
+            project_root = self.path_resolver.project_root
+
+            # Use import analyzer to get project imports
+            from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+
+            import_analyzer = ImportAnalyzer(project_root=project_root)
+
+            # Analyze project imports
+            project_imports = import_analyzer.analyze_project_imports(project_root)
+
+            # Apply max_graph_size limiting if configured
+            max_graph_size = 100  # Default limit for performance
+            if len(project_imports.file_imports) > max_graph_size:
+                logger.warning(
+                    f"Project has {len(project_imports.file_imports)} files, limiting to "
+                    f"{max_graph_size} for dependency analysis"
+                )
+                # Create a limited version of project_imports
+                limited_files = list(project_imports.file_imports.keys())[
+                    :max_graph_size
+                ]
+                limited_file_imports = {
+                    k: v
+                    for k, v in project_imports.file_imports.items()
+                    if k in limited_files
+                }
+                project_imports.file_imports = limited_file_imports
+
+            # Build the dependency graph
+            self.dependency_graph.build_graph(project_imports)
+
+            logger.info(
+                f"Built dependency graph with {self.dependency_graph.graph.number_of_nodes()} nodes"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to build dependency graph: {e}")
+            # Continue with empty graph - centrality analysis will handle it gracefully

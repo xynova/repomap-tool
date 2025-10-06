@@ -11,7 +11,7 @@ import ast
 import logging
 import re
 from pathlib import Path
-from typing import List, Dict, Optional, Set
+from typing import List, Dict, Optional, Set, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import Import, FileImports, ProjectImports, ImportType
@@ -87,188 +87,331 @@ class PythonImportParser(ImportParser):
 
 
 class JavaScriptImportParser(ImportParser):
-    """Parser for JavaScript/TypeScript import statements."""
+    """Parser for JavaScript/TypeScript import statements using aider's tree-sitter."""
+
+    def __init__(self, project_root: Optional[str] = None):
+        """Initialize with project root for aider's RepoMap."""
+        super().__init__()
+        self.project_root = project_root
+        self._repo_map = None
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract JavaScript/TypeScript imports using regex patterns."""
+        """Extract JavaScript/TypeScript imports using aider's tree-sitter."""
         imports = []
 
-        # Pattern for ES6 imports: import { name } from 'module'
-        es6_pattern = r'import\s+(?:\{([^}]+)\}|\*|\w+)\s+from\s+[\'"]([^\'"]+)[\'"]'
-
-        # Pattern for CommonJS requires: const x = require('module')
-        require_pattern = (
-            r'(?:const|let|var)\s+\w+\s*=\s*require\s*\(\s*[\'"]([^\'"]+)[\'"]'
-        )
-
-        # Pattern for dynamic imports: import('module')
-        dynamic_pattern = r'import\s*\(\s*[\'"]([^\'"]+)[\'"]'
-
         try:
-            # Parse ES6 imports
-            for match in re.finditer(es6_pattern, file_content):
-                symbols_str = match.group(1)
-                module = match.group(2)
+            # Get aider's RepoMap for tree-sitter parsing
+            repo_map = self._get_repo_map()
 
-                if symbols_str:
-                    symbols = [s.strip() for s in symbols_str.split(",")]
-                else:
-                    symbols = []
+            # Get relative path for aider
+            rel_path = self._get_relative_path(file_path)
 
-                import_obj = Import(
-                    module=module,
-                    symbols=symbols,
-                    is_relative=module.startswith("."),
-                    import_type=(
-                        ImportType.RELATIVE
-                        if module.startswith(".")
-                        else ImportType.ABSOLUTE
-                    ),
-                    line_number=self._get_line_number(file_content, match.start()),
-                )
-                imports.append(import_obj)
+            # Use aider's tree-sitter to get tags
+            tags = repo_map.get_tags(file_path, rel_path)
 
-            # Parse CommonJS requires
-            for match in re.finditer(require_pattern, file_content):
-                module = match.group(1)
-                import_obj = Import(
-                    module=module,
-                    is_relative=module.startswith("."),
-                    import_type=(
-                        ImportType.RELATIVE
-                        if module.startswith(".")
-                        else ImportType.ABSOLUTE
-                    ),
-                    line_number=self._get_line_number(file_content, match.start()),
-                )
-                imports.append(import_obj)
+            # Extract imports from file content (simplified approach)
+            # TODO: Enhance this to use aider's more detailed parsing
+            import_lines = [
+                line.strip()
+                for line in file_content.split("\n")
+                if line.strip().startswith("import ") or "require(" in line
+            ]
 
-            # Parse dynamic imports
-            for match in re.finditer(dynamic_pattern, file_content):
-                module = match.group(1)
-                import_obj = Import(
-                    module=module,
-                    is_relative=module.startswith("."),
-                    import_type=(
-                        ImportType.RELATIVE
-                        if module.startswith(".")
-                        else ImportType.ABSOLUTE
-                    ),
-                    line_number=self._get_line_number(file_content, match.start()),
-                )
-                imports.append(import_obj)
+            for line_num, line in enumerate(import_lines, 1):
+                if line.startswith("import "):
+                    # Basic ES6 import parsing
+                    if " from " in line:
+                        parts = line.split(" from ")
+                        if len(parts) == 2:
+                            module = parts[1].strip().strip("'\"")
+                            imports.append(
+                                Import(
+                                    module=module,
+                                    symbols=[],
+                                    is_relative=module.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+                elif "require(" in line:
+                    # Basic CommonJS require parsing
+                    start = line.find("require(") + 8
+                    end = line.find(")", start)
+                    if start < end:
+                        module = line[start:end].strip().strip("'\"")
+                        imports.append(
+                            Import(
+                                module=module,
+                                symbols=[],
+                                is_relative=module.startswith("."),
+                                import_type=(
+                                    ImportType.RELATIVE
+                                    if module.startswith(".")
+                                    else ImportType.ABSOLUTE
+                                ),
+                                line_number=line_num,
+                            )
+                        )
+
+            logger.debug(
+                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
+            )
 
         except Exception as e:
-            logger.error(f"Error parsing JavaScript file {file_path}: {e}")
+            logger.error(
+                f"Error parsing JavaScript file {file_path} with tree-sitter: {e}"
+            )
 
         return imports
 
-    def _get_line_number(self, content: str, position: int) -> Optional[int]:
-        """Get line number for a given position in content."""
-        try:
-            return content[:position].count("\n") + 1
-        except Exception:
-            return None
+    def _get_repo_map(self) -> Any:
+        """Get or create aider's RepoMap instance."""
+        if self._repo_map is None:
+            try:
+                from aider.repomap import RepoMap
+                from aider.io import InputOutput
+
+                io = InputOutput()
+                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
+                logger.debug(
+                    "Created aider RepoMap instance for JavaScript import parsing"
+                )
+            except ImportError as e:
+                logger.error(f"Failed to import aider modules: {e}")
+                raise RuntimeError(
+                    "aider modules not available for tree-sitter parsing"
+                )
+
+        return self._repo_map
+
+    def _get_relative_path(self, file_path: str) -> str:
+        """Get relative path for aider's RepoMap."""
+        import os
+
+        if self.project_root and file_path.startswith(self.project_root):
+            return os.path.relpath(file_path, self.project_root)
+        return os.path.basename(file_path)
 
 
 class JavaImportParser(ImportParser):
-    """Parser for Java import statements."""
+    """Parser for Java import statements using aider's tree-sitter."""
+
+    def __init__(self, project_root: Optional[str] = None):
+        """Initialize with project root for aider's RepoMap."""
+        super().__init__()
+        self.project_root = project_root
+        self._repo_map = None
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract Java imports using regex patterns."""
+        """Extract Java imports using aider's tree-sitter."""
         imports = []
 
-        # Pattern for Java imports: import java.util.List;
-        import_pattern = r"import\s+([^;]+);"
-
         try:
-            for match in re.finditer(import_pattern, file_content):
-                module = match.group(1).strip()
+            # Get aider's RepoMap for tree-sitter parsing
+            repo_map = self._get_repo_map()
 
-                # Skip static imports for now
-                if module.startswith("static "):
-                    continue
+            # Get relative path for aider
+            rel_path = self._get_relative_path(file_path)
 
-                import_obj = Import(
-                    module=module,
-                    is_relative=False,
-                    import_type=ImportType.ABSOLUTE,
-                    line_number=self._get_line_number(file_content, match.start()),
-                )
-                imports.append(import_obj)
+            # Use aider's tree-sitter to get tags
+            tags = repo_map.get_tags(file_path, rel_path)
+
+            # Extract imports from file content (simplified approach)
+            import_lines = [
+                line.strip()
+                for line in file_content.split("\n")
+                if line.strip().startswith("import ")
+            ]
+
+            for line_num, line in enumerate(import_lines, 1):
+                if line.startswith("import ") and line.endswith(";"):
+                    # Extract module name from import statement
+                    module = line[7:-1].strip()  # Remove 'import ' and ';'
+
+                    # Skip static imports for now
+                    if not module.startswith("static "):
+                        imports.append(
+                            Import(
+                                module=module,
+                                symbols=[],
+                                is_relative=False,  # Java imports are always absolute
+                                import_type=ImportType.ABSOLUTE,
+                                line_number=line_num,
+                            )
+                        )
+
+            logger.debug(
+                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
+            )
 
         except Exception as e:
-            logger.error(f"Error parsing Java file {file_path}: {e}")
+            logger.error(f"Error parsing Java file {file_path} with tree-sitter: {e}")
 
         return imports
 
-    def _get_line_number(self, content: str, position: int) -> Optional[int]:
-        """Get line number for a given position in content."""
-        try:
-            return content[:position].count("\n") + 1
-        except Exception:
-            return None
+    def _get_repo_map(self) -> Any:
+        """Get or create aider's RepoMap instance."""
+        if self._repo_map is None:
+            try:
+                from aider.repomap import RepoMap
+                from aider.io import InputOutput
+
+                io = InputOutput()
+                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
+                logger.debug("Created aider RepoMap instance for Java import parsing")
+            except ImportError as e:
+                logger.error(f"Failed to import aider modules: {e}")
+                raise RuntimeError(
+                    "aider modules not available for tree-sitter parsing"
+                )
+
+        return self._repo_map
+
+    def _get_relative_path(self, file_path: str) -> str:
+        """Get relative path for aider's RepoMap."""
+        import os
+
+        if self.project_root and file_path.startswith(self.project_root):
+            return os.path.relpath(file_path, self.project_root)
+        return os.path.basename(file_path)
 
 
 class GoImportParser(ImportParser):
-    """Parser for Go import statements."""
+    """Parser for Go import statements using aider's tree-sitter."""
+
+    def __init__(self, project_root: Optional[str] = None):
+        """Initialize with project root for aider's RepoMap."""
+        super().__init__()
+        self.project_root = project_root
+        self._repo_map = None
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract Go imports using regex patterns."""
+        """Extract Go imports using aider's tree-sitter."""
         imports = []
 
-        # Pattern for Go imports: import "fmt"
-        single_import_pattern = r'import\s+[\'"]([^\'"]+)[\'"]'
-
-        # Pattern for grouped imports: import ( "fmt" "os" )
-        grouped_import_pattern = r'import\s*\(\s*((?:[\'"][^\'"]+[\'"]\s*)+)\s*\)'
-
         try:
-            # Parse single imports
-            for match in re.finditer(single_import_pattern, file_content):
-                module = match.group(1)
+            # Get aider's RepoMap for tree-sitter parsing
+            repo_map = self._get_repo_map()
 
-                import_obj = Import(
-                    module=module,
-                    is_relative=module.startswith("."),
-                    import_type=(
-                        ImportType.RELATIVE
-                        if module.startswith(".")
-                        else ImportType.ABSOLUTE
-                    ),
-                    line_number=self._get_line_number(file_content, match.start()),
-                )
-                imports.append(import_obj)
+            # Get relative path for aider
+            rel_path = self._get_relative_path(file_path)
 
-            # Parse grouped imports
-            for match in re.finditer(grouped_import_pattern, file_content):
-                imports_block = match.group(1)
-                for import_match in re.finditer(r'[\'"]([^\'"]+)[\'"]', imports_block):
-                    module = import_match.group(1)
+            # Use aider's tree-sitter to get tags
+            tags = repo_map.get_tags(file_path, rel_path)
 
-                    import_obj = Import(
-                        module=module,
-                        is_relative=module.startswith("."),
-                        import_type=(
-                            ImportType.RELATIVE
-                            if module.startswith(".")
-                            else ImportType.ABSOLUTE
-                        ),
-                        line_number=self._get_line_number(file_content, match.start()),
-                    )
-                    imports.append(import_obj)
+            # Extract imports from file content (simplified approach)
+            import_lines = [
+                line.strip()
+                for line in file_content.split("\n")
+                if line.strip().startswith("import ")
+            ]
+
+            for line_num, line in enumerate(import_lines, 1):
+                if line.startswith("import "):
+                    # Handle single import: import "fmt"
+                    if '"' in line or "'" in line:
+                        # Extract module name from quotes
+                        start_quote = line.find('"') if '"' in line else line.find("'")
+                        end_quote = line.rfind('"') if '"' in line else line.rfind("'")
+                        if (
+                            start_quote != -1
+                            and end_quote != -1
+                            and start_quote != end_quote
+                        ):
+                            module = line[start_quote + 1 : end_quote]
+                            imports.append(
+                                Import(
+                                    module=module,
+                                    symbols=[],
+                                    is_relative=module.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+                    # Handle grouped imports: import ( "fmt" "os" )
+                    elif "(" in line:
+                        # Find the import block content
+                        start_paren = line.find("(")
+                        if start_paren != -1:
+                            # Look for the rest of the import block in subsequent lines
+                            lines = file_content.split("\n")
+                            import_block = line[start_paren + 1 :]
+                            i = line_num
+                            while i < len(lines) and ")" not in import_block:
+                                import_block += " " + lines[i].strip()
+                                i += 1
+
+                            # Extract modules from the block
+                            for quote_char in ['"', "'"]:
+                                start = 0
+                                while True:
+                                    start_quote = import_block.find(quote_char, start)
+                                    if start_quote == -1:
+                                        break
+                                    end_quote = import_block.find(
+                                        quote_char, start_quote + 1
+                                    )
+                                    if end_quote == -1:
+                                        break
+                                    module = import_block[start_quote + 1 : end_quote]
+                                    if module.strip():
+                                        imports.append(
+                                            Import(
+                                                module=module,
+                                                symbols=[],
+                                                is_relative=module.startswith("."),
+                                                import_type=(
+                                                    ImportType.RELATIVE
+                                                    if module.startswith(".")
+                                                    else ImportType.ABSOLUTE
+                                                ),
+                                                line_number=line_num,
+                                            )
+                                        )
+                                    start = end_quote + 1
+
+            logger.debug(
+                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
+            )
 
         except Exception as e:
-            logger.error(f"Error parsing Go file {file_path}: {e}")
+            logger.error(f"Error parsing Go file {file_path} with tree-sitter: {e}")
 
         return imports
 
-    def _get_line_number(self, content: str, position: int) -> Optional[int]:
-        """Get line number for a given position in content."""
-        try:
-            return content[:position].count("\n") + 1
-        except Exception:
-            return None
+    def _get_repo_map(self) -> Any:
+        """Get or create aider's RepoMap instance."""
+        if self._repo_map is None:
+            try:
+                from aider.repomap import RepoMap
+                from aider.io import InputOutput
+
+                io = InputOutput()
+                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
+                logger.debug("Created aider RepoMap instance for Go import parsing")
+            except ImportError as e:
+                logger.error(f"Failed to import aider modules: {e}")
+                raise RuntimeError(
+                    "aider modules not available for tree-sitter parsing"
+                )
+
+        return self._repo_map
+
+    def _get_relative_path(self, file_path: str) -> str:
+        """Get relative path for aider's RepoMap."""
+        import os
+
+        if self.project_root and file_path.startswith(self.project_root):
+            return os.path.relpath(file_path, self.project_root)
+        return os.path.basename(file_path)
 
 
 class ImportAnalyzer:
@@ -280,12 +423,14 @@ class ImportAnalyzer:
         self.project_root = str(project_root) if project_root is not None else None
         self.language_parsers: Dict[str, ImportParser] = {
             "py": PythonImportParser(),
-            "js": JavaScriptImportParser(),
-            "ts": JavaScriptImportParser(),  # TypeScript uses same parser
-            "jsx": JavaScriptImportParser(),
-            "tsx": JavaScriptImportParser(),
-            "java": JavaImportParser(),
-            "go": GoImportParser(),
+            "js": JavaScriptImportParser(project_root=self.project_root),
+            "ts": JavaScriptImportParser(
+                project_root=self.project_root
+            ),  # TypeScript uses same parser
+            "jsx": JavaScriptImportParser(project_root=self.project_root),
+            "tsx": JavaScriptImportParser(project_root=self.project_root),
+            "java": JavaImportParser(project_root=self.project_root),
+            "go": GoImportParser(project_root=self.project_root),
         }
 
         # File extensions that should be analyzed
