@@ -7,13 +7,15 @@ This module provides intelligent identifier discovery using multiple fuzzy match
 
 import re
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import List, Set, Tuple, Dict, Optional, Any
 from fuzzywuzzy import fuzz
 from ..core.cache_manager import CacheManager
 
 
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FuzzyMatcher:
@@ -35,7 +37,7 @@ class FuzzyMatcher:
         cache_results: bool = True,
         verbose: bool = True,
         cache_max_size: int = 1000,
-        cache_ttl: int = 3600,
+        cache_ttl = get_config("CACHE_TTL", 3600),
     ):
         """
         Initialize the fuzzy matcher.

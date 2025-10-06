@@ -6,13 +6,14 @@ assessment and recommendations for testing and mitigation.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from typing import List, Dict, Set, Optional, Any
 from pathlib import Path
 
 from .models import ImpactReport, BreakingChangeRisk
 from .advanced_dependency_graph import AdvancedDependencyGraph
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ImpactAnalyzer:

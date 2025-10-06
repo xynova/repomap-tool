@@ -8,6 +8,7 @@ ensuring consistency and extensibility across the output system.
 from __future__ import annotations
 
 import logging
+from ..core.logging_service import get_logger
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Protocol, Type, TypeVar, Union
 from pathlib import Path
@@ -82,7 +83,7 @@ class BaseFormatter(ABC):
         """
         self._console_manager = console_manager
         self._enable_logging = enable_logging
-        self._logger = logging.getLogger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) if enable_logging else None
 
     @abstractmethod
     def format(

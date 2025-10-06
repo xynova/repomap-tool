@@ -11,6 +11,8 @@ This module provides a more flexible approach than rigid dictionaries by using:
 
 import re
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import Dict, List, Set, Tuple, Any
 from collections import Counter
 import math
@@ -18,7 +20,7 @@ import math
 # Import our existing fuzzy matcher
 from .fuzzy_matcher import FuzzyMatcher
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class HybridMatcher:
@@ -32,7 +34,7 @@ class HybridMatcher:
     def __init__(
         self,
         fuzzy_matcher: FuzzyMatcher,
-        semantic_threshold: float = 0.3,
+        semantic_threshold = get_config("SEMANTIC_THRESHOLD", 0.3),
         use_word_embeddings: bool = False,
         verbose: bool = True,
     ):
@@ -332,7 +334,7 @@ class HybridMatcher:
         return overall_score, component_scores
 
     def find_hybrid_matches(
-        self, query: str, all_identifiers: Set[str], threshold: float = 0.3
+        self, query: str, all_identifiers: Set[str], threshold = get_config("SEMANTIC_THRESHOLD", 0.3)
     ) -> List[Tuple[str, float, Dict[str, float]]]:
         """
         Find hybrid matches for a query among all identifiers.
@@ -382,7 +384,7 @@ class HybridMatcher:
             List of (identifier, score) tuples, sorted by score (highest first)
         """
         # Use a lower threshold for match_identifiers to be more inclusive
-        threshold = 0.1
+        threshold = get_config("HYBRID_THRESHOLD", 0.1)
 
         # Get hybrid matches
         hybrid_matches = self.find_hybrid_matches(query, all_identifiers, threshold)
@@ -410,7 +412,7 @@ class HybridMatcher:
         Returns:
             Dictionary with match analysis
         """
-        matches = self.find_hybrid_matches(query, all_identifiers, threshold=0.1)
+        matches = self.find_hybrid_matches(query, all_identifiers, threshold = get_config("HYBRID_THRESHOLD", 0.1))
 
         analysis: Dict[str, Any] = {
             "query": query,

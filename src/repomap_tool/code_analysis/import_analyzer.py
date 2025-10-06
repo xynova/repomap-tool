@@ -15,8 +15,10 @@ from typing import List, Dict, Optional, Set, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import Import, FileImports, ProjectImports, ImportType
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ImportParser:
@@ -491,12 +493,16 @@ class ImportAnalyzer:
     def analyze_project_imports(
         self,
         project_path: str,
-        max_workers: int = 4,
+        max_workers: Optional[int] = None,
         ignore_dirs: Optional[List[str]] = None,
         file_extensions: Optional[List[str]] = None,
     ) -> ProjectImports:
         """Analyze all supported files in a project for imports."""
         self.project_root = project_path  # Ensure project_root is set
+        
+        # Use config default if not provided
+        if max_workers is None:
+            max_workers = get_config("MAX_WORKERS", 4))
 
         all_files = self._get_all_files(project_path, ignore_dirs, file_extensions)
         project_imports = ProjectImports(project_path=project_path, file_imports={})

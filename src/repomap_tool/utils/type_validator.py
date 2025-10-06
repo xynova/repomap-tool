@@ -6,10 +6,11 @@ to ensure type safety at runtime.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from typing import Any, Dict, List, Optional
 from ..protocols import ProjectMap, Tag, FileData
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def validate_project_map(data: Optional[Dict[str, Any]]) -> ProjectMap:

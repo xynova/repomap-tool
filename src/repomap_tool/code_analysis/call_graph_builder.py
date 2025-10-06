@@ -7,6 +7,8 @@ call graph that shows how functions depend on each other.
 
 import ast
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 import re
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any
@@ -14,7 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import FunctionCall, CallGraph
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CallAnalyzer:
@@ -259,7 +261,7 @@ class CallGraphBuilder:
         )
 
     def build_call_graph(
-        self, project_files: List[str], max_workers: int = 4
+        self, project_files: List[str], max_workers = get_config("MAX_WORKERS", 4)
     ) -> CallGraph:
         """Build the complete call graph for a project.
 

@@ -8,6 +8,7 @@ following proper MVC architecture patterns.
 from __future__ import annotations
 
 import logging
+from ..core.logging_service import get_logger
 from typing import Any, List, Optional
 
 import click
@@ -18,7 +19,7 @@ from .template_formatter import TemplateBasedFormatter
 from .templates.engine import get_template_engine
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):

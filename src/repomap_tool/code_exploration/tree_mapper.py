@@ -7,13 +7,14 @@ providing the output interface for tree-based exploration.
 
 import os
 import logging
+from ..core.logging_service import get_logger
 from typing import Optional, List, Dict, Any
 from pathlib import Path
 
 from repomap_tool.models import ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TreeMapper:

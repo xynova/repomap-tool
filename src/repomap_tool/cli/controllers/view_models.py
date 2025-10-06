@@ -1,3 +1,4 @@
+from ..core.config_service import get_config
 """
 ViewModels for CLI Controllers.
 
@@ -105,7 +106,7 @@ class ExplorationViewModel:
     navigation_hints: List[Dict[str, Any]]
     session_id: Optional[str] = None
     token_count: int = 0
-    max_tokens: int = 4000
+    max_tokens = get_config("MAX_TOKENS", 4000)
     compression_level: str = "medium"
 
 
@@ -128,7 +129,7 @@ class ProjectAnalysisViewModel:
 class ControllerConfig:
     """Configuration for Controllers."""
 
-    max_tokens: int = 4000
+    max_tokens = get_config("MAX_TOKENS", 4000)
     compression_level: str = "medium"
     verbose: bool = False
     output_format: str = "text"

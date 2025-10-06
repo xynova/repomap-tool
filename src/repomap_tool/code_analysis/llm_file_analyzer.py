@@ -7,6 +7,7 @@ about file relationships and impact.
 """
 
 import logging
+from ..core.logging_service import get_logger
 import os
 from typing import List, Dict, Set, Optional, Any, Tuple, TYPE_CHECKING
 from pathlib import Path
@@ -47,7 +48,7 @@ from ..llm.token_optimizer import TokenOptimizer
 from ..llm.context_selector import ContextSelector
 from ..llm.hierarchical_formatter import HierarchicalFormatter
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class LLMFileAnalyzer:

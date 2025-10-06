@@ -6,6 +6,8 @@ advanced dependency metrics for comprehensive code relationship analysis.
 """
 
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import List, Dict, Set, Optional, Any, Tuple
 from collections import defaultdict, deque
 
@@ -13,7 +15,7 @@ from .dependency_graph import DependencyGraph
 from .call_graph_builder import CallGraphBuilder
 from .models import CallGraph, FunctionCall
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AdvancedDependencyGraph(DependencyGraph):
@@ -130,7 +132,7 @@ class AdvancedDependencyGraph(DependencyGraph):
         return list(dependents)
 
     def calculate_transitive_dependencies(
-        self, file_path: str, max_depth: int = 10
+        self, file_path: str, max_depth = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files transitively dependent on a given file.
 
@@ -173,7 +175,7 @@ class AdvancedDependencyGraph(DependencyGraph):
         return visited - {file_path}  # Exclude the original file
 
     def calculate_transitive_dependents(
-        self, file_path: str, max_depth: int = 10
+        self, file_path: str, max_depth = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files that a given file transitively depends on.
 

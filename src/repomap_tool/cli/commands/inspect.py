@@ -55,7 +55,7 @@ def inspect(ctx: click.Context) -> None:
     help="Matching strategy",
 )
 @click.option(
-    "--threshold", "-t", type=float, default=0.7, help="Match threshold (0.0-1.0)"
+    "--threshold = get_config("FUZZY_THRESHOLD", 0.7), help="Match threshold (0.0-1.0)"
 )
 @click.option(
     "--max-results", "-m", type=int, default=10, help="Maximum results to return"

@@ -6,6 +6,7 @@ providing the core functionality for tree manipulation within sessions.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 import os
@@ -15,7 +16,7 @@ from repomap_tool.core import RepoMapService
 from repomap_tool.code_exploration.session_manager import SessionManager
 from repomap_tool.code_exploration.tree_builder import TreeBuilder
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TreeManager:

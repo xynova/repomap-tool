@@ -6,6 +6,8 @@ code analysis and search functionality.
 """
 
 import logging
+from .config_service import get_config
+from .logging_service import get_logger
 import os
 import time
 import traceback
@@ -119,7 +121,7 @@ class RepoMapService:
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging based on configuration."""
-        logger = logging.getLogger(__name__)
+        logger = get_logger(__name__)
 
         # Set log level
         level = getattr(logging, self.config.log_level)
@@ -898,7 +900,7 @@ class RepoMapService:
             query=query,
             identifiers=identifiers,
             semantic_matcher=self.semantic_matcher,
-            limit=50,
+            limit = get_config("DEFAULT_LIMIT", 5),
         )
 
         # Convert MatchResult objects to the expected format
@@ -942,7 +944,7 @@ class RepoMapService:
             query=query,
             identifiers=identifiers,
             fuzzy_matcher=self.fuzzy_matcher,
-            limit=50,
+            limit = get_config("DEFAULT_LIMIT", 5),
         )
 
         # Return MatchResult objects directly (as expected by the interface)

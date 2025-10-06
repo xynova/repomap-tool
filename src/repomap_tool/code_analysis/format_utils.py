@@ -7,6 +7,7 @@ including LLM-optimized text, JSON, tables, and plain text.
 
 import json
 import logging
+from ..core.logging_service import get_logger
 import os
 from pathlib import Path
 from typing import Any, List, Set, TYPE_CHECKING, Union, Protocol
@@ -30,7 +31,7 @@ class TokenOptimizerProtocol(Protocol):
 if TYPE_CHECKING:
     from .models import FileImpactAnalysis, FileCentralityAnalysis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def format_llm_optimized_impact(

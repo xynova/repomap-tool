@@ -6,10 +6,11 @@ across different analysis components.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from typing import List, Optional
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 def get_all_project_files(

@@ -9,6 +9,7 @@ and output configuration.
 from __future__ import annotations
 
 import logging
+from ..core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Type, Union
 
 import click
@@ -52,7 +53,7 @@ class OutputManager:
         self._console_manager = console_manager
         self._formatter_registry = formatter_registry
         self._enable_logging = enable_logging
-        self._logger = logging.getLogger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) if enable_logging else None
 
         # Track output statistics
         self._output_stats: Dict[str, int] = {

@@ -10,10 +10,11 @@ import stat
 from pathlib import Path
 from typing import Optional, Union, List, Tuple, Any
 import logging
+from ..core.logging_service import get_logger
 
 from ..exceptions import FileAccessError, ValidationError
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 # Security constants
 MAX_PATH_LENGTH = 4096

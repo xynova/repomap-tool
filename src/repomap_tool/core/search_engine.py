@@ -5,6 +5,7 @@ This module handles different types of search operations (fuzzy, semantic, hybri
 """
 
 import logging
+from .config_service import get_config
 from typing import List, Optional
 from ..protocols import MatcherProtocol
 from ..models import MatchResult
@@ -16,7 +17,7 @@ def fuzzy_search(
     query: str,
     identifiers: List[str],
     fuzzy_matcher: MatcherProtocol,
-    limit: int = 10,
+    limit = get_config("MAX_LIMIT", 10),
 ) -> List[MatchResult]:
     """Perform fuzzy search on identifiers."""
     # Input validation
@@ -56,7 +57,7 @@ def semantic_search(
     query: str,
     identifiers: List[str],
     semantic_matcher: MatcherProtocol,
-    limit: int = 10,
+    limit = get_config("MAX_LIMIT", 10),
 ) -> List[MatchResult]:
     """Perform semantic search on identifiers."""
     # Input validation
@@ -129,7 +130,7 @@ def hybrid_search(
     query: str,
     identifiers: List[str],
     hybrid_matcher: MatcherProtocol,
-    limit: int = 10,
+    limit = get_config("MAX_LIMIT", 10),
 ) -> List[MatchResult]:
     """Perform hybrid search on identifiers."""
     # Input validation
@@ -174,7 +175,7 @@ def hybrid_search(
 def basic_search(
     query: Optional[str],
     identifiers: Optional[List[str]],
-    limit: int = 10,
+    limit = get_config("MAX_LIMIT", 10),
 ) -> List[MatchResult]:
     """Perform basic string search on identifiers."""
     # Handle None inputs gracefully

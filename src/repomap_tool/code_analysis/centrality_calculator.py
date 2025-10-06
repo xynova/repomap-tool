@@ -11,8 +11,10 @@ from typing import Dict, List, Tuple, Optional, Any, Set
 from collections import defaultdict
 
 from .dependency_graph import DependencyGraph
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CentralityCalculator:
@@ -107,7 +109,7 @@ class CentralityCalculator:
             return {}
 
     def calculate_pagerank_centrality(
-        self, alpha: float = 0.85, max_iter: int = 100
+        self, alpha: Optional[float] = None, max_iter: Optional[int] = None
     ) -> Dict[str, float]:
         """Calculate PageRank centrality for all files.
 
@@ -115,12 +117,18 @@ class CentralityCalculator:
         of files that import them. Higher values indicate more important files.
 
         Args:
-            alpha: Damping parameter (0.85 is standard)
-            max_iter: Maximum iterations for convergence
+            alpha: Damping parameter (default: from config)
+            max_iter: Maximum iterations for convergence (default: from config)
 
         Returns:
             Dictionary mapping file paths to PageRank scores (0-1)
         """
+        # Use config defaults if not provided
+        if alpha is None:
+            alpha = get_config("PAGERANK_ALPHA", 0.85))
+        if max_iter is None:
+            max_iter = get_config("PAGERANK_MAX_ITER", 100))
+            
         cache_key = f"pagerank_centrality_{alpha}_{max_iter}"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached PageRank centrality scores")
@@ -223,8 +231,9 @@ class CentralityCalculator:
                 return {}
 
             # Use NetworkX's eigenvector centrality
+            max_iter = get_config("EIGENVECTOR_MAX_ITER", 1000)
             eigenvector_scores: Dict[str, float] = nx.eigenvector_centrality(
-                self.graph.graph, max_iter=1000
+                self.graph.graph, max_iter=max_iter
             )
 
             # Validate scores

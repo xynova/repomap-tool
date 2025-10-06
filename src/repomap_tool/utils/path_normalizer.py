@@ -9,8 +9,9 @@ import os
 from pathlib import Path
 from typing import Optional
 import logging
+from ..core.logging_service import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class PathNormalizer:

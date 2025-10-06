@@ -8,6 +8,8 @@ coordinating between code_analysis, code_exploration, and code_search services.
 from __future__ import annotations
 
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 
 from ...code_analysis.models import AnalysisFormat, FileImpactAnalysis
@@ -21,7 +23,7 @@ from .view_models import (
 )
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ImpactController(BaseController):
@@ -266,7 +268,7 @@ class ImpactController(BaseController):
             risk_assessment=risk_assessment,
             total_affected=len(all_affected_files),
             token_count=len(str(impact_analyses)),
-            max_tokens=self.config.max_tokens if self.config else 4000,
+            max_tokens = get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
             ),

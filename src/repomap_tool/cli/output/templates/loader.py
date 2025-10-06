@@ -8,6 +8,7 @@ template loading and template content management.
 from __future__ import annotations
 
 import logging
+from ..core.logging_service import get_logger
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
@@ -21,7 +22,7 @@ class TemplateLoader(ABC):
     def __init__(self, enable_logging: bool = True) -> None:
         """Initialize the template loader."""
         self._enable_logging = enable_logging
-        self._logger = logging.getLogger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) if enable_logging else None
 
     @abstractmethod
     def load_template(

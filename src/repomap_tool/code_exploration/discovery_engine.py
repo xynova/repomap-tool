@@ -7,6 +7,8 @@ capabilities, providing the foundation for building exploration trees.
 
 import os
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -21,7 +23,7 @@ from repomap_tool.code_analysis import (
     DependencyGraph,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EntrypointDiscoverer:
@@ -59,7 +61,7 @@ class EntrypointDiscoverer:
             self.semantic_threshold = 0.6
 
         # Fuzzy matching threshold (70% similarity)
-        self.fuzzy_threshold = 0.7
+        self.fuzzy_threshold = get_config("FUZZY_THRESHOLD", 0.7)
 
         # All dependencies must be injected - no fallback allowed
         if import_analyzer is None:

@@ -6,6 +6,8 @@ to avoid direct instantiation and ensure consistent configuration patterns.
 """
 
 import logging
+from .config_service import get_config
+from .logging_service import get_logger
 from typing import Optional, List, Any
 from pathlib import Path
 
@@ -17,7 +19,7 @@ from repomap_tool.models import (
     PerformanceConfig,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ConfigFactory:
@@ -91,7 +93,7 @@ class ConfigFactory:
 
     @staticmethod
     def create_performance_config(
-        max_workers: int = 4,
+        max_workers = get_config("MAX_WORKERS", 4),
         enable_progress: bool = True,
     ) -> PerformanceConfig:
         """Create a PerformanceConfig with specified parameters.

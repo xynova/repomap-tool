@@ -6,13 +6,14 @@ eliminating the need for components to ask for file paths separately.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 
 from .file_filter import FileFilter
 from ..core.file_scanner import get_project_files
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FileDiscoveryService:

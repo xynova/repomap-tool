@@ -6,6 +6,8 @@ centrality scores, rankings, dependency analysis, and structural impact.
 """
 
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 import os
 from typing import List, Dict, Any, Optional
 
@@ -20,7 +22,7 @@ from .function_utils import (
 from .models import FileCentralityAnalysis
 from ..utils.path_normalizer import PathNormalizer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CentralityAnalysisEngine:
@@ -222,7 +224,7 @@ class CentralityAnalysisEngine:
             ast_result.function_calls,
             ast_result.defined_functions,
             ast_result.imports,
-            limit=5,
+            limit = get_config("DEFAULT_LIMIT", 5),
         )
 
         return {
@@ -234,7 +236,7 @@ class CentralityAnalysisEngine:
                 ast_result.function_calls
             ),
             "top_called_functions": get_top_called_functions(
-                ast_result.function_calls, limit=5
+                ast_result.function_calls, limit = get_config("DEFAULT_LIMIT", 5)
             ),
             "internal_functions": categorized_calls["internal"],
             "external_functions": categorized_calls["external"],

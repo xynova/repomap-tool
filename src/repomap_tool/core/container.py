@@ -6,6 +6,7 @@ and ensuring proper lifecycle management of services.
 """
 
 import logging
+from .logging_service import get_logger
 from typing import TYPE_CHECKING, Optional, cast
 
 from dependency_injector import containers, providers
@@ -46,7 +47,7 @@ if TYPE_CHECKING:
 # Legacy factory functions removed - using DI container instead
 from ..models import RepoMapConfig
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class Container(containers.DeclarativeContainer):

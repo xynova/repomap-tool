@@ -6,10 +6,11 @@ consolidating all the scattered filtering rules across the codebase.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from typing import List, Set, Optional
 from pathlib import Path
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class FileFilter:

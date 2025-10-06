@@ -7,6 +7,7 @@ relationships for LLM-optimized impact and centrality analysis.
 """
 
 import logging
+from ..core.logging_service import get_logger
 import os
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any, Union
@@ -21,7 +22,7 @@ from .models import (
     CrossFileRelationship,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AnalysisType(str, Enum):

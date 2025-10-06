@@ -6,6 +6,7 @@ leveraging existing semantic analysis to create human-readable context names.
 """
 
 import logging
+from ..core.logging_service import get_logger
 from collections import Counter
 from typing import List, Dict, Optional
 from uuid import uuid4
@@ -13,7 +14,7 @@ from uuid import uuid4
 from repomap_tool.models import Entrypoint, TreeCluster
 from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TreeClusterer:

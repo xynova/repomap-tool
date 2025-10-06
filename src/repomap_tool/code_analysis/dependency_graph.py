@@ -6,6 +6,8 @@ code dependencies across a project.
 """
 
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 import networkx as nx
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any
@@ -14,7 +16,7 @@ from collections import defaultdict, deque
 from .models import DependencyNode, Import, FileImports, ProjectImports
 from .import_analyzer import ImportAnalyzer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DependencyGraph:
@@ -251,7 +253,7 @@ class DependencyGraph:
         return list(self.graph.successors(file_path))
 
     def get_transitive_dependencies(
-        self, file_path: str, max_depth: int = 10
+        self, file_path: str, max_depth = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files transitively dependent on a given file.
 
@@ -283,7 +285,7 @@ class DependencyGraph:
         return visited - {file_path}  # Exclude the original file
 
     def get_transitive_dependents(
-        self, file_path: str, max_depth: int = 10
+        self, file_path: str, max_depth = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files that a given file transitively depends on.
 
