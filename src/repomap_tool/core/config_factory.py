@@ -27,7 +27,7 @@ class ConfigFactory:
 
     @staticmethod
     def create_dependency_config(
-        max_graph_size: int = 1000,
+        max_graph_size: int = 2000,
         enable_call_graph: bool = True,
         enable_impact_analysis: bool = True,
     ) -> DependencyConfig:
@@ -154,83 +154,6 @@ class ConfigFactory:
             **kwargs,
         )
 
-    @staticmethod
-    def create_basic_config(project_root: str, verbose: bool = False) -> RepoMapConfig:
-        """Create a basic RepoMapConfig with default settings.
-
-        Args:
-            project_root: Project root path
-            verbose: Enable verbose output
-
-        Returns:
-            Basic RepoMapConfig instance
-        """
-        return ConfigFactory.create_repomap_config(
-            project_root=project_root,
-            verbose=verbose,
-        )
-
-    @staticmethod
-    def create_analysis_config(
-        project_root: str,
-        enable_impact_analysis: bool = True,
-        max_graph_size: int = 1000,
-        verbose: bool = False,
-    ) -> RepoMapConfig:
-        """Create a RepoMapConfig optimized for analysis operations.
-
-        Args:
-            project_root: Project root path
-            enable_impact_analysis: Enable impact analysis
-            max_graph_size: Maximum size of dependency graph
-            verbose: Enable verbose output
-
-        Returns:
-            Analysis-optimized RepoMapConfig instance
-        """
-        dependencies = ConfigFactory.create_dependency_config(
-            max_graph_size=max_graph_size,
-            enable_impact_analysis=enable_impact_analysis,
-        )
-
-        return ConfigFactory.create_repomap_config(
-            project_root=project_root,
-            dependencies=dependencies,
-            verbose=verbose,
-        )
-
-    @staticmethod
-    def create_search_config(
-        project_root: str,
-        fuzzy_threshold: int = 70,
-        semantic_enabled: bool = False,
-        verbose: bool = False,
-    ) -> RepoMapConfig:
-        """Create a RepoMapConfig optimized for search operations.
-
-        Args:
-            project_root: Project root path
-            fuzzy_threshold: Fuzzy matching threshold (0-100)
-            semantic_enabled: Enable semantic matching
-            verbose: Enable verbose output
-
-        Returns:
-            Search-optimized RepoMapConfig instance
-        """
-        fuzzy_match = ConfigFactory.create_fuzzy_match_config(
-            threshold=fuzzy_threshold,
-        )
-
-        semantic_match = ConfigFactory.create_semantic_match_config(
-            enabled=semantic_enabled,
-        )
-
-        return ConfigFactory.create_repomap_config(
-            project_root=project_root,
-            fuzzy_match=fuzzy_match,
-            semantic_match=semantic_match,
-            verbose=verbose,
-        )
 
 
 # Global config factory instance

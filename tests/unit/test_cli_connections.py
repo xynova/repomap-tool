@@ -14,9 +14,9 @@ from unittest.mock import patch, MagicMock
 
 from src.repomap_tool.cli import (
     create_default_config,
-    create_search_config,
     load_config_file,
 )
+from src.repomap_tool.cli.config.loader import load_or_create_config
 from src.repomap_tool.models import (
     RepoMapConfig,
     FuzzyMatchConfig,
@@ -265,37 +265,52 @@ class TestCLIConnections:
     def test_search_config_creation(self):
         """Test that search config properly enables matchers based on match type."""
         # Test fuzzy match type
-        config = create_search_config(
+        config, was_created = load_or_create_config(
             project_path=".",
-            match_type="fuzzy",
+            config_file=None,
+            create_if_missing=False,
             verbose=True,
             log_level="DEBUG",
             cache_size=1500,
         )
 
-        # Fuzzy matching is always enabled
+        # Override specific search settings
+        config.fuzzy_match.enabled = True
+        config.semantic_match.enabled = False
+
+        # Fuzzy matching is enabled, semantic is disabled
         assert config.semantic_match.enabled is False
         assert config.log_level == "DEBUG"
         assert config.performance.cache_size == 1500
 
         # Test semantic match type
-        config = create_search_config(
+        config, was_created = load_or_create_config(
             project_path=".",
-            match_type="semantic",
+            config_file=None,
+            create_if_missing=False,
             verbose=True,
         )
 
-        # Fuzzy matching is always enabled
+        # Override specific search settings
+        config.fuzzy_match.enabled = True
+        config.semantic_match.enabled = True
+
+        # Both fuzzy and semantic matching are enabled
         assert config.semantic_match.enabled is True
 
         # Test hybrid match type
-        config = create_search_config(
+        config, was_created = load_or_create_config(
             project_path=".",
-            match_type="hybrid",
+            config_file=None,
+            create_if_missing=False,
             verbose=True,
         )
 
-        # Fuzzy matching is always enabled
+        # Override specific search settings
+        config.fuzzy_match.enabled = True
+        config.semantic_match.enabled = True
+
+        # Both fuzzy and semantic matching are enabled
         assert config.semantic_match.enabled is True
 
 

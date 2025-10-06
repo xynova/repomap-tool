@@ -68,6 +68,17 @@ alwaysApply: true
 - **Eliminates duplicate logger setup** across 46+ files
 - **Improves consistency** - unified logging behavior
 
+### **🚨 CRITICAL: Configuration File Loading Requirements**
+- **ALL CLI commands MUST properly load configuration files** - no exceptions
+- **ALWAYS use `load_or_create_config()` from `cli.config.loader`** for configuration loading
+- **NEVER use `create_analysis_config()` or `create_search_config()`** - these ignore config files
+- **ALWAYS pass `config_file` parameter** to `load_or_create_config()`
+- **NEVER bypass configuration file loading** with hardcoded factory methods
+- **Configuration files MUST be respected** when `--config` parameter is provided
+- **ALL commands must have consistent configuration loading behavior**
+- **Eliminates configuration loading inconsistencies** across CLI commands
+- **Improves user experience** - configuration files work as expected
+
 ### **AI Development Guidelines**
 - **ALWAYS use aider.repomap.RepoMap** - this is the core of the project, never bypass it
 - **ALWAYS use aider's tree-sitter capabilities** - never implement custom AST parsing
@@ -76,6 +87,7 @@ alwaysApply: true
 - **ALWAYS use absolute paths** - all file paths must be absolute throughout the system
 - **ALWAYS use centralized configuration** - use `get_config(key, default)` instead of hardcoded values
 - **ALWAYS use centralized logging** - use `get_logger(__name__)` instead of `logging.getLogger(__name__)`
+- **ALWAYS use proper configuration file loading** - use `load_or_create_config()` not factory methods
 - **ALWAYS follow existing patterns** - don't reinvent the wheel
 - **ALWAYS use dependency injection** - never instantiate services directly
 - **ALWAYS validate dependencies** - raise errors for missing dependencies
@@ -839,6 +851,38 @@ class BadService3:
         # This creates inconsistency and maintenance nightmare
 ```
 
+### **❌ Configuration Loading Anti-Patterns**
+```python
+# WRONG - AI must never bypass configuration file loading
+@click.command()
+def bad_command(project_path: str, config: Optional[str]) -> None:
+    # ❌ AI: NEVER use factory methods that ignore config files
+    config_factory = get_config_factory()
+    config_obj = config_factory.create_analysis_config(
+        project_root=project_path,
+        verbose=verbose,
+    )  # WRONG! Ignores --config parameter completely
+
+# WRONG - AI must never use create_search_config for CLI commands
+@click.command()
+def bad_search_command(project_path: str, config: Optional[str]) -> None:
+    # ❌ AI: NEVER use create_search_config - it ignores config files
+    config_obj = create_search_config(
+        project_path, match_type, verbose, log_level, cache_size
+    )  # WRONG! Ignores --config parameter completely
+
+# WRONG - AI must never skip config_file parameter
+@click.command()
+def bad_command(project_path: str, config: Optional[str]) -> None:
+    # ❌ AI: NEVER call load_or_create_config without config_file parameter
+    config_obj, was_created = load_or_create_config(
+        project_path=project_path,
+        # config_file=config,  # WRONG! Missing this parameter
+        create_if_missing=False,
+        verbose=verbose,
+    )
+```
+
 ### **❌ AI Anti-Patterns**
 ```python
 # WRONG - AI must never do these things
@@ -1145,6 +1189,41 @@ def good_function():
     
     result = service.process()
     output_manager.display(result, OutputFormat.TEXT)
+```
+
+### **✅ Configuration Loading Patterns**
+```python
+# CORRECT - AI must always use proper configuration file loading
+@click.command()
+def good_command(project_path: str, config: Optional[str]) -> None:
+    # ✅ AI: ALWAYS use load_or_create_config for CLI commands
+    from repomap_tool.cli.config.loader import load_or_create_config
+    
+    config_obj, was_created = load_or_create_config(
+        project_path=project_path,
+        config_file=config,  # ✅ AI: ALWAYS pass config_file parameter
+        create_if_missing=False,
+        verbose=verbose,
+    )
+    
+    # ✅ AI: Configuration file is now properly loaded and applied
+
+# CORRECT - AI must always respect configuration files
+@click.command()
+def good_search_command(project_path: str, config: Optional[str]) -> None:
+    # ✅ AI: ALWAYS use load_or_create_config, then override specific settings
+    from repomap_tool.cli.config.loader import load_or_create_config
+    
+    config_obj, was_created = load_or_create_config(
+        project_path=project_path,
+        config_file=config,  # ✅ AI: ALWAYS pass config_file parameter
+        create_if_missing=False,
+        verbose=verbose,
+    )
+    
+    # ✅ AI: Override specific settings after loading config file
+    config_obj.fuzzy_match.enabled = match_type in ["fuzzy", "hybrid"]
+    config_obj.semantic_match.enabled = match_type in ["semantic", "hybrid"]
 ```
 
 ### **✅ AI-Required Patterns**

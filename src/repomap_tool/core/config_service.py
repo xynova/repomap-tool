@@ -54,7 +54,7 @@ class ConfigDefaults:
     ENTRYPOINT_THRESHOLD: float = 0.6
 
     # === DEPENDENCY ANALYSIS CONFIGURATION ===
-    MAX_GRAPH_SIZE: int = 1000
+    MAX_GRAPH_SIZE: int = 2000
     MAX_DEPENDENCY_DEPTH: int = 10
     MAX_TRANSITIVE_DEPTH: int = 20
 

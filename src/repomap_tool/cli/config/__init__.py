@@ -11,7 +11,6 @@ from .loader import (
     load_or_create_config,
     apply_environment_overrides,
     apply_cli_overrides,
-    create_search_config,
     create_tree_config,
 )
 
@@ -22,6 +21,5 @@ __all__ = [
     "load_or_create_config",
     "apply_environment_overrides",
     "apply_cli_overrides",
-    "create_search_config",
     "create_tree_config",
 ]

@@ -23,8 +23,6 @@ from ...models import (
 from ...core import RepoMapService
 from ..config.loader import (
     resolve_project_path,
-    create_search_config,
-    create_tree_config,
 )
 from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
@@ -109,10 +107,21 @@ def find(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration
-        config_obj = create_search_config(
-            resolved_project_path, match_type, verbose, log_level, cache_size
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
+            verbose=verbose,
         )
+
+        # Override specific search settings
+        config_obj.fuzzy_match.enabled = match_type in ["fuzzy", "hybrid"]
+        config_obj.semantic_match.enabled = match_type in ["semantic", "hybrid"]
+        config_obj.performance.cache_size = cache_size
+        config_obj.log_level = log_level
 
         # Update configuration with threshold from CLI
         # Convert float threshold (0.0-1.0) to integer (0-100) for internal use
@@ -198,12 +207,13 @@ def cycles(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration using factory
-        from repomap_tool.core.config_factory import get_config_factory
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
 
-        config_factory = get_config_factory()
-        config_obj = config_factory.create_basic_config(
-            project_root=resolved_project_path,
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
             verbose=verbose,
         )
 
@@ -296,12 +306,13 @@ def centrality(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration using factory
-        from repomap_tool.core.config_factory import get_config_factory
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
 
-        config_factory = get_config_factory()
-        config_obj = config_factory.create_analysis_config(
-            project_root=resolved_project_path,
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
             verbose=verbose,
         )
 
@@ -419,12 +430,13 @@ def impact(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration using factory
-        from repomap_tool.core.config_factory import get_config_factory
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
 
-        config_factory = get_config_factory()
-        config_obj = config_factory.create_analysis_config(
-            project_root=resolved_project_path,
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
             verbose=verbose,
         )
 

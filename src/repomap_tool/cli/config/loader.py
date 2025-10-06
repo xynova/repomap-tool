@@ -554,48 +554,6 @@ def load_or_create_config(
     return config, was_created
 
 
-def create_search_config(
-    project_path: Optional[str],
-    match_type: str,
-    verbose: bool,
-    log_level: str = "INFO",
-    cache_size: int = get_config("CACHE_SIZE", 1000),
-) -> RepoMapConfig:
-    """Create configuration for search operations."""
-    if project_path is None:
-        raise ValueError("project_path is required for create_search_config")
-
-    # Enable appropriate matchers based on match type
-    if match_type not in ["fuzzy", "semantic", "hybrid"]:
-        raise ValueError(
-            f"Invalid match_type: '{match_type}'. Must be one of 'fuzzy', 'semantic', 'hybrid'."
-        )
-
-    semantic_enabled = match_type in ["semantic", "hybrid"]
-
-    fuzzy_config = FuzzyMatchConfig()
-    semantic_config = SemanticMatchConfig(enabled=semantic_enabled)
-
-    # Create performance config with cache settings
-    performance_config = PerformanceConfig(
-        cache_size=cache_size,
-    )
-
-    # Get cache directory from environment variable if set
-    cache_dir_env = os.environ.get("CACHE_DIR")
-    cache_dir = Path(cache_dir_env) if cache_dir_env is not None else None
-
-    config = RepoMapConfig(
-        project_root=project_path,
-        cache_dir=cache_dir,
-        fuzzy_match=fuzzy_config,
-        semantic_match=semantic_config,
-        performance=performance_config,
-        verbose=verbose,
-        log_level=log_level,
-    )
-
-    return config
 
 
 def create_tree_config(

@@ -10,7 +10,6 @@ from .main import cli
 from .config.loader import (
     load_config_file,
     create_default_config,
-    create_search_config,
     create_tree_config,
     load_or_create_config,
     resolve_project_path,
@@ -38,7 +37,6 @@ __all__ = [
     # Config functions
     "load_config_file",
     "create_default_config",
-    "create_search_config",
     "create_tree_config",
     "load_or_create_config",
     "resolve_project_path",

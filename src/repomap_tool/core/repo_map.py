@@ -705,7 +705,13 @@ class RepoMapService:
 
         try:
             cache = self.repo_map.TAGS_CACHE
-            cache_key = f"import_analysis_{self.config.project_root}"
+            # Include max_graph_size in cache key to ensure different configs get different cache entries
+            # Also include refresh_cache flag to force cache miss when refresh is requested
+            refresh_flag = "refresh" if self.config.refresh_cache else "normal"
+            cache_key = f"import_analysis_{self.config.project_root}_maxsize_{self.config.dependencies.max_graph_size}_{refresh_flag}"
+            self.logger.info(f"Cache key: {cache_key}")
+            self.logger.info(f"Config max_graph_size: {self.config.dependencies.max_graph_size}")
+            self.logger.info(f"Config refresh_cache: {self.config.refresh_cache}")
 
             if cache_key in cache:
                 cached_data = cache[cache_key]
@@ -732,7 +738,10 @@ class RepoMapService:
 
         try:
             cache = self.repo_map.TAGS_CACHE
-            cache_key = f"import_analysis_{self.config.project_root}"
+            # Include max_graph_size in cache key to ensure different configs get different cache entries
+            # Also include refresh_cache flag to force cache miss when refresh is requested
+            refresh_flag = "refresh" if self.config.refresh_cache else "normal"
+            cache_key = f"import_analysis_{self.config.project_root}_maxsize_{self.config.dependencies.max_graph_size}_{refresh_flag}"
             cache[cache_key] = project_imports
             self.logger.info("Cached import analysis results to persistent storage")
         except Exception as e:
@@ -768,6 +777,8 @@ class RepoMapService:
                 self._cache_import_analysis(project_imports)
 
             # Limit files if configured
+            self.logger.info(f"Configuration max_graph_size: {self.config.dependencies.max_graph_size}")
+            self.logger.info(f"Project imports count: {len(project_imports)}")
             if len(project_imports) > self.config.dependencies.max_graph_size:
                 self.logger.warning(
                     f"Project has {len(project_imports)} files, limiting to "
