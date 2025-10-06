@@ -349,8 +349,6 @@ class TestProjectInfoFormatter:
             formatter.format(project_info, "unsupported_format")
 
 
-
-
 class TestDictFormatter:
     """Test the DictFormatter implementation."""
 

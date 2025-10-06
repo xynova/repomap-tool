@@ -148,16 +148,23 @@ def find(
 
             from repomap_tool.cli.services import get_service_factory
             from repomap_tool.cli.controllers.search_controller import SearchController
-            from repomap_tool.cli.controllers.view_models import ControllerConfig, AnalysisType
+            from repomap_tool.cli.controllers.view_models import (
+                ControllerConfig,
+                AnalysisType,
+            )
             from repomap_tool.core.container import create_container
 
             service_factory = get_service_factory()
             repomap = service_factory.create_repomap_service(config_obj)
-            
+
             # Get matchers from the container
             container = create_container(config_obj)
             fuzzy_matcher = container.fuzzy_matcher()
-            semantic_matcher = container.adaptive_semantic_matcher() if config_obj.semantic_match.enabled else None
+            semantic_matcher = (
+                container.adaptive_semantic_matcher()
+                if config_obj.semantic_match.enabled
+                else None
+            )
 
             progress.update(task, description="Creating search controller...")
 
@@ -169,7 +176,7 @@ def find(
                 output_format=output,
                 analysis_type=AnalysisType.SEARCH,
                 search_strategy=match_type,
-                context_selection="centrality_based"
+                context_selection="centrality_based",
             )
 
             # Create search controller
@@ -178,7 +185,7 @@ def find(
                 search_engine=None,  # Not needed for search controller
                 fuzzy_matcher=fuzzy_matcher,
                 semantic_matcher=semantic_matcher,
-                config=controller_config
+                config=controller_config,
             )
 
             progress.update(task, description="Searching identifiers...")

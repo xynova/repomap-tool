@@ -115,7 +115,6 @@ class TestTemplateBasedFormatterIntegration:
         assert isinstance(result, str)
         assert len(result) > 0
 
-
     def test_format_with_dict_data(self):
         """Test formatting dictionary data."""
         formatter = TemplateBasedFormatter()

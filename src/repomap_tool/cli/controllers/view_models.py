@@ -100,10 +100,10 @@ class SearchViewModel:
     match_type: str = "hybrid"
     search_time_ms: float = 0.0
     cache_hit: bool = False
-    metadata: Dict[str, Any] = None
-    performance_metrics: Dict[str, Any] = None
-    
-    def __post_init__(self):
+    metadata: Optional[Dict[str, Any]] = None
+    performance_metrics: Optional[Dict[str, Any]] = None
+
+    def __post_init__(self) -> None:
         """Initialize default values for optional fields."""
         if self.metadata is None:
             self.metadata = {}

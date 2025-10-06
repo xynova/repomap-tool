@@ -189,13 +189,15 @@ class CentralityController(BaseController):
         else:
             sorted_file_paths = code_files
 
+        # Create a mapping for O(1) lookups instead of O(n) list.index() calls
+        resolved_paths_map = dict(zip(code_files, resolved_paths))
+
         # Analyze each file in order of importance
         centrality_analyses = []
         for file_path in sorted_file_paths:
             try:
-                # Find the resolved path for this file
-                original_index = code_files.index(file_path)
-                resolved_path = resolved_paths[original_index]
+                # Find the resolved path for this file using the map
+                resolved_path = resolved_paths_map[file_path]
                 centrality_analysis = self.centrality_engine.analyze_file_centrality(
                     file_path, ast_results[resolved_path], all_files
                 )

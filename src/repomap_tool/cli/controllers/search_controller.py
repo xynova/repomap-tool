@@ -51,14 +51,14 @@ class SearchController(BaseController):
             config: Controller configuration
         """
         super().__init__(config)
-        
+
         # All dependencies must be injected - no fallback allowed
         if repomap_service is None:
             raise ValueError("RepoMapService must be injected - no fallback allowed")
         if fuzzy_matcher is None:
             raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
         # semantic_matcher is optional - only needed for semantic/hybrid matching
-        
+
         self.repomap_service = repomap_service
         self.search_engine = search_engine
         self.fuzzy_matcher = fuzzy_matcher
@@ -75,37 +75,41 @@ class SearchController(BaseController):
         """
         if self.config is None:
             raise ValueError("ControllerConfig must be set before executing")
-        
-        self._log_operation("search", {
-            "query": search_request.query,
-            "match_type": search_request.match_type,
-            "threshold": search_request.threshold,
-            "max_results": search_request.max_results
-        })
+
+        self._log_operation(
+            "search",
+            {
+                "query": search_request.query,
+                "match_type": search_request.match_type,
+                "threshold": search_request.threshold,
+                "max_results": search_request.max_results,
+            },
+        )
 
         try:
             # Perform search using RepoMap service
             search_response = self.repomap_service.search_identifiers(search_request)
-            
+
             # Convert SearchResponse to SearchViewModel
             view_model = self._build_search_view_model(search_response, search_request)
-            
-            self._log_operation("search_complete", {
-                "total_results": view_model.total_results,
-                "execution_time": view_model.execution_time,
-                "token_count": view_model.token_count
-            })
-            
+
+            self._log_operation(
+                "search_complete",
+                {
+                    "total_results": view_model.total_results,
+                    "execution_time": view_model.execution_time,
+                    "token_count": view_model.token_count,
+                },
+            )
+
             return view_model
-            
+
         except Exception as e:
             self.logger.error(f"Search operation failed: {e}")
             raise
 
     def _build_search_view_model(
-        self, 
-        search_response: SearchResponse, 
-        search_request: SearchRequest
+        self, search_response: SearchResponse, search_request: SearchRequest
     ) -> SearchViewModel:
         """Build SearchViewModel from SearchResponse.
 
@@ -130,13 +134,13 @@ class SearchController(BaseController):
                 centrality_score=None,
                 impact_risk=None,
                 importance_score=result.score,
-                is_critical=result.score >= 0.8  # High score = critical
+                is_critical=result.score >= 0.8,  # High score = critical
             )
             symbol_view_models.append(symbol_view_model)
 
         # Estimate token count for the results
         token_count = self._estimate_tokens(search_response)
-        
+
         # Determine compression level based on token count vs max tokens
         compression_level = self._determine_compression_level(token_count)
 
@@ -145,16 +149,17 @@ class SearchController(BaseController):
             results=symbol_view_models,
             total_results=search_response.total_results,
             search_strategy=search_response.match_type,
-            execution_time=search_response.search_time_ms / 1000.0,  # Convert to seconds
+            execution_time=search_response.search_time_ms
+            / 1000.0,  # Convert to seconds
             token_count=token_count,
-            max_tokens=self.config.max_tokens,
+            max_tokens=self.config.max_tokens if self.config else 4000,
             compression_level=compression_level,
             threshold=search_response.threshold,
             match_type=search_response.match_type,
             search_time_ms=search_response.search_time_ms,
             cache_hit=search_response.cache_hit,
             metadata=search_response.metadata,
-            performance_metrics=search_response.performance_metrics
+            performance_metrics=search_response.performance_metrics,
         )
 
     def _determine_compression_level(self, token_count: int) -> str:
@@ -168,9 +173,9 @@ class SearchController(BaseController):
         """
         if self.config is None:
             return "medium"
-        
+
         ratio = token_count / self.config.max_tokens
-        
+
         if ratio <= 0.5:
             return "low"
         elif ratio <= 0.8:
@@ -189,9 +194,9 @@ class SearchController(BaseController):
         """
         # Base tokens for query and metadata
         base_tokens = 50
-        
+
         # Tokens for each result
-        result_tokens = 0
+        result_tokens = 0.0
         for result in search_response.results:
             # Identifier name
             result_tokens += len(result.identifier.split()) * 1.3
@@ -203,5 +208,5 @@ class SearchController(BaseController):
                 result_tokens += len(result.context.split()) * 1.3
             # Metadata
             result_tokens += 10  # Fixed overhead per result
-        
+
         return int(base_tokens + result_tokens)

@@ -134,13 +134,15 @@ class ImpactController(BaseController):
         # Perform AST analysis for all files
         ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
 
+        # Create a mapping for O(1) lookups instead of O(n) list.index() calls
+        resolved_paths_map = dict(zip(changed_files, resolved_paths))
+
         # Analyze each file for impact
         impact_analyses = []
         for file_path in changed_files:
             try:
-                # Find the resolved path for this file
-                original_index = changed_files.index(file_path)
-                resolved_path = resolved_paths[original_index]
+                # Find the resolved path for this file using the map
+                resolved_path = resolved_paths_map[file_path]
                 impact_analysis = self.impact_engine.analyze_file_impact(
                     file_path, ast_results[resolved_path], all_files
                 )

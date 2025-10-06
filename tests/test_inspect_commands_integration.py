@@ -62,28 +62,28 @@ from models.user import User
 class UserService:
     def __init__(self):
         self.db = database.get_connection()
-    
+
     def create_user(self, user_data):
         # Validate credentials
         if not validate_credentials(user_data.get('email')):
             raise ValueError("Invalid email")
-        
+
         # Create user in database
         user = User(**user_data)
         user_id = self.db.save_user(user)
-        
+
         # Send notification
         send_notification(user.email, "Welcome!")
-        
+
         return user_id
-    
+
     def delete_user(self, user_id):
         user = self.db.get_user_by_id(user_id)
         if user:
             self.db.delete_user(user_id)
             return True
         return False
-    
+
     def update_profile(self, user_id, profile_data):
         user = self.db.get_user_by_id(user_id)
         if user:
@@ -127,14 +127,14 @@ from typing import Optional, Dict, Any
 class DatabaseConnection:
     def __init__(self, db_path: str = "test.db"):
         self.connection = sqlite3.connect(db_path)
-    
+
     def save_user(self, user) -> int:
         cursor = self.connection.cursor()
         cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)",
                       (user.name, user.email))
         self.connection.commit()
         return cursor.lastrowid
-    
+
     def get_user_by_id(self, user_id: int):
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -142,7 +142,7 @@ class DatabaseConnection:
         if row:
             return {"id": row[0], "name": row[1], "email": row[2]}
         return None
-    
+
     def delete_user(self, user_id: int):
         cursor = self.connection.cursor()
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
@@ -200,11 +200,11 @@ class User:
         self.email = email
         self.profile = kwargs.get('profile', {})
         self.created_at = kwargs.get('created_at')
-    
+
     def update_profile(self, profile_data: Dict[str, Any]):
         '''Update user profile'''
         self.profile.update(profile_data)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         '''Convert user to dictionary'''
         return {
@@ -213,7 +213,7 @@ class User:
             'profile': self.profile,
             'created_at': self.created_at
         }
-    
+
     def __str__(self):
         return f"User(name={self.name}, email={self.email})"
 """
@@ -282,13 +282,13 @@ class TestUserService:
         user_data = {'name': 'Test User', 'email': 'test@example.com'}
         user_id = service.create_user(user_data)
         assert user_id is not None
-    
+
     def test_delete_user(self):
         service = UserService()
         # Test with non-existent user
         result = service.delete_user(999)
         assert result is False
-    
+
     def test_update_profile(self):
         service = UserService()
         profile_data = {'bio': 'Test bio'}
@@ -649,10 +649,10 @@ class TestClass:
     def __init__(self, name: str):
         self.name = name
         self.value = 42
-    
+
     def method1(self) -> str:
         return f"Hello {self.name}"
-    
+
     def method2(self, items: List[str]) -> Dict[str, int]:
         return {item: len(item) for item in items}
 
@@ -815,12 +815,3 @@ def broken_function(
         analyzer.clear_cache()
         cache_stats_after = analyzer.get_cache_stats()
         assert cache_stats_after["cache_size"] == 0
-
-
-class User:
-    def __init__(self, name: str, email: str):
-        self.name = name
-        self.email = email
-
-    def __str__(self):
-        return f"User({self.name}, {self.email})"

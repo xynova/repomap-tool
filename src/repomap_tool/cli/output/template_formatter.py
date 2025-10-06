@@ -217,7 +217,6 @@ class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
         if "project_root" in data and "total_files" in data:
             return "project_info"
 
-
         return "generic"
 
     def _create_template_config(self, config: Optional[OutputConfig]) -> TemplateConfig:

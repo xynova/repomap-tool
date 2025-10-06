@@ -442,7 +442,7 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             JSON string
         """
         import json
-        
+
         # Convert to dictionary for JSON serialization
         result_dict = {
             "query": data.query,
@@ -472,7 +472,7 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             "metadata": data.metadata,
             "performance_metrics": data.performance_metrics,
         }
-        
+
         return json.dumps(result_dict, indent=2)
 
     def _format_text(self, data: SearchViewModel, config: Optional[Any] = None) -> str:
@@ -495,7 +495,9 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             logger.error(f"Template rendering failed: {e}")
             return self._format_fallback(data)
 
-    def _format_fallback(self, data: SearchViewModel, template_config: Optional[Any] = None) -> str:
+    def _format_fallback(
+        self, data: SearchViewModel, template_config: Optional[Any] = None
+    ) -> str:
         """Fallback formatting if template fails.
 
         Args:

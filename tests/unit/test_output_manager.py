@@ -541,4 +541,3 @@ class TestOutputManagerIntegration:
         assert "Project Analysis" in output
         assert "Total Files: 10" in output
         assert "Total Identifiers: 50" in output
-

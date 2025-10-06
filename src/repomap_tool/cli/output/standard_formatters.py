@@ -136,8 +136,6 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter):
         return ProjectInfo
 
 
-
-
 class DictFormatter(BaseFormatter, DataFormatter):
     """Formatter for dictionary data."""
 
@@ -480,8 +478,9 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
 
     registry.register_formatter(CentralityViewModelFormatter(), CentralityViewModel)
     registry.register_formatter(ImpactViewModelFormatter(), ImpactViewModel)
-    
+
     # Register SearchViewModel formatter
     from .controller_formatters import SearchViewModelFormatter
     from ..controllers.view_models import SearchViewModel
+
     registry.register_formatter(SearchViewModelFormatter(), SearchViewModel)
