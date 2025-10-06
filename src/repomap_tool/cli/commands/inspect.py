@@ -327,20 +327,11 @@ def centrality(
         )
         centrality_controller.config = controller_config
 
-        # Determine files to analyze
-        if files:
-            file_paths = list(files)
-        else:
-            # Analyze all files in the project
-            from repomap_tool.core.file_scanner import get_project_files
-
-            # get_project_files now returns absolute paths directly
-            file_paths = get_project_files(resolved_project_path, verbose=verbose)
-
         # Perform centrality analysis using Controller
+        # The controller will handle file discovery internally using the centralized service
         try:
-            # Execute Controller to get ViewModel
-            view_model = centrality_controller.execute(file_paths)
+            # Execute Controller to get ViewModel (no need to pass files)
+            view_model = centrality_controller.execute()
 
             # Display the ViewModel using OutputManager
             output_manager.display(view_model, output_config)

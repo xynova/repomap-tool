@@ -73,11 +73,11 @@ class CentralityController(BaseController):
         self.ast_analyzer = ast_analyzer
         self.path_resolver = path_resolver
 
-    def execute(self, file_paths: List[str]) -> CentralityViewModel:
+    def execute(self, file_paths: Optional[List[str]] = None) -> CentralityViewModel:
         """Execute centrality analysis for the specified files.
 
         Args:
-            file_paths: List of file paths to analyze
+            file_paths: List of file paths to analyze (optional, will use all code files if not provided)
 
         Returns:
             CentralityViewModel with analysis results
@@ -93,6 +93,13 @@ class CentralityController(BaseController):
         self._log_operation("centrality_analysis", {"files": file_paths})
 
         try:
+            # Use centralized file discovery if no files provided
+            if file_paths is None:
+                from ...code_analysis.file_discovery_service import get_file_discovery_service
+                file_discovery = get_file_discovery_service(self.path_resolver.project_root)
+                file_paths = file_discovery.get_code_files(exclude_tests=True)
+                logger.info(f"Using {len(file_paths)} code files from centralized discovery")
+            
             # 1. Get structured centrality data from code_analysis service
             centrality_analyses = self._get_centrality_data(file_paths)
 
@@ -124,38 +131,58 @@ class CentralityController(BaseController):
         Returns:
             List of FileCentralityAnalysis objects
         """
+        # Filter to only code files for centrality analysis
+        from ...code_analysis.file_filter import FileFilter
+        code_files = FileFilter.filter_code_files(file_paths, exclude_tests=True)
+        
+        if len(code_files) != len(file_paths):
+            logger.info(
+                f"Filtered {len(file_paths)} files to {len(code_files)} code files "
+                f"for centrality analysis"
+            )
+        
         # Build dependency graph if it's empty
         if self.dependency_graph.graph.number_of_nodes() == 0:
             logger.info("Building dependency graph for centrality analysis")
             self._build_dependency_graph()
 
         # Resolve file paths relative to project root
-        resolved_paths = self.path_resolver.resolve_file_paths(file_paths)
+        resolved_paths = self.path_resolver.resolve_file_paths(code_files)
 
         # Perform AST analysis for all files
         ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
 
         # Get all files in project for comprehensive analysis
+        # Use the same file list that was used to build the dependency graph
+        # to ensure consistency between centrality calculation and analysis
         all_files = self.path_resolver.get_all_project_files()
+        
+        # If we have a dependency graph, use its file list for consistency
+        if self.dependency_graph and self.dependency_graph.graph.number_of_nodes() > 0:
+            # Get files from dependency graph to ensure consistency
+            graph_files = list(self.dependency_graph.graph.nodes())
+            if graph_files:
+                all_files = graph_files
+                logger.debug(f"Using {len(all_files)} files from dependency graph for consistency")
 
         # Sort files by centrality score (highest first) to process most important files first
-        if len(file_paths) > 1:
+        if len(code_files) > 1:
             # Get centrality scores for all files to sort them
             centrality_scores = (
                 self.centrality_calculator.calculate_composite_importance()
             )
-            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in file_paths]
+            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in code_files]
             sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
             sorted_file_paths = [fp for fp, _ in sorted_file_scores]
         else:
-            sorted_file_paths = file_paths
+            sorted_file_paths = code_files
 
         # Analyze each file in order of importance
         centrality_analyses = []
         for file_path in sorted_file_paths:
             try:
                 # Find the resolved path for this file
-                original_index = file_paths.index(file_path)
+                original_index = code_files.index(file_path)
                 resolved_path = resolved_paths[original_index]
                 centrality_analysis = self.centrality_engine.analyze_file_centrality(
                     file_path, ast_results[resolved_path], all_files
@@ -168,7 +195,7 @@ class CentralityController(BaseController):
                     file_path=file_path,
                     centrality_score=0.0,
                     rank=1,
-                    total_files=len(file_paths),
+                    total_files=len(code_files),
                     dependency_analysis={
                         "total_connections": 0,
                         "incoming_connections": 0,

@@ -434,7 +434,8 @@ class ImportAnalyzer:
         }
 
         # File extensions that should be analyzed
-        self.analyzable_extensions = set(self.language_parsers.keys())
+        from .file_filter import FileFilter
+        self.analyzable_extensions = FileFilter.get_analyzable_extensions()
 
         logger.info(
             f"ImportAnalyzer initialized with {len(self.language_parsers)} language parsers for project: {self.project_root}"
@@ -553,21 +554,11 @@ class ImportAnalyzer:
         file_extensions: Optional[List[str]] = None,
     ) -> List[str]:
         """Get all files in a project directory using centralized file discovery."""
-        from ..core.file_scanner import get_project_files
-
-        if file_extensions is None:
-            file_extensions = list(self.analyzable_extensions)
-
-        # Use centralized file discovery that returns absolute paths
-        all_files = get_project_files(project_path, verbose=False)
-
-        # Filter to only files with analyzable extensions
-        filtered_files = []
-        for file_path in all_files:
-            if any(file_path.endswith(f".{ext}") for ext in file_extensions):
-                filtered_files.append(file_path)
-
-        return filtered_files
+        from .file_discovery_service import get_file_discovery_service
+        
+        # Use centralized file discovery service
+        file_discovery = get_file_discovery_service(project_path)
+        return file_discovery.get_analyzable_files(exclude_tests=True)
 
     def _resolve_import_paths(
         self, imports: List[Import], file_path: str

@@ -30,57 +30,31 @@ def get_all_project_files(
     # Ensure project_root is always a string, not a ConfigurationOption
     project_path = Path(str(project_root))
 
-    # Supported file extensions for centrality analysis (exclude data files)
-    supported_extensions = {".py", ".ts", ".tsx", ".js", ".jsx", ".java", ".go"}
-
-    # Exclude directories and file patterns that don't need centrality analysis
-    exclude_patterns = {
-        "node_modules",
-        ".git",
-        ".vscode",
-        "dist",
-        "build",
-        "coverage",
-        "*.min.js",
-        "*.bundle.js",
-        "*.d.ts",
-        "*.spec.ts",
-        "*.test.ts",
-        "*.test.js",
-    }
+    # Use centralized file filtering
+    from .file_filter import FileFilter
 
     all_files = []
 
     for file_path in project_path.rglob("*"):
         if not any(part.startswith(".") for part in file_path.parts):
-            if file_path.is_file() and file_path.suffix in supported_extensions:
-                # Skip excluded patterns
-                if any(pattern in str(file_path) for pattern in exclude_patterns):
-                    continue
+            if file_path.is_file():
+                # Use centralized filtering
+                if FileFilter.is_code_file(str(file_path)) and not FileFilter.should_exclude_file(str(file_path)):
+                    # Convert to relative path from project root
+                    try:
+                        rel_path = file_path.relative_to(project_path)
+                        all_files.append(str(rel_path))
 
-                # Skip test files and generated files for performance
-                file_name = file_path.name.lower()
-                if any(
-                    skip in file_name
-                    for skip in [".spec.", ".test.", ".min.", ".bundle.", ".d.ts"]
-                ):
-                    continue
+                        # Stop if we've reached the maximum number of files (only if limit is specified)
+                        if max_files is not None and len(all_files) >= max_files:
+                            logger.info(
+                                f"Reached maximum file limit ({max_files}), stopping file discovery"
+                            )
+                            break
 
-                # Convert to relative path from project root
-                try:
-                    rel_path = file_path.relative_to(project_path)
-                    all_files.append(str(rel_path))
-
-                    # Stop if we've reached the maximum number of files (only if limit is specified)
-                    if max_files is not None and len(all_files) >= max_files:
-                        logger.info(
-                            f"Reached maximum file limit ({max_files}), stopping file discovery"
-                        )
-                        break
-
-                except ValueError:
-                    # File is not relative to project root, skip it
-                    continue
+                    except ValueError:
+                        # File is not relative to project root, skip it
+                        continue
 
     logger.info(
         f"Found {len(all_files)} files for analysis"

@@ -251,7 +251,8 @@ class CallGraphBuilder:
         }
 
         # File extensions that should be analyzed
-        self.analyzable_extensions = set(self.language_analyzers.keys())
+        from .file_filter import FileFilter
+        self.analyzable_extensions = FileFilter.get_analyzable_extensions()
 
         logger.info(
             f"CallGraphBuilder initialized with {len(self.language_analyzers)} language analyzers"
@@ -272,11 +273,8 @@ class CallGraphBuilder:
         logger.info(f"Building call graph for {len(project_files)} files")
 
         # Filter to only analyzable files
-        analyzable_files = [
-            f
-            for f in project_files
-            if Path(f).suffix.lstrip(".") in self.analyzable_extensions
-        ]
+        from .file_filter import FileFilter
+        analyzable_files = FileFilter.filter_analyzable_files(project_files, exclude_tests=True)
 
         logger.info(f"Found {len(analyzable_files)} analyzable files for call graph")
 

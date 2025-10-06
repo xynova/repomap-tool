@@ -57,40 +57,10 @@ class PathResolver:
         if not self.project_root:
             return []
 
-        # Use the original aider repomap file discovery with gitignore support
-        all_files = get_project_files(self.project_root, verbose=False)
-
-        # Filter to only include code files for centrality analysis
-        code_extensions = {
-            ".py",
-            ".ts",
-            ".tsx",
-            ".js",
-            ".jsx",
-            ".java",
-            ".go",
-            ".cpp",
-            ".c",
-            ".h",
-            ".hpp",
-        }
-        code_files = []
-
-        for file_path in all_files:
-            if any(file_path.endswith(ext) for ext in code_extensions):
-                # Skip test files and generated files for performance
-                if not any(
-                    test_pattern in file_path.lower()
-                    for test_pattern in [
-                        ".test.",
-                        ".spec.",
-                        "__test__",
-                        "test_",
-                        ".min.",
-                        ".bundle.",
-                    ]
-                ):
-                    code_files.append(file_path)
+        # Use centralized file discovery service
+        from .file_discovery_service import get_file_discovery_service
+        file_discovery = get_file_discovery_service(self.project_root)
+        code_files = file_discovery.get_code_files(exclude_tests=True)
 
         # Apply file limit for performance (only if specified)
         if max_files is not None and len(code_files) > max_files:
