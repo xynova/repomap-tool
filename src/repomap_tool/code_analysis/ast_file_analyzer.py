@@ -165,7 +165,9 @@ class ASTFileAnalyzer:
             return os.path.relpath(file_path, self.project_root)
         return os.path.basename(file_path)
 
-    def _extract_imports_from_tags(self, tags: List[Any], file_path: str) -> List[Import]:
+    def _extract_imports_from_tags(
+        self, tags: List[Any], file_path: str
+    ) -> List[Import]:
         """Extract imports from aider tags."""
         imports = []
 
@@ -316,35 +318,41 @@ class ASTFileAnalyzer:
 
         return results
 
-    def find_reverse_dependencies(self, file_path: str, all_files: List[str]) -> List[str]:
+    def find_reverse_dependencies(
+        self, file_path: str, all_files: List[str]
+    ) -> List[str]:
         """Find files that import the given file (reverse dependencies)."""
         reverse_deps: List[str] = []
-        
+
         try:
             # Get the module name for the target file
             target_module = self._file_path_to_module_name(file_path)
             if not target_module:
                 return reverse_deps
-            
+
             # Check each file to see if it imports the target module
             for other_file in all_files:
                 if other_file == file_path:
                     continue
-                    
+
                 try:
                     result = self.analyze_file(other_file, AnalysisType.IMPORTS)
                     for import_stmt in result.imports:
-                        if (import_stmt.module == target_module or 
-                            import_stmt.module.endswith(f".{target_module}")):
+                        if (
+                            import_stmt.module == target_module
+                            or import_stmt.module.endswith(f".{target_module}")
+                        ):
                             reverse_deps.append(other_file)
                             break
                 except Exception as e:
-                    logger.debug(f"Could not analyze {other_file} for reverse deps: {e}")
+                    logger.debug(
+                        f"Could not analyze {other_file} for reverse deps: {e}"
+                    )
                     continue
-                    
+
         except Exception as e:
             logger.error(f"Error finding reverse dependencies for {file_path}: {e}")
-            
+
         return reverse_deps
 
     def _file_path_to_module_name(self, file_path: str) -> Optional[str]:
@@ -352,25 +360,25 @@ class ASTFileAnalyzer:
         try:
             if not self.project_root:
                 return None
-                
+
             # Get relative path from project root
             rel_path = os.path.relpath(file_path, self.project_root)
-            
+
             # Remove .py extension and convert path separators to dots
-            if rel_path.endswith('.py'):
+            if rel_path.endswith(".py"):
                 rel_path = rel_path[:-3]
-            elif rel_path.endswith(('.ts', '.tsx', '.js', '.jsx')):
-                rel_path = rel_path.rsplit('.', 1)[0]
-            
+            elif rel_path.endswith((".ts", ".tsx", ".js", ".jsx")):
+                rel_path = rel_path.rsplit(".", 1)[0]
+
             # Convert path separators to module separators
-            module_name = rel_path.replace(os.sep, '.')
-            
+            module_name = rel_path.replace(os.sep, ".")
+
             # Remove __init__ suffix if present
-            if module_name.endswith('.__init__'):
+            if module_name.endswith(".__init__"):
                 module_name = module_name[:-9]
-                
+
             return module_name if module_name else None
-            
+
         except Exception as e:
             logger.debug(f"Could not convert {file_path} to module name: {e}")
             return None
