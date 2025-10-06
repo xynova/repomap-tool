@@ -124,7 +124,7 @@ class LLMFileAnalyzer:
 
         # Get all files in project for reverse dependency analysis
         all_files = self.path_resolver.get_all_project_files()
-        # Convert relative paths to absolute paths for analysis
+        # Validate that all file paths are absolute (architectural requirement)
         all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Analyze each file
@@ -174,7 +174,7 @@ class LLMFileAnalyzer:
 
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
-        # Convert relative paths to absolute paths for analysis
+        # Validate that all file paths are absolute (architectural requirement)
         all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Sort files by centrality score (highest first) to process most important files first
@@ -279,7 +279,7 @@ class LLMFileAnalyzer:
 
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
-        # Convert relative paths to absolute paths for analysis
+        # Validate that all file paths are absolute (architectural requirement)
         all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Sort files by centrality score (highest first) to process most important files first
@@ -370,7 +370,7 @@ class LLMFileAnalyzer:
 
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
-        # Convert relative paths to absolute paths for analysis
+        # Validate that all file paths are absolute (architectural requirement)
         all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Analyze each file

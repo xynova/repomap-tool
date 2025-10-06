@@ -443,15 +443,17 @@ class ImportAnalyzer:
     def analyze_file_imports(self, file_path: str) -> FileImports:
         """Analyze a single file for imports."""
 
-        full_path = file_path
-        if self.project_root and not os.path.isabs(file_path):
-            full_path = os.path.join(self.project_root, file_path)
+        # All file paths must be absolute (architectural requirement)
+        if not os.path.isabs(file_path):
+            raise ValueError(
+                f"All file paths must be absolute (architectural requirement). Got relative path: {file_path}"
+            )
 
-        if not os.path.exists(full_path):
-            raise FileNotFoundError(f"File not found: {full_path}")
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"File not found: {file_path}")
 
         try:
-            with open(full_path, "r", encoding="utf-8") as f:
+            with open(file_path, "r", encoding="utf-8") as f:
                 content = f.read()
 
             # Get the appropriate parser
@@ -459,7 +461,7 @@ class ImportAnalyzer:
             imports = parser.extract_imports(content, file_path)
 
             # Resolve import paths
-            resolved_imports = self._resolve_import_paths(imports, full_path)
+            resolved_imports = self._resolve_import_paths(imports, file_path)
 
             file_imports = FileImports(
                 file_path=file_path,
@@ -550,49 +552,22 @@ class ImportAnalyzer:
         ignore_dirs: Optional[List[str]] = None,
         file_extensions: Optional[List[str]] = None,
     ) -> List[str]:
-        """Recursively get all files in a project directory, respecting .gitignore."""
-        from ..core.file_scanner import parse_gitignore, should_ignore_file
+        """Get all files in a project directory using centralized file discovery."""
+        from ..core.file_scanner import get_project_files
 
         if file_extensions is None:
             file_extensions = list(self.analyzable_extensions)
 
-        # Parse .gitignore file
-        gitignore_path = Path(project_path) / ".gitignore"
-        gitignore_patterns = parse_gitignore(gitignore_path)
+        # Use centralized file discovery that returns absolute paths
+        all_files = get_project_files(project_path, verbose=False)
 
-        if gitignore_patterns:
-            logger.info(
-                f"Loaded {len(gitignore_patterns)} .gitignore patterns for import analysis"
-            )
+        # Filter to only files with analyzable extensions
+        filtered_files = []
+        for file_path in all_files:
+            if any(file_path.endswith(f".{ext}") for ext in file_extensions):
+                filtered_files.append(file_path)
 
-        all_files = []
-        project_root_path = Path(project_path)
-
-        for root, dirs, files in os.walk(project_path):
-            # Filter out ignored directories using gitignore
-            dirs[:] = [
-                d
-                for d in dirs
-                if not should_ignore_file(
-                    Path(root) / d, gitignore_patterns, project_root_path
-                )
-            ]
-
-            for file in files:
-                file_path = Path(root) / file
-
-                # Check if file should be ignored based on gitignore
-                if should_ignore_file(file_path, gitignore_patterns, project_root_path):
-                    logger.debug(f"Ignoring file (gitignore): {file_path}")
-                    continue
-
-                # Check file extension
-                if any(file.endswith(f".{ext}") for ext in file_extensions):
-                    # Get relative path from project root
-                    rel_path = file_path.relative_to(project_root_path)
-                    all_files.append(str(rel_path))
-
-        return all_files
+        return filtered_files
 
     def _resolve_import_paths(
         self, imports: List[Import], file_path: str

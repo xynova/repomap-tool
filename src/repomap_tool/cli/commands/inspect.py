@@ -297,7 +297,6 @@ def centrality(
         config_factory = get_config_factory()
         config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
-            max_graph_size=100,  # Limit dependency graph to 100 files for performance
             verbose=verbose,
         )
 
@@ -335,12 +334,8 @@ def centrality(
             # Analyze all files in the project
             from repomap_tool.core.file_scanner import get_project_files
 
-            all_files = get_project_files(resolved_project_path, verbose=verbose)
-            # Convert relative paths to absolute paths for analysis
-            file_paths = [
-                os.path.join(resolved_project_path, file_path)
-                for file_path in all_files
-            ]
+            # get_project_files now returns absolute paths directly
+            file_paths = get_project_files(resolved_project_path, verbose=verbose)
 
         # Perform centrality analysis using Controller
         try:
@@ -434,7 +429,6 @@ def impact(
         config_factory = get_config_factory()
         config_obj = config_factory.create_analysis_config(
             project_root=resolved_project_path,
-            max_graph_size=100,  # Limit dependency graph to 100 files for performance
             verbose=verbose,
         )
 

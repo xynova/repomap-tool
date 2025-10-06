@@ -458,23 +458,7 @@ class CentralityController(BaseController):
             # Analyze project imports
             project_imports = import_analyzer.analyze_project_imports(project_root)
 
-            # Apply max_graph_size limiting if configured
-            max_graph_size = 100  # Default limit for performance
-            if len(project_imports.file_imports) > max_graph_size:
-                logger.warning(
-                    f"Project has {len(project_imports.file_imports)} files, limiting to "
-                    f"{max_graph_size} for dependency analysis"
-                )
-                # Create a limited version of project_imports
-                limited_files = list(project_imports.file_imports.keys())[
-                    :max_graph_size
-                ]
-                limited_file_imports = {
-                    k: v
-                    for k, v in project_imports.file_imports.items()
-                    if k in limited_files
-                }
-                project_imports.file_imports = limited_file_imports
+            # Use all files for dependency analysis (no artificial limits)
 
             # Build the dependency graph
             self.dependency_graph.build_graph(project_imports)

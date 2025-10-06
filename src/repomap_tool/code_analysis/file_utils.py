@@ -6,13 +6,15 @@ across different analysis components.
 """
 
 import logging
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 
-def get_all_project_files(project_root: str, max_files: int = 100) -> List[str]:
+def get_all_project_files(
+    project_root: str, max_files: Optional[int] = None
+) -> List[str]:
     """Get all analyzable files in the project for analysis.
 
     Args:
@@ -69,8 +71,8 @@ def get_all_project_files(project_root: str, max_files: int = 100) -> List[str]:
                     rel_path = file_path.relative_to(project_path)
                     all_files.append(str(rel_path))
 
-                    # Stop if we've reached the maximum number of files
-                    if len(all_files) >= max_files:
+                    # Stop if we've reached the maximum number of files (only if limit is specified)
+                    if max_files is not None and len(all_files) >= max_files:
                         logger.info(
                             f"Reached maximum file limit ({max_files}), stopping file discovery"
                         )
@@ -80,7 +82,10 @@ def get_all_project_files(project_root: str, max_files: int = 100) -> List[str]:
                     # File is not relative to project root, skip it
                     continue
 
-    logger.info(f"Found {len(all_files)} files for analysis (limit: {max_files})")
+    logger.info(
+        f"Found {len(all_files)} files for analysis"
+        + (f" (limit: {max_files})" if max_files else "")
+    )
     return all_files
 
 

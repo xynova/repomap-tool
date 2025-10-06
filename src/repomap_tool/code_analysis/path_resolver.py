@@ -25,27 +25,27 @@ class PathResolver:
         self.project_root = str(project_root) if project_root is not None else None
 
     def resolve_file_paths(self, file_paths: List[str]) -> List[str]:
-        """Resolve file paths relative to project root.
+        """Validate that all file paths are absolute (architectural requirement).
 
         Args:
-            file_paths: List of file paths to resolve
+            file_paths: List of file paths to validate
 
         Returns:
-            List of resolved file paths
-        """
-        resolved_paths = []
-        for file_path in file_paths:
-            if os.path.isabs(file_path):
-                resolved_paths.append(file_path)
-            else:
-                if self.project_root is None:
-                    resolved_paths.append(file_path)
-                else:
-                    resolved_path = os.path.join(self.project_root, file_path)
-                    resolved_paths.append(resolved_path)
-        return resolved_paths
+            List of validated absolute file paths
 
-    def get_all_project_files(self, max_files: int = 100) -> List[str]:
+        Raises:
+            ValueError: If any path is not absolute
+        """
+        validated_paths = []
+        for file_path in file_paths:
+            if not os.path.isabs(file_path):
+                raise ValueError(
+                    f"All file paths must be absolute (architectural requirement). Got relative path: {file_path}"
+                )
+            validated_paths.append(file_path)
+        return validated_paths
+
+    def get_all_project_files(self, max_files: Optional[int] = None) -> List[str]:
         """Get all files in the project.
 
         Args:
@@ -92,8 +92,8 @@ class PathResolver:
                 ):
                     code_files.append(file_path)
 
-        # Apply file limit for performance
-        if len(code_files) > max_files:
+        # Apply file limit for performance (only if specified)
+        if max_files is not None and len(code_files) > max_files:
             # Sort by importance (prioritize main files)
             important_files = []
             other_files = []

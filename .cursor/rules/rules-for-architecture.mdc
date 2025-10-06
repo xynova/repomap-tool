@@ -39,11 +39,21 @@ alwaysApply: true
 - **Pydantic models** for all data structures and validation
 - **Protocol-based interfaces** for extensibility and testability
 
+### **🚨 CRITICAL: Absolute Path Standardization**
+- **ALL file paths must be absolute** throughout the system (architectural requirement)
+- **File discovery returns absolute paths** - no relative path conversion needed
+- **Controllers work with absolute paths** - no path resolution redundancy
+- **Only convert to relative paths** when calling aider's `get_tags()` method
+- **PathResolver validates absolute paths** - raises errors for relative paths
+- **Eliminates path confusion** and redundant conversions
+- **Improves reliability** and performance
+
 ### **AI Development Guidelines**
 - **ALWAYS use aider.repomap.RepoMap** - this is the core of the project, never bypass it
 - **ALWAYS use aider's tree-sitter capabilities** - never implement custom AST parsing
 - **ALWAYS use aider.repomap.RepoMap.get_tags()** for code element extraction
 - **ALWAYS use aider.io.InputOutput** for I/O operations with RepoMap
+- **ALWAYS use absolute paths** - all file paths must be absolute throughout the system
 - **ALWAYS follow existing patterns** - don't reinvent the wheel
 - **ALWAYS use dependency injection** - never instantiate services directly
 - **ALWAYS validate dependencies** - raise errors for missing dependencies
@@ -1388,6 +1398,8 @@ class DataFormatter(BaseFormatter):
 - [ ] **NO regex-based code parsing** - AI must use aider's get_tags() for all languages
 - [ ] **ALL analyzers use aider.repomap.RepoMap.get_tags()** - AI must leverage tree-sitter
 - [ ] **ALL analyzers use aider.io.InputOutput** - AI must use aider's I/O system
+- [ ] **ALL file paths are absolute** - AI must use absolute paths throughout the system
+- [ ] **NO relative path conversions** - AI must only convert to relative for aider calls
 - [ ] **ALL CLI commands use `OutputManager`** - AI must never use direct console.print
 - [ ] **NO direct `console.print()` calls in CLI commands** - AI must use OutputManager
 - [ ] **ALL services use constructor injection DI patterns** - AI must never instantiate services directly
@@ -1576,6 +1588,7 @@ class DataFormatter(BaseFormatter):
 - ✅ All code analysis uses aider.repomap.RepoMap (no custom AST parsing)
 - ✅ All analyzers use aider's tree-sitter capabilities via get_tags()
 - ✅ All I/O operations use aider.io.InputOutput
+- ✅ All file paths are absolute throughout the system
 - ✅ All code follows existing architectural patterns
 - ✅ All services use proper dependency injection
 - ✅ All CLI output goes through OutputManager
