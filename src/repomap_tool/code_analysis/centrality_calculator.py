@@ -30,7 +30,7 @@ class CentralityCalculator:
         self.cache: Dict[str, Any] = {}
         self.cache_enabled = True
 
-        logger.info("CentralityCalculator initialized")
+        logger.debug("CentralityCalculator initialized")
 
     def calculate_degree_centrality(self) -> Dict[str, float]:
         """Calculate degree centrality for all files.
@@ -57,7 +57,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = degree_scores
 
-            logger.info(f"Calculated degree centrality for {len(degree_scores)} files")
+            logger.debug(f"Calculated degree centrality for {len(degree_scores)} files")
             return degree_scores
 
         except Exception as e:
@@ -99,7 +99,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = betweenness_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated betweenness centrality for {len(betweenness_scores)} files"
             )
             return betweenness_scores
@@ -155,7 +155,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = pagerank_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated PageRank centrality for {len(pagerank_scores)} files"
             )
             return pagerank_scores
@@ -200,7 +200,7 @@ class CentralityCalculator:
                 }
                 self.cache[cache_key] = cache_data
 
-            logger.info(f"Calculated HITS scores for {len(hub_scores)} files")
+            logger.debug(f"Calculated HITS scores for {len(hub_scores)} files")
             return hub_scores, authority_scores
 
         except Exception as e:
@@ -243,7 +243,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = eigenvector_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated eigenvector centrality for {len(eigenvector_scores)} files"
             )
             return eigenvector_scores
@@ -288,7 +288,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = closeness_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated closeness centrality for {len(closeness_scores)} files"
             )
             return closeness_scores
@@ -374,7 +374,7 @@ class CentralityCalculator:
             # Validate composite scores
             self._validate_centrality_scores(composite_scores)
 
-            logger.info(
+            logger.debug(
                 f"Calculated composite importance for {len(composite_scores)} files"
             )
             return composite_scores

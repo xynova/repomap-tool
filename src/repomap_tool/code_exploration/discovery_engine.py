@@ -151,7 +151,7 @@ class EntrypointDiscoverer:
         ):
             return
 
-        logger.info("Building dependency graph for entrypoint enhancement...")
+        logger.debug("Building dependency graph for entrypoint enhancement...")
         try:
             project_imports = self.import_analyzer.analyze_project_imports(project_path)
             self.dependency_graph.build_graph(project_imports)
@@ -378,7 +378,7 @@ class EntrypointDiscoverer:
             project_path: Project path to analyze
         """
         try:
-            logger.info(f"Building dependency graph for project: {project_path}")
+            logger.debug(f"Building dependency graph for project: {project_path}")
 
             # Get project files first
             from repomap_tool.core.file_scanner import get_project_files
@@ -391,7 +391,7 @@ class EntrypointDiscoverer:
             # Build dependency graph
             self.dependency_graph.build_graph(project_imports)
 
-            logger.info(
+            logger.debug(
                 f"Built dependency graph with {len(self.dependency_graph.nodes)} nodes and {len(self.dependency_graph.graph.edges)} edges"
             )
 

@@ -29,7 +29,7 @@ class ImpactAnalyzer:
         self.cache: Dict[str, ImpactReport] = {}
         self.cache_enabled = True
 
-        logger.info("ImpactAnalyzer initialized")
+        logger.debug("ImpactAnalyzer initialized")
 
     def analyze_change_impact(self, changed_files: List[str]) -> ImpactReport:
         """Analyze the potential impact of changes to files.

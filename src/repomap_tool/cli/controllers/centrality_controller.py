@@ -105,7 +105,7 @@ class CentralityController(BaseController):
                     self.path_resolver.project_root
                 )
                 file_paths = file_discovery.get_code_files(exclude_tests=True)
-                logger.info(
+                logger.debug(
                     f"Using {len(file_paths)} code files from centralized discovery"
                 )
 
@@ -153,7 +153,7 @@ class CentralityController(BaseController):
 
         # Build dependency graph if it's empty
         if self.dependency_graph.graph.number_of_nodes() == 0:
-            logger.info("Building dependency graph for centrality analysis")
+            logger.debug("Building dependency graph for centrality analysis")
             self._build_dependency_graph()
 
         # Resolve file paths relative to project root
@@ -276,16 +276,11 @@ class CentralityController(BaseController):
             )
             file_analyses.append(file_analysis)
 
-            # Clean file path to handle special characters and double slashes
-            import re
-
-            cleaned_file_path = re.sub(r"/+", "/", analysis.file_path)
-
             # Create ranking entry with additional data and proper rank
             rankings.append(
                 {
                     "rank": rank,  # Use calculated rank instead of analysis.rank
-                    "file_path": cleaned_file_path,
+                    "file_path": analysis.file_path,  # Use original path without cleaning to preserve special chars like [id]
                     "centrality_score": analysis.centrality_score,
                     "total_files": analysis.total_files,
                     "connections": analysis.dependency_analysis.get(
@@ -502,7 +497,7 @@ class CentralityController(BaseController):
             # Build the dependency graph
             self.dependency_graph.build_graph(project_imports)
 
-            logger.info(
+            logger.debug(
                 f"Built dependency graph with {self.dependency_graph.graph.number_of_nodes()} nodes"
             )
 

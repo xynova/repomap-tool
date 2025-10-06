@@ -48,7 +48,7 @@ class CentralityAnalysisEngine:
         self.dependency_graph = dependency_graph
         self.path_normalizer = path_normalizer
 
-        logger.info(
+        logger.debug(
             "CentralityAnalysisEngine initialized with all required dependencies"
         )
 
@@ -86,6 +86,16 @@ class CentralityAnalysisEngine:
             structural_impact = self._calculate_structural_impact(
                 file_path, ast_result, all_files
             )
+
+            # DEBUG: Check if [id] is preserved in file_path
+            if (
+                "runs" in file_path
+                and "stream" in file_path
+                and "route.ts" in file_path
+            ):
+                logger.info(
+                    f"DEBUG: Creating FileCentralityAnalysis with file_path: {file_path}"
+                )
 
             return FileCentralityAnalysis(
                 file_path=file_path,
@@ -261,7 +271,7 @@ class CentralityAnalysisEngine:
 
         try:
             centrality_breakdown = {}
-            logger.info(f"Calculating centrality breakdown for {file_path}")
+            logger.debug(f"Calculating centrality breakdown for {file_path}")
 
             # Get individual centrality measures for this file
             degree_scores = self.centrality_calculator.calculate_degree_centrality()

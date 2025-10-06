@@ -51,7 +51,7 @@ class ASTFileAnalyzer:
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
-        logger.info(
+        logger.debug(
             f"ASTFileAnalyzer initialized with tree-sitter for project: {self.project_root}"
         )
 

@@ -30,7 +30,7 @@ class FileDiscoveryService:
         self._code_files_cache: Optional[List[str]] = None
         self._analyzable_files_cache: Optional[List[str]] = None
 
-        logger.info(f"FileDiscoveryService initialized for project: {project_root}")
+        logger.debug(f"FileDiscoveryService initialized for project: {project_root}")
 
     def get_all_files(self, use_cache: bool = True) -> List[str]:
         """Get all files in the project (raw discovery, no filtering).
@@ -50,7 +50,7 @@ class FileDiscoveryService:
         if use_cache:
             self._all_files_cache = all_files
 
-        logger.info(f"Discovered {len(all_files)} total files")
+        logger.debug(f"Discovered {len(all_files)} total files")
         return all_files
 
     def get_code_files(
@@ -78,7 +78,7 @@ class FileDiscoveryService:
         if use_cache:
             self._code_files_cache = code_files
 
-        logger.info(f"Filtered to {len(code_files)} code files")
+        logger.debug(f"Filtered to {len(code_files)} code files")
         return code_files
 
     def get_analyzable_files(
@@ -105,7 +105,7 @@ class FileDiscoveryService:
         if use_cache:
             self._analyzable_files_cache = analyzable_files
 
-        logger.info(f"Filtered to {len(analyzable_files)} analyzable files")
+        logger.debug(f"Filtered to {len(analyzable_files)} analyzable files")
         return analyzable_files
 
     def get_files_for_analysis(

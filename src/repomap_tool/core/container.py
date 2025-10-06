@@ -294,7 +294,7 @@ def create_container(config: RepoMapConfig) -> Container:
                 "verbose": config.verbose,
             }
         )
-        logger.info("Dependency injection container created and configured")
+        logger.debug("Dependency injection container created and configured")
     except Exception as e:
         logger.error(f"Error configuring container: {e}")
         raise

@@ -107,7 +107,7 @@ class ConfigService:
         """Initialize the configuration service."""
         self.defaults = ConfigDefaults()
         self._overrides: Dict[str, Any] = {}
-        logger.info("ConfigService initialized with centralized defaults")
+        logger.debug("ConfigService initialized with centralized defaults")
 
     def get(self, key: str, default: Any = None) -> Any:
         """Get a configuration value.

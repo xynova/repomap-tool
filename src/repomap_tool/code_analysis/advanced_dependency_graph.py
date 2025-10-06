@@ -30,7 +30,7 @@ class AdvancedDependencyGraph(DependencyGraph):
         self.function_dependents: Dict[str, Set[str]] = {}
         self.centrality_scores: Dict[str, float] = {}
 
-        logger.info("AdvancedDependencyGraph initialized")
+        logger.debug("AdvancedDependencyGraph initialized")
 
     def integrate_call_graph(self, call_graph: CallGraph) -> None:
         """Integrate function call information into the dependency graph.

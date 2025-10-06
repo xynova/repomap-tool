@@ -153,17 +153,8 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
                     (f for f in data.files if f.file_path == ranking["file_path"]), None
                 )
 
-                # Clean file path to handle special characters and double slashes
-                file_path = ranking["file_path"]
-                # Normalize double slashes and other path issues
-                import re
-
-                file_path = re.sub(
-                    r"/+", "/", file_path
-                )  # Replace multiple slashes with single slash
-                file_path = file_path.replace(
-                    "//", "/"
-                )  # Handle double slashes specifically
+                # Use the file path directly without cleaning to preserve special characters like [id]
+                file_path = ranking["file_path"].replace("[", "\[")
 
                 # Format the data for the table - keep full file paths
                 row = [
@@ -177,14 +168,13 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
                 ]
                 table_data.append(row)
 
-            # Create the table with fixed column widths for consistent alignment
+            # Create the table with tabulate
             table = tabulate(
                 table_data,
                 headers=headers,
-                tablefmt="grid",  # Use grid format for better alignment
+                tablefmt="grid",
                 stralign="left",
                 numalign="right",
-                maxcolwidths=[6, 80, 8, 12, 10, 10, 10],  # Fixed column widths
             )
 
             # Add summary information

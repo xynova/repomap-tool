@@ -210,8 +210,8 @@ class TestContainer:
         container = create_container(config)
         assert container is not None
 
-        # Verify logging was called
-        mock_logger.info.assert_called_with(
+        # Verify logging was called (changed to debug level)
+        mock_logger.debug.assert_called_with(
             "Dependency injection container created and configured"
         )
 

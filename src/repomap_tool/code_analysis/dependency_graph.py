@@ -30,11 +30,11 @@ class DependencyGraph:
         self.project_path: Optional[str] = None
         self.construction_time: Optional[float] = None
 
-        logger.info("DependencyGraph initialized")
+        logger.debug("DependencyGraph initialized")
 
     def build_graph(self, project_imports: ProjectImports) -> None:
         """Build the dependency graph from a ProjectImports object."""
-        logger.info(
+        logger.debug(
             f"Building dependency graph from ProjectImports for {project_imports.project_path}"
         )
 
@@ -68,9 +68,9 @@ class DependencyGraph:
                         self.graph.add_edge(file_path, resolved_path)
                         self.nodes[resolved_path].imported_by.append(file_path)
 
-        logger.info(
-            f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"
-        )
+            logger.debug(
+                f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"
+            )
 
     def _add_node(self, file_path: str) -> None:
         """Add a single node to the graph."""

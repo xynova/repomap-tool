@@ -114,7 +114,7 @@ class RepoMapService:
         # Initialize the system
         self._initialize_components()
 
-        self.logger.info(f"Initialized RepoMapService for {self.config.project_root}")
+        self.logger.debug(f"Initialized RepoMapService for {self.config.project_root}")
 
         # Invalidate stale caches on initialization
         self._invalidate_stale_caches()
@@ -801,7 +801,7 @@ class RepoMapService:
                     f"exceeding threshold of {self.config.dependencies.performance_threshold_seconds}s"
                 )
 
-            self.logger.info(
+            self.logger.debug(
                 f"Built dependency graph: {len(project_imports)} files in {construction_time:.2f}s"
             )
 

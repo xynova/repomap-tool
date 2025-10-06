@@ -440,7 +440,7 @@ class ImportAnalyzer:
 
         self.analyzable_extensions = FileFilter.get_analyzable_extensions()
 
-        logger.info(
+        logger.debug(
             f"ImportAnalyzer initialized with {len(self.language_parsers)} language parsers for project: {self.project_root}"
         )
 
@@ -515,7 +515,7 @@ class ImportAnalyzer:
             if Path(f).suffix.lstrip(".") in self.analyzable_extensions
         ]
 
-        logger.info(
+        logger.debug(
             f"Found {len(analyzable_files)} analyzable files out of {len(all_files)} total"
         )
 
@@ -549,7 +549,7 @@ class ImportAnalyzer:
             project_path=project_path, file_imports=file_imports
         )
 
-        logger.info(
+        logger.debug(
             f"Project import analysis complete: {project_imports.total_files} files, {project_imports.total_imports} imports"
         )
         return project_imports

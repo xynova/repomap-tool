@@ -257,7 +257,7 @@ class CallGraphBuilder:
 
         self.analyzable_extensions = FileFilter.get_analyzable_extensions()
 
-        logger.info(
+        logger.debug(
             f"CallGraphBuilder initialized with {len(self.language_analyzers)} language analyzers"
         )
 
@@ -282,7 +282,7 @@ class CallGraphBuilder:
             project_files, exclude_tests=True
         )
 
-        logger.info(f"Found {len(analyzable_files)} analyzable files for call graph")
+        logger.debug(f"Found {len(analyzable_files)} analyzable files for call graph")
 
         all_calls: List[FunctionCall] = []
         function_locations: Dict[str, str] = {}

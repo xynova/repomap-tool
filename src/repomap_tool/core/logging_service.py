@@ -88,7 +88,7 @@ class LoggingService:
 
         # Log configuration success
         logger = self.get_logger(__name__)
-        logger.info(
+        logger.debug(
             f"Logging service configured: level={level}, console={enable_console}, file={enable_file}"
         )
 
