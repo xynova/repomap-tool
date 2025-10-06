@@ -8,6 +8,7 @@ with support for custom filters, functions, and template inheritance.
 from __future__ import annotations
 
 import logging
+from repomap_tool.core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Union
 
 # Try to import Jinja2
@@ -37,7 +38,7 @@ try:
 except ImportError as e:
     # Fallback for environments without Jinja2
 
-    logger = logging.getLogger(__name__)
+    logger = get_logger(__name__)
     logger.warning(f"Jinja2 not available: {e}")
     JINJA2_AVAILABLE = False
 
@@ -63,7 +64,7 @@ class TemplateEngine:
             enable_logging: Whether to enable logging
         """
         self._enable_logging = enable_logging
-        self._logger = logging.getLogger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) if enable_logging else None
         if template_registry is None:
             self._template_registry: TemplateRegistry = get_template_registry()
         else:

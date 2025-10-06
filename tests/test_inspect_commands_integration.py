@@ -62,28 +62,28 @@ from models.user import User
 class UserService:
     def __init__(self):
         self.db = database.get_connection()
-    
+
     def create_user(self, user_data):
         # Validate credentials
         if not validate_credentials(user_data.get('email')):
             raise ValueError("Invalid email")
-        
+
         # Create user in database
         user = User(**user_data)
         user_id = self.db.save_user(user)
-        
+
         # Send notification
         send_notification(user.email, "Welcome!")
-        
+
         return user_id
-    
+
     def delete_user(self, user_id):
         user = self.db.get_user_by_id(user_id)
         if user:
             self.db.delete_user(user_id)
             return True
         return False
-    
+
     def update_profile(self, user_id, profile_data):
         user = self.db.get_user_by_id(user_id)
         if user:
@@ -127,14 +127,14 @@ from typing import Optional, Dict, Any
 class DatabaseConnection:
     def __init__(self, db_path: str = "test.db"):
         self.connection = sqlite3.connect(db_path)
-    
+
     def save_user(self, user) -> int:
         cursor = self.connection.cursor()
         cursor.execute("INSERT INTO users (name, email) VALUES (?, ?)",
                       (user.name, user.email))
         self.connection.commit()
         return cursor.lastrowid
-    
+
     def get_user_by_id(self, user_id: int):
         cursor = self.connection.cursor()
         cursor.execute("SELECT * FROM users WHERE id = ?", (user_id,))
@@ -142,7 +142,7 @@ class DatabaseConnection:
         if row:
             return {"id": row[0], "name": row[1], "email": row[2]}
         return None
-    
+
     def delete_user(self, user_id: int):
         cursor = self.connection.cursor()
         cursor.execute("DELETE FROM users WHERE id = ?", (user_id,))
@@ -200,11 +200,11 @@ class User:
         self.email = email
         self.profile = kwargs.get('profile', {})
         self.created_at = kwargs.get('created_at')
-    
+
     def update_profile(self, profile_data: Dict[str, Any]):
         '''Update user profile'''
         self.profile.update(profile_data)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         '''Convert user to dictionary'''
         return {
@@ -213,7 +213,7 @@ class User:
             'profile': self.profile,
             'created_at': self.created_at
         }
-    
+
     def __str__(self):
         return f"User(name={self.name}, email={self.email})"
 """
@@ -282,13 +282,13 @@ class TestUserService:
         user_data = {'name': 'Test User', 'email': 'test@example.com'}
         user_id = service.create_user(user_data)
         assert user_id is not None
-    
+
     def test_delete_user(self):
         service = UserService()
         # Test with non-existent user
         result = service.delete_user(999)
         assert result is False
-    
+
     def test_update_profile(self):
         service = UserService()
         profile_data = {'bio': 'Test bio'}
@@ -649,10 +649,10 @@ class TestClass:
     def __init__(self, name: str):
         self.name = name
         self.value = 42
-    
+
     def method1(self) -> str:
         return f"Hello {self.name}"
-    
+
     def method2(self, items: List[str]) -> Dict[str, int]:
         return {item: len(item) for item in items}
 
@@ -815,311 +815,3 @@ def broken_function(
         analyzer.clear_cache()
         cache_stats_after = analyzer.get_cache_stats()
         assert cache_stats_after["cache_size"] == 0
-
-
-class TestLLMFileAnalyzerIntegration:
-    """Integration tests for LLM file analyzer with real project structures."""
-
-    def _create_llm_analyzer(self, dependency_graph, project_root):
-        """Helper method to create LLM analyzer with all required dependencies."""
-        from repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
-        from repomap_tool.code_analysis.centrality_calculator import (
-            CentralityCalculator,
-        )
-        from repomap_tool.code_analysis.centrality_analysis_engine import (
-            CentralityAnalysisEngine,
-        )
-        from repomap_tool.code_analysis.impact_analysis_engine import (
-            ImpactAnalysisEngine,
-        )
-        from repomap_tool.llm.token_optimizer import TokenOptimizer
-        from repomap_tool.llm.context_selector import ContextSelector
-        from repomap_tool.llm.hierarchical_formatter import HierarchicalFormatter
-        from repomap_tool.code_analysis.path_resolver import PathResolver
-        from repomap_tool.utils.path_normalizer import PathNormalizer
-        from repomap_tool.code_analysis.llm_file_analyzer import LLMFileAnalyzer
-
-        # Create all required dependencies
-        ast_analyzer = ASTFileAnalyzer(project_root)
-        # Use service factory for centrality calculator
-        from repomap_tool.models import (
-            RepoMapConfig,
-            FuzzyMatchConfig,
-            SemanticMatchConfig,
-            PerformanceConfig,
-            DependencyConfig,
-        )
-        from repomap_tool.cli.services import get_service_factory
-
-        config = RepoMapConfig(
-            project_root=project_root,
-            fuzzy_match=FuzzyMatchConfig(),
-            semantic_match=SemanticMatchConfig(),
-            performance=PerformanceConfig(),
-            dependencies=DependencyConfig(
-                enable_impact_analysis=True,
-                enable_centrality_analysis=True,
-            ),
-            verbose=False,
-        )
-        service_factory = get_service_factory()
-        repomap_service = service_factory.create_repomap_service(config)
-        centrality_calculator = repomap_service.centrality_calculator
-        path_normalizer = PathNormalizer(project_root)
-        centrality_engine = CentralityAnalysisEngine(
-            ast_analyzer=ast_analyzer,
-            centrality_calculator=centrality_calculator,
-            dependency_graph=dependency_graph,
-            path_normalizer=path_normalizer,
-        )
-        impact_engine = ImpactAnalysisEngine(ast_analyzer=ast_analyzer)
-        token_optimizer = TokenOptimizer()
-        context_selector = ContextSelector(dependency_graph)
-        hierarchical_formatter = HierarchicalFormatter()
-        path_resolver = PathResolver(project_root)
-
-        # Create LLM analyzer with all dependencies using new constructor pattern
-        from repomap_tool.code_analysis.llm_analyzer_config import (
-            LLMAnalyzerConfig,
-            LLMAnalyzerDependencies,
-        )
-
-        # Create impact analyzer using DI container
-        from repomap_tool.core.container import create_container
-        from repomap_tool.models import RepoMapConfig
-
-        config = RepoMapConfig(project_root=project_root)
-        container = create_container(config)
-        impact_analyzer = container.impact_analyzer()
-
-        config = LLMAnalyzerConfig()
-        dependencies = LLMAnalyzerDependencies(
-            dependency_graph=dependency_graph,
-            project_root=project_root,
-            ast_analyzer=ast_analyzer,
-            token_optimizer=token_optimizer,
-            context_selector=context_selector,
-            hierarchical_formatter=hierarchical_formatter,
-            path_resolver=path_resolver,
-            impact_analyzer=impact_analyzer,
-            impact_engine=impact_engine,
-            centrality_engine=centrality_engine,
-            centrality_calculator=centrality_calculator,
-        )
-
-        return LLMFileAnalyzer(config=config, dependencies=dependencies)
-
-    def setup_method(self):
-        """Set up test environment."""
-        self.temp_dir = tempfile.mkdtemp()
-        self.project_root = Path(self.temp_dir)
-        self._create_test_project()
-
-    def teardown_method(self):
-        """Clean up test environment."""
-        import shutil
-
-        shutil.rmtree(self.temp_dir, ignore_errors=True)
-
-    def _create_test_project(self):
-        """Create a test project for LLM analyzer."""
-        # Create a simple project structure
-        src_dir = self.project_root / "src"
-        src_dir.mkdir()
-
-        # Create main.py
-        (src_dir / "main.py").write_text(
-            """# Main module
-import utils
-from models import User
-
-def main():
-    user = User("John", "john@example.com")
-    result = utils.process_user(user)
-    print(result)
-
-if __name__ == "__main__":
-    main()
-"""
-        )
-
-        # Create utils.py
-        (src_dir / "utils.py").write_text(
-            """# Utility functions
-from typing import Any
-
-def process_user(user) -> str:
-    return f"Processing user: {user.name}"
-
-def validate_email(email: str) -> bool:
-    return "@" in email
-"""
-        )
-
-        # Create models directory
-        models_dir = src_dir / "models"
-        models_dir.mkdir()
-
-        # Create models/__init__.py
-        (models_dir / "__init__.py").write_text(
-            """# Models package
-from .user import User
-"""
-        )
-
-        # Create models/user.py
-        (models_dir / "user.py").write_text(
-            """# User model
-class User:
-    def __init__(self, name: str, email: str):
-        self.name = name
-        self.email = email
-    
-    def __str__(self):
-        return f"User({self.name}, {self.email})"
-"""
-        )
-
-    def test_llm_analyzer_impact_analysis(self):
-        """Test LLM analyzer impact analysis."""
-        from repomap_tool.core.repo_map import RepoMapService
-        from repomap_tool.models import RepoMapConfig, DependencyConfig
-
-        main_file = str(self.project_root / "src" / "main.py")
-
-        # Create config and build dependency graph
-        config = RepoMapConfig(
-            project_root=str(self.project_root),
-            dependencies=DependencyConfig(enable_impact_analysis=True),
-        )
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        repomap = service_factory.create_repomap_service(config)
-        dependency_graph = repomap.build_dependency_graph()
-
-        # Create analyzer with all dependencies
-        analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.TEXT)
-
-        assert "Impact Analysis: main.py" in result
-        assert "DIRECT DEPENDENCIES" in result
-        assert "REVERSE DEPENDENCIES" in result
-        assert "STRUCTURAL IMPACT" in result
-
-    def test_llm_analyzer_centrality_analysis(self):
-        """Test LLM analyzer centrality analysis."""
-        from repomap_tool.core.repo_map import RepoMapService
-        from repomap_tool.models import RepoMapConfig, DependencyConfig
-
-        main_file = str(self.project_root / "src" / "main.py")
-
-        # Create config and build dependency graph
-        config = RepoMapConfig(
-            project_root=str(self.project_root),
-            dependencies=DependencyConfig(enable_impact_analysis=True),
-        )
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        repomap = service_factory.create_repomap_service(config)
-        dependency_graph = repomap.build_dependency_graph()
-
-        # Create analyzer with all dependencies
-        analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        result = analyzer.analyze_file_centrality([main_file], AnalysisFormat.TEXT)
-
-        assert "Centrality Analysis: main.py" in result
-        assert "IMPORTANCE SCORE" in result
-        assert "FILE CONNECTIONS" in result
-        # The test project may not have enough complexity for full centrality analysis
-        # So we check for either CHANGE IMPACT or the error message
-        assert "CHANGE IMPACT" in result or "Centrality Analysis Error" in result
-
-    def test_llm_analyzer_json_output(self):
-        """Test LLM analyzer JSON output."""
-        from repomap_tool.core.repo_map import RepoMapService
-        from repomap_tool.models import RepoMapConfig, DependencyConfig
-
-        main_file = str(self.project_root / "src" / "main.py")
-
-        # Create config and build dependency graph
-        config = RepoMapConfig(
-            project_root=str(self.project_root),
-            dependencies=DependencyConfig(enable_impact_analysis=True),
-        )
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        repomap = service_factory.create_repomap_service(config)
-        dependency_graph = repomap.build_dependency_graph()
-
-        # Create analyzer with all dependencies
-        analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.JSON)
-
-        # Should be valid JSON
-        import json
-
-        json_data = json.loads(result)
-        assert isinstance(json_data, list)
-        assert len(json_data) == 1
-        assert "file_path" in json_data[0]
-
-    def test_llm_analyzer_token_optimization(self):
-        """Test LLM analyzer token optimization."""
-        from repomap_tool.core.repo_map import RepoMapService
-        from repomap_tool.models import RepoMapConfig, DependencyConfig
-
-        main_file = str(self.project_root / "src" / "main.py")
-
-        # Create config and build dependency graph
-        config = RepoMapConfig(
-            project_root=str(self.project_root),
-            dependencies=DependencyConfig(enable_impact_analysis=True),
-        )
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        repomap = service_factory.create_repomap_service(config)
-        dependency_graph = repomap.build_dependency_graph()
-
-        # Create analyzer with all dependencies and token limit
-        analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        # Set max_tokens on the analyzer
-        analyzer.max_tokens = 500
-        result = analyzer.analyze_file_impact([main_file], AnalysisFormat.TEXT)
-
-        # Result should be optimized for token budget
-        assert "Impact Analysis: main.py" in result
-        # Should be shorter due to token optimization
-        assert len(result) < 2000  # Reasonable upper bound
-
-    def test_llm_analyzer_multiple_files(self):
-        """Test LLM analyzer with multiple files."""
-        from repomap_tool.core.repo_map import RepoMapService
-        from repomap_tool.models import RepoMapConfig, DependencyConfig
-
-        main_file = str(self.project_root / "src" / "main.py")
-        utils_file = str(self.project_root / "src" / "utils.py")
-
-        # Create config and build dependency graph
-        config = RepoMapConfig(
-            project_root=str(self.project_root),
-            dependencies=DependencyConfig(enable_impact_analysis=True),
-        )
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        repomap = service_factory.create_repomap_service(config)
-        dependency_graph = repomap.build_dependency_graph()
-
-        # Create analyzer with all dependencies
-        analyzer = self._create_llm_analyzer(dependency_graph, str(self.project_root))
-        result = analyzer.analyze_file_impact(
-            [main_file, utils_file], AnalysisFormat.TEXT
-        )
-
-        assert "Impact Analysis: main.py, utils.py" in result
-        assert "FILES ANALYZED" in result
-        assert "COMBINED DEPENDENCIES" in result

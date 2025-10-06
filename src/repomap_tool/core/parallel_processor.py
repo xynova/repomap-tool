@@ -13,6 +13,9 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 import logging
 
+from .config_service import get_config
+from .logging_service import get_logger
+
 from rich.progress import (
     Progress,
     SpinnerColumn,
@@ -86,7 +89,7 @@ class ParallelTagExtractor:
 
     def __init__(
         self,
-        max_workers: int = 4,
+        max_workers: Optional[int] = None,
         enable_progress: bool = True,
         console: Optional[Console] = None,
     ):
@@ -94,16 +97,19 @@ class ParallelTagExtractor:
         Initialize the parallel tag extractor.
 
         Args:
-            max_workers: Maximum number of worker threads
+            max_workers: Maximum number of worker threads (default: from config)
             enable_progress: Whether to show progress bars
             console: Rich console for progress display
         """
+        # Use config default if not provided
+        if max_workers is None:
+            max_workers = get_config("MAX_WORKERS", 4)
         self.max_workers = max_workers
         self.enable_progress = enable_progress
         if console is None:
             raise ValueError("Console must be injected - no fallback allowed")
         self.console = console
-        self.logger = logging.getLogger(__name__)
+        self.logger = get_logger(__name__)
 
         # Thread safety
         self._lock = threading.Lock()

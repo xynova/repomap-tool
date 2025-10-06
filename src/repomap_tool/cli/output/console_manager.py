@@ -8,6 +8,7 @@ dependency injection, error handling, and configuration management.
 from __future__ import annotations
 
 import logging
+from repomap_tool.core.logging_service import get_logger
 from typing import Optional, Dict, Any, Protocol
 from pathlib import Path
 
@@ -56,7 +57,7 @@ class DefaultConsoleManager:
             raise ValueError("ConsoleProvider must be injected - no fallback allowed")
         self._provider = provider
         self._enable_logging = enable_logging
-        self._logger = logging.getLogger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) if enable_logging else None
         self._usage_stats: Dict[str, int] = {}
 
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:

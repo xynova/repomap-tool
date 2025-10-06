@@ -472,8 +472,7 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
                     logging.debug(f"Ignoring file (gitignore): {file_path}")
                 continue
 
-            # Get relative path from project root
-            rel_path = file_path.relative_to(Path(project_root))
-            files.append(str(rel_path))
+            # Return absolute path for consistent path handling
+            files.append(str(file_path))
 
     return files

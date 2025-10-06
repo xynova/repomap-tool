@@ -7,6 +7,8 @@ capabilities, providing the foundation for building exploration trees.
 
 import os
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -21,7 +23,7 @@ from repomap_tool.code_analysis import (
     DependencyGraph,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class EntrypointDiscoverer:
@@ -59,7 +61,7 @@ class EntrypointDiscoverer:
             self.semantic_threshold = 0.6
 
         # Fuzzy matching threshold (70% similarity)
-        self.fuzzy_threshold = 0.7
+        self.fuzzy_threshold = get_config("FUZZY_THRESHOLD", 0.7)
 
         # All dependencies must be injected - no fallback allowed
         if import_analyzer is None:
@@ -149,7 +151,7 @@ class EntrypointDiscoverer:
         ):
             return
 
-        logger.info("Building dependency graph for entrypoint enhancement...")
+        logger.debug("Building dependency graph for entrypoint enhancement...")
         try:
             project_imports = self.import_analyzer.analyze_project_imports(project_path)
             self.dependency_graph.build_graph(project_imports)
@@ -376,7 +378,7 @@ class EntrypointDiscoverer:
             project_path: Project path to analyze
         """
         try:
-            logger.info(f"Building dependency graph for project: {project_path}")
+            logger.debug(f"Building dependency graph for project: {project_path}")
 
             # Get project files first
             from repomap_tool.core.file_scanner import get_project_files
@@ -389,7 +391,7 @@ class EntrypointDiscoverer:
             # Build dependency graph
             self.dependency_graph.build_graph(project_imports)
 
-            logger.info(
+            logger.debug(
                 f"Built dependency graph with {len(self.dependency_graph.nodes)} nodes and {len(self.dependency_graph.graph.edges)} edges"
             )
 

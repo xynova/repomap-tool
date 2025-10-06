@@ -7,13 +7,15 @@ aider infrastructure for dependency analysis and tree structure creation.
 
 import os
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class TreeBuilder:
@@ -44,7 +46,7 @@ class TreeBuilder:
         logger.debug("TreeBuilder initialized")
 
     def build_exploration_tree(
-        self, entrypoint: Entrypoint, max_depth: int = 3
+        self, entrypoint: Entrypoint, max_depth: int = get_config("MAX_DEPTH", 3)
     ) -> ExplorationTree:
         """Build exploration tree from entrypoint.
 
@@ -91,7 +93,7 @@ class TreeBuilder:
     def build_exploration_tree_with_dependencies(
         self,
         entrypoint: Entrypoint,
-        max_depth: int = 3,
+        max_depth: int = get_config("MAX_DEPTH", 3),
         current_files: Optional[List[str]] = None,
     ) -> ExplorationTree:
         """Build exploration tree with dependency intelligence.

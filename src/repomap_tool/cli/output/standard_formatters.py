@@ -136,116 +136,6 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter):
         return ProjectInfo
 
 
-class SearchResponseFormatter(BaseFormatter, DataFormatter):
-    """Formatter for SearchResponse data."""
-
-    def __init__(
-        self,
-        console_manager: Optional[ConsoleManager] = None,
-        enable_logging: bool = True,
-    ) -> None:
-        """Initialize the SearchResponse formatter."""
-        super().__init__(console_manager, enable_logging)
-        self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
-        self._template_formatter = TemplateBasedFormatter(
-            console_manager=console_manager,
-            enable_logging=enable_logging,
-        )
-
-    def format(
-        self,
-        data: Any,
-        output_format: OutputFormat,
-        config: Optional[OutputConfig] = None,
-        ctx: Optional[click.Context] = None,
-    ) -> Optional[str]:
-        """Format SearchResponse data."""
-        if not isinstance(data, SearchResponse):
-            raise ValueError(f"Expected SearchResponse, got {type(data)}")
-        self.log_formatting("format_search_response", format=str(output_format))
-
-        if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
-        elif output_format == OutputFormat.TEXT:
-            # Use template formatter for text output
-            return self._template_formatter.format(data, output_format, config, ctx)
-        else:
-            raise ValueError(f"Unsupported format: {output_format}")
-
-    def _format_to_text(
-        self,
-        search_response: SearchResponse,
-        config: Optional[OutputConfig] = None,
-    ) -> str:
-        """Format SearchResponse to text format."""
-        use_emojis = True
-        if config and config.template_config:
-            use_emojis = not config.template_config.get("no_emojis", False)
-
-        if not search_response.results:
-            no_results_icon = "🔍" if use_emojis else ""
-            return f"{no_results_icon} No results found."
-
-        # Prepare table data
-        table_data = []
-        for i, result in enumerate(search_response.results, 1):
-            file_display = result.file_path if result.file_path else "N/A"
-            line_display = str(result.line_number) if result.line_number else "N/A"
-
-            table_data.append(
-                [
-                    str(i),
-                    result.identifier,
-                    file_display,
-                    line_display,
-                    f"{result.score:.3f}",
-                    result.strategy,
-                ]
-            )
-
-        # Create clean ASCII table
-        headers = ["Rank", "Identifier", "File Path", "Line", "Score", "Strategy"]
-        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
-
-        # Build result
-        lines = []
-        search_icon = "🔍" if use_emojis else ""
-        lines.append(
-            f"{search_icon} Search Results ({len(search_response.results)} found)"
-        )
-        lines.append(table_str)
-
-        # Add performance metrics if available
-        if search_response.performance_metrics:
-            lines.append("")
-            perf_icon = "⚡" if use_emojis else ""
-            lines.append(f"{perf_icon} Performance Metrics:")
-            for key, value in search_response.performance_metrics.items():
-                if isinstance(value, float):
-                    formatted_value = f"{value:.3f}"
-                else:
-                    formatted_value = str(value)
-                lines.append(f"├── {key.replace('_', ' ').title()}: {formatted_value}")
-
-        return "\n".join(lines)
-
-    def supports_format(self, output_format: OutputFormat) -> bool:
-        """Check if format is supported."""
-        return output_format in self._supported_formats
-
-    def get_supported_formats(self) -> List[OutputFormat]:
-        """Get supported formats."""
-        return self._supported_formats.copy()
-
-    def validate_data(self, data: Any) -> bool:
-        """Validate data is SearchResponse."""
-        return isinstance(data, SearchResponse)
-
-    def get_data_type(self) -> Type[Any]:
-        """Get data type."""
-        return SearchResponse
-
-
 class DictFormatter(BaseFormatter, DataFormatter):
     """Formatter for dictionary data."""
 
@@ -415,18 +305,29 @@ class ListFormatter(BaseFormatter, DataFormatter):
             no_cycles_icon = "🔄" if use_emojis else ""
             return f"{no_cycles_icon} No circular dependencies found! 🎉"
 
-        table_data = []
-        for i, cycle in enumerate(data, 1):
-            cycle_str = " → ".join(cycle + [cycle[0]])  # Close the cycle
-            table_data.append([str(i), cycle_str])
-
-        headers = ["Cycle #", "Dependencies"]
-        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
-
         lines = []
         cycle_icon = "🔄" if use_emojis else ""
         lines.append(f"{cycle_icon} Circular Dependencies ({len(data)} found)")
-        lines.append(table_str)
+        lines.append("")
+
+        for i, cycle in enumerate(data, 1):
+            lines.append(f"Cycle #{i}:")
+
+            # Format each file in the cycle with proper indentation
+            for j, file_path in enumerate(cycle):
+                if j == 0:
+                    # First file
+                    lines.append(f"  {file_path}")
+                else:
+                    # Subsequent files with arrow and indentation
+                    lines.append(f"    → {file_path}")
+
+            # Close the cycle by showing the first file again
+            lines.append(f"    → {cycle[0]}")
+
+            # Add spacing between cycles (except for the last one)
+            if i < len(data):
+                lines.append("")
 
         return "\n".join(lines)
 
@@ -568,7 +469,6 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
     """Register default formatters."""
     # Register standard formatters
     registry.register_formatter(ProjectInfoFormatter(), ProjectInfo)
-    registry.register_formatter(SearchResponseFormatter(), SearchResponse)
     registry.register_formatter(DictFormatter(), dict)
     registry.register_formatter(ListFormatter(), list)
     registry.register_formatter(StringFormatter(), str)
@@ -578,3 +478,9 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
 
     registry.register_formatter(CentralityViewModelFormatter(), CentralityViewModel)
     registry.register_formatter(ImpactViewModelFormatter(), ImpactViewModel)
+
+    # Register SearchViewModel formatter
+    from .controller_formatters import SearchViewModelFormatter
+    from ..controllers.view_models import SearchViewModel
+
+    registry.register_formatter(SearchViewModelFormatter(), SearchViewModel)

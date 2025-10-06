@@ -11,8 +11,10 @@ from typing import Dict, List, Tuple, Optional, Any, Set
 from collections import defaultdict
 
 from .dependency_graph import DependencyGraph
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CentralityCalculator:
@@ -28,7 +30,7 @@ class CentralityCalculator:
         self.cache: Dict[str, Any] = {}
         self.cache_enabled = True
 
-        logger.info("CentralityCalculator initialized")
+        logger.debug("CentralityCalculator initialized")
 
     def calculate_degree_centrality(self) -> Dict[str, float]:
         """Calculate degree centrality for all files.
@@ -55,7 +57,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = degree_scores
 
-            logger.info(f"Calculated degree centrality for {len(degree_scores)} files")
+            logger.debug(f"Calculated degree centrality for {len(degree_scores)} files")
             return degree_scores
 
         except Exception as e:
@@ -77,6 +79,14 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating betweenness centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's betweenness centrality
             betweenness_scores: Dict[str, float] = nx.betweenness_centrality(
                 self.graph.graph
@@ -89,7 +99,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = betweenness_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated betweenness centrality for {len(betweenness_scores)} files"
             )
             return betweenness_scores
@@ -99,7 +109,7 @@ class CentralityCalculator:
             return {}
 
     def calculate_pagerank_centrality(
-        self, alpha: float = 0.85, max_iter: int = 100
+        self, alpha: Optional[float] = None, max_iter: Optional[int] = None
     ) -> Dict[str, float]:
         """Calculate PageRank centrality for all files.
 
@@ -107,18 +117,32 @@ class CentralityCalculator:
         of files that import them. Higher values indicate more important files.
 
         Args:
-            alpha: Damping parameter (0.85 is standard)
-            max_iter: Maximum iterations for convergence
+            alpha: Damping parameter (default: from config)
+            max_iter: Maximum iterations for convergence (default: from config)
 
         Returns:
             Dictionary mapping file paths to PageRank scores (0-1)
         """
+        # Use config defaults if not provided
+        if alpha is None:
+            alpha = get_config("PAGERANK_ALPHA", 0.85)
+        if max_iter is None:
+            max_iter = get_config("PAGERANK_MAX_ITER", 100)
+
         cache_key = f"pagerank_centrality_{alpha}_{max_iter}"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached PageRank centrality scores")
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating PageRank centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's PageRank
             pagerank_scores: Dict[str, float] = nx.pagerank(
                 self.graph.graph, alpha=alpha, max_iter=max_iter
@@ -131,7 +155,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = pagerank_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated PageRank centrality for {len(pagerank_scores)} files"
             )
             return pagerank_scores
@@ -176,7 +200,7 @@ class CentralityCalculator:
                 }
                 self.cache[cache_key] = cache_data
 
-            logger.info(f"Calculated HITS scores for {len(hub_scores)} files")
+            logger.debug(f"Calculated HITS scores for {len(hub_scores)} files")
             return hub_scores, authority_scores
 
         except Exception as e:
@@ -198,9 +222,18 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating eigenvector centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's eigenvector centrality
+            max_iter = get_config("EIGENVECTOR_MAX_ITER", 1000)
             eigenvector_scores: Dict[str, float] = nx.eigenvector_centrality(
-                self.graph.graph, max_iter=1000
+                self.graph.graph, max_iter=max_iter
             )
 
             # Validate scores
@@ -210,12 +243,13 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = eigenvector_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated eigenvector centrality for {len(eigenvector_scores)} files"
             )
             return eigenvector_scores
 
         except Exception as e:
+            logger.warning("Empty centrality scores dictionary")
             logger.error(f"Error calculating eigenvector centrality: {e}")
             return {}
 
@@ -234,6 +268,14 @@ class CentralityCalculator:
             return self.cache[cache_key]  # type: ignore
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating closeness centrality: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Use NetworkX's closeness centrality
             closeness_scores: Dict[str, float] = nx.closeness_centrality(
                 self.graph.graph
@@ -246,7 +288,7 @@ class CentralityCalculator:
             if self.cache_enabled:
                 self.cache[cache_key] = closeness_scores
 
-            logger.info(
+            logger.debug(
                 f"Calculated closeness centrality for {len(closeness_scores)} files"
             )
             return closeness_scores
@@ -284,6 +326,14 @@ class CentralityCalculator:
             weights = {k: v / total_weight for k, v in weights.items()}
 
         try:
+            # Check if graph is empty
+            if self.graph.graph.number_of_nodes() == 0:
+                logger.warning("Empty centrality scores dictionary")
+                logger.error(
+                    "Error calculating composite importance: cannot compute centrality for the null graph"
+                )
+                return {}
+
             # Calculate all centrality measures
             centrality_scores = {}
 
@@ -324,7 +374,7 @@ class CentralityCalculator:
             # Validate composite scores
             self._validate_centrality_scores(composite_scores)
 
-            logger.info(
+            logger.debug(
                 f"Calculated composite importance for {len(composite_scores)} files"
             )
             return composite_scores

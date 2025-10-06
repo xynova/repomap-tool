@@ -10,12 +10,14 @@ This module provides a CacheManager class that implements:
 
 import time
 import logging
+from .config_service import get_config
+from .logging_service import get_logger
 import os
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple, List, Set
 from ..exceptions import CacheError
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CacheManager:
@@ -32,9 +34,9 @@ class CacheManager:
     def __init__(
         self,
         max_size: int = 1000,
-        ttl: int = 3600,
+        ttl: int = get_config("CACHE_TTL", 3600),
         enable_memory_monitoring: bool = True,
-    ):
+    ) -> None:
         """
         Initialize the cache manager.
 

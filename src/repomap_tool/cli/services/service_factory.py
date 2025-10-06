@@ -6,6 +6,7 @@ using the dependency injection container.
 """
 
 import logging
+from repomap_tool.core.logging_service import get_logger
 from typing import Optional, Any
 from pathlib import Path
 
@@ -21,7 +22,7 @@ from repomap_tool.core.parallel_processor import ParallelTagExtractor
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from rich.console import Console
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ServiceFactory:

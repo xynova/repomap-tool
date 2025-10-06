@@ -5,11 +5,14 @@ This module contains commands for code inspection, analysis, and discovery.
 Merges functionality from the previous 'analyze' and 'search' commands.
 """
 
+import os
 import sys
 from typing import Optional, Literal
 
 import click
 from rich.progress import Progress, SpinnerColumn, TextColumn
+
+from repomap_tool.core.config_service import get_config
 
 from ...models import (
     SearchRequest,
@@ -20,8 +23,6 @@ from ...models import (
 from ...core import RepoMapService
 from ..config.loader import (
     resolve_project_path,
-    create_search_config,
-    create_tree_config,
 )
 from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
@@ -54,7 +55,10 @@ def inspect(ctx: click.Context) -> None:
     help="Matching strategy",
 )
 @click.option(
-    "--threshold", "-t", type=float, default=0.7, help="Match threshold (0.0-1.0)"
+    "--threshold",
+    default=get_config("FUZZY_THRESHOLD", 0.7),
+    type=float,
+    help="Match threshold (0.0-1.0)",
 )
 @click.option(
     "--max-results", "-m", type=int, default=10, help="Maximum results to return"
@@ -103,10 +107,21 @@ def find(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration
-        config_obj = create_search_config(
-            resolved_project_path, match_type, verbose, log_level, cache_size
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
+            verbose=verbose,
         )
+
+        # Override specific search settings
+        config_obj.fuzzy_match.enabled = match_type in ["fuzzy", "hybrid"]
+        config_obj.semantic_match.enabled = match_type in ["semantic", "hybrid"]
+        config_obj.performance.cache_size = cache_size
+        config_obj.log_level = log_level
 
         # Update configuration with threshold from CLI
         # Convert float threshold (0.0-1.0) to integer (0-100) for internal use
@@ -123,30 +138,67 @@ def find(
             strategies=list(strategies) if strategies else None,
         )
 
-        # Initialize RepoMap using service factory
+        # Initialize services using service factory
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            task = progress.add_task("Initializing RepoMap...", total=None)
+            task = progress.add_task("Initializing services...", total=None)
 
             from repomap_tool.cli.services import get_service_factory
+            from repomap_tool.cli.controllers.search_controller import SearchController
+            from repomap_tool.cli.controllers.view_models import (
+                ControllerConfig,
+                AnalysisType,
+            )
+            from repomap_tool.core.container import create_container
 
             service_factory = get_service_factory()
             repomap = service_factory.create_repomap_service(config_obj)
 
+            # Get matchers from the container
+            container = create_container(config_obj)
+            fuzzy_matcher = container.fuzzy_matcher()
+            semantic_matcher = (
+                container.adaptive_semantic_matcher()
+                if config_obj.semantic_match.enabled
+                else None
+            )
+
+            progress.update(task, description="Creating search controller...")
+
+            # Create controller configuration
+            controller_config = ControllerConfig(
+                max_tokens=get_config("MAX_TOKENS", 4000),
+                compression_level="medium",
+                verbose=verbose,
+                output_format=output,
+                analysis_type=AnalysisType.SEARCH,
+                search_strategy=match_type,
+                context_selection="centrality_based",
+            )
+
+            # Create search controller
+            search_controller = SearchController(
+                repomap_service=repomap,
+                search_engine=None,  # Not needed for search controller
+                fuzzy_matcher=fuzzy_matcher,
+                semantic_matcher=semantic_matcher,
+                config=controller_config,
+            )
+
             progress.update(task, description="Searching identifiers...")
 
-            # Perform search
-            response = repomap.search_identifiers(request)
+            # Execute search using controller
+            search_view_model = search_controller.execute(request)
 
             progress.update(task, description="Search complete!")
 
         # Display results using OutputManager
         output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
-        output_manager.display(response, output_config)
+        output_manager.display(search_view_model, output_config)
 
     except Exception as e:
         # Use OutputManager for error handling
@@ -192,12 +244,13 @@ def cycles(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration using factory
-        from repomap_tool.core.config_factory import get_config_factory
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
 
-        config_factory = get_config_factory()
-        config_obj = config_factory.create_basic_config(
-            project_root=resolved_project_path,
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
             verbose=verbose,
         )
 
@@ -226,7 +279,7 @@ def cycles(
 
             progress.update(task, description="Analysis complete!")
 
-        # Display results using OutputManager
+        # Display results using OutputManager (with improved formatting)
         output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display(cycles, output_config)
@@ -290,12 +343,13 @@ def centrality(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration using factory
-        from repomap_tool.core.config_factory import get_config_factory
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
 
-        config_factory = get_config_factory()
-        config_obj = config_factory.create_analysis_config(
-            project_root=resolved_project_path,
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
             verbose=verbose,
         )
 
@@ -326,20 +380,11 @@ def centrality(
         )
         centrality_controller.config = controller_config
 
-        # Determine files to analyze
-        if files:
-            file_paths = list(files)
-        else:
-            # Analyze all files in the project
-            from repomap_tool.core.file_scanner import get_project_files
-
-            all_files = get_project_files(resolved_project_path, verbose=verbose)
-            file_paths = all_files
-
         # Perform centrality analysis using Controller
+        # The controller will handle file discovery internally using the centralized service
         try:
-            # Execute Controller to get ViewModel
-            view_model = centrality_controller.execute(file_paths)
+            # Execute Controller to get ViewModel (no need to pass files)
+            view_model = centrality_controller.execute()
 
             # Display the ViewModel using OutputManager
             output_manager.display(view_model, output_config)
@@ -422,12 +467,13 @@ def impact(
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
-        # Create configuration using factory
-        from repomap_tool.core.config_factory import get_config_factory
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
 
-        config_factory = get_config_factory()
-        config_obj = config_factory.create_analysis_config(
-            project_root=resolved_project_path,
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
             verbose=verbose,
         )
 

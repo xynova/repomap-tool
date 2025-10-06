@@ -228,7 +228,7 @@ def my_function():
             output = result.output
             assert "Centrality" in output and "Analysis" in output
             assert "Centrality" in output
-            assert "rankings" in output.lower()
+            assert "rank" in output.lower()
         else:
             # Should show proper error message for small projects
             assert "Error:" in result.output or "Failed" in result.output

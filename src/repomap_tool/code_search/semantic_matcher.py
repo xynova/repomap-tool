@@ -8,10 +8,12 @@ predefined semantic mappings for programming concepts.
 
 import re
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import Dict, List, Set, Tuple, Optional
 
 # Configure logging
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DomainSemanticMatcher:
@@ -460,7 +462,10 @@ class DomainSemanticMatcher:
         return similarity
 
     def find_semantic_matches(
-        self, query: str, all_identifiers: Set[str], threshold: float = 0.3
+        self,
+        query: str,
+        all_identifiers: Set[str],
+        threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
     ) -> List[Tuple[str, float]]:
         """
         Find semantic matches for a query among all identifiers.

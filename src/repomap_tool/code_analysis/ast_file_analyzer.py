@@ -1,13 +1,14 @@
 """
-AST-based file analyzer for detailed file-level dependency analysis.
+Tree-sitter-based file analyzer for detailed file-level dependency analysis.
 
-This module provides comprehensive AST-based analysis of individual files to extract
-imports, function calls, class usage, and other relationships for LLM-optimized
-impact and centrality analysis.
+This module provides comprehensive tree-sitter-based analysis of individual files using
+aider's RepoMap functionality to extract imports, function calls, class usage, and other
+relationships for LLM-optimized impact and centrality analysis.
 """
 
-import ast
 import logging
+from ..core.logging_service import get_logger
+import os
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any, Union
 from dataclasses import dataclass
@@ -20,15 +21,12 @@ from .models import (
     FileAnalysisResult,
     CrossFileRelationship,
 )
-from .ast_visitors import create_visitor, AnalysisContext
-from .js_ts_analyzer import JavaScriptTypeScriptAnalyzer, JSAnalysisContext
-from .import_utils import ImportUtils
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AnalysisType(str, Enum):
-    """Types of AST analysis to perform."""
+    """Types of analysis to perform."""
 
     IMPORTS = "imports"
     FUNCTION_CALLS = "function_calls"
@@ -38,101 +36,109 @@ class AnalysisType(str, Enum):
 
 
 class ASTFileAnalyzer:
-    """AST-based analyzer for individual files and cross-file relationships."""
+    """Tree-sitter-based analyzer for individual files and cross-file relationships."""
 
     def __init__(self, project_root: Optional[str] = None):
-        """Initialize the AST file analyzer.
+        """Initialize the tree-sitter file analyzer.
 
         Args:
             project_root: Root path of the project for resolving relative imports
         """
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
+        self._repo_map = None
+        self._io = None
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
-        # Initialize extracted components
-        self.import_utils = ImportUtils(self.project_root)
-        self.js_ts_analyzer = JavaScriptTypeScriptAnalyzer()
-
-        logger.info(f"ASTFileAnalyzer initialized for project: {self.project_root}")
+        logger.debug(
+            f"ASTFileAnalyzer initialized with tree-sitter for project: {self.project_root}"
+        )
 
     def analyze_file(
         self, file_path: str, analysis_type: AnalysisType = AnalysisType.ALL
     ) -> FileAnalysisResult:
-        """Analyze a single file using AST parsing.
+        """Analyze a single file using aider's tree-sitter.
 
         Args:
             file_path: Path to the file to analyze
             analysis_type: Type of analysis to perform
 
         Returns:
-            FileAnalysisResult with comprehensive analysis
+            FileAnalysisResult with extracted information
         """
         # Check cache first
-        cache_key = f"{file_path}:{analysis_type.value}"
+        cache_key = f"{file_path}:{analysis_type}"
         if self.cache_enabled and cache_key in self.analysis_cache:
             logger.debug(f"Using cached analysis for {file_path}")
             return self.analysis_cache[cache_key]
 
         try:
-            # Read file content
-            with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+            # Resolve file path
+            full_path = self._resolve_file_path(file_path)
 
-            # Check file extension to determine parsing method
-            file_ext = Path(file_path).suffix.lower()
-            if file_ext == ".py":
-                # Use Python AST for Python files
-                tree = ast.parse(content, filename=file_path)
-                result = self._analyze_ast_tree(tree, file_path, content, analysis_type)
-            elif file_ext in [".ts", ".js", ".tsx", ".jsx"]:
-                # Use extracted JavaScript/TypeScript analyzer
-                js_context = JSAnalysisContext(file_path=file_path, content=content)
-                result = self.js_ts_analyzer.analyze_file(js_context)
-            else:
-                # For other file types, return empty result with analysis error
-                logger.debug(
-                    f"Skipping analysis for unsupported file type: {file_path}"
-                )
-                return FileAnalysisResult(
-                    file_path=file_path,
-                    imports=[],
-                    function_calls=[],
-                    defined_functions=[],
-                    defined_classes=[],
-                    used_classes=[],
-                    used_variables=[],
-                    line_count=len(content.splitlines()),
-                    analysis_errors=[f"Analysis not supported for {file_ext} files"],
-                )
+            # Check for syntax errors first
+            analysis_errors = []
+            try:
+                with open(full_path, "r", encoding="utf-8") as f:
+                    content = f.read()
 
-            # Result is already obtained from the appropriate parser above
+                # Try to parse Python files for syntax errors
+                if full_path.endswith(".py"):
+                    try:
+                        compile(content, full_path, "exec")
+                    except SyntaxError as e:
+                        analysis_errors.append(
+                            f"Syntax error at line {e.lineno}: {e.msg}"
+                        )
+                    except Exception as e:
+                        analysis_errors.append(f"Parse error: {str(e)}")
+            except Exception as e:
+                analysis_errors.append(f"File read error: {str(e)}")
 
-            # Cache result
+            # Get aider's RepoMap for tree-sitter parsing
+            repo_map = self._get_repo_map()
+
+            # Get relative path for aider
+            rel_path = self._get_relative_path(full_path)
+
+            # Use aider's tree-sitter to get tags
+            tags = repo_map.get_tags(full_path, rel_path)
+
+            # Extract information from tags
+            imports = self._extract_imports_from_tags(tags, full_path)
+            defined_functions = self._extract_functions_from_tags(tags)
+            defined_classes = self._extract_classes_from_tags(tags)
+            function_calls = self._extract_function_calls_from_tags(tags, full_path)
+
+            # Create result
+            result = FileAnalysisResult(
+                file_path=full_path,
+                imports=imports,
+                function_calls=function_calls,
+                defined_functions=defined_functions,
+                defined_classes=defined_classes,
+                used_classes=[],  # TODO: Extract from tags if needed
+                used_variables=[],  # TODO: Extract from tags if needed
+                line_count=self._get_line_count(full_path),
+                analysis_errors=analysis_errors,
+            )
+
+            # Cache the result
             if self.cache_enabled:
                 self.analysis_cache[cache_key] = result
 
             logger.debug(
-                f"AST analysis complete for {file_path}: {len(result.imports)} imports, {len(result.function_calls)} calls"
+                f"Tree-sitter analysis complete for {full_path}: "
+                f"{len(imports)} imports, {len(defined_functions)} functions, "
+                f"{len(defined_classes)} classes, {len(function_calls)} calls"
             )
+
             return result
 
-        except SyntaxError as e:
-            logger.warning(f"Syntax error in {file_path}: {e}")
-            return FileAnalysisResult(
-                file_path=file_path,
-                imports=[],
-                function_calls=[],
-                defined_functions=[],
-                defined_classes=[],
-                used_classes=[],
-                used_variables=[],
-                line_count=0,
-                analysis_errors=[f"Syntax error: {e}"],
-            )
         except Exception as e:
-            logger.error(f"Error analyzing {file_path}: {e}")
+            logger.error(f"Error analyzing file {file_path} with tree-sitter: {e}")
+            # Return empty result on error
             return FileAnalysisResult(
                 file_path=file_path,
                 imports=[],
@@ -142,13 +148,366 @@ class ASTFileAnalyzer:
                 used_classes=[],
                 used_variables=[],
                 line_count=0,
-                analysis_errors=[f"Analysis error: {e}"],
+                analysis_errors=[str(e)],
             )
+
+    def _resolve_file_path(self, file_path: str) -> str:
+        """Resolve file path to absolute path."""
+        if os.path.isabs(file_path):
+            return file_path
+
+        if self.project_root:
+            return os.path.join(self.project_root, file_path)
+
+        return file_path
+
+    def _get_repo_map(self) -> Any:
+        """Get or create aider's RepoMap instance."""
+        if self._repo_map is None:
+            try:
+                from aider.repomap import RepoMap
+                from aider.io import InputOutput
+
+                self._io = InputOutput()
+                self._repo_map = RepoMap(io=self._io, root=self.project_root or "/")
+                logger.debug("Created aider RepoMap instance for tree-sitter parsing")
+            except ImportError as e:
+                logger.error(f"Failed to import aider modules: {e}")
+                raise RuntimeError(
+                    "aider modules not available for tree-sitter parsing"
+                )
+
+        return self._repo_map
+
+    def _get_relative_path(self, file_path: str) -> str:
+        """Get relative path for aider's RepoMap."""
+        if self.project_root and file_path.startswith(self.project_root):
+            return os.path.relpath(file_path, self.project_root)
+        return os.path.basename(file_path)
+
+    def _extract_imports_from_tags(
+        self, tags: List[Any], file_path: str
+    ) -> List[Import]:
+        """Extract imports from file content since aider tags don't include imports."""
+        imports = []
+
+        try:
+            # Read file content to extract imports
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            for line_num, line in enumerate(lines, 1):
+                line = line.strip()
+
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+
+                # Handle Python imports
+                if line.startswith("import ") and " from " not in line:
+                    # Standard import: import module
+                    module = line[7:].strip()  # Remove "import "
+                    # Handle multiple imports: import os, sys
+                    for module_name in module.split(","):
+                        module_name = module_name.strip()
+                        if module_name:
+                            imports.append(
+                                Import(
+                                    module=module_name,
+                                    symbols=[],
+                                    is_relative=module_name.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module_name.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+                elif line.startswith("from "):
+                    # From import: from module import symbol
+                    if " import " in line:
+                        parts = line.split(" import ")
+                        if len(parts) == 2:
+                            from_part = parts[0].strip()  # "from module"
+                            import_part = parts[1].strip()  # "symbol"
+
+                            if from_part.startswith("from "):
+                                module = from_part[5:].strip()  # Remove "from "
+                                symbols = []
+
+                                # Handle multiple symbols: import os, sys
+                                for symbol in import_part.split(","):
+                                    symbol = symbol.strip()
+                                    if symbol:
+                                        symbols.append(symbol)
+
+                                imports.append(
+                                    Import(
+                                        module=module,
+                                        symbols=symbols,
+                                        is_relative=module.startswith("."),
+                                        import_type=(
+                                            ImportType.RELATIVE
+                                            if module.startswith(".")
+                                            else ImportType.ABSOLUTE
+                                        ),
+                                        line_number=line_num,
+                                    )
+                                )
+
+                # Handle JavaScript/TypeScript imports
+                elif line.startswith("import ") and (
+                    " from " in line or " = require(" in line
+                ):
+                    if " from " in line:
+                        # ES6 import: import { symbol } from 'module'
+                        parts = line.split(" from ")
+                        if len(parts) == 2:
+                            symbols_part = parts[0].strip()
+                            module = parts[1].strip().strip("'\"")
+
+                            symbols = []
+                            if symbols_part.startswith("import "):
+                                symbols_str = symbols_part[
+                                    7:
+                                ].strip()  # Remove "import "
+                                if symbols_str.startswith("{") and symbols_str.endswith(
+                                    "}"
+                                ):
+                                    # Named imports: { symbol1, symbol2 }
+                                    symbols_str = symbols_str[1:-1]  # Remove braces
+                                    for symbol in symbols_str.split(","):
+                                        symbol = symbol.strip()
+                                        if symbol:
+                                            symbols.append(symbol)
+                                elif symbols_str == "*":
+                                    # Namespace import: import * as name
+                                    symbols = ["*"]
+                                else:
+                                    # Default import: import name
+                                    symbols = [symbols_str]
+
+                            imports.append(
+                                Import(
+                                    module=module,
+                                    symbols=symbols,
+                                    is_relative=module.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+                    elif " = require(" in line:
+                        # CommonJS require: const module = require('module')
+                        start = line.find("require(") + 8
+                        end = line.find(")", start)
+                        if start < end:
+                            module = line[start:end].strip().strip("'\"")
+                            imports.append(
+                                Import(
+                                    module=module,
+                                    symbols=[],
+                                    is_relative=module.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+
+        except Exception as e:
+            logger.warning(f"Could not extract imports from {file_path}: {e}")
+
+        return imports
+
+    def _extract_functions_from_tags(self, tags: List[Any]) -> List[str]:
+        """Extract function names from aider tags."""
+        functions = []
+
+        for tag in tags:
+            if tag.kind in ["def", "function"]:
+                # Filter out false positives - aider sometimes tags variable assignments as 'def'
+                # We can identify these by checking if the name appears to be a variable assignment
+                # in the context of the file content
+                if not self._is_likely_variable_assignment(
+                    tag
+                ) and not self._is_likely_class_definition(tag):
+                    functions.append(tag.name)
+
+        return functions
+
+    def _is_likely_variable_assignment(self, tag: Any) -> bool:
+        """Check if a tag is likely a variable assignment rather than a function definition."""
+        # This is a heuristic to filter out false positives from aider's tree-sitter
+        # Variable assignments that aider incorrectly tags as 'def' often have these characteristics:
+
+        # 1. Single word names that are common variable names
+        common_variable_names = {
+            "result",
+            "obj",
+            "message",
+            "counts",
+            "data",
+            "value",
+            "item",
+            "items",
+            "response",
+            "request",
+            "config",
+            "settings",
+            "options",
+            "params",
+            "args",
+            "kwargs",
+            "self",
+            "cls",
+            "var",
+            "temp",
+            "tmp",
+            "file",
+            "path",
+            "url",
+            "name",
+            "id",
+            "key",
+            "val",
+            "content",
+            "text",
+            "string",
+            "number",
+            "list",
+            "dict",
+            "tuple",
+            "set",
+            "bool",
+        }
+
+        if tag.name.lower() in common_variable_names:
+            return True
+
+        # 2. Names that are very short (1-3 characters) and lowercase
+        if len(tag.name) <= 3 and tag.name.islower():
+            return True
+
+        # 3. Names that are common variable patterns but not function patterns
+        # Functions typically have descriptive names, variables are often short/generic
+        # But we need to be careful not to filter out legitimate short function names
+        if (
+            tag.name.islower()
+            and len(tag.name) <= 6
+            and not any(
+                word in tag.name
+                for word in [
+                    "get",
+                    "set",
+                    "is",
+                    "has",
+                    "can",
+                    "should",
+                    "will",
+                    "do",
+                    "make",
+                    "create",
+                    "build",
+                    "process",
+                    "handle",
+                    "manage",
+                    "parse",
+                    "format",
+                    "validate",
+                    "check",
+                    "find",
+                    "search",
+                    "load",
+                    "save",
+                    "delete",
+                    "update",
+                    "add",
+                    "remove",
+                    "init",
+                    "method",
+                    "test",
+                    "run",
+                    "call",
+                    "exec",
+                    "eval",
+                ]
+            )
+        ):
+            return True
+
+        return False
+
+    def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
+        """Extract class names from aider tags."""
+        classes = []
+
+        for tag in tags:
+            if tag.kind in ["class"]:
+                classes.append(tag.name)
+            elif tag.kind == "def" and self._is_likely_class_definition(tag):
+                # Aider sometimes tags class definitions as 'def'
+                classes.append(tag.name)
+
+        return classes
+
+    def _is_likely_class_definition(self, tag: Any) -> bool:
+        """Check if a tag is likely a class definition rather than a function."""
+        # Class names typically follow PascalCase convention
+        if tag.name[0].isupper() and tag.name[1:].islower():
+            return True
+
+        # Class names that are all uppercase (constants/enums)
+        if tag.name.isupper():
+            return True
+
+        # Class names with multiple uppercase letters (PascalCase)
+        if any(c.isupper() for c in tag.name[1:]):
+            return True
+
+        return False
+
+    def _extract_function_calls_from_tags(
+        self, tags: List[Any], file_path: str
+    ) -> List[FunctionCall]:
+        """Extract function calls from aider tags."""
+        calls = []
+
+        # For now, we'll create basic function calls from tag references
+        # This is a simplified approach - can be enhanced with more detailed parsing
+        for tag in tags:
+            if tag.kind in ["ref"]:  # References to functions
+                calls.append(
+                    FunctionCall(
+                        caller="unknown",
+                        callee=tag.name,
+                        file_path=file_path,
+                        line_number=tag.line,
+                        is_method_call=False,
+                        object_name=None,
+                    )
+                )
+
+        return calls
+
+    def _get_line_count(self, file_path: str) -> int:
+        """Get line count of a file."""
+        try:
+            with open(file_path, "r", encoding="utf-8") as f:
+                return len(f.readlines())
+        except Exception:
+            return 0
 
     def analyze_multiple_files(
         self, file_paths: List[str], analysis_type: AnalysisType = AnalysisType.ALL
     ) -> Dict[str, FileAnalysisResult]:
-        """Analyze multiple files and return results.
+        """Analyze multiple files using tree-sitter.
 
         Args:
             file_paths: List of file paths to analyze
@@ -161,9 +520,11 @@ class ASTFileAnalyzer:
 
         for file_path in file_paths:
             try:
-                results[file_path] = self.analyze_file(file_path, analysis_type)
+                result = self.analyze_file(file_path, analysis_type)
+                results[file_path] = result
             except Exception as e:
-                logger.error(f"Failed to analyze {file_path}: {e}")
+                logger.error(f"Error analyzing file {file_path}: {e}")
+                # Add empty result for failed files
                 results[file_path] = FileAnalysisResult(
                     file_path=file_path,
                     imports=[],
@@ -173,160 +534,92 @@ class ASTFileAnalyzer:
                     used_classes=[],
                     used_variables=[],
                     line_count=0,
-                    analysis_errors=[f"Failed to analyze: {e}"],
+                    analysis_errors=[str(e)],
                 )
 
         return results
 
-    def find_direct_dependencies(self, file_path: str) -> List[Import]:
-        """Find all direct dependencies (imports) for a file.
-
-        Args:
-            file_path: Path to the file to analyze
-
-        Returns:
-            List of Import objects representing direct dependencies
-        """
-        result = self.analyze_file(file_path, AnalysisType.IMPORTS)
-        return result.imports
-
     def find_reverse_dependencies(
         self, file_path: str, all_files: List[str]
     ) -> List[CrossFileRelationship]:
-        """Find all files that import or use the specified file.
+        """Find files that import the given file (reverse dependencies)."""
+        reverse_deps: List[CrossFileRelationship] = []
 
-        Args:
-            file_path: Path to the file to find reverse dependencies for
-            all_files: List of all files in the project to search
+        try:
+            # Get the module name for the target file
+            target_module = self._file_path_to_module_name(file_path)
+            if not target_module:
+                return reverse_deps
 
-        Returns:
-            List of CrossFileRelationship objects
-        """
-        reverse_deps = []
+            # Check each file to see if it imports the target module
+            for other_file in all_files:
+                if other_file == file_path:
+                    continue
 
-        # Analyze all files to find references to the target file
-        for other_file in all_files:
-            if other_file == file_path:
-                continue
-
-            try:
-                result = self.analyze_file(other_file, AnalysisType.ALL)
-
-                # Check imports
-                for import_obj in result.imports:
-                    if self.import_utils.is_import_of_file(import_obj, file_path):
-                        reverse_deps.append(
-                            CrossFileRelationship(
-                                source_file=other_file,
-                                target_file=file_path,
-                                relationship_type="imports",
-                                line_number=import_obj.line_number or 0,
-                                details=f"imports {import_obj.module}",
+                try:
+                    result = self.analyze_file(other_file, AnalysisType.IMPORTS)
+                    for import_stmt in result.imports:
+                        if (
+                            import_stmt.module == target_module
+                            or import_stmt.module.endswith(f".{target_module}")
+                        ):
+                            reverse_deps.append(
+                                CrossFileRelationship(
+                                    source_file=other_file,
+                                    target_file=file_path,
+                                    relationship_type="imports",
+                                    line_number=import_stmt.line_number or 0,
+                                    details=f"Imports {import_stmt.module}",
+                                )
                             )
-                        )
+                            break
+                except Exception as e:
+                    logger.debug(
+                        f"Could not analyze {other_file} for reverse deps: {e}"
+                    )
+                    continue
 
-                # Check function calls (if the file defines functions that are called)
-                # This would require more sophisticated analysis
-
-            except Exception as e:
-                logger.debug(
-                    f"Error checking reverse dependencies in {other_file}: {e}"
-                )
-                continue
+        except Exception as e:
+            logger.error(f"Error finding reverse dependencies for {file_path}: {e}")
 
         return reverse_deps
 
-    def find_function_call_relationships(
-        self, file_path: str, all_files: List[str]
-    ) -> List[CrossFileRelationship]:
-        """Find function call relationships for a file.
+    def _file_path_to_module_name(self, file_path: str) -> Optional[str]:
+        """Convert file path to module name."""
+        try:
+            if not self.project_root:
+                return None
 
-        Args:
-            file_path: Path to the file to analyze
-            all_files: List of all files in the project
+            # Get relative path from project root
+            rel_path = os.path.relpath(file_path, self.project_root)
 
-        Returns:
-            List of CrossFileRelationship objects for function calls
-        """
-        relationships = []
-        result = self.analyze_file(file_path, AnalysisType.FUNCTION_CALLS)
+            # Remove .py extension and convert path separators to dots
+            if rel_path.endswith(".py"):
+                rel_path = rel_path[:-3]
+            elif rel_path.endswith((".ts", ".tsx", ".js", ".jsx")):
+                rel_path = rel_path.rsplit(".", 1)[0]
 
-        # For each function call in the file, try to find where it's defined
-        for func_call in result.function_calls:
-            # This is a simplified approach - in practice, you'd need more sophisticated
-            # analysis to determine which file defines the function
-            relationships.append(
-                CrossFileRelationship(
-                    source_file=file_path,
-                    target_file="unknown",  # Would need more analysis to determine
-                    relationship_type="calls_function",
-                    line_number=func_call.line_number or 0,
-                    details=f"calls {func_call.callee}",
-                )
-            )
+            # Convert path separators to module separators
+            module_name = rel_path.replace(os.sep, ".")
 
-        return relationships
+            # Remove __init__ suffix if present
+            if module_name.endswith(".__init__"):
+                module_name = module_name[:-9]
 
-    def _analyze_ast_tree(
-        self, tree: ast.AST, file_path: str, content: str, analysis_type: AnalysisType
-    ) -> FileAnalysisResult:
-        """Analyze an AST tree and extract relevant information.
+            return module_name if module_name else None
 
-        Args:
-            tree: Parsed AST tree
-            file_path: Path to the file being analyzed
-            content: File content for line counting
-            analysis_type: Type of analysis to perform
-
-        Returns:
-            FileAnalysisResult with extracted information
-        """
-        # Create analysis context
-        context = AnalysisContext(
-            file_path=file_path, content=content, analysis_type=analysis_type.value
-        )
-
-        # Create appropriate visitor
-        visitor = create_visitor(analysis_type.value, context)
-
-        # Visit the AST tree
-        visitor.visit(tree)
-
-        # Count lines
-        line_count = len(content.splitlines())
-
-        return FileAnalysisResult(
-            file_path=file_path,
-            imports=visitor.imports,
-            function_calls=visitor.function_calls,
-            defined_functions=visitor.defined_functions,
-            defined_classes=visitor.defined_classes,
-            used_classes=visitor.used_classes,
-            used_variables=visitor.used_variables,
-            line_count=line_count,
-            analysis_errors=visitor.analysis_errors,
-        )
+        except Exception as e:
+            logger.debug(f"Could not convert {file_path} to module name: {e}")
+            return None
 
     def clear_cache(self) -> None:
         """Clear the analysis cache."""
         self.analysis_cache.clear()
-        logger.info("AST analysis cache cleared")
+        logger.debug("Analysis cache cleared")
 
     def get_cache_stats(self) -> Dict[str, Any]:
-        """Get cache statistics.
-
-        Returns:
-            Dictionary with cache statistics
-        """
+        """Get cache statistics."""
         return {
-            "cache_enabled": self.cache_enabled,
             "cache_size": len(self.analysis_cache),
-            "cached_files": list(self.analysis_cache.keys()),
+            "cache_enabled": self.cache_enabled,
         }
-
-    def _get_line_number(self, content: str, position: int) -> int:
-        """Get line number for a given position in content."""
-        try:
-            return content[:position].count("\n") + 1
-        except Exception:
-            return 1

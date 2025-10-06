@@ -6,6 +6,8 @@ code dependencies across a project.
 """
 
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 import networkx as nx
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any
@@ -14,7 +16,7 @@ from collections import defaultdict, deque
 from .models import DependencyNode, Import, FileImports, ProjectImports
 from .import_analyzer import ImportAnalyzer
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class DependencyGraph:
@@ -28,11 +30,11 @@ class DependencyGraph:
         self.project_path: Optional[str] = None
         self.construction_time: Optional[float] = None
 
-        logger.info("DependencyGraph initialized")
+        logger.debug("DependencyGraph initialized")
 
     def build_graph(self, project_imports: ProjectImports) -> None:
         """Build the dependency graph from a ProjectImports object."""
-        logger.info(
+        logger.debug(
             f"Building dependency graph from ProjectImports for {project_imports.project_path}"
         )
 
@@ -60,29 +62,15 @@ class DependencyGraph:
 
             for imp in file_imports.imports:
                 if imp.resolved_path:
-                    # Convert absolute resolved path to relative path for node lookup
-                    try:
-                        resolved_path = Path(imp.resolved_path)
-                        if self.project_path:
-                            project_root = Path(self.project_path)
-                            if project_root in resolved_path.parents:
-                                relative_resolved_path = str(
-                                    resolved_path.relative_to(project_root)
-                                )
-                                if relative_resolved_path in self.nodes:
-                                    self.graph.add_edge(
-                                        file_path, relative_resolved_path
-                                    )
-                                    self.nodes[
-                                        relative_resolved_path
-                                    ].imported_by.append(file_path)
-                    except (ValueError, OSError):
-                        # Path is not relative to project root, skip
-                        continue
+                    # Use absolute resolved path directly for node lookup
+                    resolved_path = imp.resolved_path
+                    if resolved_path in self.nodes:
+                        self.graph.add_edge(file_path, resolved_path)
+                        self.nodes[resolved_path].imported_by.append(file_path)
 
-        logger.info(
-            f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"
-        )
+            logger.debug(
+                f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"
+            )
 
     def _add_node(self, file_path: str) -> None:
         """Add a single node to the graph."""
@@ -265,7 +253,7 @@ class DependencyGraph:
         return list(self.graph.successors(file_path))
 
     def get_transitive_dependencies(
-        self, file_path: str, max_depth: int = 10
+        self, file_path: str, max_depth: int = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files transitively dependent on a given file.
 
@@ -297,7 +285,7 @@ class DependencyGraph:
         return visited - {file_path}  # Exclude the original file
 
     def get_transitive_dependents(
-        self, file_path: str, max_depth: int = 10
+        self, file_path: str, max_depth: int = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files that a given file transitively depends on.
 

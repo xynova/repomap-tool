@@ -8,11 +8,13 @@ predefined categories. It's much more flexible and adaptive.
 
 import re
 import logging
+from ..core.config_service import get_config
+from ..core.logging_service import get_logger
 from typing import Dict, List, Set, Tuple
 from collections import Counter
 import math
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class AdaptiveSemanticMatcher:
@@ -232,7 +234,10 @@ class AdaptiveSemanticMatcher:
         return similarity
 
     def find_semantic_matches(
-        self, query: str, all_identifiers: Set[str], threshold: float = 0.1
+        self,
+        query: str,
+        all_identifiers: Set[str],
+        threshold: float = get_config("HYBRID_THRESHOLD", 0.1),
     ) -> List[Tuple[str, float]]:
         """
         Find semantic matches for a query among all identifiers.
@@ -371,7 +376,9 @@ class AdaptiveSemanticMatcher:
         return suggestions[:20]  # Limit to 20 suggestions
 
     def get_semantic_clusters(
-        self, all_identifiers: Set[str], similarity_threshold: float = 0.3
+        self,
+        all_identifiers: Set[str],
+        similarity_threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
     ) -> List[Set[str]]:
         """
         Group identifiers into semantic clusters.
@@ -424,7 +431,7 @@ class AdaptiveSemanticMatcher:
             List of (identifier, score) tuples, sorted by score (highest first)
         """
         # Use a lower threshold for match_identifiers to be more inclusive
-        threshold = 0.1
+        threshold = get_config("HYBRID_THRESHOLD", 0.1)
 
         # Get semantic matches
         semantic_matches = self.find_semantic_matches(query, all_identifiers, threshold)

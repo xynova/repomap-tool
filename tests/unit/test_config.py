@@ -1,20 +1,30 @@
 #!/usr/bin/env python3
 
-from repomap_tool.cli import create_search_config
+from repomap_tool.cli.config.loader import load_or_create_config
 from repomap_tool.core import RepoMapService
 
 
 def test_search_config_creation():
     """Test that search config is created correctly."""
-    config = create_search_config(".", "fuzzy", True)
+    config, was_created = load_or_create_config(
+        project_path=".",
+        config_file=None,
+        create_if_missing=False,
+        verbose=True,
+    )
 
-    # Fuzzy matching is always enabled
-    assert config.semantic_match.enabled is False
+    # Fuzzy matching should be enabled by default
+    assert config.fuzzy_match.enabled is True
 
 
 def test_fuzzy_matcher_initialization():
     """Test that fuzzy matcher is initialized correctly."""
-    config = create_search_config(".", "fuzzy", True)
+    config, was_created = load_or_create_config(
+        project_path=".",
+        config_file=None,
+        create_if_missing=False,
+        verbose=True,
+    )
     from repomap_tool.cli.services import get_service_factory
 
     service_factory = get_service_factory()
@@ -25,7 +35,12 @@ def test_fuzzy_matcher_initialization():
 
 def test_fuzzy_matcher_functionality():
     """Test that fuzzy matcher works correctly."""
-    config = create_search_config(".", "fuzzy", True)
+    config, was_created = load_or_create_config(
+        project_path=".",
+        config_file=None,
+        create_if_missing=False,
+        verbose=True,
+    )
     from repomap_tool.cli.services import get_service_factory
 
     service_factory = get_service_factory()

@@ -7,6 +7,7 @@ about file relationships and impact.
 """
 
 import logging
+from ..core.logging_service import get_logger
 import os
 from typing import List, Dict, Set, Optional, Any, Tuple, TYPE_CHECKING
 from pathlib import Path
@@ -47,7 +48,7 @@ from ..llm.token_optimizer import TokenOptimizer
 from ..llm.context_selector import ContextSelector
 from ..llm.hierarchical_formatter import HierarchicalFormatter
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class LLMFileAnalyzer:
@@ -124,6 +125,8 @@ class LLMFileAnalyzer:
 
         # Get all files in project for reverse dependency analysis
         all_files = self.path_resolver.get_all_project_files()
+        # Validate that all file paths are absolute (architectural requirement)
+        all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Analyze each file
         impact_analyses = []
@@ -172,36 +175,37 @@ class LLMFileAnalyzer:
 
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
+        # Validate that all file paths are absolute (architectural requirement)
+        all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Sort files by centrality score (highest first) to process most important files first
-        if len(file_paths) > 1:
+        if len(resolved_paths) > 1:
             # Get centrality scores for all files to sort them
             centrality_scores = (
                 self.centrality_calculator.calculate_composite_importance()
             )
-            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in file_paths]
+            file_scores = [
+                (fp, centrality_scores.get(fp, 0.0)) for fp in resolved_paths
+            ]
             sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
-            sorted_file_paths = [fp for fp, _ in sorted_file_scores]
+            sorted_resolved_paths = [fp for fp, _ in sorted_file_scores]
         else:
-            sorted_file_paths = file_paths
+            sorted_resolved_paths = resolved_paths
 
         # Analyze each file in order of importance
         centrality_analyses = []
-        for file_path in sorted_file_paths:
+        for resolved_path in sorted_resolved_paths:
             try:
-                # Find the resolved path for this file
-                original_index = file_paths.index(file_path)
-                resolved_path = resolved_paths[original_index]
                 centrality_analysis = self.centrality_engine.analyze_file_centrality(
-                    file_path, ast_results[resolved_path], all_files
+                    resolved_path, ast_results[resolved_path], all_files
                 )
                 centrality_analyses.append(centrality_analysis)
             except Exception as e:
-                logger.error(f"Error analyzing file {file_path}: {e}")
+                logger.error(f"Error analyzing file {resolved_path}: {e}")
                 # Create a minimal centrality analysis for this file
 
                 centrality_analysis = FileCentralityAnalysis(
-                    file_path=file_path,
+                    file_path=resolved_path,
                     centrality_score=0.0,
                     rank=1,
                     total_files=len(file_paths),
@@ -276,35 +280,36 @@ class LLMFileAnalyzer:
 
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
+        # Validate that all file paths are absolute (architectural requirement)
+        all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Sort files by centrality score (highest first) to process most important files first
-        if len(file_paths) > 1:
+        if len(resolved_paths) > 1:
             # Get centrality scores for all files to sort them
             centrality_scores = (
                 self.centrality_calculator.calculate_composite_importance()
             )
-            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in file_paths]
+            file_scores = [
+                (fp, centrality_scores.get(fp, 0.0)) for fp in resolved_paths
+            ]
             sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
-            sorted_file_paths = [fp for fp, _ in sorted_file_scores]
+            sorted_resolved_paths = [fp for fp, _ in sorted_file_scores]
         else:
-            sorted_file_paths = file_paths
+            sorted_resolved_paths = resolved_paths
 
         # Analyze each file in order of importance
         centrality_analyses = []
-        for file_path in sorted_file_paths:
+        for resolved_path in sorted_resolved_paths:
             try:
-                # Find the resolved path for this file
-                original_index = file_paths.index(file_path)
-                resolved_path = resolved_paths[original_index]
                 centrality_analysis = self.centrality_engine.analyze_file_centrality(
-                    file_path, ast_results[resolved_path], all_files
+                    resolved_path, ast_results[resolved_path], all_files
                 )
                 centrality_analyses.append(centrality_analysis)
             except Exception as e:
-                logger.error(f"Error analyzing file {file_path}: {e}")
+                logger.error(f"Error analyzing file {resolved_path}: {e}")
                 # Create a minimal centrality analysis for this file
                 centrality_analysis = FileCentralityAnalysis(
-                    file_path=file_path,
+                    file_path=resolved_path,
                     centrality_score=0.0,
                     rank=1,
                     total_files=len(file_paths),
@@ -366,16 +371,15 @@ class LLMFileAnalyzer:
 
         # Get all files in project for comprehensive analysis
         all_files = self.path_resolver.get_all_project_files()
+        # Validate that all file paths are absolute (architectural requirement)
+        all_files = self.path_resolver.resolve_file_paths(all_files)
 
         # Analyze each file
         impact_analyses = []
         for file_path in file_paths:
             try:
-                # Find the resolved path for this file
-                original_index = file_paths.index(file_path)
-                resolved_path = resolved_paths[original_index]
                 impact_analysis = self.impact_engine.analyze_file_impact(
-                    file_path, ast_results[resolved_path], all_files
+                    file_path, ast_results[file_path], all_files
                 )
                 impact_analyses.append(impact_analysis)
             except Exception as e:

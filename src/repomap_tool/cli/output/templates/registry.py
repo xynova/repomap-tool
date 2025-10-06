@@ -8,6 +8,7 @@ allowing dynamic template discovery and registration.
 from __future__ import annotations
 
 import logging
+from repomap_tool.core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Protocol, Union
 
 from .config import TemplateConfig
@@ -83,7 +84,7 @@ class DefaultTemplateRegistry:
             enable_logging: Whether to enable logging
         """
         self._enable_logging = enable_logging
-        self._logger = logging.getLogger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) if enable_logging else None
         if template_loader is None:
             self._template_loader: TemplateLoader = FileTemplateLoader(
                 enable_logging=enable_logging

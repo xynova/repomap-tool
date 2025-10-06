@@ -1,11 +1,13 @@
+from __future__ import annotations
+
+from repomap_tool.core.config_service import get_config
+
 """
 ViewModels for CLI Controllers.
 
 This module defines the ViewModel classes that represent structured data
 for the view layer, following proper MVC architecture patterns.
 """
-
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
@@ -93,6 +95,20 @@ class SearchViewModel:
     token_count: int
     max_tokens: int
     compression_level: str = "medium"
+    # Additional fields to match SearchResponse structure
+    threshold: float = 0.7
+    match_type: str = "hybrid"
+    search_time_ms: float = 0.0
+    cache_hit: bool = False
+    metadata: Optional[Dict[str, Any]] = None
+    performance_metrics: Optional[Dict[str, Any]] = None
+
+    def __post_init__(self) -> None:
+        """Initialize default values for optional fields."""
+        if self.metadata is None:
+            self.metadata = {}
+        if self.performance_metrics is None:
+            self.performance_metrics = {}
 
 
 @dataclass
@@ -105,7 +121,7 @@ class ExplorationViewModel:
     navigation_hints: List[Dict[str, Any]]
     session_id: Optional[str] = None
     token_count: int = 0
-    max_tokens: int = 4000
+    max_tokens = get_config("MAX_TOKENS", 4000)
     compression_level: str = "medium"
 
 
@@ -128,7 +144,7 @@ class ProjectAnalysisViewModel:
 class ControllerConfig:
     """Configuration for Controllers."""
 
-    max_tokens: int = 4000
+    max_tokens: int = get_config("MAX_TOKENS", 4000)
     compression_level: str = "medium"
     verbose: bool = False
     output_format: str = "text"

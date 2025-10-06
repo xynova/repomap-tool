@@ -181,7 +181,6 @@ class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
         # Map data types to template names
         template_mapping = {
             "ProjectInfo": "project_info",
-            "SearchResponse": "search_response",
             "dict": self._get_dict_template_name(data),
             "list": "list",
         }
@@ -217,10 +216,6 @@ class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
         # Check for project info structure
         if "project_root" in data and "total_files" in data:
             return "project_info"
-
-        # Check for search response structure
-        if "query" in data and "results" in data:
-            return "search_response"
 
         return "generic"
 

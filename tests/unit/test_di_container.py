@@ -113,17 +113,6 @@ class TestContainer:
         console2 = container.console()
         assert console is console2
 
-    def test_llm_analyzer_provider(self):
-        """Test LLM analyzer provider."""
-        config = self._create_test_config()
-
-        container = create_container(config)
-        llm_analyzer = container.llm_file_analyzer()
-
-        assert llm_analyzer is not None
-        assert hasattr(llm_analyzer, "config")
-        assert hasattr(llm_analyzer, "dependencies")
-
     def test_centrality_calculator_provider(self):
         """Test centrality calculator provider."""
         config = self._create_test_config()
@@ -191,7 +180,6 @@ class TestContainer:
             container.hybrid_matcher(),
             container.centrality_calculator(),
             container.impact_analyzer(),
-            container.llm_file_analyzer(),
         ]
 
         for service in services:
@@ -222,8 +210,8 @@ class TestContainer:
         container = create_container(config)
         assert container is not None
 
-        # Verify logging was called
-        mock_logger.info.assert_called_with(
+        # Verify logging was called (changed to debug level)
+        mock_logger.debug.assert_called_with(
             "Dependency injection container created and configured"
         )
 

@@ -11,8 +11,10 @@ from typing import List, Dict, Optional, Any, Literal, Union, Set
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import logging
+from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class PerformanceConfig(BaseModel):
@@ -39,7 +41,10 @@ class PerformanceConfig(BaseModel):
     parallel_threshold: int = Field(
         default=10, description="Minimum number of files to trigger parallel processing"
     )
-    cache_ttl: int = Field(default=3600, description="Cache time-to-live in seconds")
+    cache_ttl: int = Field(
+        default=get_config("CACHE_TTL", 3600),
+        description="Cache time-to-live in seconds",
+    )
     allow_fallback: bool = Field(
         default=False,
         description="Allow fallback to sequential processing on parallel errors (not recommended for development)",
@@ -89,7 +94,9 @@ class SemanticMatchConfig(BaseModel):
 class TreeConfig(BaseModel):
     """Configuration for tree exploration functionality."""
 
-    max_depth: int = Field(default=3, ge=1, le=10, description="Maximum tree depth")
+    max_depth: int = Field(
+        default=get_config("MAX_DEPTH_LIMIT", 10), description="Maximum tree depth"
+    )
     max_trees_per_session: int = Field(
         default=10, ge=1, le=100, description="Maximum trees per session"
     )
@@ -482,7 +489,9 @@ class ExplorationTree(BaseModel):
 
     tree_id: str = Field(description="Unique tree identifier")
     root_entrypoint: Entrypoint = Field(description="Root entrypoint of the tree")
-    max_depth: int = Field(default=3, description="Maximum tree depth")
+    max_depth: int = Field(
+        default=get_config("MAX_DEPTH", 3), description="Maximum tree depth"
+    )
     tree_structure: Optional[TreeNode] = Field(
         default=None, description="Tree structure"
     )

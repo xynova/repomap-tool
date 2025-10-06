@@ -9,6 +9,7 @@ import os
 import json
 import tempfile
 import logging
+from ..core.logging_service import get_logger
 from pathlib import Path
 from typing import Optional, Dict, List
 from datetime import datetime
@@ -21,7 +22,7 @@ from repomap_tool.utils.file_validator import (
     safe_read_text,
 )
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class SessionStoreError(RepoMapError):

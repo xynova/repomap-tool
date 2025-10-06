@@ -6,6 +6,8 @@ code analysis and search functionality.
 """
 
 import logging
+from .config_service import get_config
+from .logging_service import get_logger
 import os
 import time
 import traceback
@@ -112,14 +114,14 @@ class RepoMapService:
         # Initialize the system
         self._initialize_components()
 
-        self.logger.info(f"Initialized RepoMapService for {self.config.project_root}")
+        self.logger.debug(f"Initialized RepoMapService for {self.config.project_root}")
 
         # Invalidate stale caches on initialization
         self._invalidate_stale_caches()
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging based on configuration."""
-        logger = logging.getLogger(__name__)
+        logger = get_logger(__name__)
 
         # Set log level
         level = getattr(logging, self.config.log_level)
@@ -703,7 +705,15 @@ class RepoMapService:
 
         try:
             cache = self.repo_map.TAGS_CACHE
-            cache_key = f"import_analysis_{self.config.project_root}"
+            # Include max_graph_size in cache key to ensure different configs get different cache entries
+            # Also include refresh_cache flag to force cache miss when refresh is requested
+            refresh_flag = "refresh" if self.config.refresh_cache else "normal"
+            cache_key = f"import_analysis_{self.config.project_root}_maxsize_{self.config.dependencies.max_graph_size}_{refresh_flag}"
+            self.logger.debug(f"Cache key: {cache_key}")
+            self.logger.debug(
+                f"Config max_graph_size: {self.config.dependencies.max_graph_size}"
+            )
+            self.logger.debug(f"Config refresh_cache: {self.config.refresh_cache}")
 
             if cache_key in cache:
                 cached_data = cache[cache_key]
@@ -730,7 +740,10 @@ class RepoMapService:
 
         try:
             cache = self.repo_map.TAGS_CACHE
-            cache_key = f"import_analysis_{self.config.project_root}"
+            # Include max_graph_size in cache key to ensure different configs get different cache entries
+            # Also include refresh_cache flag to force cache miss when refresh is requested
+            refresh_flag = "refresh" if self.config.refresh_cache else "normal"
+            cache_key = f"import_analysis_{self.config.project_root}_maxsize_{self.config.dependencies.max_graph_size}_{refresh_flag}"
             cache[cache_key] = project_imports
             self.logger.info("Cached import analysis results to persistent storage")
         except Exception as e:
@@ -766,6 +779,10 @@ class RepoMapService:
                 self._cache_import_analysis(project_imports)
 
             # Limit files if configured
+            self.logger.debug(
+                f"Configuration max_graph_size: {self.config.dependencies.max_graph_size}"
+            )
+            self.logger.debug(f"Project imports count: {len(project_imports)}")
             if len(project_imports) > self.config.dependencies.max_graph_size:
                 self.logger.warning(
                     f"Project has {len(project_imports)} files, limiting to "
@@ -799,7 +816,7 @@ class RepoMapService:
                     f"exceeding threshold of {self.config.dependencies.performance_threshold_seconds}s"
                 )
 
-            self.logger.info(
+            self.logger.debug(
                 f"Built dependency graph: {len(project_imports)} files in {construction_time:.2f}s"
             )
 
@@ -898,7 +915,7 @@ class RepoMapService:
             query=query,
             identifiers=identifiers,
             semantic_matcher=self.semantic_matcher,
-            limit=50,
+            limit=get_config("DEFAULT_LIMIT", 5),
         )
 
         # Convert MatchResult objects to the expected format
@@ -942,7 +959,7 @@ class RepoMapService:
             query=query,
             identifiers=identifiers,
             fuzzy_matcher=self.fuzzy_matcher,
-            limit=50,
+            limit=get_config("DEFAULT_LIMIT", 5),
         )
 
         # Return MatchResult objects directly (as expected by the interface)

@@ -1,0 +1,75 @@
+{# Search Results Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+{% set show_centrality = config.options.include_centrality_scores if config and config.options else true %}
+{% set show_impact = config.options.include_impact_risk if config and config.options else true %}
+
+{% if emoji %}🔍 Search Results{% else %}Search Results{% endif %}
+{{ "=" * 60 }}
+
+{% if emoji %}📊{% endif %} QUERY: "{{ data.query }}"
+{% if hierarchical %}├──{% else %}•{% endif %} Match Type: {{ data.match_type }}
+{% if hierarchical %}├──{% else %}•{% endif %} Strategy: {{ data.search_strategy }}
+{% if hierarchical %}├──{% else %}•{% endif %} Threshold: {{ data.threshold | format_percentage }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Results: {{ data.total_results }}
+{% if hierarchical %}├──{% else %}•{% endif %} Execution Time: {{ data.execution_time | format_duration }}
+{% if hierarchical %}├──{% else %}•{% endif %} Token Count: {{ data.token_count }}/{{ data.max_tokens }}
+{% if hierarchical %}└──{% else %}•{% endif %} Compression: {{ data.compression_level }}
+
+{% if data.cache_hit %}
+{% if emoji %}💾{% endif %} Result from cache
+{% endif %}
+
+{% if data.results %}
+{% if emoji %}🎯{% endif %} RESULTS:
+{% for result in data.results %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ result.name }}
+{% if hierarchical %}│   {% else %}  {% endif %}File: {{ result.file_path }}
+{% if hierarchical %}│   {% else %}  {% endif %}Line: {{ result.line_number }}
+{% if hierarchical %}│   {% else %}  {% endif %}Type: {{ result.symbol_type }}
+{% if hierarchical %}│   {% else %}  {% endif %}Score: {{ result.importance_score | format_percentage }}
+{% if result.is_critical %}
+{% if hierarchical %}│   {% else %}  {% endif %}{% if emoji %}⭐{% endif %} Critical Match
+{% endif %}
+{% if show_centrality and result.centrality_score %}
+{% if hierarchical %}│   {% else %}  {% endif %}{% if emoji %}📊{% endif %} Centrality: {{ result.centrality_score | format_centrality }}
+{% endif %}
+{% if show_impact and result.impact_risk %}
+{% if hierarchical %}│   {% else %}  {% endif %}{% if emoji %}⚠️{% endif %} Impact Risk: {{ result.impact_risk | get_risk_level }} ({{ result.impact_risk | format_percentage }})
+{% endif %}
+{% if result.signature %}
+{% if hierarchical %}│   {% else %}  {% endif %}Signature: {{ result.signature }}
+{% endif %}
+{% if result.critical_lines %}
+{% if hierarchical %}│   {% else %}  {% endif %}{% if emoji %}🔍{% endif %} Critical Lines:
+{% for line in result.critical_lines %}
+{% if hierarchical %}│   {% else %}  {% endif %}  {{ line }}
+{% endfor %}
+{% endif %}
+{% if result.dependencies %}
+{% if hierarchical %}│   {% else %}  {% endif %}{% if emoji %}🔗{% endif %} Dependencies:
+{% for dep in result.dependencies %}
+{% if hierarchical %}│   {% else %}  {% endif %}  - {{ dep }}
+{% endfor %}
+{% endif %}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No results found
+{% endif %}
+
+{% if data.performance_metrics %}
+{% if emoji %}⚡{% endif %} PERFORMANCE METRICS:
+{% for key, value in data.performance_metrics.items() %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ key | title }}: {{ value }}
+{% endfor %}
+{% endif %}
+
+{% if data.metadata %}
+{% if emoji %}📋{% endif %} METADATA:
+{% for key, value in data.metadata.items() %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ key | title }}: {{ value }}
+{% endfor %}
+{% endif %}

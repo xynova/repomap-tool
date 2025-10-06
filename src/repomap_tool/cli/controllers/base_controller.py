@@ -8,13 +8,14 @@ should inherit from, following proper MVC architecture patterns.
 from __future__ import annotations
 
 import logging
+from repomap_tool.core.logging_service import get_logger
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
 
 from .view_models import ControllerConfig
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class BaseController(ABC):

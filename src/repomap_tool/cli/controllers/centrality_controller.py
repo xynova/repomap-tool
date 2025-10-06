@@ -8,6 +8,8 @@ coordinating between code_analysis, code_exploration, and code_search services.
 from __future__ import annotations
 
 import logging
+from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 
 from ...code_analysis.models import AnalysisFormat, FileCentralityAnalysis
@@ -21,7 +23,7 @@ from .view_models import (
 )
 
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class CentralityController(BaseController):
@@ -34,46 +36,50 @@ class CentralityController(BaseController):
 
     def __init__(
         self,
-        code_analysis_service: Optional[Any] = None,
-        code_exploration_service: Optional[Any] = None,
-        code_search_service: Optional[Any] = None,
-        token_optimizer: Optional[Any] = None,
-        context_selector: Optional[Any] = None,
+        dependency_graph: Optional[Any] = None,
+        centrality_calculator: Optional[Any] = None,
+        centrality_engine: Optional[Any] = None,
+        ast_analyzer: Optional[Any] = None,
+        path_resolver: Optional[Any] = None,
         config: Optional[ControllerConfig] = None,
     ):
         """Initialize the CentralityController.
 
         Args:
-            code_analysis_service: Service for code analysis operations
-            code_exploration_service: Service for code exploration operations
-            code_search_service: Service for code search operations
-            token_optimizer: Service for token optimization
-            context_selector: Service for context selection
+            dependency_graph: Dependency graph for centrality analysis
+            centrality_calculator: Centrality calculation service
+            centrality_engine: Centrality analysis engine
+            ast_analyzer: AST analysis service
+            path_resolver: Path resolution service
             config: Controller configuration
         """
         super().__init__(config)
 
         # Validate dependencies
-        if code_analysis_service is None:
+        if dependency_graph is None:
+            raise ValueError("dependency_graph must be injected - no fallback allowed")
+        if centrality_calculator is None:
             raise ValueError(
-                "code_analysis_service must be injected - no fallback allowed"
+                "centrality_calculator must be injected - no fallback allowed"
             )
-        if token_optimizer is None:
-            raise ValueError("token_optimizer must be injected - no fallback allowed")
-        if context_selector is None:
-            raise ValueError("context_selector must be injected - no fallback allowed")
+        if centrality_engine is None:
+            raise ValueError("centrality_engine must be injected - no fallback allowed")
+        if ast_analyzer is None:
+            raise ValueError("ast_analyzer must be injected - no fallback allowed")
+        if path_resolver is None:
+            raise ValueError("path_resolver must be injected - no fallback allowed")
 
-        self.code_analysis_service = code_analysis_service
-        self.code_exploration = code_exploration_service
-        self.code_search = code_search_service
-        self.token_optimizer = token_optimizer
-        self.context_selector = context_selector
+        self.dependency_graph = dependency_graph
+        self.centrality_calculator = centrality_calculator
+        self.centrality_engine = centrality_engine
+        self.ast_analyzer = ast_analyzer
+        self.path_resolver = path_resolver
 
-    def execute(self, file_paths: List[str]) -> CentralityViewModel:
+    def execute(self, file_paths: Optional[List[str]] = None) -> CentralityViewModel:
         """Execute centrality analysis for the specified files.
 
         Args:
-            file_paths: List of file paths to analyze
+            file_paths: List of file paths to analyze (optional, will use all code files if not provided)
 
         Returns:
             CentralityViewModel with analysis results
@@ -89,6 +95,20 @@ class CentralityController(BaseController):
         self._log_operation("centrality_analysis", {"files": file_paths})
 
         try:
+            # Use centralized file discovery if no files provided
+            if file_paths is None:
+                from ...code_analysis.file_discovery_service import (
+                    create_file_discovery_service,
+                )
+
+                file_discovery = create_file_discovery_service(
+                    self.path_resolver.project_root
+                )
+                file_paths = file_discovery.get_code_files(exclude_tests=True)
+                logger.debug(
+                    f"Using {len(file_paths)} code files from centralized discovery"
+                )
+
             # 1. Get structured centrality data from code_analysis service
             centrality_analyses = self._get_centrality_data(file_paths)
 
@@ -112,7 +132,7 @@ class CentralityController(BaseController):
     def _get_centrality_data(
         self, file_paths: List[str]
     ) -> List[FileCentralityAnalysis]:
-        """Get structured centrality data from code_analysis service.
+        """Get structured centrality data by performing analysis directly.
 
         Args:
             file_paths: List of file paths to analyze
@@ -120,14 +140,107 @@ class CentralityController(BaseController):
         Returns:
             List of FileCentralityAnalysis objects
         """
-        # Use LLM analyzer to get structured centrality analysis
-        centrality_analyses = (
-            self.code_analysis_service.analyze_file_centrality_structured(
-                file_paths=file_paths
-            )
-        )
+        # Filter to only code files for centrality analysis
+        from ...code_analysis.file_filter import FileFilter
 
-        return centrality_analyses  # type: ignore[no-any-return]
+        code_files = FileFilter.filter_code_files(file_paths, exclude_tests=True)
+
+        if len(code_files) != len(file_paths):
+            logger.info(
+                f"Filtered {len(file_paths)} files to {len(code_files)} code files "
+                f"for centrality analysis"
+            )
+
+        # Build dependency graph if it's empty
+        if self.dependency_graph.graph.number_of_nodes() == 0:
+            logger.debug("Building dependency graph for centrality analysis")
+            self._build_dependency_graph()
+
+        # Resolve file paths relative to project root
+        resolved_paths = self.path_resolver.resolve_file_paths(code_files)
+
+        # Perform AST analysis for all files
+        ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
+
+        # Get all files in project for comprehensive analysis
+        # Use the same file list that was used to build the dependency graph
+        # to ensure consistency between centrality calculation and analysis
+        all_files = self.path_resolver.get_all_project_files()
+
+        # If we have a dependency graph, use its file list for consistency
+        if self.dependency_graph and self.dependency_graph.graph.number_of_nodes() > 0:
+            # Get files from dependency graph to ensure consistency
+            graph_files = list(self.dependency_graph.graph.nodes())
+            if graph_files:
+                all_files = graph_files
+                logger.debug(
+                    f"Using {len(all_files)} files from dependency graph for consistency"
+                )
+
+        # Sort files by centrality score (highest first) to process most important files first
+        if len(code_files) > 1:
+            # Get centrality scores for all files to sort them
+            centrality_scores = (
+                self.centrality_calculator.calculate_composite_importance()
+            )
+            file_scores = [(fp, centrality_scores.get(fp, 0.0)) for fp in code_files]
+            sorted_file_scores = sorted(file_scores, key=lambda x: x[1], reverse=True)
+            sorted_file_paths = [fp for fp, _ in sorted_file_scores]
+        else:
+            sorted_file_paths = code_files
+
+        # Create a mapping for O(1) lookups instead of O(n) list.index() calls
+        resolved_paths_map = dict(zip(code_files, resolved_paths))
+
+        # Analyze each file in order of importance
+        centrality_analyses = []
+        for file_path in sorted_file_paths:
+            try:
+                # Find the resolved path for this file using the map
+                resolved_path = resolved_paths_map[file_path]
+                centrality_analysis = self.centrality_engine.analyze_file_centrality(
+                    file_path, ast_results[resolved_path], all_files
+                )
+                centrality_analyses.append(centrality_analysis)
+            except Exception as e:
+                logger.error(f"Error analyzing file {file_path}: {e}")
+                # Create a minimal centrality analysis for this file
+                centrality_analysis = FileCentralityAnalysis(
+                    file_path=file_path,
+                    centrality_score=0.0,
+                    rank=1,
+                    total_files=len(code_files),
+                    dependency_analysis={
+                        "total_connections": 0,
+                        "incoming_connections": 0,
+                        "outgoing_connections": 0,
+                        "connection_ratio": 0.0,
+                        "direct_imports": 0,
+                        "reverse_dependencies": 0,
+                    },
+                    function_call_analysis={
+                        "defined_functions": 0,
+                        "called_functions": 0,
+                        "external_calls": 0,
+                        "internal_calls": 0,
+                    },
+                    centrality_breakdown={
+                        "degree_centrality": 0.0,
+                        "betweenness_centrality": 0.0,
+                        "pagerank": 0.0,
+                        "eigenvector_centrality": 0.0,
+                        "closeness_centrality": 0.0,
+                    },
+                    structural_impact={
+                        "complexity_score": 0.0,
+                        "maintainability_score": 0.0,
+                        "testability_score": 0.0,
+                        "documentation_score": 0.0,
+                    },
+                )
+                centrality_analyses.append(centrality_analysis)
+
+        return centrality_analyses
 
     # Note: Exploration context methods removed - Controllers focus on LLM analysis
 
@@ -147,7 +260,12 @@ class CentralityController(BaseController):
         file_analyses = []
         rankings = []
 
-        for analysis in centrality_analyses:
+        # Sort analyses by centrality score to calculate proper rankings
+        sorted_analyses = sorted(
+            centrality_analyses, key=lambda x: x.centrality_score, reverse=True
+        )
+
+        for rank, analysis in enumerate(sorted_analyses, 1):
             # Create FileAnalysisViewModel from structured data
             file_analysis = FileAnalysisViewModel(
                 file_path=analysis.file_path,
@@ -160,13 +278,23 @@ class CentralityController(BaseController):
             )
             file_analyses.append(file_analysis)
 
-            # Create ranking entry
+            # Create ranking entry with additional data and proper rank
             rankings.append(
                 {
-                    "rank": analysis.rank,
-                    "file_path": analysis.file_path,
+                    "rank": rank,  # Use calculated rank instead of analysis.rank
+                    "file_path": analysis.file_path,  # Use original path without cleaning to preserve special chars like [id]
                     "centrality_score": analysis.centrality_score,
                     "total_files": analysis.total_files,
+                    "connections": analysis.dependency_analysis.get(
+                        "total_connections", 0
+                    ),
+                    "imports": analysis.dependency_analysis.get("direct_imports", 0),
+                    "reverse_dependencies": analysis.dependency_analysis.get(
+                        "reverse_dependencies", 0
+                    ),
+                    "functions": analysis.function_call_analysis.get(
+                        "defined_functions", 0
+                    ),
                 }
             )
 
@@ -200,49 +328,13 @@ class CentralityController(BaseController):
             total_files=len(centrality_analyses),
             analysis_summary=centrality_summary,
             token_count=len(str(centrality_analyses)),
-            max_tokens=self.config.max_tokens if self.config else 4000,
+            max_tokens=get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
             ),
         )
 
     # Note: Exploration context methods removed - Controllers focus on LLM analysis
-
-    def _optimize_for_tokens(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Optimize data for token budget.
-
-        Args:
-            data: Data to optimize
-
-        Returns:
-            Token-optimized data
-        """
-        # Use token optimizer to optimize the data
-        optimized_data = self.token_optimizer.optimize_for_token_budget(
-            data, self.config.max_tokens if self.config else 4000
-        )
-
-        return optimized_data  # type: ignore[no-any-return]
-
-    def _select_optimal_context(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """Select optimal context based on token budget.
-
-        Args:
-            data: Data to select context from
-
-        Returns:
-            Selected context data
-        """
-        # Use context selector to select optimal context
-        selected_context = self.context_selector.select_optimal_context(
-            data,
-            self.config.max_tokens if self.config else 4000,
-            strategy=(
-                self.config.context_selection if self.config else "centrality_based"
-            ),
-        )
-
-        return selected_context  # type: ignore[no-any-return]
 
     def _build_view_model(
         self, selected_context: Dict[str, Any], file_paths: List[str]
@@ -276,7 +368,7 @@ class CentralityController(BaseController):
             total_files=len(file_paths),
             analysis_summary=analysis_summary,
             token_count=self._estimate_tokens(selected_context),
-            max_tokens=self.config.max_tokens if self.config else 4000,
+            max_tokens=get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
             ),
@@ -387,3 +479,30 @@ class CentralityController(BaseController):
             ),
             "token_optimization": True,
         }
+
+    def _build_dependency_graph(self) -> None:
+        """Build the dependency graph if it's empty."""
+        try:
+            # Get project root from path resolver
+            project_root = self.path_resolver.project_root
+
+            # Use import analyzer to get project imports
+            from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+
+            import_analyzer = ImportAnalyzer(project_root=project_root)
+
+            # Analyze project imports
+            project_imports = import_analyzer.analyze_project_imports(project_root)
+
+            # Use all files for dependency analysis (no artificial limits)
+
+            # Build the dependency graph
+            self.dependency_graph.build_graph(project_imports)
+
+            logger.debug(
+                f"Built dependency graph with {self.dependency_graph.graph.number_of_nodes()} nodes"
+            )
+
+        except Exception as e:
+            logger.error(f"Failed to build dependency graph: {e}")
+            # Continue with empty graph - centrality analysis will handle it gracefully

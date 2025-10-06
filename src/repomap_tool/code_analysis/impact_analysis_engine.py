@@ -7,6 +7,7 @@ structural impact, and risk assessment.
 """
 
 import logging
+from ..core.logging_service import get_logger
 import os
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -15,7 +16,7 @@ from .ast_file_analyzer import ASTFileAnalyzer, FileAnalysisResult
 from .file_utils import suggest_test_files
 from .models import FileImpactAnalysis
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 
 
 class ImpactAnalysisEngine:
@@ -201,13 +202,13 @@ class ImpactAnalysisEngine:
             reverse_deps = self.ast_analyzer.find_reverse_dependencies(
                 file_path, all_files
             )
-            for dep in reverse_deps:
+            for dep_file in reverse_deps:
                 reverse_dependencies.append(
                     {
-                        "file": dep.source_file,
-                        "line": dep.line_number,
-                        "relationship": dep.relationship_type,
-                        "details": dep.details,
+                        "file": dep_file,
+                        "line": 0,  # Line number not available from reverse dependency analysis
+                        "relationship": "imports",
+                        "details": f"File imports {file_path}",
                     }
                 )
         except Exception as e:
