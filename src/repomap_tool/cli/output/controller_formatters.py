@@ -8,7 +8,7 @@ following proper MVC architecture patterns.
 from __future__ import annotations
 
 import logging
-from ..core.logging_service import get_logger
+from repomap_tool.core.logging_service import get_logger
 from typing import Any, List, Optional
 
 import click

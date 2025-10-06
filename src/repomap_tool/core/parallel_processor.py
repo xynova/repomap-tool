@@ -103,7 +103,7 @@ class ParallelTagExtractor:
         """
         # Use config default if not provided
         if max_workers is None:
-            max_workers = get_config("MAX_WORKERS", 4))
+            max_workers = get_config("MAX_WORKERS", 4)
         self.max_workers = max_workers
         self.enable_progress = enable_progress
         if console is None:

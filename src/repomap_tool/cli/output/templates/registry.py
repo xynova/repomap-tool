@@ -8,7 +8,7 @@ allowing dynamic template discovery and registration.
 from __future__ import annotations
 
 import logging
-from ..core.logging_service import get_logger
+from repomap_tool.core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Protocol, Union
 
 from .config import TemplateConfig

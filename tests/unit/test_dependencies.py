@@ -155,9 +155,11 @@ class TestDependencyGraph:
             graph = repomap_service.dependency_graph
             graph.build_graph(project_imports)
 
-            # Check that dependencies were added
-            assert "file1.py" in graph.nodes
-            assert "file2.py" in graph.nodes
+            # Check that dependencies were added (using absolute paths)
+            file1_path = str(Path(temp_dir) / "file1.py")
+            file2_path = str(Path(temp_dir) / "file2.py")
+            assert file1_path in graph.nodes
+            assert file2_path in graph.nodes
 
     def test_get_dependencies(self):
         """Test getting file dependencies."""

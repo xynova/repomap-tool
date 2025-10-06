@@ -12,6 +12,8 @@ from typing import Optional, Literal
 import click
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
+from repomap_tool.core.config_service import get_config
+
 from ...models import (
     SearchRequest,
     RepoMapConfig,
@@ -55,7 +57,10 @@ def inspect(ctx: click.Context) -> None:
     help="Matching strategy",
 )
 @click.option(
-    "--threshold = get_config("FUZZY_THRESHOLD", 0.7), help="Match threshold (0.0-1.0)"
+    "--threshold",
+    default=get_config("FUZZY_THRESHOLD", 0.7),
+    type=float,
+    help="Match threshold (0.0-1.0)",
 )
 @click.option(
     "--max-results", "-m", type=int, default=10, help="Maximum results to return"

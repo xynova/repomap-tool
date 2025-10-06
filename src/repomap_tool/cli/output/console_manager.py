@@ -8,7 +8,7 @@ dependency injection, error handling, and configuration management.
 from __future__ import annotations
 
 import logging
-from ..core.logging_service import get_logger
+from repomap_tool.core.logging_service import get_logger
 from typing import Optional, Dict, Any, Protocol
 from pathlib import Path
 

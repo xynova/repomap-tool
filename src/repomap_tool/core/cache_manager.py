@@ -34,9 +34,9 @@ class CacheManager:
     def __init__(
         self,
         max_size: int = 1000,
-        ttl = get_config("CACHE_TTL", 3600),
+        ttl: int = get_config("CACHE_TTL", 3600),
         enable_memory_monitoring: bool = True,
-    ):
+    ) -> None:
         """
         Initialize the cache manager.
 

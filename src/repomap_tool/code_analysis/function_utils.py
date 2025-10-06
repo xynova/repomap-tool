@@ -28,7 +28,7 @@ def find_most_called_function(function_calls: List[Any]) -> Optional[str]:
 
 
 def get_top_called_functions(
-    function_calls: List[Any], limit = get_config("DEFAULT_LIMIT", 5)
+    function_calls: List[Any], limit: int = get_config("DEFAULT_LIMIT", 5)
 ) -> List[Tuple[str, int]]:
     """Get the top N most frequently called functions with their call counts."""
     if not function_calls:
@@ -48,7 +48,7 @@ def smart_categorize_function_calls(
     function_calls: List[Any],
     defined_functions: List[str],
     imports: List[Any],
-    limit = get_config("DEFAULT_LIMIT", 5),
+    limit: int = get_config("DEFAULT_LIMIT", 5),
 ) -> Dict[str, Any]:
     """Smart categorization that infers sources rather than hardcoding them."""
     if not function_calls:

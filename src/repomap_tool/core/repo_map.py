@@ -900,7 +900,7 @@ class RepoMapService:
             query=query,
             identifiers=identifiers,
             semantic_matcher=self.semantic_matcher,
-            limit = get_config("DEFAULT_LIMIT", 5),
+            limit=get_config("DEFAULT_LIMIT", 5),
         )
 
         # Convert MatchResult objects to the expected format
@@ -944,7 +944,7 @@ class RepoMapService:
             query=query,
             identifiers=identifiers,
             fuzzy_matcher=self.fuzzy_matcher,
-            limit = get_config("DEFAULT_LIMIT", 5),
+            limit=get_config("DEFAULT_LIMIT", 5),
         )
 
         # Return MatchResult objects directly (as expected by the interface)

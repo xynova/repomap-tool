@@ -132,7 +132,7 @@ class AdvancedDependencyGraph(DependencyGraph):
         return list(dependents)
 
     def calculate_transitive_dependencies(
-        self, file_path: str, max_depth = get_config("MAX_DEPTH_LIMIT", 10)
+        self, file_path: str, max_depth: int = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files transitively dependent on a given file.
 
@@ -175,7 +175,7 @@ class AdvancedDependencyGraph(DependencyGraph):
         return visited - {file_path}  # Exclude the original file
 
     def calculate_transitive_dependents(
-        self, file_path: str, max_depth = get_config("MAX_DEPTH_LIMIT", 10)
+        self, file_path: str, max_depth: int = get_config("MAX_DEPTH_LIMIT", 10)
     ) -> Set[str]:
         """Get all files that a given file transitively depends on.
 

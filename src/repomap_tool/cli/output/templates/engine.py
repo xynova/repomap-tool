@@ -8,7 +8,7 @@ with support for custom filters, functions, and template inheritance.
 from __future__ import annotations
 
 import logging
-from ..core.logging_service import get_logger
+from repomap_tool.core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Union
 
 # Try to import Jinja2

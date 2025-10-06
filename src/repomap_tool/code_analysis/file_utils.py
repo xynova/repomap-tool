@@ -40,7 +40,9 @@ def get_all_project_files(
         if not any(part.startswith(".") for part in file_path.parts):
             if file_path.is_file():
                 # Use centralized filtering
-                if FileFilter.is_code_file(str(file_path)) and not FileFilter.should_exclude_file(str(file_path)):
+                if FileFilter.is_code_file(
+                    str(file_path)
+                ) and not FileFilter.should_exclude_file(str(file_path)):
                     # Convert to relative path from project root
                     try:
                         rel_path = file_path.relative_to(project_path)

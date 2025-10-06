@@ -1,12 +1,13 @@
-from ..core.config_service import get_config
+from __future__ import annotations
+
+from repomap_tool.core.config_service import get_config
+
 """
 ViewModels for CLI Controllers.
 
 This module defines the ViewModel classes that represent structured data
 for the view layer, following proper MVC architecture patterns.
 """
-
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import List, Dict, Any, Optional
@@ -129,7 +130,7 @@ class ProjectAnalysisViewModel:
 class ControllerConfig:
     """Configuration for Controllers."""
 
-    max_tokens = get_config("MAX_TOKENS", 4000)
+    max_tokens: int = get_config("MAX_TOKENS", 4000)
     compression_level: str = "medium"
     verbose: bool = False
     output_format: str = "text"

@@ -462,7 +462,10 @@ class DomainSemanticMatcher:
         return similarity
 
     def find_semantic_matches(
-        self, query: str, all_identifiers: Set[str], threshold = get_config("SEMANTIC_THRESHOLD", 0.3)
+        self,
+        query: str,
+        all_identifiers: Set[str],
+        threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
     ) -> List[Tuple[str, float]]:
         """
         Find semantic matches for a query among all identifiers.

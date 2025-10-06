@@ -132,8 +132,7 @@ def safe_operation(
                 )
             except Exception as e:
                 # Log unexpected errors and wrap them
-                import logging
-from ..core.logging_service import get_logger
+                from repomap_tool.core.logging_service import get_logger
 
                 logger = get_logger(__name__)
                 logger.error(
@@ -160,8 +159,7 @@ def handle_errors(func: F) -> F:
         except RepoMapError:
             raise
         except Exception as e:
-            import logging
-from ..core.logging_service import get_logger
+            from repomap_tool.core.logging_service import get_logger
 
             logger = get_logger(__name__)
             logger.error(f"Error in {func.__name__}: {e}")

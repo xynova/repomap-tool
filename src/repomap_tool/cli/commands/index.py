@@ -1,4 +1,5 @@
-from ..core.config_service import get_config
+from repomap_tool.core.config_service import get_config
+
 """
 Index commands for RepoMap-Tool CLI.
 
@@ -52,7 +53,10 @@ def index() -> None:
     "--semantic/--no-semantic", default=False, help="Enable semantic matching"
 )
 @click.option(
-    "--threshold = get_config("FUZZY_THRESHOLD", 0.7), help="Match threshold (0.0-1.0)"
+    "--threshold",
+    default=get_config("FUZZY_THRESHOLD", 0.7),
+    type=float,
+    help="Match threshold (0.0-1.0)",
 )
 @click.option(
     "--max-results", "-m", type=int, default=50, help="Maximum results to return"

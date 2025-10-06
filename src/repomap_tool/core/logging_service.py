@@ -17,8 +17,8 @@ _logger_cache: Dict[str, logging.Logger] = {}
 
 class LoggingService:
     """Centralized logging service for RepoMap-Tool."""
-    
-    def __init__(self):
+
+    def __init__(self) -> None:
         """Initialize the logging service."""
         self._configured = False
         self._log_level = logging.INFO
@@ -26,7 +26,7 @@ class LoggingService:
         self._log_file: Optional[str] = None
         self._enable_console = True
         self._enable_file = False
-        
+
     def configure(
         self,
         level: str = "INFO",
@@ -36,7 +36,7 @@ class LoggingService:
         enable_file: bool = False,
     ) -> None:
         """Configure the logging service.
-        
+
         Args:
             level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
             format_string: Custom log format string
@@ -46,20 +46,20 @@ class LoggingService:
         """
         # Convert string level to logging constant
         numeric_level = getattr(logging, level.upper(), logging.INFO)
-        
+
         self._log_level = numeric_level
         self._log_format = format_string or self._log_format
         self._log_file = log_file
         self._enable_console = enable_console
         self._enable_file = enable_file
-        
+
         # Configure root logger
         root_logger = logging.getLogger()
         root_logger.setLevel(numeric_level)
-        
+
         # Clear existing handlers
         root_logger.handlers.clear()
-        
+
         # Add console handler
         if enable_console:
             console_handler = logging.StreamHandler(sys.stdout)
@@ -67,14 +67,14 @@ class LoggingService:
             console_formatter = logging.Formatter(self._log_format)
             console_handler.setFormatter(console_formatter)
             root_logger.addHandler(console_handler)
-        
+
         # Add file handler
         if enable_file and log_file:
             try:
                 # Ensure log directory exists
                 log_path = Path(log_file)
                 log_path.parent.mkdir(parents=True, exist_ok=True)
-                
+
                 file_handler = logging.FileHandler(log_file)
                 file_handler.setLevel(numeric_level)
                 file_formatter = logging.Formatter(self._log_format)
@@ -83,70 +83,72 @@ class LoggingService:
             except Exception as e:
                 # Fallback to console if file logging fails
                 print(f"Warning: Failed to configure file logging: {e}")
-        
+
         self._configured = True
-        
+
         # Log configuration success
         logger = self.get_logger(__name__)
-        logger.info(f"Logging service configured: level={level}, console={enable_console}, file={enable_file}")
-    
+        logger.info(
+            f"Logging service configured: level={level}, console={enable_console}, file={enable_file}"
+        )
+
     def get_logger(self, name: str) -> logging.Logger:
         """Get a logger instance for the specified name.
-        
+
         Args:
             name: Logger name (typically __name__)
-            
+
         Returns:
             Logger instance
         """
         # Use cached logger if available
         if name in _logger_cache:
             return _logger_cache[name]
-        
+
         # Create new logger
         logger = logging.getLogger(name)
-        
+
         # Cache the logger
         _logger_cache[name] = logger
-        
+
         return logger
-    
+
     def set_level(self, level: str) -> None:
         """Set the logging level.
-        
+
         Args:
             level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         """
         numeric_level = getattr(logging, level.upper(), logging.INFO)
         self._log_level = numeric_level
-        
+
         # Update root logger level
         root_logger = logging.getLogger()
         root_logger.setLevel(numeric_level)
-        
+
         # Update all cached loggers
         for logger in _logger_cache.values():
             logger.setLevel(numeric_level)
-    
+
     def get_level(self) -> int:
         """Get the current logging level.
-        
+
         Returns:
             Current logging level
         """
         return self._log_level
-    
+
     def is_configured(self) -> bool:
         """Check if logging is configured.
-        
+
         Returns:
             True if logging is configured, False otherwise
         """
         return self._configured
-    
+
     def get_config(self) -> Dict[str, Any]:
         """Get current logging configuration.
-        
+
         Returns:
             Dictionary with current logging configuration
         """
@@ -158,10 +160,9 @@ class LoggingService:
             "enable_file": self._enable_file,
             "configured": self._configured,
         }
-    
+
     def clear_cache(self) -> None:
         """Clear the logger cache."""
-        global _logger_cache
         _logger_cache.clear()
 
 
@@ -171,7 +172,7 @@ _logging_service: Optional[LoggingService] = None
 
 def get_logging_service() -> LoggingService:
     """Get the global logging service instance.
-    
+
     Returns:
         LoggingService instance
     """
@@ -183,7 +184,7 @@ def get_logging_service() -> LoggingService:
 
 def set_logging_service(service: LoggingService) -> None:
     """Set the global logging service instance.
-    
+
     Args:
         service: LoggingService instance
     """
@@ -193,13 +194,13 @@ def set_logging_service(service: LoggingService) -> None:
 
 def get_logger(name: str) -> logging.Logger:
     """Get a logger instance for the specified name.
-    
+
     This is the main function that should be used throughout the codebase
     instead of logging.getLogger(__name__).
-    
+
     Args:
         name: Logger name (typically __name__)
-        
+
     Returns:
         Logger instance
     """
@@ -214,7 +215,7 @@ def configure_logging(
     enable_file: bool = False,
 ) -> None:
     """Configure the global logging service.
-    
+
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         format_string: Custom log format string
@@ -233,7 +234,7 @@ def configure_logging(
 
 def set_log_level(level: str) -> None:
     """Set the global logging level.
-    
+
     Args:
         level: Log level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
     """
@@ -242,7 +243,7 @@ def set_log_level(level: str) -> None:
 
 def get_log_level() -> int:
     """Get the current global logging level.
-    
+
     Returns:
         Current logging level
     """
@@ -251,7 +252,7 @@ def get_log_level() -> int:
 
 def is_logging_configured() -> bool:
     """Check if logging is configured.
-    
+
     Returns:
         True if logging is configured, False otherwise
     """
@@ -260,7 +261,7 @@ def is_logging_configured() -> bool:
 
 def get_logging_config() -> Dict[str, Any]:
     """Get current logging configuration.
-    
+
     Returns:
         Dictionary with current logging configuration
     """

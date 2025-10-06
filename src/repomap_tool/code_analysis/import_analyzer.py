@@ -437,6 +437,7 @@ class ImportAnalyzer:
 
         # File extensions that should be analyzed
         from .file_filter import FileFilter
+
         self.analyzable_extensions = FileFilter.get_analyzable_extensions()
 
         logger.info(
@@ -499,10 +500,10 @@ class ImportAnalyzer:
     ) -> ProjectImports:
         """Analyze all supported files in a project for imports."""
         self.project_root = project_path  # Ensure project_root is set
-        
+
         # Use config default if not provided
         if max_workers is None:
-            max_workers = get_config("MAX_WORKERS", 4))
+            max_workers = get_config("MAX_WORKERS", 4)
 
         all_files = self._get_all_files(project_path, ignore_dirs, file_extensions)
         project_imports = ProjectImports(project_path=project_path, file_imports={})
@@ -560,10 +561,10 @@ class ImportAnalyzer:
         file_extensions: Optional[List[str]] = None,
     ) -> List[str]:
         """Get all files in a project directory using centralized file discovery."""
-        from .file_discovery_service import get_file_discovery_service
-        
+        from .file_discovery_service import create_file_discovery_service
+
         # Use centralized file discovery service
-        file_discovery = get_file_discovery_service(project_path)
+        file_discovery = create_file_discovery_service(project_path)
         return file_discovery.get_analyzable_files(exclude_tests=True)
 
     def _resolve_import_paths(

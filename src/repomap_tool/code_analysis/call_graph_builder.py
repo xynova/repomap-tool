@@ -254,6 +254,7 @@ class CallGraphBuilder:
 
         # File extensions that should be analyzed
         from .file_filter import FileFilter
+
         self.analyzable_extensions = FileFilter.get_analyzable_extensions()
 
         logger.info(
@@ -261,7 +262,7 @@ class CallGraphBuilder:
         )
 
     def build_call_graph(
-        self, project_files: List[str], max_workers = get_config("MAX_WORKERS", 4)
+        self, project_files: List[str], max_workers: int = get_config("MAX_WORKERS", 4)
     ) -> CallGraph:
         """Build the complete call graph for a project.
 
@@ -276,7 +277,10 @@ class CallGraphBuilder:
 
         # Filter to only analyzable files
         from .file_filter import FileFilter
-        analyzable_files = FileFilter.filter_analyzable_files(project_files, exclude_tests=True)
+
+        analyzable_files = FileFilter.filter_analyzable_files(
+            project_files, exclude_tests=True
+        )
 
         logger.info(f"Found {len(analyzable_files)} analyzable files for call graph")
 

@@ -8,8 +8,8 @@ coordinating between code_analysis, code_exploration, and code_search services.
 from __future__ import annotations
 
 import logging
-from ..core.config_service import get_config
-from ..core.logging_service import get_logger
+from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 
 from ...code_analysis.models import AnalysisFormat, FileCentralityAnalysis
@@ -97,11 +97,18 @@ class CentralityController(BaseController):
         try:
             # Use centralized file discovery if no files provided
             if file_paths is None:
-                from ...code_analysis.file_discovery_service import get_file_discovery_service
-                file_discovery = get_file_discovery_service(self.path_resolver.project_root)
+                from ...code_analysis.file_discovery_service import (
+                    create_file_discovery_service,
+                )
+
+                file_discovery = create_file_discovery_service(
+                    self.path_resolver.project_root
+                )
                 file_paths = file_discovery.get_code_files(exclude_tests=True)
-                logger.info(f"Using {len(file_paths)} code files from centralized discovery")
-            
+                logger.info(
+                    f"Using {len(file_paths)} code files from centralized discovery"
+                )
+
             # 1. Get structured centrality data from code_analysis service
             centrality_analyses = self._get_centrality_data(file_paths)
 
@@ -135,14 +142,15 @@ class CentralityController(BaseController):
         """
         # Filter to only code files for centrality analysis
         from ...code_analysis.file_filter import FileFilter
+
         code_files = FileFilter.filter_code_files(file_paths, exclude_tests=True)
-        
+
         if len(code_files) != len(file_paths):
             logger.info(
                 f"Filtered {len(file_paths)} files to {len(code_files)} code files "
                 f"for centrality analysis"
             )
-        
+
         # Build dependency graph if it's empty
         if self.dependency_graph.graph.number_of_nodes() == 0:
             logger.info("Building dependency graph for centrality analysis")
@@ -158,14 +166,16 @@ class CentralityController(BaseController):
         # Use the same file list that was used to build the dependency graph
         # to ensure consistency between centrality calculation and analysis
         all_files = self.path_resolver.get_all_project_files()
-        
+
         # If we have a dependency graph, use its file list for consistency
         if self.dependency_graph and self.dependency_graph.graph.number_of_nodes() > 0:
             # Get files from dependency graph to ensure consistency
             graph_files = list(self.dependency_graph.graph.nodes())
             if graph_files:
                 all_files = graph_files
-                logger.debug(f"Using {len(all_files)} files from dependency graph for consistency")
+                logger.debug(
+                    f"Using {len(all_files)} files from dependency graph for consistency"
+                )
 
         # Sort files by centrality score (highest first) to process most important files first
         if len(code_files) > 1:
@@ -321,7 +331,7 @@ class CentralityController(BaseController):
             total_files=len(centrality_analyses),
             analysis_summary=centrality_summary,
             token_count=len(str(centrality_analyses)),
-            max_tokens = get_config("MAX_TOKENS", 4000),
+            max_tokens=get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
             ),
@@ -361,7 +371,7 @@ class CentralityController(BaseController):
             total_files=len(file_paths),
             analysis_summary=analysis_summary,
             token_count=self._estimate_tokens(selected_context),
-            max_tokens = get_config("MAX_TOKENS", 4000),
+            max_tokens=get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
             ),

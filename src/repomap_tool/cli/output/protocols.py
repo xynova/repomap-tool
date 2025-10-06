@@ -8,7 +8,7 @@ ensuring consistency and extensibility across the output system.
 from __future__ import annotations
 
 import logging
-from ..core.logging_service import get_logger
+from repomap_tool.core.logging_service import get_logger
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, Protocol, Type, TypeVar, Union
 from pathlib import Path

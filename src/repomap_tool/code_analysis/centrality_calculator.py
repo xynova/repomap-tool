@@ -125,10 +125,10 @@ class CentralityCalculator:
         """
         # Use config defaults if not provided
         if alpha is None:
-            alpha = get_config("PAGERANK_ALPHA", 0.85))
+            alpha = get_config("PAGERANK_ALPHA", 0.85)
         if max_iter is None:
-            max_iter = get_config("PAGERANK_MAX_ITER", 100))
-            
+            max_iter = get_config("PAGERANK_MAX_ITER", 100)
+
         cache_key = f"pagerank_centrality_{alpha}_{max_iter}"
         if self.cache_enabled and cache_key in self.cache:
             logger.debug("Using cached PageRank centrality scores")

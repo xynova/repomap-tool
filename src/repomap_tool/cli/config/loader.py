@@ -1,4 +1,5 @@
-from ..core.config_service import get_config
+from repomap_tool.core.config_service import get_config
+
 """
 Configuration loading and management utilities.
 
@@ -161,11 +162,11 @@ def create_default_config(
     project_path: str,
     fuzzy: bool = True,
     semantic: bool = True,
-    threshold = get_config("FUZZY_THRESHOLD", 0.7),
+    threshold: float = get_config("FUZZY_THRESHOLD", 0.7),
     max_results: int = 50,
     output: Literal["text", "json"] = "text",
     verbose: bool = False,
-    cache_size = get_config("CACHE_SIZE", 1000),
+    cache_size: int = get_config("CACHE_SIZE", 1000),
     no_progress: Optional[bool] = None,
     no_monitoring: Optional[bool] = None,
     log_level: Optional[str] = None,
@@ -532,11 +533,11 @@ def load_or_create_config(
             project_path,
             fuzzy=True,
             semantic=True,
-            threshold = get_config("FUZZY_THRESHOLD", 0.7),
+            threshold=get_config("FUZZY_THRESHOLD", 0.7),
             max_results=50,
             output="json",
             verbose=False,
-            cache_size = get_config("CACHE_SIZE", 1000),
+            cache_size=get_config("CACHE_SIZE", 1000),
         )
         was_created = True
 
@@ -558,7 +559,7 @@ def create_search_config(
     match_type: str,
     verbose: bool,
     log_level: str = "INFO",
-    cache_size = get_config("CACHE_SIZE", 1000),
+    cache_size: int = get_config("CACHE_SIZE", 1000),
 ) -> RepoMapConfig:
     """Create configuration for search operations."""
     if project_path is None:
@@ -599,7 +600,7 @@ def create_search_config(
 
 def create_tree_config(
     project_path: Optional[str],
-    max_depth = get_config("MAX_DEPTH", 3),
+    max_depth: int = get_config("MAX_DEPTH", 3),
     verbose: bool = True,
 ) -> RepoMapConfig:
     """Create configuration for tree-related operations (explore, focus, expand, prune, map, list_trees, status)."""
@@ -608,7 +609,7 @@ def create_tree_config(
 
     fuzzy_config = FuzzyMatchConfig(threshold=70, cache_results=True)
     semantic_config = SemanticMatchConfig(
-        enabled=True, threshold = get_config("FUZZY_THRESHOLD", 0.7), cache_results=True
+        enabled=True, threshold=get_config("FUZZY_THRESHOLD", 0.7), cache_results=True
     )
     tree_config = TreeConfig(max_depth=max_depth, entrypoint_threshold=0.6)
 

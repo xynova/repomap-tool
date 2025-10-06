@@ -234,7 +234,10 @@ class AdaptiveSemanticMatcher:
         return similarity
 
     def find_semantic_matches(
-        self, query: str, all_identifiers: Set[str], threshold = get_config("HYBRID_THRESHOLD", 0.1)
+        self,
+        query: str,
+        all_identifiers: Set[str],
+        threshold: float = get_config("HYBRID_THRESHOLD", 0.1),
     ) -> List[Tuple[str, float]]:
         """
         Find semantic matches for a query among all identifiers.
@@ -373,7 +376,9 @@ class AdaptiveSemanticMatcher:
         return suggestions[:20]  # Limit to 20 suggestions
 
     def get_semantic_clusters(
-        self, all_identifiers: Set[str], similarity_threshold = get_config("SEMANTIC_THRESHOLD", 0.3)
+        self,
+        all_identifiers: Set[str],
+        similarity_threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
     ) -> List[Set[str]]:
         """
         Group identifiers into semantic clusters.

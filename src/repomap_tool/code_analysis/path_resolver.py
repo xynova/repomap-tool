@@ -58,8 +58,9 @@ class PathResolver:
             return []
 
         # Use centralized file discovery service
-        from .file_discovery_service import get_file_discovery_service
-        file_discovery = get_file_discovery_service(self.project_root)
+        from .file_discovery_service import create_file_discovery_service
+
+        file_discovery = create_file_discovery_service(self.project_root)
         code_files = file_discovery.get_code_files(exclude_tests=True)
 
         # Apply file limit for performance (only if specified)

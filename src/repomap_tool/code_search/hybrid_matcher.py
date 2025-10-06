@@ -34,7 +34,7 @@ class HybridMatcher:
     def __init__(
         self,
         fuzzy_matcher: FuzzyMatcher,
-        semantic_threshold = get_config("SEMANTIC_THRESHOLD", 0.3),
+        semantic_threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
         use_word_embeddings: bool = False,
         verbose: bool = True,
     ):
@@ -334,7 +334,10 @@ class HybridMatcher:
         return overall_score, component_scores
 
     def find_hybrid_matches(
-        self, query: str, all_identifiers: Set[str], threshold = get_config("SEMANTIC_THRESHOLD", 0.3)
+        self,
+        query: str,
+        all_identifiers: Set[str],
+        threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
     ) -> List[Tuple[str, float, Dict[str, float]]]:
         """
         Find hybrid matches for a query among all identifiers.
@@ -412,7 +415,9 @@ class HybridMatcher:
         Returns:
             Dictionary with match analysis
         """
-        matches = self.find_hybrid_matches(query, all_identifiers, threshold = get_config("HYBRID_THRESHOLD", 0.1))
+        matches = self.find_hybrid_matches(
+            query, all_identifiers, threshold=get_config("HYBRID_THRESHOLD", 0.1)
+        )
 
         analysis: Dict[str, Any] = {
             "query": query,

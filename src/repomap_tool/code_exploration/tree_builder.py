@@ -46,7 +46,7 @@ class TreeBuilder:
         logger.debug("TreeBuilder initialized")
 
     def build_exploration_tree(
-        self, entrypoint: Entrypoint, max_depth = get_config("MAX_DEPTH", 3)
+        self, entrypoint: Entrypoint, max_depth: int = get_config("MAX_DEPTH", 3)
     ) -> ExplorationTree:
         """Build exploration tree from entrypoint.
 
@@ -93,7 +93,7 @@ class TreeBuilder:
     def build_exploration_tree_with_dependencies(
         self,
         entrypoint: Entrypoint,
-        max_depth = get_config("MAX_DEPTH", 3),
+        max_depth: int = get_config("MAX_DEPTH", 3),
         current_files: Optional[List[str]] = None,
     ) -> ExplorationTree:
         """Build exploration tree with dependency intelligence.

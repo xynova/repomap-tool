@@ -48,12 +48,34 @@ alwaysApply: true
 - **Eliminates path confusion** and redundant conversions
 - **Improves reliability** and performance
 
+### **🚨 CRITICAL: Centralized Configuration Management**
+- **ALL configuration values must use centralized ConfigService** - no hardcoded constants
+- **ALWAYS use `get_config(key, default)` from `core.config_service`** for configuration access
+- **NEVER hardcode thresholds, limits, timeouts, or other configurable values**
+- **ALL configuration defaults defined in `ConfigDefaults` dataclass**
+- **Configuration overrides supported via `set_config(key, value)`**
+- **Global configuration service instance with singleton pattern**
+- **Eliminates scattered hardcoded values** across 31+ files
+- **Improves maintainability** - single place to change configuration
+
+### **🚨 CRITICAL: Centralized Logging Management**
+- **ALL logging must use centralized LoggingService** - no direct `logging.getLogger()`
+- **ALWAYS use `get_logger(__name__)` from `core.logging_service`** for logger creation
+- **NEVER use `logging.getLogger(__name__)` directly in modules**
+- **Centralized logging configuration** with consistent formatting
+- **Logger caching and singleton pattern** for performance
+- **Global logging service instance** with auto-initialization
+- **Eliminates duplicate logger setup** across 46+ files
+- **Improves consistency** - unified logging behavior
+
 ### **AI Development Guidelines**
 - **ALWAYS use aider.repomap.RepoMap** - this is the core of the project, never bypass it
 - **ALWAYS use aider's tree-sitter capabilities** - never implement custom AST parsing
 - **ALWAYS use aider.repomap.RepoMap.get_tags()** for code element extraction
 - **ALWAYS use aider.io.InputOutput** for I/O operations with RepoMap
 - **ALWAYS use absolute paths** - all file paths must be absolute throughout the system
+- **ALWAYS use centralized configuration** - use `get_config(key, default)` instead of hardcoded values
+- **ALWAYS use centralized logging** - use `get_logger(__name__)` instead of `logging.getLogger(__name__)`
 - **ALWAYS follow existing patterns** - don't reinvent the wheel
 - **ALWAYS use dependency injection** - never instantiate services directly
 - **ALWAYS validate dependencies** - raise errors for missing dependencies
@@ -517,6 +539,102 @@ class ExampleService:
         return self.formatter.format(result, OutputFormat.TEXT)
 ```
 
+### **Centralized Configuration Pattern**
+```python
+# CORRECT - Use centralized configuration service
+from repomap_tool.core.config_service import get_config
+
+class ExampleService:
+    def __init__(self):
+        # ✅ AI: ALWAYS use get_config() for configuration values
+        self.threshold = get_config('FUZZY_MATCH_THRESHOLD', 70)
+        self.max_workers = get_config('MAX_WORKERS', 4)
+        self.timeout = get_config('ANALYSIS_TIMEOUT', 30)
+        self.cache_ttl = get_config('CACHE_TTL', 3600)
+    
+    def process_data(self, data: Any) -> Any:
+        # ✅ AI: ALWAYS use config values, never hardcode
+        if len(data) > get_config('MAX_DATA_SIZE', 1000):
+            raise ValueError("Data too large")
+        
+        # Use configured timeout
+        timeout = get_config('PROCESSING_TIMEOUT', 60)
+        return self._process_with_timeout(data, timeout)
+
+# WRONG - Hardcoded configuration values
+class BadService:
+    def __init__(self):
+        # ❌ AI: NEVER hardcode configuration values
+        self.threshold = 70  # WRONG!
+        self.max_workers = 4  # WRONG!
+        self.timeout = 30  # WRONG!
+```
+
+### **Centralized Logging Pattern**
+```python
+# CORRECT - Use centralized logging service
+from repomap_tool.core.logging_service import get_logger
+
+class ExampleService:
+    def __init__(self):
+        # ✅ AI: ALWAYS use get_logger() for logger creation
+        self.logger = get_logger(__name__)
+    
+    def process_data(self, data: Any) -> Any:
+        # ✅ AI: ALWAYS use centralized logger
+        self.logger.info(f"Processing {len(data)} items")
+        
+        try:
+            result = self._process(data)
+            self.logger.debug(f"Processing completed successfully")
+            return result
+        except Exception as e:
+            self.logger.error(f"Processing failed: {e}")
+            raise
+
+# WRONG - Direct logging.getLogger() usage
+import logging
+
+class BadService:
+    def __init__(self):
+        # ❌ AI: NEVER use logging.getLogger() directly
+        self.logger = logging.getLogger(__name__)  # WRONG!
+```
+
+### **Centralized Services Integration Pattern**
+```python
+# CORRECT - Combine centralized services
+from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
+
+class ExampleService:
+    def __init__(self):
+        # ✅ AI: ALWAYS use both centralized services
+        self.logger = get_logger(__name__)
+        self.threshold = get_config('SERVICE_THRESHOLD', 0.8)
+        self.max_retries = get_config('MAX_RETRIES', 3)
+    
+    def process_with_retry(self, data: Any) -> Any:
+        retries = 0
+        max_retries = get_config('MAX_RETRIES', 3)
+        
+        while retries < max_retries:
+            try:
+                self.logger.info(f"Processing attempt {retries + 1}")
+                result = self._process(data)
+                self.logger.info("Processing successful")
+                return result
+            except Exception as e:
+                retries += 1
+                self.logger.warning(f"Attempt {retries} failed: {e}")
+                
+                if retries >= max_retries:
+                    self.logger.error("All retry attempts exhausted")
+                    raise
+        
+        return None
+```
+
 ### **CLI Command Pattern**
 ```python
 @click.command()
@@ -666,6 +784,59 @@ def bad_command():
 def bad_function():
     matcher = FuzzyMatcher(threshold=0.7)  # ❌ AI: Don't bypass DI
     formatter = ProjectInfoFormatter()     # ❌ AI: Don't bypass DI
+```
+
+### **❌ Hardcoded Configuration Values**
+```python
+# WRONG - AI must never hardcode configuration values
+class BadService:
+    def __init__(self):
+        # ❌ AI: NEVER hardcode configuration values
+        self.threshold = 70  # WRONG!
+        self.max_workers = 4  # WRONG!
+        self.timeout = 30  # WRONG!
+        self.cache_ttl = 3600  # WRONG!
+    
+    def process_data(self, data: Any) -> Any:
+        # ❌ AI: NEVER hardcode limits or thresholds
+        if len(data) > 1000:  # WRONG!
+            raise ValueError("Data too large")
+        
+        # ❌ AI: NEVER hardcode timeouts
+        return self._process_with_timeout(data, 60)  # WRONG!
+```
+
+### **❌ Direct Logging Usage**
+```python
+# WRONG - AI must never use logging.getLogger() directly
+import logging
+
+class BadService:
+    def __init__(self):
+        # ❌ AI: NEVER use logging.getLogger() directly
+        self.logger = logging.getLogger(__name__)  # WRONG!
+    
+    def process_data(self, data: Any) -> Any:
+        # ❌ AI: NEVER use direct logging setup
+        logging.basicConfig(level=logging.INFO)  # WRONG!
+        self.logger.info("Processing data")  # WRONG!
+```
+
+### **❌ Scattered Configuration Management**
+```python
+# WRONG - AI must never scatter configuration across files
+class BadService1:
+    def __init__(self):
+        self.threshold = 70  # ❌ WRONG: Hardcoded in file 1
+
+class BadService2:
+    def __init__(self):
+        self.threshold = 80  # ❌ WRONG: Different value in file 2
+
+class BadService3:
+    def __init__(self):
+        self.threshold = 75  # ❌ WRONG: Another value in file 3
+        # This creates inconsistency and maintenance nightmare
 ```
 
 ### **❌ AI Anti-Patterns**
@@ -1400,6 +1571,10 @@ class DataFormatter(BaseFormatter):
 - [ ] **ALL analyzers use aider.io.InputOutput** - AI must use aider's I/O system
 - [ ] **ALL file paths are absolute** - AI must use absolute paths throughout the system
 - [ ] **NO relative path conversions** - AI must only convert to relative for aider calls
+- [ ] **ALL configuration values use centralized ConfigService** - AI must use `get_config(key, default)`
+- [ ] **NO hardcoded configuration values** - AI must never hardcode thresholds, limits, timeouts
+- [ ] **ALL logging uses centralized LoggingService** - AI must use `get_logger(__name__)`
+- [ ] **NO direct `logging.getLogger()` calls** - AI must never use `logging.getLogger(__name__)` directly
 - [ ] **ALL CLI commands use `OutputManager`** - AI must never use direct console.print
 - [ ] **NO direct `console.print()` calls in CLI commands** - AI must use OutputManager
 - [ ] **ALL services use constructor injection DI patterns** - AI must never instantiate services directly
@@ -1533,6 +1708,8 @@ class DataFormatter(BaseFormatter):
 ### **AI Development Checklist**
 - [ ] **Read and understand existing patterns** before writing new code
 - [ ] **Use existing DI container** for all service creation
+- [ ] **Use centralized configuration service** - always use `get_config(key, default)`
+- [ ] **Use centralized logging service** - always use `get_logger(__name__)`
 - [ ] **Follow OutputManager pattern** for all CLI output
 - [ ] **Implement proper error handling** with custom exceptions
 - [ ] **Write comprehensive tests** for all new functionality
@@ -1549,6 +1726,8 @@ class DataFormatter(BaseFormatter):
 
 ### **AI Must Never Do These Things**
 - [ ] **Never instantiate services directly** - always use DI container
+- [ ] **Never hardcode configuration values** - always use `get_config(key, default)`
+- [ ] **Never use direct logging.getLogger()** - always use `get_logger(__name__)`
 - [ ] **Never use direct console.print** - always use OutputManager
 - [ ] **Never skip dependency validation** - always raise errors for missing dependencies
 - [ ] **Never create new service factories** - always use existing DI container
@@ -1573,22 +1752,26 @@ class DataFormatter(BaseFormatter):
 2. **ALWAYS use aider's tree-sitter capabilities** - never implement custom AST parsing
 3. **ALWAYS use aider.repomap.RepoMap.get_tags()** - for all code element extraction
 4. **ALWAYS use aider.io.InputOutput** - for I/O operations with RepoMap
-5. **ALWAYS use dependency injection** - never instantiate services directly
-6. **ALWAYS use OutputManager** - never use direct console.print in CLI commands
-7. **ALWAYS validate dependencies** - raise errors for missing dependencies
-8. **ALWAYS follow existing patterns** - don't reinvent the wheel
-9. **ALWAYS write comprehensive tests** - maintain >80% test coverage
-10. **ALWAYS run CI pipeline** - ensure `make ci-all` passes
-11. **ALWAYS use existing DI container** - don't create new service factories
-12. **ALWAYS follow template system** - use Jinja2 templates for output
-13. **ALWAYS implement proper error handling** - use custom exception hierarchy
-14. **ALWAYS follow existing protocols** - implement existing interfaces
+5. **ALWAYS use centralized configuration** - use `get_config(key, default)` instead of hardcoded values
+6. **ALWAYS use centralized logging** - use `get_logger(__name__)` instead of `logging.getLogger(__name__)`
+7. **ALWAYS use dependency injection** - never instantiate services directly
+8. **ALWAYS use OutputManager** - never use direct console.print in CLI commands
+9. **ALWAYS validate dependencies** - raise errors for missing dependencies
+10. **ALWAYS follow existing patterns** - don't reinvent the wheel
+11. **ALWAYS write comprehensive tests** - maintain >80% test coverage
+12. **ALWAYS run CI pipeline** - ensure `make ci-all` passes
+13. **ALWAYS use existing DI container** - don't create new service factories
+14. **ALWAYS follow template system** - use Jinja2 templates for output
+15. **ALWAYS implement proper error handling** - use custom exception hierarchy
+16. **ALWAYS follow existing protocols** - implement existing interfaces
 
 ### **AI Success Criteria:**
 - ✅ All code analysis uses aider.repomap.RepoMap (no custom AST parsing)
 - ✅ All analyzers use aider's tree-sitter capabilities via get_tags()
 - ✅ All I/O operations use aider.io.InputOutput
 - ✅ All file paths are absolute throughout the system
+- ✅ All configuration values use centralized ConfigService (no hardcoded values)
+- ✅ All logging uses centralized LoggingService (no direct logging.getLogger())
 - ✅ All code follows existing architectural patterns
 - ✅ All services use proper dependency injection
 - ✅ All CLI output goes through OutputManager

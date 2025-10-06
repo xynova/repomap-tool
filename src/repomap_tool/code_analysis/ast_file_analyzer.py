@@ -77,6 +77,25 @@ class ASTFileAnalyzer:
             # Resolve file path
             full_path = self._resolve_file_path(file_path)
 
+            # Check for syntax errors first
+            analysis_errors = []
+            try:
+                with open(full_path, "r", encoding="utf-8") as f:
+                    content = f.read()
+
+                # Try to parse Python files for syntax errors
+                if full_path.endswith(".py"):
+                    try:
+                        compile(content, full_path, "exec")
+                    except SyntaxError as e:
+                        analysis_errors.append(
+                            f"Syntax error at line {e.lineno}: {e.msg}"
+                        )
+                    except Exception as e:
+                        analysis_errors.append(f"Parse error: {str(e)}")
+            except Exception as e:
+                analysis_errors.append(f"File read error: {str(e)}")
+
             # Get aider's RepoMap for tree-sitter parsing
             repo_map = self._get_repo_map()
 
@@ -102,7 +121,7 @@ class ASTFileAnalyzer:
                 used_classes=[],  # TODO: Extract from tags if needed
                 used_variables=[],  # TODO: Extract from tags if needed
                 line_count=self._get_line_count(full_path),
-                analysis_errors=[],
+                analysis_errors=analysis_errors,
             )
 
             # Cache the result
@@ -169,32 +188,125 @@ class ASTFileAnalyzer:
     def _extract_imports_from_tags(
         self, tags: List[Any], file_path: str
     ) -> List[Import]:
-        """Extract imports from aider tags."""
+        """Extract imports from file content since aider tags don't include imports."""
         imports = []
 
-        # For now, we'll extract imports from the file content since aider tags
-        # don't directly provide import information. This is a simplified approach.
-        # TODO: Enhance this to use aider's more detailed parsing if available
-
         try:
-            # Read file content to extract imports (temporary approach)
+            # Read file content to extract imports
             with open(file_path, "r", encoding="utf-8") as f:
-                content = f.read()
+                lines = f.readlines()
 
-            # Simple import extraction for now - can be enhanced later
-            import_lines = [
-                line.strip()
-                for line in content.split("\n")
-                if line.strip().startswith("import ") or "require(" in line
-            ]
+            for line_num, line in enumerate(lines, 1):
+                line = line.strip()
 
-            for line_num, line in enumerate(import_lines, 1):
-                if line.startswith("import "):
-                    # Basic ES6 import parsing
+                # Skip empty lines and comments
+                if not line or line.startswith("#"):
+                    continue
+
+                # Handle Python imports
+                if line.startswith("import ") and " from " not in line:
+                    # Standard import: import module
+                    module = line[7:].strip()  # Remove "import "
+                    # Handle multiple imports: import os, sys
+                    for module_name in module.split(","):
+                        module_name = module_name.strip()
+                        if module_name:
+                            imports.append(
+                                Import(
+                                    module=module_name,
+                                    symbols=[],
+                                    is_relative=module_name.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module_name.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+                elif line.startswith("from "):
+                    # From import: from module import symbol
+                    if " import " in line:
+                        parts = line.split(" import ")
+                        if len(parts) == 2:
+                            from_part = parts[0].strip()  # "from module"
+                            import_part = parts[1].strip()  # "symbol"
+
+                            if from_part.startswith("from "):
+                                module = from_part[5:].strip()  # Remove "from "
+                                symbols = []
+
+                                # Handle multiple symbols: import os, sys
+                                for symbol in import_part.split(","):
+                                    symbol = symbol.strip()
+                                    if symbol:
+                                        symbols.append(symbol)
+
+                                imports.append(
+                                    Import(
+                                        module=module,
+                                        symbols=symbols,
+                                        is_relative=module.startswith("."),
+                                        import_type=(
+                                            ImportType.RELATIVE
+                                            if module.startswith(".")
+                                            else ImportType.ABSOLUTE
+                                        ),
+                                        line_number=line_num,
+                                    )
+                                )
+
+                # Handle JavaScript/TypeScript imports
+                elif line.startswith("import ") and (
+                    " from " in line or " = require(" in line
+                ):
                     if " from " in line:
+                        # ES6 import: import { symbol } from 'module'
                         parts = line.split(" from ")
                         if len(parts) == 2:
+                            symbols_part = parts[0].strip()
                             module = parts[1].strip().strip("'\"")
+
+                            symbols = []
+                            if symbols_part.startswith("import "):
+                                symbols_str = symbols_part[
+                                    7:
+                                ].strip()  # Remove "import "
+                                if symbols_str.startswith("{") and symbols_str.endswith(
+                                    "}"
+                                ):
+                                    # Named imports: { symbol1, symbol2 }
+                                    symbols_str = symbols_str[1:-1]  # Remove braces
+                                    for symbol in symbols_str.split(","):
+                                        symbol = symbol.strip()
+                                        if symbol:
+                                            symbols.append(symbol)
+                                elif symbols_str == "*":
+                                    # Namespace import: import * as name
+                                    symbols = ["*"]
+                                else:
+                                    # Default import: import name
+                                    symbols = [symbols_str]
+
+                            imports.append(
+                                Import(
+                                    module=module,
+                                    symbols=symbols,
+                                    is_relative=module.startswith("."),
+                                    import_type=(
+                                        ImportType.RELATIVE
+                                        if module.startswith(".")
+                                        else ImportType.ABSOLUTE
+                                    ),
+                                    line_number=line_num,
+                                )
+                            )
+                    elif " = require(" in line:
+                        # CommonJS require: const module = require('module')
+                        start = line.find("require(") + 8
+                        end = line.find(")", start)
+                        if start < end:
+                            module = line[start:end].strip().strip("'\"")
                             imports.append(
                                 Import(
                                     module=module,
@@ -208,25 +320,6 @@ class ASTFileAnalyzer:
                                     line_number=line_num,
                                 )
                             )
-                elif "require(" in line:
-                    # Basic CommonJS require parsing
-                    start = line.find("require(") + 8
-                    end = line.find(")", start)
-                    if start < end:
-                        module = line[start:end].strip().strip("'\"")
-                        imports.append(
-                            Import(
-                                module=module,
-                                symbols=[],
-                                is_relative=module.startswith("."),
-                                import_type=(
-                                    ImportType.RELATIVE
-                                    if module.startswith(".")
-                                    else ImportType.ABSOLUTE
-                                ),
-                                line_number=line_num,
-                            )
-                        )
 
         except Exception as e:
             logger.warning(f"Could not extract imports from {file_path}: {e}")
@@ -239,9 +332,117 @@ class ASTFileAnalyzer:
 
         for tag in tags:
             if tag.kind in ["def", "function"]:
-                functions.append(tag.name)
+                # Filter out false positives - aider sometimes tags variable assignments as 'def'
+                # We can identify these by checking if the name appears to be a variable assignment
+                # in the context of the file content
+                if not self._is_likely_variable_assignment(
+                    tag
+                ) and not self._is_likely_class_definition(tag):
+                    functions.append(tag.name)
 
         return functions
+
+    def _is_likely_variable_assignment(self, tag: Any) -> bool:
+        """Check if a tag is likely a variable assignment rather than a function definition."""
+        # This is a heuristic to filter out false positives from aider's tree-sitter
+        # Variable assignments that aider incorrectly tags as 'def' often have these characteristics:
+
+        # 1. Single word names that are common variable names
+        common_variable_names = {
+            "result",
+            "obj",
+            "message",
+            "counts",
+            "data",
+            "value",
+            "item",
+            "items",
+            "response",
+            "request",
+            "config",
+            "settings",
+            "options",
+            "params",
+            "args",
+            "kwargs",
+            "self",
+            "cls",
+            "var",
+            "temp",
+            "tmp",
+            "file",
+            "path",
+            "url",
+            "name",
+            "id",
+            "key",
+            "val",
+            "content",
+            "text",
+            "string",
+            "number",
+            "list",
+            "dict",
+            "tuple",
+            "set",
+            "bool",
+        }
+
+        if tag.name.lower() in common_variable_names:
+            return True
+
+        # 2. Names that are very short (1-3 characters) and lowercase
+        if len(tag.name) <= 3 and tag.name.islower():
+            return True
+
+        # 3. Names that are common variable patterns but not function patterns
+        # Functions typically have descriptive names, variables are often short/generic
+        # But we need to be careful not to filter out legitimate short function names
+        if (
+            tag.name.islower()
+            and len(tag.name) <= 6
+            and not any(
+                word in tag.name
+                for word in [
+                    "get",
+                    "set",
+                    "is",
+                    "has",
+                    "can",
+                    "should",
+                    "will",
+                    "do",
+                    "make",
+                    "create",
+                    "build",
+                    "process",
+                    "handle",
+                    "manage",
+                    "parse",
+                    "format",
+                    "validate",
+                    "check",
+                    "find",
+                    "search",
+                    "load",
+                    "save",
+                    "delete",
+                    "update",
+                    "add",
+                    "remove",
+                    "init",
+                    "method",
+                    "test",
+                    "run",
+                    "call",
+                    "exec",
+                    "eval",
+                ]
+            )
+        ):
+            return True
+
+        return False
 
     def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
         """Extract class names from aider tags."""
@@ -250,8 +451,27 @@ class ASTFileAnalyzer:
         for tag in tags:
             if tag.kind in ["class"]:
                 classes.append(tag.name)
+            elif tag.kind == "def" and self._is_likely_class_definition(tag):
+                # Aider sometimes tags class definitions as 'def'
+                classes.append(tag.name)
 
         return classes
+
+    def _is_likely_class_definition(self, tag: Any) -> bool:
+        """Check if a tag is likely a class definition rather than a function."""
+        # Class names typically follow PascalCase convention
+        if tag.name[0].isupper() and tag.name[1:].islower():
+            return True
+
+        # Class names that are all uppercase (constants/enums)
+        if tag.name.isupper():
+            return True
+
+        # Class names with multiple uppercase letters (PascalCase)
+        if any(c.isupper() for c in tag.name[1:]):
+            return True
+
+        return False
 
     def _extract_function_calls_from_tags(
         self, tags: List[Any], file_path: str
@@ -321,9 +541,9 @@ class ASTFileAnalyzer:
 
     def find_reverse_dependencies(
         self, file_path: str, all_files: List[str]
-    ) -> List[str]:
+    ) -> List[CrossFileRelationship]:
         """Find files that import the given file (reverse dependencies)."""
-        reverse_deps: List[str] = []
+        reverse_deps: List[CrossFileRelationship] = []
 
         try:
             # Get the module name for the target file
@@ -343,7 +563,15 @@ class ASTFileAnalyzer:
                             import_stmt.module == target_module
                             or import_stmt.module.endswith(f".{target_module}")
                         ):
-                            reverse_deps.append(other_file)
+                            reverse_deps.append(
+                                CrossFileRelationship(
+                                    source_file=other_file,
+                                    target_file=file_path,
+                                    relationship_type="imports",
+                                    line_number=import_stmt.line_number or 0,
+                                    details=f"Imports {import_stmt.module}",
+                                )
+                            )
                             break
                 except Exception as e:
                     logger.debug(

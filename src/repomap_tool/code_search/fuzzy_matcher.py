@@ -37,8 +37,8 @@ class FuzzyMatcher:
         cache_results: bool = True,
         verbose: bool = True,
         cache_max_size: int = 1000,
-        cache_ttl = get_config("CACHE_TTL", 3600),
-    ):
+        cache_ttl: int = get_config("CACHE_TTL", 3600),
+    ) -> None:
         """
         Initialize the fuzzy matcher.
 

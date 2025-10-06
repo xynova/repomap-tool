@@ -1,4 +1,5 @@
-from ..core.config_service import get_config
+from repomap_tool.core.config_service import get_config
+
 """
 System commands for RepoMap-Tool CLI.
 
@@ -35,7 +36,10 @@ def system() -> None:
 @click.option("--fuzzy/--no-fuzzy", default=True, help="Enable fuzzy matching")
 @click.option("--semantic/--no-semantic", default=True, help="Enable semantic matching")
 @click.option(
-    "--threshold = get_config("FUZZY_THRESHOLD", 0.7), type=float, help="Matching threshold (0.0-1.0)"
+    "--threshold",
+    default=get_config("FUZZY_THRESHOLD", 0.7),
+    type=float,
+    help="Matching threshold (0.0-1.0)",
 )
 @click.option("--cache-size", default=1000, type=int, help="Cache size for results")
 @click.pass_context

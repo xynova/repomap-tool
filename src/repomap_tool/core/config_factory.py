@@ -93,7 +93,7 @@ class ConfigFactory:
 
     @staticmethod
     def create_performance_config(
-        max_workers = get_config("MAX_WORKERS", 4),
+        max_workers: int = get_config("MAX_WORKERS", 4),
         enable_progress: bool = True,
     ) -> PerformanceConfig:
         """Create a PerformanceConfig with specified parameters.

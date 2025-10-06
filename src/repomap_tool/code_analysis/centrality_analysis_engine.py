@@ -224,7 +224,7 @@ class CentralityAnalysisEngine:
             ast_result.function_calls,
             ast_result.defined_functions,
             ast_result.imports,
-            limit = get_config("DEFAULT_LIMIT", 5),
+            limit=get_config("DEFAULT_LIMIT", 5),
         )
 
         return {
@@ -236,7 +236,7 @@ class CentralityAnalysisEngine:
                 ast_result.function_calls
             ),
             "top_called_functions": get_top_called_functions(
-                ast_result.function_calls, limit = get_config("DEFAULT_LIMIT", 5)
+                ast_result.function_calls, limit=get_config("DEFAULT_LIMIT", 5)
             ),
             "internal_functions": categorized_calls["internal"],
             "external_functions": categorized_calls["external"],
