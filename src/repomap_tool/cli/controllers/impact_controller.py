@@ -126,6 +126,11 @@ class ImpactController(BaseController):
         # Resolve file paths relative to project root
         resolved_paths = self.path_resolver.resolve_file_paths(changed_files)
 
+        # Get all files in project for comprehensive analysis
+        all_files = self.path_resolver.get_all_project_files()
+        # Validate that all file paths are absolute (architectural requirement)
+        all_files = self.path_resolver.resolve_file_paths(all_files)
+
         # Perform AST analysis for all files
         ast_results = self.ast_analyzer.analyze_multiple_files(resolved_paths)
 
@@ -137,7 +142,7 @@ class ImpactController(BaseController):
                 original_index = changed_files.index(file_path)
                 resolved_path = resolved_paths[original_index]
                 impact_analysis = self.impact_engine.analyze_file_impact(
-                    file_path, ast_results[resolved_path]
+                    file_path, ast_results[resolved_path], all_files
                 )
                 impact_analyses.append(impact_analysis)
             except Exception as e:
