@@ -610,6 +610,13 @@ docker run --rm -t -v /path/to/test:/workspace repomap-tool:local <command>
 - [ ] **Functionality verified working**
 ```
 
+### **File Path Display Rules:**
+- **ALWAYS escape square brackets in file paths** when displaying in tables or terminal output
+- **Square brackets `[` and `]` can be misinterpreted** by terminals, table libraries, or output systems
+- **Use `file_path.replace("[", "\[")`** to escape opening brackets in display contexts
+- **This prevents corruption** like `[id]` becoming `//` in table output
+- **Common issue**: Next.js dynamic routes like `[id]` get corrupted in terminal displays
+
 ### **Code Quality Gates:**
 - **Line length**: ≤88 characters (Black standard)
 - **Function length**: ≤50 lines
