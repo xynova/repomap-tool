@@ -437,15 +437,32 @@ class TestCLIProjectPathFix:
             mock_container = MagicMock()
             mock_create_container.return_value = mock_container
 
-            # Mock exploration controller
+            # Mock exploration controller to raise exception when methods are called
             mock_exploration_controller = MagicMock()
+            mock_exploration_controller.focus_tree.side_effect = Exception(
+                "Session not found"
+            )
+            mock_exploration_controller.expand_tree.side_effect = Exception(
+                "Session not found"
+            )
+            mock_exploration_controller.prune_tree.side_effect = Exception(
+                "Session not found"
+            )
+            mock_exploration_controller.map_tree.side_effect = Exception(
+                "Session not found"
+            )
+            mock_exploration_controller.list_trees.side_effect = Exception(
+                "Session not found"
+            )
             mock_container.exploration_controller.return_value = (
                 mock_exploration_controller
             )
 
-            # Mock session manager to return None (session not found)
+            # Mock session manager to raise exception when session not found
             mock_session_manager = MagicMock()
-            mock_session_manager.get_session.return_value = None
+            mock_session_manager.get_session.side_effect = Exception(
+                "Session not found"
+            )
             mock_container.session_manager.return_value = mock_session_manager
 
             # Set environment variable

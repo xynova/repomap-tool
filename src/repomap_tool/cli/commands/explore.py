@@ -5,7 +5,7 @@ This module contains commands for session-based exploration.
 """
 
 import sys
-from typing import Optional
+from typing import Any, Optional
 
 import click
 from rich.console import Console
@@ -26,6 +26,55 @@ def get_explore_console() -> Console:
     """Get console instance using dependency injection."""
     ctx = click.get_current_context()
     return get_console(ctx)
+
+
+def create_exploration_controller_with_repomap(
+    config_obj: Any, output_format: str = "text", verbose: bool = True
+) -> Any:
+    """
+    Create and properly configure an ExplorationController with repomap injection.
+
+    This helper function centralizes the controller setup logic and ensures
+    the critical repomap service is properly injected into all dependencies.
+
+    Args:
+        config_obj: RepoMapConfig object
+        output_format: Output format for the controller
+        verbose: Whether to enable verbose logging
+
+    Returns:
+        Properly configured ExplorationController instance
+    """
+    from repomap_tool.core.container import create_container
+    from repomap_tool.cli.controllers import ControllerConfig
+    from repomap_tool.cli.services import get_service_factory
+
+    # Create DI container
+    container = create_container(config_obj)
+
+    # Initialize RepoMap service (critical for controller dependencies)
+    service_factory = get_service_factory()
+    repomap = service_factory.create_repomap_service(config_obj)
+
+    # Create controller configuration
+    controller_config = ControllerConfig(
+        max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+        output_format=output_format,
+        verbose=verbose,
+    )
+
+    # Create exploration controller with injected dependencies
+    exploration_controller = container.exploration_controller()
+    exploration_controller.config = controller_config
+
+    # CRITICAL: Inject repomap into all controller dependencies
+    # This is the bug fix - these injections were missing in focus/expand/prune/map/trees commands
+    exploration_controller.search_controller.repomap_service = repomap
+    exploration_controller.tree_builder.repo_map = repomap
+    exploration_controller.tree_builder.entrypoint_discoverer.repo_map = repomap
+    exploration_controller.search_controller.config = controller_config
+
+    return exploration_controller
 
 
 @click.group()
@@ -103,27 +152,10 @@ def start(
         output_manager.display_progress(f"🎯 Intent: {intent}")
         output_manager.display_progress(f"📁 Project: {resolved_project_path}")
 
-        # Use DI container to get Controllers (following architectural rules)
-        from repomap_tool.core.container import create_container
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Create DI container and get Controller
-        container = create_container(config_obj)
-        exploration_controller = container.exploration_controller()
-
-        # Inject repo_map into the controller's dependencies
-        exploration_controller.search_controller.repomap_service = repomap
-        exploration_controller.tree_builder.repo_map = repomap
-        exploration_controller.tree_builder.entrypoint_discoverer.repo_map = repomap
-
-        # Configure Controller
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format=output,
-            verbose=True,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format=output, verbose=True
         )
-        exploration_controller.config = controller_config
-        exploration_controller.search_controller.config = controller_config
 
         # Execute exploration
         result_view_model = exploration_controller.start_exploration(
@@ -180,30 +212,9 @@ def focus(tree_id: str, session: Optional[str], output: str) -> None:
             f"🎯 Focused on tree: {tree_id} in session {session_id}"
         )
 
-        # Create exploration controller
-        from repomap_tool.cli.controllers.exploration_controller import (
-            ExplorationController,
-        )
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Get services from DI container
-        from repomap_tool.core.container import create_container
-
-        container = create_container(config_obj)
-
-        # Create controller configuration
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format=output,
-            verbose=True,
-        )
-
-        # Create exploration controller with injected dependencies
-        exploration_controller = ExplorationController(
-            search_controller=container.search_controller(),
-            session_manager=container.session_manager(),
-            tree_builder=container.tree_builder(),
-            config=controller_config,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format=output, verbose=True
         )
 
         # Execute focus operation
@@ -252,30 +263,9 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
             verbose=True,
         )
 
-        # Create exploration controller
-        from repomap_tool.cli.controllers.exploration_controller import (
-            ExplorationController,
-        )
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Get services from DI container
-        from repomap_tool.core.container import create_container
-
-        container = create_container(config_obj)
-
-        # Create controller configuration
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format="text",
-            verbose=True,
-        )
-
-        # Create exploration controller with injected dependencies
-        exploration_controller = ExplorationController(
-            search_controller=container.search_controller(),
-            session_manager=container.session_manager(),
-            tree_builder=container.tree_builder(),
-            config=controller_config,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format="text", verbose=True
         )
 
         # Execute expansion operation
@@ -325,30 +315,9 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
             verbose=True,
         )
 
-        # Create exploration controller
-        from repomap_tool.cli.controllers.exploration_controller import (
-            ExplorationController,
-        )
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Get services from DI container
-        from repomap_tool.core.container import create_container
-
-        container = create_container(config_obj)
-
-        # Create controller configuration
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format="text",
-            verbose=True,
-        )
-
-        # Create exploration controller with injected dependencies
-        exploration_controller = ExplorationController(
-            search_controller=container.search_controller(),
-            session_manager=container.session_manager(),
-            tree_builder=container.tree_builder(),
-            config=controller_config,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format="text", verbose=True
         )
 
         # Execute pruning operation
@@ -400,30 +369,9 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
             verbose=True,
         )
 
-        # Create exploration controller
-        from repomap_tool.cli.controllers.exploration_controller import (
-            ExplorationController,
-        )
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Get services from DI container
-        from repomap_tool.core.container import create_container
-
-        container = create_container(config_obj)
-
-        # Create controller configuration
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format="text",
-            verbose=True,
-        )
-
-        # Create exploration controller with injected dependencies
-        exploration_controller = ExplorationController(
-            search_controller=container.search_controller(),
-            session_manager=container.session_manager(),
-            tree_builder=container.tree_builder(),
-            config=controller_config,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format="text", verbose=True
         )
 
         # Execute mapping operation
@@ -480,30 +428,9 @@ def trees(session: Optional[str]) -> None:
             verbose=True,
         )
 
-        # Create exploration controller
-        from repomap_tool.cli.controllers.exploration_controller import (
-            ExplorationController,
-        )
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Get services from DI container
-        from repomap_tool.core.container import create_container
-
-        container = create_container(config_obj)
-
-        # Create controller configuration
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format="text",
-            verbose=True,
-        )
-
-        # Create exploration controller with injected dependencies
-        exploration_controller = ExplorationController(
-            search_controller=container.search_controller(),
-            session_manager=container.session_manager(),
-            tree_builder=container.tree_builder(),
-            config=controller_config,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format="text", verbose=True
         )
 
         # Execute tree listing operation
@@ -554,30 +481,9 @@ def status(session: Optional[str]) -> None:
             verbose=True,
         )
 
-        # Create exploration controller
-        from repomap_tool.cli.controllers.exploration_controller import (
-            ExplorationController,
-        )
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Get services from DI container
-        from repomap_tool.core.container import create_container
-
-        container = create_container(config_obj)
-
-        # Create controller configuration
-        controller_config = ControllerConfig(
-            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            output_format="text",
-            verbose=True,
-        )
-
-        # Create exploration controller with injected dependencies
-        exploration_controller = ExplorationController(
-            search_controller=container.search_controller(),
-            session_manager=container.session_manager(),
-            tree_builder=container.tree_builder(),
-            config=controller_config,
+        # Create properly configured exploration controller with repomap injection
+        exploration_controller = create_exploration_controller_with_repomap(
+            config_obj, output_format="text", verbose=True
         )
 
         # Execute status operation
