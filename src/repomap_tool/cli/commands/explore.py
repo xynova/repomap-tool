@@ -14,7 +14,8 @@ from rich.panel import Panel
 
 from ...models import create_error_response
 from ...core import RepoMapService
-from ..config.loader import resolve_project_path, create_tree_config
+from ...core.config_service import get_config
+from ..config.loader import resolve_project_path
 from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.session import get_project_path_from_session, get_or_create_session
 from ..utils.console import get_console
@@ -43,6 +44,13 @@ def explore() -> None:
 @click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
 @click.option("--max-depth", default=3, help="Maximum tree depth")
 @click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
+)
+@click.option(
     "--config",
     "-c",
     type=click.Path(exists=True),
@@ -53,19 +61,31 @@ def start(
     project_path: Optional[str],
     session: Optional[str],
     max_depth: int,
+    output: str,
     config: Optional[str],
 ) -> None:
     """Discover exploration trees from intent."""
 
     try:
+        ctx = click.get_current_context()
         # Resolve project path from argument, config file, or discovery
         resolved_project_path = resolve_project_path(project_path, config)
 
         # Get or create session ID
         session_id = get_or_create_session(session)
 
-        # Create configuration
-        config_obj = create_tree_config(resolved_project_path, max_depth, verbose=True)
+        # Load or create configuration (properly handles config files)
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Override tree-specific settings
+        config_obj.trees.max_depth = max_depth
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
@@ -75,7 +95,7 @@ def start(
 
         # Use OutputManager for progress and success messages
         output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_config = OutputConfig(format=OutputFormat(output))
 
         output_manager.display_progress(
             f"🌳 Starting exploration session: {session_id}"
@@ -83,10 +103,39 @@ def start(
         output_manager.display_progress(f"🎯 Intent: {intent}")
         output_manager.display_progress(f"📁 Project: {resolved_project_path}")
 
-        # Placeholder for tree discovery logic
-        # TODO: Implement actual tree discovery
-        output_manager.display_success("Exploration session created", output_config)
-        output_manager.display_progress("Use: focus tree_1 to focus on a tree")
+        # Use DI container to get Controllers (following architectural rules)
+        from repomap_tool.core.container import create_container
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Create DI container and get Controller
+        container = create_container(config_obj)
+        exploration_controller = container.exploration_controller()
+
+        # Inject repo_map into the controller's dependencies
+        exploration_controller.search_controller.repomap_service = repomap
+        exploration_controller.tree_builder.repo_map = repomap
+        exploration_controller.tree_builder.entrypoint_discoverer.repo_map = repomap
+
+        # Configure Controller
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format=output,
+            verbose=True,
+        )
+        exploration_controller.config = controller_config
+        exploration_controller.search_controller.config = controller_config
+
+        # Execute exploration
+        result_view_model = exploration_controller.start_exploration(
+            intent=intent,
+            project_path=resolved_project_path,
+            max_depth=max_depth,
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+        )
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat(output))
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ExplorationError")
@@ -100,17 +149,72 @@ def start(
 @explore.command()
 @click.argument("tree_id", type=str)
 @click.option("--session", "-s", help="Session ID")
-def focus(tree_id: str, session: Optional[str]) -> None:
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format: 'text' for rich LLM-optimized output, 'json' for structured data",
+)
+def focus(tree_id: str, session: Optional[str], output: str) -> None:
     """Focus on a specific exploration tree."""
 
     try:
+        ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
+
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=None,  # Will be resolved from session
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
         # Use OutputManager for progress message
         output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display_progress(
             f"🎯 Focused on tree: {tree_id} in session {session_id}"
         )
-        # TODO: Implement actual tree focus logic
+
+        # Create exploration controller
+        from repomap_tool.cli.controllers.exploration_controller import (
+            ExplorationController,
+        )
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Get services from DI container
+        from repomap_tool.core.container import create_container
+
+        container = create_container(config_obj)
+
+        # Create controller configuration
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format=output,
+            verbose=True,
+        )
+
+        # Create exploration controller with injected dependencies
+        exploration_controller = ExplorationController(
+            search_controller=container.search_controller(),
+            session_manager=container.session_manager(),
+            tree_builder=container.tree_builder(),
+            config=controller_config,
+        )
+
+        # Execute focus operation
+        result_view_model = exploration_controller.focus_tree(
+            session_id=session_id,
+            tree_id=tree_id,
+        )
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat(output))
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "FocusError")
@@ -129,6 +233,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
     """Expand specific areas of the exploration tree."""
 
     try:
+        ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
         # Use OutputManager for success message
@@ -137,7 +242,52 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         output_manager.display_success(
             f"Expanded area: {expansion_area} in tree {tree_id}", output_config
         )
-        # TODO: Implement actual tree expansion logic
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=None,  # Will be resolved from session
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Create exploration controller
+        from repomap_tool.cli.controllers.exploration_controller import (
+            ExplorationController,
+        )
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Get services from DI container
+        from repomap_tool.core.container import create_container
+
+        container = create_container(config_obj)
+
+        # Create controller configuration
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format="text",
+            verbose=True,
+        )
+
+        # Create exploration controller with injected dependencies
+        exploration_controller = ExplorationController(
+            search_controller=container.search_controller(),
+            session_manager=container.session_manager(),
+            tree_builder=container.tree_builder(),
+            config=controller_config,
+        )
+
+        # Execute expansion operation
+        result_view_model = exploration_controller.expand_tree(
+            session_id=session_id,
+            tree_id=tree_id,
+            area=expansion_area,
+        )
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ExpansionError")
@@ -156,6 +306,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
     """Prune specific areas of the exploration tree."""
 
     try:
+        ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
         # Use OutputManager for success message
@@ -164,7 +315,53 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         output_manager.display_success(
             f"Pruned area: {prune_area} from tree {tree_id}", output_config
         )
-        # TODO: Implement actual tree pruning logic
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=None,  # Will be resolved from session
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Create exploration controller
+        from repomap_tool.cli.controllers.exploration_controller import (
+            ExplorationController,
+        )
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Get services from DI container
+        from repomap_tool.core.container import create_container
+
+        container = create_container(config_obj)
+
+        # Create controller configuration
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format="text",
+            verbose=True,
+        )
+
+        # Create exploration controller with injected dependencies
+        exploration_controller = ExplorationController(
+            search_controller=container.search_controller(),
+            session_manager=container.session_manager(),
+            tree_builder=container.tree_builder(),
+            config=controller_config,
+        )
+
+        # Execute pruning operation
+        result_view_model = exploration_controller.prune_tree(
+            session_id=session_id,
+            tree_id=tree_id,
+            area=prune_area,
+            reason="User requested",
+        )
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "PruningError")
@@ -183,6 +380,7 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
     """Generate repomap from current tree state."""
 
     try:
+        ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
         # Use OutputManager for success message
@@ -192,7 +390,53 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
             f"Generated map for tree {tree_id} (include_code: {include_code})",
             output_config,
         )
-        # TODO: Implement actual tree mapping logic
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=None,  # Will be resolved from session
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Create exploration controller
+        from repomap_tool.cli.controllers.exploration_controller import (
+            ExplorationController,
+        )
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Get services from DI container
+        from repomap_tool.core.container import create_container
+
+        container = create_container(config_obj)
+
+        # Create controller configuration
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format="text",
+            verbose=True,
+        )
+
+        # Create exploration controller with injected dependencies
+        exploration_controller = ExplorationController(
+            search_controller=container.search_controller(),
+            session_manager=container.session_manager(),
+            tree_builder=container.tree_builder(),
+            config=controller_config,
+        )
+
+        # Execute mapping operation
+        result_view_model = exploration_controller.map_tree(
+            session_id=session_id,
+            tree_id=tree_id,
+            include_code=include_code,
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+        )
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "MappingError")
@@ -209,6 +453,7 @@ def trees(session: Optional[str]) -> None:
     """List all exploration trees in the session."""
 
     try:
+        ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
 
         # Display placeholder trees table
@@ -225,7 +470,48 @@ def trees(session: Optional[str]) -> None:
         table.add_row("tree_2", "auth.py", "8", "")
 
         output_manager.display(table, output_config)
-        # TODO: Implement actual tree listing logic
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=None,  # Will be resolved from session
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Create exploration controller
+        from repomap_tool.cli.controllers.exploration_controller import (
+            ExplorationController,
+        )
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Get services from DI container
+        from repomap_tool.core.container import create_container
+
+        container = create_container(config_obj)
+
+        # Create controller configuration
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format="text",
+            verbose=True,
+        )
+
+        # Create exploration controller with injected dependencies
+        exploration_controller = ExplorationController(
+            search_controller=container.search_controller(),
+            session_manager=container.session_manager(),
+            tree_builder=container.tree_builder(),
+            config=controller_config,
+        )
+
+        # Execute tree listing operation
+        result_view_model = exploration_controller.list_trees(session_id=session_id)
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "TreeListError")
@@ -242,6 +528,7 @@ def status(session: Optional[str]) -> None:
     """Show current exploration session status."""
 
     try:
+        ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
 
         # Display session info
@@ -257,7 +544,50 @@ def status(session: Optional[str]) -> None:
         table.add_row("Current Focus", "tree_1")
 
         output_manager.display(table, output_config)
-        # TODO: Implement actual session status logic
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=None,  # Will be resolved from session
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Create exploration controller
+        from repomap_tool.cli.controllers.exploration_controller import (
+            ExplorationController,
+        )
+        from repomap_tool.cli.controllers import ControllerConfig
+
+        # Get services from DI container
+        from repomap_tool.core.container import create_container
+
+        container = create_container(config_obj)
+
+        # Create controller configuration
+        controller_config = ControllerConfig(
+            max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            output_format="text",
+            verbose=True,
+        )
+
+        # Create exploration controller with injected dependencies
+        exploration_controller = ExplorationController(
+            search_controller=container.search_controller(),
+            session_manager=container.session_manager(),
+            tree_builder=container.tree_builder(),
+            config=controller_config,
+        )
+
+        # Execute status operation
+        result_view_model = exploration_controller.get_session_status(
+            session_id=session_id
+        )
+
+        # Display results
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "StatusError")

@@ -1,0 +1,66 @@
+{# Tree Mapping Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}🗺️{% endif %} Tree Mapping: {{ data.tree_id }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Tree ID: {{ data.tree_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Nodes: {{ data.total_nodes }}
+{% if hierarchical %}├──{% else %}•{% endif %} Max Depth: {{ data.max_depth }}
+{% if hierarchical %}├──{% else %}•{% endif %} Include Code: {{ "Yes" if data.include_code else "No" }}
+{% if hierarchical %}├──{% else %}•{% endif %} Token Count: {{ data.token_count }}
+{% if hierarchical %}├──{% else %}•{% endif %} Max Tokens: {{ data.max_tokens }}
+{% if hierarchical %}└──{% else %}•{% endif %} Token Usage: {{ ((data.token_count / data.max_tokens) * 100) | round(1) }}%
+
+{# Tree structure section #}
+{% if data.tree_structure %}
+{% if emoji %}🌳{% endif %} TREE STRUCTURE:
+{% if hierarchical %}├──{% else %}•{% endif %} Node Count: {{ data.tree_structure.node_count }}
+{% if hierarchical %}├──{% else %}•{% endif %} Current Depth: {{ data.tree_structure.current_depth }}
+{% if hierarchical %}├──{% else %}•{% endif %} Max Depth: {{ data.tree_structure.max_depth }}
+{% if hierarchical %}├──{% else %}•{% endif %} Expanded Areas: {{ data.tree_structure.expanded_areas | length }}
+{% if hierarchical %}└──{% else %}•{% endif %} Pruned Areas: {{ data.tree_structure.pruned_areas | length }}
+
+{# Node details #}
+{% if data.tree_structure.nodes %}
+{% if emoji %}📋{% endif %} NODES:
+{% for node in data.tree_structure.nodes[:15] %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ node.identifier }}
+{% if hierarchical %}│   {% else %}  {% endif %}Location: {{ node.location }}
+{% if hierarchical %}│   {% else %}  {% endif %}Type: {{ node.type }}
+{% if hierarchical %}│   {% else %}  {% endif %}Depth: {{ node.depth }}
+{% if hierarchical %}│   {% else %}  {% endif %}Expanded: {{ "Yes" if node.expanded else "No" }}
+{% if hierarchical %}│   {% else %}  {% endif %}Children: {{ node.children_count }}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% if data.tree_structure.nodes | length > 15 %}
+{% if hierarchical %}└──{% else %}•{% endif %} ... and {{ data.tree_structure.nodes | length - 15 }} more nodes
+{% endif %}
+{% endif %}
+{% endif %}
+
+{# Code snippets section #}
+{% if data.include_code and data.code_snippets %}
+{% if emoji %}💻{% endif %} CODE SNIPPETS:
+{% for snippet in data.code_snippets[:5] %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ snippet.identifier }}
+{% if hierarchical %}│   {% else %}  {% endif %}Location: {{ snippet.location }}
+{% if hierarchical %}│   {% else %}  {% endif %}Type: {{ snippet.type }}
+{% if hierarchical %}│   {% else %}  {% endif %}Tokens: {{ snippet.tokens_used }}
+{% if snippet.content %}
+{% if hierarchical %}│   {% else %}  {% endif %}Content: {{ snippet.content[:100] }}{% if snippet.content | length > 100 %}...{% endif %}
+{% endif %}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% if data.code_snippets | length > 5 %}
+{% if hierarchical %}└──{% else %}•{% endif %} ... and {{ data.code_snippets | length - 5 }} more snippets
+{% endif %}
+{% endif %}

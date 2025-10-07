@@ -1,0 +1,38 @@
+{# Tree Listing Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}🌳{% endif %} Tree Listing: {{ data.session_id }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Session ID: {{ data.session_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Trees: {{ data.total_trees }}
+{% if hierarchical %}├──{% else %}•{% endif %} Current Focus: {{ data.current_focus or "None" }}
+{% if hierarchical %}└──{% else %}•{% endif %} Trees Listed: {{ data.trees | length }}
+
+{# Trees section #}
+{% if data.trees %}
+{% if emoji %}🌲{% endif %} TREES:
+{% for tree in data.trees %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ tree.tree_id }}: {{ tree.context_name }}
+{% if hierarchical %}│   {% else %}  {% endif %}Confidence: {{ (tree.confidence * 100) | round(1) }}%
+{% if hierarchical %}│   {% else %}  {% endif %}Entrypoints: {{ tree.entrypoints | length }}
+{% if hierarchical %}│   {% else %}  {% endif %}Total Nodes: {{ tree.total_nodes }}
+{% if hierarchical %}│   {% else %}  {% endif %}Max Depth: {{ tree.max_depth }}
+{% if hierarchical %}│   {% else %}  {% endif %}Root File: {{ tree.root_file }}
+{% if tree.description %}
+{% if hierarchical %}│   {% else %}  {% endif %}Description: {{ tree.description[:100] }}{% if tree.description | length > 100 %}...{% endif %}
+{% endif %}
+{% if data.current_focus == tree.tree_id %}
+{% if hierarchical %}│   {% else %}  {% endif %}{% if emoji %}🎯{% endif %} CURRENT FOCUS
+{% endif %}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No trees found in session
+{% endif %}

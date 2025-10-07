@@ -107,11 +107,11 @@ def handle_authentication_request():
         export_expected = f"Set: export REPOMAP_SESSION={session_id}"
         if export_expected not in result.output:
             # If export command not found, just verify session was created
-            assert "Exploration session created" in result.output
+            assert "Exploration Session:" in result.output
         else:
             assert export_expected in result.output
         # The command should create an exploration session
-        assert "Exploration session created" in result.output
+        assert "Exploration Session:" in result.output
 
         # Note: Explore command is a placeholder implementation that doesn't create session files
         # The command shows status messages but doesn't actually persist sessions

@@ -1,0 +1,38 @@
+{# Tree Cluster Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}🌳{% endif %} Tree Cluster: {{ data.context_name }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Tree ID: {{ data.tree_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Confidence: {{ (data.confidence * 100) | round(1) }}%
+{% if hierarchical %}├──{% else %}•{% endif %} Total Nodes: {{ data.total_nodes }}
+{% if hierarchical %}├──{% else %}•{% endif %} Max Depth: {{ data.max_depth }}
+{% if hierarchical %}└──{% else %}•{% endif %} Root File: {{ data.root_file }}
+
+{# Description section #}
+{% if data.description %}
+{% if emoji %}📝{% endif %} DESCRIPTION:
+{{ data.description }}
+{% endif %}
+
+{# Entrypoints section #}
+{% if data.entrypoints %}
+{% if emoji %}🎯{% endif %} ENTRYPOINTS:
+{% for entrypoint in data.entrypoints %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ entrypoint.identifier }}
+{% if hierarchical %}│   {% else %}  {% endif %}Location: {{ entrypoint.location }}
+{% if hierarchical %}│   {% else %}  {% endif %}Type: {{ entrypoint.type }}
+{% if hierarchical %}│   {% else %}  {% endif %}Depth: {{ entrypoint.depth }}
+{% if hierarchical %}│   {% else %}  {% endif %}Relevance: {{ (entrypoint.relevance_score * 100) | round(1) }}%
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No entrypoints found
+{% endif %}

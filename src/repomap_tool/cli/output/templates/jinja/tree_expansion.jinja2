@@ -1,0 +1,32 @@
+{# Tree Expansion Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}📈{% endif %} Tree Expansion: {{ data.expanded_area }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Tree ID: {{ data.tree_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Expanded Area: {{ data.expanded_area }}
+{% if hierarchical %}├──{% else %}•{% endif %} New Nodes: {{ data.new_nodes | length }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Nodes: {{ data.total_nodes }}
+{% if hierarchical %}├──{% else %}•{% endif %} Expansion Depth: {{ data.expansion_depth }}
+{% if hierarchical %}└──{% else %}•{% endif %} Confidence: {{ (data.confidence_score * 100) | round(1) }}%
+
+{# New nodes section #}
+{% if data.new_nodes %}
+{% if emoji %}🆕{% endif %} NEW NODES:
+{% for node in data.new_nodes %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ node.identifier }}
+{% if hierarchical %}│   {% else %}  {% endif %}Location: {{ node.location }}
+{% if hierarchical %}│   {% else %}  {% endif %}Type: {{ node.type }}
+{% if hierarchical %}│   {% else %}  {% endif %}Depth: {{ node.depth }}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No new nodes added
+{% endif %}

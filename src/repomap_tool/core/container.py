@@ -40,8 +40,14 @@ if TYPE_CHECKING:
     )
     from repomap_tool.code_exploration.tree_mapper import TreeMapper
     from repomap_tool.code_exploration.tree_clusters import TreeClusterer
+    from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
+    from repomap_tool.code_exploration.tree_builder import TreeBuilder
     from repomap_tool.cli.controllers.centrality_controller import CentralityController
     from repomap_tool.cli.controllers.impact_controller import ImpactController
+    from repomap_tool.cli.controllers.search_controller import SearchController
+    from repomap_tool.cli.controllers.exploration_controller import (
+        ExplorationController,
+    )
     from rich.console import Console
 
 # Legacy factory functions removed - using DI container instead
@@ -252,6 +258,52 @@ class Container(containers.DeclarativeContainer):
             impact_engine=impact_analysis_engine,
             ast_analyzer=ast_analyzer,
             path_resolver=path_resolver,
+        ),
+    )
+
+    # Entrypoint discoverer for exploration
+    entrypoint_discoverer: "providers.Factory[EntrypointDiscoverer]" = cast(
+        "providers.Factory[EntrypointDiscoverer]",
+        providers.Factory(
+            "repomap_tool.code_exploration.discovery_engine.EntrypointDiscoverer",
+            repo_map=None,  # Will be injected from context
+            import_analyzer=import_analyzer,
+            dependency_graph=dependency_graph,
+            centrality_calculator=centrality_calculator,
+            impact_analyzer=impact_analyzer,
+        ),
+    )
+
+    # Tree builder for exploration
+    tree_builder: "providers.Factory[TreeBuilder]" = cast(
+        "providers.Factory[TreeBuilder]",
+        providers.Factory(
+            "repomap_tool.code_exploration.tree_builder.TreeBuilder",
+            repo_map=None,  # Will be injected from context
+            entrypoint_discoverer=entrypoint_discoverer,
+        ),
+    )
+
+    # Search controller for exploration
+    search_controller: "providers.Factory[SearchController]" = cast(
+        "providers.Factory[SearchController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.search_controller.SearchController",
+            repomap_service=None,  # Will be injected from context
+            search_engine=None,  # Optional
+            fuzzy_matcher=fuzzy_matcher,
+            semantic_matcher=adaptive_semantic_matcher,
+        ),
+    )
+
+    # Exploration controller
+    exploration_controller: "providers.Factory[ExplorationController]" = cast(
+        "providers.Factory[ExplorationController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.exploration_controller.ExplorationController",
+            search_controller=search_controller,
+            session_manager=session_manager,
+            tree_builder=tree_builder,
         ),
     )
 

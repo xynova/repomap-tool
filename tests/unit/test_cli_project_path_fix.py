@@ -14,6 +14,7 @@ from click.testing import CliRunner
 
 from repomap_tool.cli import cli, get_project_path_from_session
 from repomap_tool.models import ExplorationSession
+from repomap_tool.cli.controllers.view_models import TreeFocusViewModel
 from repomap_tool.code_exploration import SessionManager
 
 
@@ -99,27 +100,41 @@ class TestCLIProjectPathFix:
         session_id = "test_session_456"
         project_path = str(self.test_project_dir)
 
-        # Create a mock session
+        # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
+        test_tree = MagicMock()
+        test_tree.tree_id = "test_tree_id"
+        test_tree.context_name = "Test Tree"
+        test_tree.expanded_areas = set()
+        test_tree.pruned_areas = set()
+        test_tree.nodes = []
+        test_tree.max_depth = 3
+        session.add_tree(test_tree)
 
-        # Mock the session manager and tree manager
+        # Mock the DI container and its services
         with (
             patch(
-                "repomap_tool.code_exploration.SessionManager"
-            ) as mock_session_manager_class,
-            patch(
-                "repomap_tool.code_exploration.TreeManager"
-            ) as mock_tree_manager_class,
+                "repomap_tool.core.container.create_container"
+            ) as mock_create_container,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
-            mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
-            mock_session_manager.get_session.return_value = session
+            # Create mock container with mock services
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
 
-            mock_tree_manager = MagicMock()
-            mock_tree_manager_class.return_value = mock_tree_manager
-            mock_tree_manager.focus_tree.return_value = True
+            # Mock session manager
+            mock_session_manager = MagicMock()
+            mock_session_manager.get_session.return_value = session
+            mock_container.session_manager.return_value = mock_session_manager
+
+            # Mock tree builder
+            mock_tree_builder = MagicMock()
+            mock_container.tree_builder.return_value = mock_tree_builder
+
+            # Mock search controller
+            mock_search_controller = MagicMock()
+            mock_container.search_controller.return_value = mock_search_controller
 
             mock_repomap = MagicMock()
             mock_repomap_class.return_value = mock_repomap
@@ -153,27 +168,42 @@ class TestCLIProjectPathFix:
         session_id = "test_session_789"
         project_path = str(self.test_project_dir)
 
-        # Create a mock session
+        # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
+        test_tree = MagicMock()
+        test_tree.tree_id = "current"  # Use "current" as the tree ID
+        test_tree.context_name = "Test Tree"
+        test_tree.expanded_areas = set()
+        test_tree.pruned_areas = set()
+        test_tree.nodes = []
+        test_tree.max_depth = 3
+        session.add_tree(test_tree)
+        session.set_current_focus("current")  # Set as current focus
 
-        # Mock the session manager and tree manager
+        # Mock the DI container and its services
         with (
             patch(
-                "repomap_tool.code_exploration.SessionManager"
-            ) as mock_session_manager_class,
-            patch(
-                "repomap_tool.code_exploration.TreeManager"
-            ) as mock_tree_manager_class,
+                "repomap_tool.core.container.create_container"
+            ) as mock_create_container,
             patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
         ):
 
-            mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
-            mock_session_manager.get_session.return_value = session
+            # Create mock container with mock services
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
 
-            mock_tree_manager = MagicMock()
-            mock_tree_manager_class.return_value = mock_tree_manager
-            mock_tree_manager.expand_tree.return_value = True
+            # Mock session manager
+            mock_session_manager = MagicMock()
+            mock_session_manager.get_session.return_value = session
+            mock_container.session_manager.return_value = mock_session_manager
+
+            # Mock tree builder
+            mock_tree_builder = MagicMock()
+            mock_container.tree_builder.return_value = mock_tree_builder
+
+            # Mock search controller
+            mock_search_controller = MagicMock()
+            mock_container.search_controller.return_value = mock_search_controller
 
             mock_repomap = MagicMock()
             mock_repomap_class.return_value = mock_repomap
@@ -205,30 +235,43 @@ class TestCLIProjectPathFix:
         session_id = "test_session_101"
         project_path = str(self.test_project_dir)
 
-        # Create a mock session
+        # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
+        test_tree = MagicMock()
+        test_tree.tree_id = "test_tree_id"
+        test_tree.context_name = "Test Tree"
+        test_tree.expanded_areas = set()
+        test_tree.pruned_areas = set()
+        test_tree.nodes = []
+        test_tree.max_depth = 3
+        session.add_tree(test_tree)
+        session.set_current_focus("test_tree_id")
 
-        # Mock the session manager and tree manager
+        # Mock the DI container
         with (
             patch(
-                "repomap_tool.code_exploration.SessionManager"
-            ) as mock_session_manager_class,
-            patch(
-                "repomap_tool.code_exploration.TreeManager"
-            ) as mock_tree_manager_class,
-            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
+                "repomap_tool.core.container.create_container"
+            ) as mock_create_container,
         ):
+            # Create mock container
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
 
+            # Mock exploration controller
+            mock_exploration_controller = MagicMock()
+            mock_container.exploration_controller.return_value = (
+                mock_exploration_controller
+            )
+
+            # Mock session manager
             mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = session
+            mock_container.session_manager.return_value = mock_session_manager
 
+            # Mock tree manager
             mock_tree_manager = MagicMock()
-            mock_tree_manager_class.return_value = mock_tree_manager
             mock_tree_manager.prune_tree.return_value = True
-
-            mock_repomap = MagicMock()
-            mock_repomap_class.return_value = mock_repomap
+            mock_container.tree_manager.return_value = mock_tree_manager
 
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
@@ -257,35 +300,48 @@ class TestCLIProjectPathFix:
         session_id = "test_session_202"
         project_path = str(self.test_project_dir)
 
-        # Create a mock session
+        # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
+        test_tree = MagicMock()
+        test_tree.tree_id = "test_tree_id"
+        test_tree.context_name = "Test Tree"
+        test_tree.expanded_areas = set()
+        test_tree.pruned_areas = set()
+        test_tree.nodes = []
+        test_tree.max_depth = 3
+        session.add_tree(test_tree)
+        session.set_current_focus("test_tree_id")
 
-        # Mock the session manager and tree manager
+        # Mock the DI container
         with (
             patch(
-                "repomap_tool.code_exploration.SessionManager"
-            ) as mock_session_manager_class,
-            patch(
-                "repomap_tool.code_exploration.TreeManager"
-            ) as mock_tree_manager_class,
-            patch("repomap_tool.code_exploration.TreeMapper") as mock_tree_mapper_class,
-            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
+                "repomap_tool.core.container.create_container"
+            ) as mock_create_container,
         ):
+            # Create mock container
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
 
+            # Mock exploration controller
+            mock_exploration_controller = MagicMock()
+            mock_container.exploration_controller.return_value = (
+                mock_exploration_controller
+            )
+
+            # Mock session manager
             mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = session
+            mock_container.session_manager.return_value = mock_session_manager
 
+            # Mock tree manager
             mock_tree_manager = MagicMock()
-            mock_tree_manager_class.return_value = mock_tree_manager
             mock_tree_manager.get_tree_state.return_value = MagicMock()
+            mock_container.tree_manager.return_value = mock_tree_manager
 
+            # Mock tree mapper
             mock_tree_mapper = MagicMock()
-            mock_tree_mapper_class.return_value = mock_tree_mapper
             mock_tree_mapper.generate_tree_map.return_value = "Mock tree map"
-
-            mock_repomap = MagicMock()
-            mock_repomap_class.return_value = mock_repomap
+            mock_container.tree_mapper.return_value = mock_tree_mapper
 
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
@@ -316,22 +372,35 @@ class TestCLIProjectPathFix:
 
         # Create a mock session with some trees
         session = ExplorationSession(session_id=session_id, project_path=project_path)
-        session.exploration_trees = {"tree1": MagicMock(), "tree2": MagicMock()}
+        tree1 = MagicMock()
+        tree1.tree_id = "tree1"
+        tree1.context_name = "Tree 1"
+        tree2 = MagicMock()
+        tree2.tree_id = "tree2"
+        tree2.context_name = "Tree 2"
+        session.add_tree(tree1)
+        session.add_tree(tree2)
 
-        # Mock the session manager
+        # Mock the DI container
         with (
             patch(
-                "repomap_tool.code_exploration.SessionManager"
-            ) as mock_session_manager_class,
-            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
+                "repomap_tool.core.container.create_container"
+            ) as mock_create_container,
         ):
+            # Create mock container
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
 
+            # Mock exploration controller
+            mock_exploration_controller = MagicMock()
+            mock_container.exploration_controller.return_value = (
+                mock_exploration_controller
+            )
+
+            # Mock session manager
             mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = session
-
-            mock_repomap = MagicMock()
-            mock_repomap_class.return_value = mock_repomap
+            mock_container.session_manager.return_value = mock_session_manager
 
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
@@ -358,41 +427,50 @@ class TestCLIProjectPathFix:
         """Test that commands fail gracefully when session is not found."""
         session_id = "nonexistent_session"
 
-        # Mock SessionManager to return None
-        with patch(
-            "repomap_tool.code_exploration.SessionManager"
-        ) as mock_session_manager_class:
+        # Mock the DI container
+        with (
+            patch(
+                "repomap_tool.core.container.create_container"
+            ) as mock_create_container,
+        ):
+            # Create mock container
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
+
+            # Mock exploration controller
+            mock_exploration_controller = MagicMock()
+            mock_container.exploration_controller.return_value = (
+                mock_exploration_controller
+            )
+
+            # Mock session manager to return None (session not found)
             mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = None
+            mock_container.session_manager.return_value = mock_session_manager
 
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Test focus command
                 result = self.runner.invoke(cli, ["explore", "focus", "test_tree"])
                 assert (
-                    result.exit_code == 0
-                )  # Command doesn't exit with error, just returns
-                assert "Focused on tree: test_tree" in result.output
+                    result.exit_code == 1
+                )  # Command should exit with error when session not found
 
                 # Test expand command
                 result = self.runner.invoke(cli, ["explore", "expand", "test_area"])
-                assert result.exit_code == 0
-                assert "Expanded area: test_area" in result.output
+                assert result.exit_code == 1  # Should also fail when session not found
 
                 # Test prune command
                 result = self.runner.invoke(cli, ["explore", "prune", "test_area"])
-                assert result.exit_code == 0
-                assert "Pruned area: test_area" in result.output
+                assert result.exit_code == 1  # Should also fail when session not found
 
                 # Test map command
                 result = self.runner.invoke(cli, ["explore", "map"])
-                assert result.exit_code == 0
-                assert "Generated map for tree" in result.output
+                assert result.exit_code == 1  # Should also fail when session not found
 
                 # Test list-trees command
                 result = self.runner.invoke(cli, ["explore", "trees"])
-                assert result.exit_code == 0
+                assert result.exit_code == 1  # Should also fail when session not found
                 # Note: The actual output may vary, just check that command succeeds
 
     def test_commands_work_from_different_directories(self):
@@ -400,30 +478,60 @@ class TestCLIProjectPathFix:
         session_id = "test_session_404"
         project_path = str(self.test_project_dir)
 
-        # Create a mock session
+        # Create a mock session with a tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
 
-        # Mock the session manager and tree manager
-        with (
-            patch(
-                "repomap_tool.code_exploration.SessionManager"
-            ) as mock_session_manager_class,
-            patch(
-                "repomap_tool.code_exploration.TreeManager"
-            ) as mock_tree_manager_class,
-            patch("repomap_tool.cli.RepoMapService") as mock_repomap_class,
-        ):
+        # Add a mock tree to the session
+        from repomap_tool.models import ExplorationTree, Entrypoint
+        from pathlib import Path
 
+        mock_tree = ExplorationTree(
+            tree_id="test_tree",
+            context_name="test_tree",
+            root_entrypoint=Entrypoint(
+                identifier="test_entrypoint",
+                file_path=Path("/test/project/file1.py"),
+                score=0.8,
+            ),
+            max_depth=3,
+            expanded_areas=set(),
+            pruned_areas=set(),
+        )
+        session.add_tree(mock_tree)
+
+        # Mock the DI container
+        with patch(
+            "repomap_tool.core.container.create_container"
+        ) as mock_create_container:
+            # Create mock container
+            mock_container = MagicMock()
+            mock_create_container.return_value = mock_container
+
+            # Mock exploration controller
+            mock_exploration_controller = MagicMock()
+            mock_container.exploration_controller.return_value = (
+                mock_exploration_controller
+            )
+            mock_exploration_controller.focus_tree.return_value = TreeFocusViewModel(
+                tree_id="test_tree",
+                context_name="test_tree",
+                current_focus=True,
+                tree_structure={},
+                expanded_areas=[],
+                pruned_areas=[],
+                total_nodes=1,
+                max_depth=3,
+            )
+
+            # Mock session manager
             mock_session_manager = MagicMock()
-            mock_session_manager_class.return_value = mock_session_manager
+            mock_container.session_manager.return_value = mock_session_manager
             mock_session_manager.get_session.return_value = session
 
+            # Mock tree manager
             mock_tree_manager = MagicMock()
-            mock_tree_manager_class.return_value = mock_tree_manager
+            mock_container.tree_manager.return_value = mock_tree_manager
             mock_tree_manager.focus_tree.return_value = True
-
-            mock_repomap = MagicMock()
-            mock_repomap_class.return_value = mock_repomap
 
             # Set environment variable
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
@@ -449,15 +557,3 @@ class TestCLIProjectPathFix:
                         # Verify the command succeeded
                         assert result.exit_code == 0
                         assert "🎯 Focused on tree: test_tree" in result.output
-
-                        # Verify RepoMapService was initialized with correct project path
-                        # Note: RepoMapService may not be called in all explore commands
-                        # mock_repomap_class.assert_called_once()
-                        # call_args = mock_repomap_class.call_args
-                        # config = call_args[0][0]  # First positional argument
-                        # assert os.path.realpath(
-                        #     str(config.project_root)
-                        # ) == os.path.realpath(project_path)
-
-                        # Reset mock for next iteration
-                        mock_repomap_class.reset_mock()
