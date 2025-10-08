@@ -1,0 +1,41 @@
+{# Session Status Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}📊{% endif %} Session Status: {{ data.session_id }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📋{% endif %} SESSION INFO:
+{% if hierarchical %}├──{% else %}•{% endif %} Session ID: {{ data.session_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Project Path: {{ data.project_path }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Trees: {{ data.total_trees }}
+{% if hierarchical %}├──{% else %}•{% endif %} Current Focus: {{ data.current_focus or "None" }}
+{% if hierarchical %}├──{% else %}•{% endif %} Created: {{ data.created_at }}
+{% if hierarchical %}└──{% else %}•{% endif %} Last Activity: {{ data.last_activity }}
+
+{# Session statistics section #}
+{% if data.session_stats %}
+{% if emoji %}📈{% endif %} SESSION STATISTICS:
+{% if hierarchical %}├──{% else %}•{% endif %} Tree Count: {{ data.session_stats.tree_count }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Nodes: {{ data.session_stats.total_nodes }}
+{% if hierarchical %}├──{% else %}•{% endif %} Expanded Areas: {{ data.session_stats.expanded_areas }}
+{% if hierarchical %}├──{% else %}•{% endif %} Pruned Areas: {{ data.session_stats.pruned_areas }}
+{% if hierarchical %}├──{% else %}•{% endif %} Session Duration: {{ data.session_stats.session_duration }} seconds
+{% if hierarchical %}└──{% else %}•{% endif %} Current Focus: {{ data.session_stats.current_focus or "None" }}
+
+{# Duration formatting #}
+{% if data.session_stats.session_duration %}
+{% set hours = (data.session_stats.session_duration // 3600) %}
+{% set minutes = ((data.session_stats.session_duration % 3600) // 60) %}
+{% set seconds = (data.session_stats.session_duration % 60) %}
+{% if hours > 0 %}
+{% if hierarchical %}└──{% else %}•{% endif %} Duration: {{ hours }}h {{ minutes }}m {{ seconds }}s
+{% elif minutes > 0 %}
+{% if hierarchical %}└──{% else %}•{% endif %} Duration: {{ minutes }}m {{ seconds }}s
+{% else %}
+{% if hierarchical %}└──{% else %}•{% endif %} Duration: {{ seconds }}s
+{% endif %}
+{% endif %}
+{% endif %}

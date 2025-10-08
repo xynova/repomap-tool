@@ -36,6 +36,7 @@ RUN pip install -e . --no-deps
 
 # Set environment variables
 ENV PYTHONPATH=/app
+#ENV REPOMAP_WORKSPACE_DIR=/workspace
 ENV CACHE_DIR=/workspace/.repomap/cache
 ENV REPOMAP_SESSION_DIR=/workspace/.repomap/sessions
 
@@ -46,3 +47,5 @@ RUN chmod +x /app/entrypoint.sh
 # Set entrypoint to the shell wrapper
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["--help"]
+
+WORKDIR /workspace

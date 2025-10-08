@@ -532,3 +532,54 @@ class ExplorationSession(BaseModel):
     last_activity: datetime = Field(
         default_factory=datetime.now, description="Last activity timestamp"
     )
+
+    def get_tree(self, tree_id: str) -> Optional[ExplorationTree]:
+        """Get a tree by ID from this session.
+
+        Args:
+            tree_id: ID of the tree to retrieve
+
+        Returns:
+            ExplorationTree object or None if not found
+        """
+        return self.exploration_trees.get(tree_id)
+
+    def set_current_focus(self, tree_id: str) -> None:
+        """Set the current focus to a specific tree.
+
+        Args:
+            tree_id: ID of the tree to focus on
+
+        Raises:
+            ValueError: If tree_id is not found in session
+        """
+        if tree_id not in self.exploration_trees:
+            raise ValueError(f"Tree {tree_id} not found in session {self.session_id}")
+        self.current_focus = tree_id
+        self.last_activity = datetime.now()
+
+    def add_tree(self, tree: ExplorationTree) -> None:
+        """Add a tree to this session.
+
+        Args:
+            tree: ExplorationTree to add
+        """
+        self.exploration_trees[tree.tree_id] = tree
+        self.last_activity = datetime.now()
+
+    def remove_tree(self, tree_id: str) -> bool:
+        """Remove a tree from this session.
+
+        Args:
+            tree_id: ID of the tree to remove
+
+        Returns:
+            True if tree was removed, False if not found
+        """
+        if tree_id in self.exploration_trees:
+            del self.exploration_trees[tree_id]
+            if self.current_focus == tree_id:
+                self.current_focus = None
+            self.last_activity = datetime.now()
+            return True
+        return False

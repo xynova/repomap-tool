@@ -13,12 +13,12 @@ from typing import Any, Dict, List, Optional, Type
 import click
 
 from .protocols import BaseFormatter, TemplateFormatter
+from .templates.config import TemplateConfig
 from .formats import OutputFormat, OutputConfig
 from .console_manager import ConsoleManager
 from .templates import (
     TemplateEngine,
     TemplateEngineFactory,
-    TemplateConfig,
     TemplateRegistry,
     get_template_registry,
 )
@@ -139,23 +139,28 @@ class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
 
     def render_template(
         self,
-        template: str,
+        template_name: str,
         data: Any,
         config: Optional[OutputConfig] = None,
     ) -> str:
         """Render template with data.
 
         Args:
-            template: Template content
+            template_name: Name of the template to render
             data: Data to render
-            config: Optional configuration
+            config: Optional template configuration
 
         Returns:
             Rendered content
         """
         try:
-            template_config = self._create_template_config(config)
-            return self._template_engine.render_string(template, data, template_config)
+            if config is None:
+                template_config = self._create_template_config(None)
+            else:
+                template_config = self._create_template_config(config)
+            return self._template_engine.render_template(
+                template_name, data, template_config
+            )
         except Exception as e:
             if self._logger:
                 self._logger.error(f"Template rendering failed: {e}")
@@ -228,7 +233,7 @@ class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
         Returns:
             Template configuration
         """
-        if config and config.template_config:
+        if config and hasattr(config, "template_config") and config.template_config:
             # Convert template_config dict to TemplateConfig
             template_options = config.template_config
             return TemplateConfig.create_config(

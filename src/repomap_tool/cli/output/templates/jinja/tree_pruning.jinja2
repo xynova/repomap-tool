@@ -1,0 +1,25 @@
+{# Tree Pruning Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}✂️{% endif %} Tree Pruning: {{ data.pruned_area }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Tree ID: {{ data.tree_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Pruned Area: {{ data.pruned_area }}
+{% if hierarchical %}├──{% else %}•{% endif %} Removed Nodes: {{ data.removed_nodes | length }}
+{% if hierarchical %}├──{% else %}•{% endif %} Remaining Nodes: {{ data.remaining_nodes }}
+{% if hierarchical %}└──{% else %}•{% endif %} Reason: {{ data.pruning_reason }}
+
+{# Removed nodes section #}
+{% if data.removed_nodes %}
+{% if emoji %}🗑️{% endif %} REMOVED NODES:
+{% for node in data.removed_nodes %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ node }}
+{% endfor %}
+{% else %}
+{% if emoji %}ℹ️{% endif %} No nodes were removed
+{% endif %}

@@ -16,11 +16,8 @@ import click
 from rich.console import Console
 from rich.theme import Theme
 
-from ..utils.console import (
-    ConsoleProvider,
-    RichConsoleFactory,
-    get_console as get_console_legacy,
-)
+# Import console provider to avoid circular dependency
+from ..utils.console import ConsoleProvider
 
 
 class ConsoleManager(Protocol):
@@ -176,6 +173,9 @@ class ConsoleManagerFactory:
             Configured console manager
         """
         if provider is None:
+            # Import here to avoid circular dependency
+            from ..utils.console import RichConsoleFactory
+
             provider = ConsoleProvider(RichConsoleFactory())
         return DefaultConsoleManager(provider=provider, enable_logging=enable_logging)
 
