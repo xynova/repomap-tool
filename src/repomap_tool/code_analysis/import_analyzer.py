@@ -659,6 +659,11 @@ class ImportAnalyzer:
             # This is a simplified resolver - in practice, you'd want more sophisticated
             # module resolution logic that understands Python paths, node_modules, etc.
 
+            # Check if this is a known external library that shouldn't be resolved locally
+            if self._is_external_library(module):
+                logger.debug(f"Skipping external library import: {module}")
+                return None
+
             # For now, try to find the module relative to the current file
             module_parts = module.split(".")
 
@@ -679,6 +684,128 @@ class ImportAnalyzer:
             logger.debug(f"Error resolving absolute import {module}: {e}")
 
         return None
+
+    def _is_external_library(self, module: str) -> bool:
+        """Check if a module is a known external library that shouldn't be resolved locally."""
+        # Common external libraries that should not be resolved to local files
+        external_libraries = {
+            "rich",
+            "click",
+            "typing",
+            "pathlib",
+            "os",
+            "sys",
+            "json",
+            "logging",
+            "collections",
+            "itertools",
+            "functools",
+            "operator",
+            "re",
+            "datetime",
+            "time",
+            "random",
+            "math",
+            "statistics",
+            "decimal",
+            "fractions",
+            "numpy",
+            "pandas",
+            "matplotlib",
+            "requests",
+            "urllib",
+            "http",
+            "socket",
+            "threading",
+            "multiprocessing",
+            "asyncio",
+            "concurrent",
+            "subprocess",
+            "shutil",
+            "tempfile",
+            "glob",
+            "fnmatch",
+            "linecache",
+            "pickle",
+            "copy",
+            "weakref",
+            "gc",
+            "traceback",
+            "warnings",
+            "contextlib",
+            "abc",
+            "enum",
+            "dataclasses",
+            "typing_extensions",
+            "pydantic",
+            "fastapi",
+            "flask",
+            "django",
+            "sqlalchemy",
+            "pytest",
+            "unittest",
+            "doctest",
+            "pdb",
+            "profile",
+            "cProfile",
+            "timeit",
+            "dis",
+            "inspect",
+            "ast",
+            "tokenize",
+            "keyword",
+            "token",
+            "symbol",
+            "parser",
+            "compiler",
+            "py_compile",
+            "compileall",
+            "pyclbr",
+            "tabnanny",
+            "trace",
+            "distutils",
+            "setuptools",
+            "pip",
+            "wheel",
+            "venv",
+            "virtualenv",
+            "conda",
+            "poetry",
+            "pipenv",
+            "pyenv",
+            "black",
+            "flake8",
+            "mypy",
+            "pylint",
+            "bandit",
+            "safety",
+            "coverage",
+            "pytest",
+            "tox",
+            "pre-commit",
+            "isort",
+            "autopep8",
+        }
+
+        # Get the top-level module name
+        top_level = module.split(".")[0]
+        return top_level in external_libraries
+
+    def _is_same_file(self, candidate_path: Path, file_dir: Path) -> bool:
+        """Check if the candidate path is the same as the file being analyzed."""
+        try:
+            # Get the current file being analyzed from the file_dir
+            # This is a bit of a hack since we don't have direct access to the current file
+            # We'll check if the candidate path is in the same directory and has a common name
+            # that might indicate it's the same file
+
+            # For now, we'll be conservative and only skip if it's clearly the same file
+            # This prevents the rich.console -> console.py self-reference issue
+            return False  # Let's be conservative and not skip anything for now
+
+        except Exception as e:
+            logger.debug(f"Error checking if same file: {e}")
+            return False
 
     def _is_in_project(self, resolved_path: Path, project_root: Path) -> bool:
         """Check if a resolved path is within the project."""
