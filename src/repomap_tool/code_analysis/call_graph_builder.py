@@ -7,6 +7,7 @@ call graph that shows how functions depend on each other.
 
 import ast
 import logging
+import os
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 import re
@@ -36,10 +37,72 @@ class CallAnalyzer:
 
 
 class PythonCallAnalyzer(CallAnalyzer):
-    """Parser for Python function calls using AST."""
+    """Parser for Python function calls using tree-sitter."""
+
+    def __init__(self, tree_sitter_parser=None):
+        """Initialize with tree-sitter parser.
+        
+        Args:
+            tree_sitter_parser: TreeSitterParser instance for parsing
+        """
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
-        """Extract Python function calls using AST parsing."""
+        """Extract Python function calls using tree-sitter parsing."""
+        calls = []
+
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available, falling back to AST")
+            return self._extract_calls_ast(file_content, file_path)
+
+        try:
+            # Get all tags from tree-sitter
+            tags = self.tree_sitter_parser.parse_file(file_path)
+            
+            # Look for function call tags
+            for tag in tags:
+                kind = tag['kind']
+                
+                # Handle function calls
+                if kind == 'name.reference.call':
+                    call_obj = self._parse_call_tag(tag, file_path)
+                    if call_obj:
+                        calls.append(call_obj)
+            
+            logger.debug(f"Tree-sitter extracted {len(calls)} calls from {file_path}")
+            
+        except Exception as e:
+            logger.error(f"Error extracting Python calls from {file_path}: {e}")
+            # Fallback to AST parsing
+            return self._extract_calls_ast(file_content, file_path)
+
+        return calls
+    
+    def _parse_call_tag(self, tag: Dict[str, Any], file_path: str) -> Optional[FunctionCall]:
+        """Parse a single call tag into FunctionCall object.
+        
+        Args:
+            tag: Tree-sitter tag dictionary
+            file_path: Path to the file
+            
+        Returns:
+            FunctionCall object or None if parsing fails
+        """
+        try:
+            return FunctionCall(
+                caller="unknown",  # Simplified - could be enhanced with context analysis
+                callee=tag['name'],
+                file_path=file_path,
+                line_number=tag['line'],
+                is_method_call=False,  # Simplified - could parse from tag details
+                object_name=None,
+            )
+        except Exception as e:
+            logger.debug(f"Error parsing call tag {tag}: {e}")
+            return None
+    
+    def _extract_calls_ast(self, file_content: str, file_path: str) -> List[FunctionCall]:
+        """Fallback AST parsing for function calls."""
         calls = []
 
         try:
@@ -242,10 +305,16 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
 class CallGraphBuilder:
     """Main call graph builder that coordinates multi-language analysis."""
 
-    def __init__(self) -> None:
+    def __init__(self, project_root: Optional[str] = None, tree_sitter_parser=None) -> None:
         """Initialize the call graph builder with language analyzers."""
+        self.project_root = project_root
+        self.tree_sitter_parser = tree_sitter_parser
+        
+        # Initialize Python analyzer with tree-sitter
+        python_analyzer = PythonCallAnalyzer(tree_sitter_parser=tree_sitter_parser)
+        
         self.language_analyzers: Dict[str, CallAnalyzer] = {
-            "py": PythonCallAnalyzer(),
+            "py": python_analyzer,
             "js": JavaScriptCallAnalyzer(),
             "ts": JavaScriptCallAnalyzer(),  # TypeScript uses same analyzer
             "jsx": JavaScriptCallAnalyzer(),

@@ -38,10 +38,77 @@ class ImportParser:
 
 
 class PythonImportParser(ImportParser):
-    """Parser for Python import statements using AST."""
+    """Parser for Python import statements using tree-sitter."""
+
+    def __init__(self, tree_sitter_parser=None):
+        """Initialize with tree-sitter parser.
+        
+        Args:
+            tree_sitter_parser: TreeSitterParser instance for parsing
+        """
+        super().__init__()
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract Python imports using AST parsing."""
+        """Extract Python imports using tree-sitter parsing."""
+        imports = []
+
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available, falling back to AST")
+            return self._extract_imports_ast(file_content, file_path)
+
+        try:
+            # Get all tags from tree-sitter
+            tags = self.tree_sitter_parser.parse_file(file_path)
+            
+            # Look for import-related tags
+            for tag in tags:
+                kind = tag['kind']
+                
+                # Handle import statements
+                if 'import' in kind.lower():
+                    # Parse import details from the tag
+                    import_obj = self._parse_import_tag(tag, file_path)
+                    if import_obj:
+                        imports.append(import_obj)
+            
+            logger.debug(f"Tree-sitter extracted {len(imports)} imports from {file_path}")
+            
+        except Exception as e:
+            logger.error(f"Error extracting Python imports from {file_path}: {e}")
+            # Fallback to AST parsing
+            return self._extract_imports_ast(file_content, file_path)
+
+        return imports
+    
+    def _parse_import_tag(self, tag: Dict[str, Any], file_path: str) -> Optional[Import]:
+        """Parse a single import tag into Import object.
+        
+        Args:
+            tag: Tree-sitter tag dictionary
+            file_path: Path to the file
+            
+        Returns:
+            Import object or None if parsing fails
+        """
+        try:
+            # For now, create a basic import from the tag name
+            # This is a simplified approach - could be enhanced with more detailed parsing
+            module = tag['name']
+            
+            return Import(
+                module=module,
+                alias=None,
+                is_relative=False,  # Simplified - could parse from tag details
+                import_type=ImportType.ABSOLUTE,
+                line_number=tag['line'],
+            )
+        except Exception as e:
+            logger.debug(f"Error parsing import tag {tag}: {e}")
+            return None
+    
+    def _extract_imports_ast(self, file_content: str, file_path: str) -> List[Import]:
+        """Fallback AST parsing for imports."""
         imports = []
 
         try:
@@ -419,12 +486,17 @@ class GoImportParser(ImportParser):
 class ImportAnalyzer:
     """Main import analyzer that coordinates multi-language parsing."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(self, project_root: Optional[str] = None, tree_sitter_parser=None):
         """Initialize the import analyzer with language parsers."""
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
+        self.tree_sitter_parser = tree_sitter_parser
+        
+        # Initialize Python parser with tree-sitter
+        python_parser = PythonImportParser(tree_sitter_parser=tree_sitter_parser)
+        
         self.language_parsers: Dict[str, ImportParser] = {
-            "py": PythonImportParser(),
+            "py": python_parser,
             "js": JavaScriptImportParser(project_root=self.project_root),
             "ts": JavaScriptImportParser(
                 project_root=self.project_root

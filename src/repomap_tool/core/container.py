@@ -141,6 +141,10 @@ class Container(containers.DeclarativeContainer):
         providers.Singleton(
             "repomap_tool.code_analysis.import_analyzer.ImportAnalyzer",
             project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+            ),
         ),
     )
 
@@ -233,6 +237,11 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[CallGraphBuilder]",
         providers.Singleton(
             "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
+            project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+            ),
         ),
     )
 
