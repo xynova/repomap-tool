@@ -20,7 +20,7 @@ dependencies = [
     "packaging>=21.0",
     "click>=8.0.0",
     "colorama>=0.4.4",
-        "rich>=13.0.0",
+    "rich>=13.0.0",
     "numpy>=1.21.0",
     "scipy>=1.7.0",
     "fuzzywuzzy>=0.18.0",
@@ -29,10 +29,19 @@ dependencies = [
     "dependency-injector>=4.41.0",
     "tabulate>=0.9.0",
     "jinja2>=3.1.0",
+    "pytest-xdist>=3.8.0",
 ]
 
 [project.scripts]
 repomap-tool = "repomap_tool.cli:cli"
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.package-data]
+repomap_tool = [
+    "code_analysis/queries/*.scm",
+]
 
 [project.optional-dependencies]
 dev = [

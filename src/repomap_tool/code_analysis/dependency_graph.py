@@ -40,6 +40,9 @@ class DependencyGraph:
 
         # Set project path for path resolution
         self.project_path = project_imports.project_path
+        
+        # Update import analyzer with project root for proper import resolution
+        self.import_analyzer.project_root = project_imports.project_path
 
         # Clear existing graph
         self.graph.clear()

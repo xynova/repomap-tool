@@ -25,6 +25,7 @@ class FileFilter:
         ".jsx",  # JavaScript React
         ".java",  # Java
         ".go",  # Go
+        ".cs",  # C#
         ".cpp",  # C++
         ".c",  # C
         ".h",  # C Header
@@ -33,7 +34,16 @@ class FileFilter:
 
     # Extensions that can be parsed for imports/analysis but are not "core code"
     # Note: These should match the language parser keys (without dots)
-    ANALYZABLE_EXTENSIONS: Set[str] = {"py", "ts", "tsx", "js", "jsx", "java", "go"}
+    ANALYZABLE_EXTENSIONS: Set[str] = {
+        "py",
+        "ts",
+        "tsx",
+        "js",
+        "jsx",
+        "java",
+        "go",
+        "cs",
+    }
 
     # File patterns to exclude from analysis
     EXCLUDE_PATTERNS: Set[str] = {
