@@ -336,26 +336,34 @@ class RepoMapService:
         return project_info
 
     def search_identifiers(self, request: SearchRequest) -> SearchResponse:
-        """Perform search based on request configuration."""
+        """Perform search based on request configuration using tree-sitter."""
         start_time = time.time()
 
-        # Try to use cached tags first, fallback to re-parsing if needed
+        # ALWAYS use tree-sitter - no fallbacks
         tags = self._get_cached_tags()
 
         if not tags:
-            # Fallback: Get project files and extract identifiers from tags
-            self.logger.info("Cache miss or empty cache, re-parsing files")
+            # Force tree-sitter to scan files and populate cache
+            self.logger.debug("Cache empty, forcing tree-sitter tag extraction")
+            
+            # Get project files
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
-            identifiers = self._extract_identifiers_from_files(project_files)
-            # Convert identifiers to tags format for consistency
-            tags = [
-                {"name": identifier, "type": None, "file": None, "line": None}
-                for identifier in identifiers
-            ]
+            
+            # Force tree-sitter to extract tags
+            if self.repo_map:
+                # This populates TAGS_CACHE via tree-sitter
+                self.repo_map.get_ranked_tags_map(project_files)
+                
+                # Get cached tags from tree-sitter (now populated)
+                tags = self._get_cached_tags()
+            
+            if not tags:
+                # If still no tags, the project has no identifiers (empty project)
+                self.logger.warning("No tags found after tree-sitter extraction - empty project?")
         else:
-            self.logger.info(f"Using cached tags: {len(tags)} found")
+            self.logger.debug(f"Using cached tags from tree-sitter: {len(tags)} found")
 
         if not tags:
             return SearchResponse(
@@ -717,7 +725,7 @@ class RepoMapService:
 
             if cache_key in cache:
                 cached_data = cache[cache_key]
-                self.logger.info("Using cached import analysis results")
+                self.logger.debug("Using cached import analysis results")
                 return cached_data
             else:
                 self.logger.debug("No cached import analysis found")

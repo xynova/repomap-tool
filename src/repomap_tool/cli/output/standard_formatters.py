@@ -295,8 +295,9 @@ class ListFormatter(BaseFormatter, DataFormatter):
 
     def _is_cycle_data(self, data: List[Any]) -> bool:
         """Check if data looks like cycle detection results."""
+        # Empty list is valid cycle data (no cycles found)
         if not data:
-            return False
+            return True
         return all(isinstance(item, list) and len(item) > 0 for item in data)
 
     def _format_cycle_data(self, data: List[List[str]], use_emojis: bool) -> str:

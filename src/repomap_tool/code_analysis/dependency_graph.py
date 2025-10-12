@@ -327,7 +327,7 @@ class DependencyGraph:
         """
         try:
             cycles = list(nx.simple_cycles(self.graph))
-            logger.info(f"Found {len(cycles)} circular dependency cycles")
+            logger.debug(f"Found {len(cycles)} circular dependency cycles")
             return cycles
         except Exception as e:
             logger.error(f"Error finding cycles: {e}")
