@@ -81,18 +81,22 @@ def cycles(
             verbose=verbose,
         )
 
-        # Initialize RepoMap
+        # Initialize RepoMap with detailed progress
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            task = progress.add_task("Finding circular dependencies...", total=None)
+            task = progress.add_task("Loading configuration...", total=None)
 
             from repomap_tool.cli.services import get_service_factory
 
+            progress.update(task, description="Creating service factory...")
             service_factory = get_service_factory()
+            
+            progress.update(task, description="Initializing RepoMap service...")
             repomap = service_factory.create_repomap_service(config_obj)
+            
             progress.update(task, description="Building dependency graph...")
 
             # Build dependency graph

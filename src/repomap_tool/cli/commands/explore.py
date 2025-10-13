@@ -470,7 +470,7 @@ def trees(session: Optional[str]) -> None:
 )
 @click.option(
     "--threshold",
-    default=get_config("HYBRID_THRESHOLD", 0.3),
+    default=get_config("HYBRID_THRESHOLD", 0.2),
     type=float,
     help="Match threshold (0.0-1.0)",
 )
@@ -554,14 +554,14 @@ def find(
             strategies=list(strategies) if strategies else None,
         )
 
-        # Initialize services using service factory
+        # Initialize services using service factory with detailed progress
         from rich.progress import Progress, SpinnerColumn, TextColumn
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             console=console,
         ) as progress:
-            task = progress.add_task("Initializing services...", total=None)
+            task = progress.add_task("Loading configuration...", total=None)
 
             from repomap_tool.cli.services import get_service_factory
             from repomap_tool.cli.controllers.search_controller import SearchController
@@ -571,17 +571,30 @@ def find(
             )
             from repomap_tool.core.container import create_container
 
+            progress.update(task, description="Creating service factory...")
             service_factory = get_service_factory()
+            
+            progress.update(task, description="Initializing RepoMap service...")
             repomap = service_factory.create_repomap_service(config_obj)
 
-            # Get matchers from the container
+            progress.update(task, description="Loading dependency injection container...")
             container = create_container(config_obj)
+            
+            progress.update(task, description="Initializing fuzzy matcher...")
             fuzzy_matcher = container.fuzzy_matcher()
+            
+            progress.update(task, description="Initializing semantic matcher...")
             semantic_matcher = (
                 container.adaptive_semantic_matcher()
                 if config_obj.semantic_match.enabled
                 else None
             )
+
+            progress.update(task, description="Loading embedding model...")
+            embedding_matcher = container.embedding_matcher()
+            
+            progress.update(task, description="Initializing hybrid matcher...")
+            hybrid_matcher = container.hybrid_matcher()
 
             progress.update(task, description="Creating search controller...")
 
