@@ -91,6 +91,26 @@ class SemanticMatchConfig(BaseModel):
     cache_results: bool = True
 
 
+class EmbeddingConfig(BaseModel):
+    """Configuration for CodeRankEmbed embeddings (always enabled)."""
+
+    model_config = ConfigDict(frozen=False)
+
+    enabled: bool = Field(default=True, description="Always enabled")
+    model_name: str = Field(
+        default="nomic-ai/CodeRankEmbed", description="CodeRankEmbed model (fixed)"
+    )
+    trust_remote_code: bool = Field(
+        default=True, description="Required for CodeRankEmbed"
+    )
+    threshold: float = Field(
+        default=0.3, ge=0.0, le=1.0, description="Similarity threshold"
+    )
+    cache_dir: Optional[str] = Field(
+        default=None, description="Embedding cache directory"
+    )
+
+
 class TreeConfig(BaseModel):
     """Configuration for tree exploration functionality."""
 
@@ -156,6 +176,7 @@ class RepoMapConfig(BaseModel):
     # Matching configurations
     fuzzy_match: FuzzyMatchConfig = Field(default_factory=FuzzyMatchConfig)
     semantic_match: SemanticMatchConfig = Field(default_factory=SemanticMatchConfig)
+    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
 
     # Tree exploration configuration
     trees: TreeConfig = Field(default_factory=TreeConfig)
@@ -278,7 +299,7 @@ class SearchRequest(BaseModel):
         default="hybrid", description="Type of matching"
     )
     threshold: float = Field(
-        default=0.7, ge=0.0, le=1.0, description="Minimum score threshold"
+        default=0.3, ge=0.0, le=1.0, description="Minimum similarity threshold (0.0-1.0)"
     )
     max_results: int = Field(
         default=10, ge=1, le=100, description="Maximum results to return"
@@ -309,6 +330,9 @@ class SearchResponse(BaseModel):
     results: List[MatchResult] = Field(description="List of match results")
     search_time_ms: float = Field(description="Search time in milliseconds")
     cache_hit: bool = Field(default=False, description="Whether result was from cache")
+    spellcheck_suggestions: List[str] = Field(
+        default_factory=list, description="Did you mean suggestions for typos"
+    )
     metadata: Dict[str, Any] = Field(
         default_factory=dict, description="Additional metadata"
     )

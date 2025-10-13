@@ -165,3 +165,9 @@
   left: (identifier) @assignment.name
   right: (expression) @assignment.value
 ) @assignment.expression
+
+; ✨ NEW: Single-line comments
+(comment) @comment
+
+; ✨ NEW: JSDoc comments
+(comment) @comment.documentation

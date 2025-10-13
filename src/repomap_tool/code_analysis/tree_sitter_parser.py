@@ -144,7 +144,10 @@ class TreeSitterParser:
                         logger.debug(f"Unexpected capture format: {capture}")
 
             logger.debug(f"Parsed {len(tags)} tags from {file_path}")
-            return tags
+            
+            # Associate comments with code elements
+            tags_with_comments = self._associate_comments_with_code(tags, tree.root_node, code)
+            return tags_with_comments
 
         except Exception as e:
             logger.error(f"Error parsing file {file_path} with tree-sitter: {e}")
@@ -212,6 +215,136 @@ class TreeSitterParser:
 
         logger.warning(f"No query file found for language: {lang}")
         return None
+
+    def _associate_comments_with_code(self, tags: List[Dict], root_node: Any, code: str) -> List[Dict]:
+        """Associate comments with nearest code elements.
+        
+        Args:
+            tags: List of parsed tags
+            root_node: Tree-sitter root node
+            code: Source code content
+            
+        Returns:
+            Tags with associated comments
+        """
+        try:
+            # Find all comment nodes in the tree
+            comment_nodes = []
+            self._find_comment_nodes(root_node, comment_nodes)
+            
+            # Associate comments with nearest code elements
+            for tag in tags:
+                tag['comment'] = self._find_nearest_comment(tag, comment_nodes, code)
+            
+            return tags
+        except Exception as e:
+            logger.warning(f"Error associating comments: {e}")
+            return tags
+
+    def _find_comment_nodes(self, node: Any, comment_nodes: List[Dict]) -> None:
+        """Recursively find all comment nodes in the tree.
+        
+        Args:
+            node: Current tree-sitter node
+            comment_nodes: List to store comment nodes
+        """
+        try:
+            if hasattr(node, 'type') and node.type in ['comment', 'line_comment', 'block_comment']:
+                comment_text = node.text.decode('utf-8') if hasattr(node, 'text') else ""
+                comment_nodes.append({
+                    'text': comment_text,
+                    'line': node.start_point[0] + 1,
+                    'column': node.start_point[1],
+                    'end_line': node.end_point[0] + 1,
+                    'end_column': node.end_point[1]
+                })
+            
+            # Recursively check children
+            if hasattr(node, 'children'):
+                for child in node.children:
+                    self._find_comment_nodes(child, comment_nodes)
+        except Exception as e:
+            logger.debug(f"Error finding comment nodes: {e}")
+
+    def _find_nearest_comment(self, tag: Dict, comment_nodes: List[Dict], code: str) -> Optional[str]:
+        """Find the nearest comment for a code element.
+        
+        Args:
+            tag: Code element tag
+            comment_nodes: List of comment nodes
+            code: Source code content
+            
+        Returns:
+            Associated comment text or None
+        """
+        try:
+            tag_line = tag.get('line', 0)
+            if tag_line <= 0:
+                return None
+            
+            # Find comments within 5 lines before the tag
+            nearest_comment = None
+            min_distance = float('inf')
+            
+            for comment in comment_nodes:
+                comment_line = comment.get('line', 0)
+                if comment_line <= 0:
+                    continue
+                
+                # Only consider comments before the tag (within 5 lines)
+                if comment_line < tag_line and (tag_line - comment_line) <= 5:
+                    distance = tag_line - comment_line
+                    if distance < min_distance:
+                        min_distance = distance
+                        nearest_comment = comment
+            
+            if nearest_comment:
+                # Clean comment text
+                comment_text = nearest_comment['text'].strip()
+                # Remove comment markers
+                comment_text = self._clean_comment_text(comment_text)
+                return comment_text if comment_text else None
+            
+            return None
+        except Exception as e:
+            logger.debug(f"Error finding nearest comment: {e}")
+            return None
+
+    def _clean_comment_text(self, comment_text: str) -> str:
+        """Clean comment text by removing markers.
+        
+        Args:
+            comment_text: Raw comment text
+            
+        Returns:
+            Cleaned comment text
+        """
+        try:
+            # Remove common comment markers
+            comment_text = comment_text.strip()
+            
+            # Python: # comment
+            if comment_text.startswith('#'):
+                comment_text = comment_text[1:].strip()
+            
+            # JavaScript/Java: // comment
+            elif comment_text.startswith('//'):
+                comment_text = comment_text[2:].strip()
+            
+            # Block comments: /* comment */
+            elif comment_text.startswith('/*') and comment_text.endswith('*/'):
+                comment_text = comment_text[2:-2].strip()
+            
+            # JSDoc: /** comment */
+            elif comment_text.startswith('/**') and comment_text.endswith('*/'):
+                comment_text = comment_text[3:-2].strip()
+                # Remove JSDoc markers
+                comment_text = comment_text.replace('*', '').strip()
+            
+            return comment_text
+        except Exception as e:
+            logger.debug(f"Error cleaning comment text: {e}")
+            return comment_text
 
     def _read_file(self, file_path: str) -> Optional[str]:
         """Read file content safely.

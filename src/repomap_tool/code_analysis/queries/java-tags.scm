@@ -323,3 +323,9 @@
 (class_literal
   type: (type) @class.type
 ) @class.literal
+
+; ✨ NEW: Comments (single-line and block)
+(comment) @comment
+
+; ✨ NEW: Javadoc comments
+(comment) @comment.documentation

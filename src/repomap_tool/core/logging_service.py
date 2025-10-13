@@ -86,11 +86,19 @@ class LoggingService:
 
         self._configured = True
 
+        # Configure external library loggers to be less verbose
+        self._configure_external_library_loggers()
+
         # Log configuration success
         logger = self.get_logger(__name__)
         logger.debug(
             f"Logging service configured: level={level}, console={enable_console}, file={enable_file}"
         )
+
+    def _configure_external_library_loggers(self) -> None:
+        """Configure external library loggers to be less verbose."""
+        # Use the centralized function
+        _suppress_external_library_logs()
 
     def get_logger(self, name: str) -> logging.Logger:
         """Get a logger instance for the specified name.
@@ -279,3 +287,52 @@ def _initialize_default_logging() -> None:
 
 # Auto-initialize on import
 _initialize_default_logging()
+
+# Configure external libraries immediately on import
+def _configure_external_libraries_early() -> None:
+    """Configure external library logging as early as possible."""
+    _suppress_external_library_logs()
+
+def _suppress_external_library_logs() -> None:
+    """Centralized function to suppress external library logs."""
+    import logging
+    
+    # Configure transformers library
+    try:
+        import transformers
+        transformers.logging.set_verbosity_error()
+        
+        # Set specific transformers loggers
+        transformers_logger = logging.getLogger("transformers_modules")
+        transformers_logger.setLevel(logging.ERROR)
+        
+    except ImportError:
+        pass
+    
+    # Configure sentence-transformers library
+    try:
+        import sentence_transformers
+        sentence_transformers_logger = logging.getLogger("sentence_transformers")
+        sentence_transformers_logger.setLevel(logging.WARNING)
+        
+        # Also configure the specific SentenceTransformer logger
+        st_logger = logging.getLogger("sentence_transformers.SentenceTransformer")
+        st_logger.setLevel(logging.WARNING)
+        
+    except ImportError:
+        pass
+    
+    # Configure other external libraries
+    external_loggers = [
+        "torch", "numpy", "scipy", "sklearn", "networkx"
+    ]
+    
+    for logger_name in external_loggers:
+        try:
+            external_logger = logging.getLogger(logger_name)
+            external_logger.setLevel(logging.WARNING)
+        except Exception:
+            pass
+
+# Configure external libraries immediately
+_configure_external_libraries_early()

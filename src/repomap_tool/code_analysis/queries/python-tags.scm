@@ -45,3 +45,10 @@
   module_name: (dotted_name)? @name.reference.import.module
   name: (dotted_name) @name.reference.import.name
   alias: (identifier)? @name.reference.import.alias)
+
+; ✨ NEW: Comments (inline and block)
+(comment) @comment
+
+; ✨ NEW: Docstrings
+(expression_statement
+  (string) @docstring)

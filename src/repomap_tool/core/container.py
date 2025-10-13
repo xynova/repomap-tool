@@ -166,7 +166,14 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[CacheManager]",
         providers.Singleton(
             "repomap_tool.core.cache_manager.CacheManager",
-            project_root=config.project_root,
+        ),
+    )
+
+    # Spell checker service
+    spellchecker_service: "providers.Singleton[Any]" = cast(
+        "providers.Singleton[Any]",
+        providers.Singleton(
+            "repomap_tool.core.spellchecker_service.SpellCheckerService",
         ),
     )
 
@@ -192,6 +199,17 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # Embedding matcher with persistent caching
+    embedding_matcher: "providers.Singleton[Any]" = cast(
+        "providers.Singleton[Any]",
+        providers.Singleton(
+            "repomap_tool.code_search.embedding_matcher.EmbeddingMatcher",
+            model_name="nomic-ai/CodeRankEmbed",  # FIXED: Use hardcoded value instead of config
+            cache_manager=cache_manager,
+            cache_dir=config.embedding.cache_dir,
+        ),
+    )
+
     adaptive_semantic_matcher: "providers.Factory[AdaptiveSemanticMatcher]" = cast(
         "providers.Factory[AdaptiveSemanticMatcher]",
         providers.Factory(
@@ -205,6 +223,7 @@ class Container(containers.DeclarativeContainer):
         providers.Factory(
             "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
             fuzzy_matcher=fuzzy_matcher,
+            embedding_matcher=embedding_matcher,
             semantic_threshold=config.semantic_match.threshold,
             verbose=config.verbose,
         ),

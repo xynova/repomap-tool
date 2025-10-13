@@ -464,3 +464,9 @@
 (defer_statement
   expression: (expression) @defer.expression
 ) @defer.statement
+
+; ✨ NEW: Comments (single-line and block)
+(comment) @comment
+
+; ✨ NEW: Documentation comments
+(comment) @comment.documentation

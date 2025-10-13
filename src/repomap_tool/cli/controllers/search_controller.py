@@ -159,6 +159,7 @@ class SearchController(BaseController):
             match_type=search_response.match_type,
             search_time_ms=search_response.search_time_ms,
             cache_hit=search_response.cache_hit,
+            spellcheck_suggestions=search_response.spellcheck_suggestions,
             metadata=search_response.metadata,
             performance_metrics=search_response.performance_metrics,
         )

@@ -60,10 +60,12 @@ class RepoMapService:
         parallel_extractor: Optional[Any] = None,
         fuzzy_matcher: Optional[Any] = None,
         semantic_matcher: Optional[Any] = None,
+        embedding_matcher: Optional[Any] = None,
         hybrid_matcher: Optional[Any] = None,
         dependency_graph: Optional[Any] = None,
         impact_analyzer: Optional[Any] = None,
         centrality_calculator: Optional[Any] = None,
+        spellchecker_service: Optional[Any] = None,
     ):
         """
         Initialize RepoMapService with validated configuration and injected dependencies.
@@ -102,10 +104,12 @@ class RepoMapService:
         self.parallel_extractor = parallel_extractor
         self.fuzzy_matcher = fuzzy_matcher
         self.semantic_matcher = semantic_matcher
+        self.embedding_matcher = embedding_matcher
         self.hybrid_matcher = hybrid_matcher
         self.dependency_graph = dependency_graph
         self.impact_analyzer = impact_analyzer
         self.centrality_calculator = centrality_calculator
+        self.spellchecker_service = spellchecker_service
 
         # Initialize components
         self.repo_map: Optional[RepoMapProtocol] = None
@@ -219,6 +223,14 @@ class RepoMapService:
                         self.logger.info(
                             f"Invalidated caches for {invalidated_files} modified files"
                         )
+
+            # Invalidate embedding caches
+            if self.embedding_matcher and hasattr(self.embedding_matcher, "cache_manager"):
+                cache_manager = self.embedding_matcher.cache_manager
+                if cache_manager:
+                    invalidated = cache_manager.invalidate_stale_files(project_files)
+                    if invalidated > 0:
+                        self.logger.info(f"Invalidated {invalidated} embedding caches")
 
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
@@ -339,8 +351,21 @@ class RepoMapService:
         """Perform search based on request configuration using tree-sitter."""
         start_time = time.time()
 
+        # Debug logging (only shows with --verbose)
+        self.logger.debug(f"Search request: query='{request.query}', match_type={request.match_type}, threshold={request.threshold}")
+
+        # Force cache refresh if empty
+        if not self.repo_map or not hasattr(self.repo_map, 'TAGS_CACHE') or not self.repo_map.TAGS_CACHE:
+            self.logger.debug("TAGS_CACHE is empty or missing, forcing refresh")
+            project_files = get_project_files(str(self.config.project_root), self.config.verbose)
+            if self.repo_map:
+                self.repo_map.get_ranked_tags_map(project_files)
+
         # ALWAYS use tree-sitter - no fallbacks
         tags = self._get_cached_tags()
+        
+        # Log tag count
+        self.logger.debug(f"Found {len(tags) if tags else 0} cached tags")
 
         if not tags:
             # Force tree-sitter to scan files and populate cache
@@ -377,6 +402,10 @@ class RepoMapService:
 
         # Extract identifiers for search
         identifiers = [tag["name"] for tag in tags]
+        
+        # Log identifier count
+        self.logger.debug(f"Extracted {len(identifiers)} identifiers from tags")
+        self.logger.debug(f"Sample identifiers: {identifiers[:10]}")
 
         # Perform search based on type
         if request.match_type == "fuzzy" and self.fuzzy_matcher:
@@ -427,6 +456,24 @@ class RepoMapService:
 
         processing_time = time.time() - start_time
 
+        # Get spellchecker suggestions if no results or few results
+        spellcheck_suggestions = []
+        self.logger.debug(f"Spellchecker service available: {self.spellchecker_service is not None}")
+        if (len(enhanced_results) == 0 or len(enhanced_results) < 3) and self.spellchecker_service:
+            try:
+                self.logger.debug(f"Getting spellchecker suggestions for: '{request.query}'")
+                suggestions = self.spellchecker_service.get_did_you_mean_suggestions(request.query)
+                spellcheck_suggestions = suggestions
+                if suggestions:
+                    self.logger.debug(f"Spellchecker suggestions: {suggestions}")
+                else:
+                    self.logger.debug("No spellchecker suggestions found")
+            except Exception as e:
+                self.logger.error(f"Spellchecker error: {e}")
+        else:
+            self.logger.debug(f"Skipping spellchecker: results={len(enhanced_results)}, service={self.spellchecker_service is not None}")
+
+        self.logger.debug(f"Creating SearchResponse with spellcheck_suggestions: {spellcheck_suggestions}")
         return SearchResponse(
             query=request.query,
             match_type=request.match_type,
@@ -434,6 +481,7 @@ class RepoMapService:
             total_results=len(enhanced_results),
             results=enhanced_results,
             search_time_ms=processing_time * 1000,  # Convert to milliseconds
+            spellcheck_suggestions=spellcheck_suggestions,
         )
 
     def _get_cached_identifiers(self) -> List[str]:
@@ -488,6 +536,12 @@ class RepoMapService:
 
         try:
             cache = self.repo_map.TAGS_CACHE
+            self.logger.debug(f"TAGS_CACHE type: {type(cache)}, size: {len(cache) if cache else 0}")
+            
+            if not cache:
+                self.logger.debug("TAGS_CACHE is empty")
+                return []
+            
             all_tags = []
 
             # Iterate through all cached files
@@ -497,6 +551,7 @@ class RepoMapService:
                     if isinstance(value, dict) and "data" in value:
                         data = value["data"]
                         if isinstance(data, list):
+                            self.logger.debug(f"File {key}: {len(data)} tags")
                             for tag in data:
                                 if hasattr(tag, "name") and tag.name:
                                     # Extract full tag information
@@ -517,7 +572,7 @@ class RepoMapService:
                     self.logger.debug(f"Error processing cache entry {key}: {e}")
                     continue
 
-            self.logger.debug(f"Retrieved {len(all_tags)} tags from cache")
+            self.logger.debug(f"Total tags extracted: {len(all_tags)}")
             return all_tags
 
         except Exception as e:

@@ -54,6 +54,7 @@ class ServiceFactory:
         console: Console = container.console()
         parallel_extractor: ParallelTagExtractor = container.parallel_tag_extractor()
         fuzzy_matcher: FuzzyMatcher = container.fuzzy_matcher()
+        embedding_matcher = container.embedding_matcher()
         semantic_matcher = None
         hybrid_matcher = None
         if config.semantic_match.enabled:
@@ -65,6 +66,8 @@ class ServiceFactory:
         if config.dependencies.enable_impact_analysis:
             impact_analyzer = container.impact_analyzer()
         centrality_calculator = container.centrality_calculator()
+        spellchecker_service = container.spellchecker_service()
+        
         # Create RepoMapService with injected dependencies
         service = RepoMapService(
             config=config,
@@ -72,10 +75,12 @@ class ServiceFactory:
             parallel_extractor=parallel_extractor,
             fuzzy_matcher=fuzzy_matcher,
             semantic_matcher=semantic_matcher,
+            embedding_matcher=embedding_matcher,
             hybrid_matcher=hybrid_matcher,
             dependency_graph=dependency_graph,
             impact_analyzer=impact_analyzer,
             centrality_calculator=centrality_calculator,
+            spellchecker_service=spellchecker_service,
         )
 
         self._services[cache_key] = service

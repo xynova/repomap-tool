@@ -34,6 +34,7 @@ class HybridMatcher:
     def __init__(
         self,
         fuzzy_matcher: FuzzyMatcher,
+        embedding_matcher: Any = None,
         semantic_threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
         use_word_embeddings: bool = False,
         verbose: bool = True,
@@ -43,11 +44,21 @@ class HybridMatcher:
 
         Args:
             fuzzy_matcher: Injected FuzzyMatcher instance
+            embedding_matcher: Injected EmbeddingMatcher instance (optional)
             semantic_threshold: Threshold for semantic similarity (0.0-1.0)
             use_word_embeddings: Whether to use word embeddings (requires more dependencies)
             verbose: Whether to log matching details
         """
         self.fuzzy_matcher = fuzzy_matcher
+        self.embedding_matcher = embedding_matcher
+        
+        # Debug logging
+        if self.embedding_matcher:
+            logger.debug(f"HybridMatcher received embedding_matcher: {type(self.embedding_matcher).__name__}")
+            logger.debug(f"Embedding matcher enabled: {getattr(self.embedding_matcher, 'enabled', False)}")
+        else:
+            logger.debug("HybridMatcher did NOT receive embedding_matcher")
+        
         self.fuzzy_threshold = fuzzy_matcher.threshold
         self.semantic_threshold = semantic_threshold
         self.use_word_embeddings = use_word_embeddings
@@ -313,21 +324,53 @@ class HybridMatcher:
         # Get context similarity
         context_score = self.calculate_context_similarity(query, identifier)
 
-        # Weighted combination
-        weights = {"fuzzy": 0.4, "tfidf": 0.3, "vector": 0.2, "context": 0.1}
+        # Get embedding similarity (CodeRankEmbed) - only for multi-word queries
+        embedding_score = 0.0
+        if (self.embedding_matcher and 
+            hasattr(self.embedding_matcher, 'enabled') and 
+            self.embedding_matcher.enabled and
+            len(query.split()) > 1):  # Only use embeddings for multi-word queries
+            try:
+                from sklearn.metrics.pairwise import cosine_similarity
+                query_emb = self.embedding_matcher.get_embedding(query)
+                identifier_emb = self.embedding_matcher.get_embedding(identifier)
+                if query_emb is not None and identifier_emb is not None:
+                    embedding_score = cosine_similarity(
+                        query_emb.reshape(1, -1), 
+                        identifier_emb.reshape(1, -1)
+                    )[0][0]
+                    # Ensure score is in [0, 1]
+                    embedding_score = max(0.0, min(1.0, float(embedding_score)))
+            except Exception as e:
+                if self.verbose:
+                    logger.debug(f"Embedding similarity failed: {e}")
+                embedding_score = 0.0
 
-        overall_score = (
-            fuzzy_score * weights["fuzzy"]
-            + tfidf_score * weights["tfidf"]
-            + vector_score * weights["vector"]
-            + context_score * weights["context"]
-        )
+        # Weighted combination with embedding
+        # If embeddings enabled: fuzzy 30%, tfidf 40%, embedding 30%
+        # If embeddings disabled: fuzzy 40%, tfidf 30%, vector 20%, context 10%
+        if self.embedding_matcher and hasattr(self.embedding_matcher, 'enabled') and self.embedding_matcher.enabled:
+            weights = {"fuzzy": 0.3, "tfidf": 0.4, "embedding": 0.3}
+            overall_score = (
+                fuzzy_score * weights["fuzzy"]
+                + tfidf_score * weights["tfidf"]
+                + embedding_score * weights["embedding"]
+            )
+        else:
+            weights = {"fuzzy": 0.4, "tfidf": 0.3, "vector": 0.2, "context": 0.1}
+            overall_score = (
+                fuzzy_score * weights["fuzzy"]
+                + tfidf_score * weights["tfidf"]
+                + vector_score * weights["vector"]
+                + context_score * weights["context"]
+            )
 
         component_scores = {
             "fuzzy": fuzzy_score,
             "tfidf": tfidf_score,
             "vector": vector_score,
             "context": context_score,
+            "embedding": embedding_score,
             "overall": overall_score,
         }
 
@@ -350,13 +393,24 @@ class HybridMatcher:
         Returns:
             List of (identifier, overall_score, component_scores) tuples, sorted by score
         """
+        # Debug logging (only shows with --verbose)
+        logger.debug(f"find_hybrid_matches: query='{query}', identifiers={len(all_identifiers)}, threshold={threshold}")
+        
         matches = []
 
         for identifier in all_identifiers:
             overall_score, component_scores = self.hybrid_similarity(query, identifier)
+            
+            # Log first few scores
+            if len(matches) < 5:
+                logger.debug(f"Similarity for '{identifier}': overall={overall_score:.3f}, components={component_scores}")
 
             if overall_score >= threshold:
                 matches.append((identifier, overall_score, component_scores))
+
+        # Log filtering results
+        logger.debug(f"Before filtering: {len(all_identifiers)} identifiers")
+        logger.debug(f"After threshold {threshold}: {len(matches)} matches")
 
         # Sort by overall score (highest first)
         matches.sort(key=lambda x: x[1], reverse=True)
@@ -386,11 +440,19 @@ class HybridMatcher:
         Returns:
             List of (identifier, score) tuples, sorted by score (highest first)
         """
+        # Debug logging (only shows with --verbose)
+        logger.debug(f"HybridMatcher.match_identifiers: query='{query}', identifiers={len(all_identifiers)}")
+        logger.debug(f"Embedding matcher: {self.embedding_matcher is not None}, enabled={getattr(self.embedding_matcher, 'enabled', False) if self.embedding_matcher else False}")
+        
         # Use a lower threshold for match_identifiers to be more inclusive
         threshold = get_config("HYBRID_THRESHOLD", 0.1)
+        logger.debug(f"Using threshold: {threshold}")
 
         # Get hybrid matches
         hybrid_matches = self.find_hybrid_matches(query, all_identifiers, threshold)
+        
+        # Log match count
+        logger.debug(f"Found {len(hybrid_matches)} hybrid matches")
 
         # Convert to the expected format: (identifier, score) where score is 0-100
         matches = []
@@ -398,6 +460,9 @@ class HybridMatcher:
             # Convert float score (0.0-1.0) to integer score (0-100)
             score = int(overall_score * 100)
             matches.append((identifier, score))
+            # Log first few matches
+            if len(matches) <= 5:
+                logger.debug(f"Match: {identifier} = {score}% (components: {component_scores})")
 
         return matches
 
