@@ -418,7 +418,7 @@ class RepoMapService:
             )
         elif request.match_type == "hybrid" and self.hybrid_matcher:
             results = hybrid_search(
-                request.query, identifiers, self.hybrid_matcher, request.max_results
+                request.query, identifiers, self.hybrid_matcher, request.max_results, request.threshold
             )
         else:
             # Fallback to basic search

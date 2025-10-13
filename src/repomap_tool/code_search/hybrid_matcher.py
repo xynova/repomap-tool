@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """
-hybrid_matcher.py - Hybrid matching combining fuzzy and semantic approaches
+hybrid_matcher.py - Enhanced hybrid matching combining fuzzy and semantic approaches
 
-This module provides a more flexible approach than rigid dictionaries by using:
+This module provides a comprehensive approach by using:
 1. Fuzzy matching (existing)
 2. TF-IDF vectorization for semantic similarity
-3. Word embeddings (optional, lightweight)
-4. Context-aware scoring
+3. Domain semantic matching (programming knowledge)
+4. ML embedding matching (CodeRankEmbed)
+5. Context-aware scoring
 """
 
 import re
@@ -25,32 +26,38 @@ logger = get_logger(__name__)
 
 class HybridMatcher:
     """
-    A hybrid matcher that combines fuzzy matching with lightweight semantic analysis.
+    Enhanced hybrid matcher that combines multiple semantic approaches.
 
-    This approach is more flexible than rigid dictionaries and adapts to the
-    actual codebase content.
+    This approach provides comprehensive semantic matching by combining:
+    1. Fuzzy matching (string similarity)
+    2. TF-IDF vectorization (statistical similarity)
+    3. Domain semantic matching (programming knowledge)
+    4. ML embedding matching (CodeRankEmbed contextual understanding)
     """
 
     def __init__(
         self,
         fuzzy_matcher: FuzzyMatcher,
         embedding_matcher: Any = None,
+        domain_semantic_matcher: Any = None,
         semantic_threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
         use_word_embeddings: bool = False,
         verbose: bool = True,
     ):
         """
-        Initialize the hybrid matcher.
+        Initialize the enhanced hybrid matcher.
 
         Args:
             fuzzy_matcher: Injected FuzzyMatcher instance
             embedding_matcher: Injected EmbeddingMatcher instance (optional)
+            domain_semantic_matcher: Injected DomainSemanticMatcher instance (optional)
             semantic_threshold: Threshold for semantic similarity (0.0-1.0)
             use_word_embeddings: Whether to use word embeddings (requires more dependencies)
             verbose: Whether to log matching details
         """
         self.fuzzy_matcher = fuzzy_matcher
         self.embedding_matcher = embedding_matcher
+        self.domain_semantic_matcher = domain_semantic_matcher
         
         # Debug logging
         if self.embedding_matcher:
@@ -58,6 +65,12 @@ class HybridMatcher:
             logger.debug(f"Embedding matcher enabled: {getattr(self.embedding_matcher, 'enabled', False)}")
         else:
             logger.debug("HybridMatcher did NOT receive embedding_matcher")
+        
+        if self.domain_semantic_matcher:
+            logger.debug(f"HybridMatcher received domain_semantic_matcher: {type(self.domain_semantic_matcher).__name__}")
+            logger.debug(f"Domain semantic matcher enabled: {getattr(self.domain_semantic_matcher, 'enabled', True)}")
+        else:
+            logger.debug("HybridMatcher did NOT receive domain_semantic_matcher")
         
         self.fuzzy_threshold = fuzzy_matcher.threshold
         self.semantic_threshold = semantic_threshold
@@ -77,7 +90,13 @@ class HybridMatcher:
 
         if self.verbose:
             logger.info(
-                f"Initialized HybridMatcher (fuzzy: {self.fuzzy_threshold}, semantic: {semantic_threshold})"
+                f"Initialized Enhanced HybridMatcher (fuzzy: {self.fuzzy_threshold}, semantic: {semantic_threshold})"
+            )
+            logger.info(
+                f"  - Embedding matcher: {'enabled' if self.embedding_matcher and getattr(self.embedding_matcher, 'enabled', False) else 'disabled'}"
+            )
+            logger.info(
+                f"  - Domain semantic matcher: {'enabled' if self.domain_semantic_matcher else 'disabled'}"
             )
 
     def _initialize_word_embeddings(self) -> None:
@@ -324,6 +343,16 @@ class HybridMatcher:
         # Get context similarity
         context_score = self.calculate_context_similarity(query, identifier)
 
+        # Get domain semantic similarity (programming knowledge)
+        domain_semantic_score = 0.0
+        if self.domain_semantic_matcher:
+            try:
+                domain_semantic_score = self.domain_semantic_matcher.semantic_similarity(query, identifier)
+            except Exception as e:
+                if self.verbose:
+                    logger.debug(f"Domain semantic similarity failed: {e}")
+                domain_semantic_score = 0.0
+
         # Get embedding similarity (CodeRankEmbed) - only for multi-word queries
         embedding_score = 0.0
         if (self.embedding_matcher and 
@@ -346,23 +375,55 @@ class HybridMatcher:
                     logger.debug(f"Embedding similarity failed: {e}")
                 embedding_score = 0.0
 
-        # Weighted combination with embedding
-        # If embeddings enabled: fuzzy 30%, tfidf 40%, embedding 30%
-        # If embeddings disabled: fuzzy 40%, tfidf 30%, vector 20%, context 10%
-        if self.embedding_matcher and hasattr(self.embedding_matcher, 'enabled') and self.embedding_matcher.enabled:
-            weights = {"fuzzy": 0.3, "tfidf": 0.4, "embedding": 0.3}
+        # Intelligent weighting based on available matchers
+        if (self.embedding_matcher and hasattr(self.embedding_matcher, 'enabled') and 
+            self.embedding_matcher.enabled and self.domain_semantic_matcher):
+            # Full semantic stack: fuzzy + domain + ML embeddings
+            weights = {
+                "fuzzy": 0.25,           # 25% - string similarity
+                "tfidf": 0.20,            # 20% - statistical similarity  
+                "domain_semantic": 0.30,   # 30% - programming domain knowledge
+                "embedding": 0.25         # 25% - ML semantic understanding
+            }
+            overall_score = (
+                fuzzy_score * weights["fuzzy"]
+                + tfidf_score * weights["tfidf"]
+                + domain_semantic_score * weights["domain_semantic"]
+                + embedding_score * weights["embedding"]
+            )
+        elif self.domain_semantic_matcher:
+            # Domain knowledge + fuzzy (no ML embeddings)
+            weights = {
+                "fuzzy": 0.40,            # 40% - string similarity
+                "tfidf": 0.30,            # 30% - statistical similarity
+                "domain_semantic": 0.30   # 30% - programming domain knowledge
+            }
+            overall_score = (
+                fuzzy_score * weights["fuzzy"]
+                + tfidf_score * weights["tfidf"]
+                + domain_semantic_score * weights["domain_semantic"]
+            )
+        elif self.embedding_matcher and hasattr(self.embedding_matcher, 'enabled') and self.embedding_matcher.enabled:
+            # ML embeddings + fuzzy (no domain knowledge)
+            weights = {
+                "fuzzy": 0.35,            # 35% - string similarity
+                "tfidf": 0.25,            # 25% - statistical similarity
+                "embedding": 0.40         # 40% - ML semantic understanding
+            }
             overall_score = (
                 fuzzy_score * weights["fuzzy"]
                 + tfidf_score * weights["tfidf"]
                 + embedding_score * weights["embedding"]
             )
         else:
-            weights = {"fuzzy": 0.4, "tfidf": 0.3, "vector": 0.2, "context": 0.1}
+            # Fallback: fuzzy + TF-IDF only
+            weights = {
+                "fuzzy": 0.60,            # 60% - string similarity
+                "tfidf": 0.40             # 40% - statistical similarity
+            }
             overall_score = (
                 fuzzy_score * weights["fuzzy"]
                 + tfidf_score * weights["tfidf"]
-                + vector_score * weights["vector"]
-                + context_score * weights["context"]
             )
 
         component_scores = {
@@ -370,8 +431,10 @@ class HybridMatcher:
             "tfidf": tfidf_score,
             "vector": vector_score,
             "context": context_score,
+            "domain_semantic": domain_semantic_score,
             "embedding": embedding_score,
             "overall": overall_score,
+            "weights": weights
         }
 
         return overall_score, component_scores
@@ -416,16 +479,17 @@ class HybridMatcher:
         matches.sort(key=lambda x: x[1], reverse=True)
 
         if self.verbose:
-            logger.debug(f"Hybrid matches for '{query}' (threshold: {threshold}):")
+            logger.debug(f"Enhanced hybrid matches for '{query}' (threshold: {threshold}):")
             for identifier, score, components in matches[:5]:
                 logger.debug(
-                    f"  - {identifier} (overall: {score:.2f}, fuzzy: {components['fuzzy']:.2f}, tfidf: {components['tfidf']:.2f})"
+                    f"  - {identifier} (overall: {score:.2f}, fuzzy: {components['fuzzy']:.2f}, "
+                    f"domain: {components['domain_semantic']:.2f}, embedding: {components['embedding']:.2f})"
                 )
 
         return matches
 
     def match_identifiers(
-        self, query: str, all_identifiers: Set[str]
+        self, query: str, all_identifiers: Set[str], threshold: float = None
     ) -> List[Tuple[str, int]]:
         """
         Match a query against all identifiers using hybrid approach.
@@ -441,11 +505,13 @@ class HybridMatcher:
             List of (identifier, score) tuples, sorted by score (highest first)
         """
         # Debug logging (only shows with --verbose)
-        logger.debug(f"HybridMatcher.match_identifiers: query='{query}', identifiers={len(all_identifiers)}")
+        logger.debug(f"Enhanced HybridMatcher.match_identifiers: query='{query}', identifiers={len(all_identifiers)}")
         logger.debug(f"Embedding matcher: {self.embedding_matcher is not None}, enabled={getattr(self.embedding_matcher, 'enabled', False) if self.embedding_matcher else False}")
+        logger.debug(f"Domain semantic matcher: {self.domain_semantic_matcher is not None}")
         
-        # Use a lower threshold for match_identifiers to be more inclusive
-        threshold = get_config("HYBRID_THRESHOLD", 0.1)
+        # Use passed threshold or fallback to config default
+        if threshold is None:
+            threshold = get_config("HYBRID_THRESHOLD", 0.1)
         logger.debug(f"Using threshold: {threshold}")
 
         # Get hybrid matches
@@ -462,7 +528,9 @@ class HybridMatcher:
             matches.append((identifier, score))
             # Log first few matches
             if len(matches) <= 5:
-                logger.debug(f"Match: {identifier} = {score}% (components: {component_scores})")
+                logger.debug(f"Match: {identifier} = {score}% (fuzzy: {component_scores['fuzzy']:.2f}, "
+                           f"domain: {component_scores['domain_semantic']:.2f}, "
+                           f"embedding: {component_scores['embedding']:.2f})")
 
         return matches
 

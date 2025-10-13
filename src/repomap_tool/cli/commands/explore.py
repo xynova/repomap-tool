@@ -470,7 +470,7 @@ def trees(session: Optional[str]) -> None:
 )
 @click.option(
     "--threshold",
-    default=get_config("FUZZY_THRESHOLD", 0.7),
+    default=get_config("HYBRID_THRESHOLD", 0.3),
     type=float,
     help="Match threshold (0.0-1.0)",
 )

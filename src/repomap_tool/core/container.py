@@ -218,12 +218,22 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # Domain semantic matcher for programming knowledge
+    domain_semantic_matcher: "providers.Singleton[Any]" = cast(
+        "providers.Singleton[Any]",
+        providers.Singleton(
+            "repomap_tool.code_search.semantic_matcher.DomainSemanticMatcher",
+            verbose=config.verbose,
+        ),
+    )
+
     hybrid_matcher: "providers.Factory[HybridMatcher]" = cast(
         "providers.Factory[HybridMatcher]",
         providers.Factory(
             "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
             fuzzy_matcher=fuzzy_matcher,
             embedding_matcher=embedding_matcher,
+            domain_semantic_matcher=domain_semantic_matcher,
             semantic_threshold=config.semantic_match.threshold,
             verbose=config.verbose,
         ),

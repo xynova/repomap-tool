@@ -131,6 +131,7 @@ def hybrid_search(
     identifiers: List[str],
     hybrid_matcher: MatcherProtocol,
     limit: int = get_config("MAX_LIMIT", 10),
+    threshold: float = get_config("HYBRID_THRESHOLD", 0.3),
 ) -> List[MatchResult]:
     """Perform hybrid search on identifiers."""
     # Input validation
@@ -149,7 +150,7 @@ def hybrid_search(
             identifier_set = set(identifiers)
             hybrid_matcher.build_tfidf_model(identifier_set)
 
-        results = hybrid_matcher.match_identifiers(query, set(identifiers))
+        results = hybrid_matcher.match_identifiers(query, set(identifiers), threshold)
 
         # Validate results and process
         match_results = []

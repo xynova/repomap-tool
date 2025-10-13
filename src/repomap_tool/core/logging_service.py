@@ -97,8 +97,39 @@ class LoggingService:
 
     def _configure_external_library_loggers(self) -> None:
         """Configure external library loggers to be less verbose."""
-        # Use the centralized function
-        _suppress_external_library_logs()
+        # Configure external libraries directly
+        import logging
+        
+        # Configure transformers library
+        try:
+            import transformers
+            transformers.logging.set_verbosity_error()
+            
+            # Set specific transformers loggers
+            transformers_logger = logging.getLogger("transformers_modules")
+            transformers_logger.setLevel(logging.ERROR)
+            
+        except ImportError:
+            pass
+        
+        # Configure sentence_transformers library
+        try:
+            import sentence_transformers
+            
+            # Set sentence_transformers logger to ERROR level
+            st_logger = logging.getLogger("sentence_transformers")
+            st_logger.setLevel(logging.ERROR)
+            
+            # Also suppress the specific SentenceTransformer logger
+            st_model_logger = logging.getLogger("sentence_transformers.SentenceTransformer")
+            st_model_logger.setLevel(logging.ERROR)
+            
+            # Suppress any other sentence_transformers related loggers
+            st_util_logger = logging.getLogger("sentence_transformers.util")
+            st_util_logger.setLevel(logging.ERROR)
+            
+        except ImportError:
+            pass
 
     def get_logger(self, name: str) -> logging.Logger:
         """Get a logger instance for the specified name.
