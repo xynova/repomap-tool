@@ -38,7 +38,6 @@ class TestExplorationControllerHelpers:
         )
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_cluster_search_results_empty_results(self):
         """Test _cluster_search_results with empty results."""
         # Call method
@@ -48,7 +47,6 @@ class TestExplorationControllerHelpers:
         assert clusters == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_cluster_search_results_with_results(self):
         """Test _cluster_search_results with search results."""
         # Create mock search results
@@ -91,7 +89,6 @@ class TestExplorationControllerHelpers:
         assert clusters[0]["cluster_type"] == "file_based"
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_cluster_search_results_max_clusters_limit(self):
         """Test _cluster_search_results respects max clusters limit."""
         # Create many search results
@@ -127,7 +124,6 @@ class TestExplorationControllerHelpers:
         assert len(clusters) == 3  # Should be limited to 3
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_entrypoints_no_tree(self):
         """Test _extract_entrypoints with no tree."""
         # Call method
@@ -137,7 +133,6 @@ class TestExplorationControllerHelpers:
         assert entrypoints == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_entrypoints_with_tree(self):
         """Test _extract_entrypoints with tree nodes."""
         # Create mock tree with nodes
@@ -178,7 +173,6 @@ class TestExplorationControllerHelpers:
         assert entrypoints[2]["identifier"] == "class1"
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_entrypoints_max_entrypoints_limit(self):
         """Test _extract_entrypoints respects max entrypoints limit."""
         # Create mock tree with many nodes
@@ -204,7 +198,6 @@ class TestExplorationControllerHelpers:
         assert len(entrypoints) == 5  # Should be limited to 5
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_create_exploration_session(self):
         """Test _create_exploration_session creates session with trees."""
         # Create mock tree clusters
@@ -236,7 +229,6 @@ class TestExplorationControllerHelpers:
         assert saved_session.current_focus == "tree_1"
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_create_exploration_session_empty_trees(self):
         """Test _create_exploration_session with empty trees."""
         # Mock session manager
@@ -251,7 +243,6 @@ class TestExplorationControllerHelpers:
         assert saved_session.current_focus is None
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_estimate_token_count_empty_trees(self):
         """Test _estimate_token_count with empty trees."""
         # Call method
@@ -261,7 +252,6 @@ class TestExplorationControllerHelpers:
         assert token_count == 0
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_estimate_token_count_with_trees(self):
         """Test _estimate_token_count with trees."""
         # Create mock trees
@@ -296,7 +286,6 @@ class TestExplorationControllerHelpers:
         assert token_count == 450
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_estimate_token_count_fallback(self):
         """Test _estimate_token_count with trees without nodes."""
         # Create mock trees without nodes attribute
@@ -318,7 +307,6 @@ class TestExplorationControllerHelpers:
         assert token_count == 400  # 2 trees * 200 fallback
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_structure_no_tree(self):
         """Test _build_tree_structure with no tree."""
         # Call method
@@ -328,7 +316,6 @@ class TestExplorationControllerHelpers:
         assert structure == {}
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_structure_with_tree(self):
         """Test _build_tree_structure with tree."""
         # Create mock tree
@@ -376,7 +363,6 @@ class TestExplorationControllerHelpers:
         assert structure["nodes"][0]["children_count"] == 2
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_code_snippets_no_tree(self):
         """Test _extract_code_snippets with no tree."""
         # Call method
@@ -386,7 +372,6 @@ class TestExplorationControllerHelpers:
         assert snippets == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_code_snippets_with_tree(self):
         """Test _extract_code_snippets with tree."""
         # Create mock tree with nodes
@@ -418,7 +403,6 @@ class TestExplorationControllerHelpers:
         assert snippets[0]["tokens_used"] > 0
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_code_snippets_token_limit(self):
         """Test _extract_code_snippets respects token limit."""
         # Create mock tree with many nodes
@@ -443,7 +427,6 @@ class TestExplorationControllerHelpers:
         assert total_tokens <= 100
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_session_stats_no_session(self):
         """Test _build_session_stats with no session."""
         # Call method
@@ -453,7 +436,6 @@ class TestExplorationControllerHelpers:
         assert stats == {}
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_session_stats_with_session(self):
         """Test _build_session_stats with session."""
         # Create mock session
@@ -491,7 +473,6 @@ class TestExplorationControllerHelpers:
         assert stats["session_duration"] == 5400  # 1.5 hours in seconds
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_session_stats_string_dates(self):
         """Test _build_session_stats with string dates."""
         # Create mock session with string dates
@@ -510,7 +491,6 @@ class TestExplorationControllerHelpers:
         assert stats["session_duration"] == 5400  # 1.5 hours in seconds
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_cluster_search_results_error_handling(self):
         """Test _cluster_search_results handles errors gracefully."""
         # Create mock search results that will cause error
@@ -525,7 +505,6 @@ class TestExplorationControllerHelpers:
         assert clusters == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_entrypoints_error_handling(self):
         """Test _extract_entrypoints handles errors gracefully."""
         # Create mock tree that will cause error
@@ -544,7 +523,6 @@ class TestExplorationControllerHelpers:
         assert entrypoints == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_create_exploration_session_error_handling(self):
         """Test _create_exploration_session handles errors gracefully."""
         # Mock session manager to raise exception
@@ -557,7 +535,6 @@ class TestExplorationControllerHelpers:
             )
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_estimate_token_count_error_handling(self):
         """Test _estimate_token_count handles errors gracefully."""
         # Create mock trees that will cause error
@@ -575,7 +552,6 @@ class TestExplorationControllerHelpers:
         assert token_count == 1000  # Fallback value
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_structure_error_handling(self):
         """Test _build_tree_structure handles errors gracefully."""
         # Create mock tree that will cause error
@@ -590,7 +566,6 @@ class TestExplorationControllerHelpers:
         assert structure == {}
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_code_snippets_error_handling(self):
         """Test _extract_code_snippets handles errors gracefully."""
         # Create mock tree that will cause error
@@ -608,7 +583,6 @@ class TestExplorationControllerHelpers:
         assert snippets == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_session_stats_error_handling(self):
         """Test _build_session_stats handles errors gracefully."""
         # Create mock session that will cause error

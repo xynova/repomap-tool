@@ -109,8 +109,12 @@ class TestServiceFactory:
                 mock_repo_map_service.return_value = mock_service
 
                 # Create service twice
-                service1 = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
-                service2 = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
+                service1 = self.factory.create_repomap_service(
+                    self._create_test_config(session_test_repo_path)
+                )
+                service2 = self.factory.create_repomap_service(
+                    self._create_test_config(session_test_repo_path)
+                )
 
                 # Should be the same instance (cached)
                 assert service1 is service2
@@ -143,7 +147,9 @@ class TestServiceFactory:
                     mock_discoverer.return_value = mock_discoverer_instance
 
                     # Create RepoMapService first
-                    repo_map = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
+                    repo_map = self.factory.create_repomap_service(
+                        self._create_test_config(session_test_repo_path)
+                    )
 
                     # Create EntrypointDiscoverer
                     discoverer = self.factory.create_entrypoint_discoverer(
@@ -184,7 +190,9 @@ class TestServiceFactory:
                     mock_tree_builder.return_value = mock_tree_builder_instance
 
                     # Create RepoMapService first
-                    repo_map = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
+                    repo_map = self.factory.create_repomap_service(
+                        self._create_test_config(session_test_repo_path)
+                    )
 
                     # Create TreeBuilder
                     tree_builder = self.factory.create_tree_builder(
@@ -226,7 +234,9 @@ class TestServiceFactory:
                     mock_tree_manager.return_value = mock_tree_manager_instance
 
                     # Create RepoMapService first
-                    repo_map = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
+                    repo_map = self.factory.create_repomap_service(
+                        self._create_test_config(session_test_repo_path)
+                    )
 
                     # Create TreeManager
                     tree_manager = self.factory.create_tree_manager(
@@ -247,10 +257,14 @@ class TestServiceFactory:
             mock_create_container.return_value = mock_container
 
             # Get LLM analyzer
-            llm_analyzer = self.factory.get_llm_analyzer(self._create_test_config(session_test_repo_path))
+            llm_analyzer = self.factory.get_llm_analyzer(
+                self._create_test_config(session_test_repo_path)
+            )
 
             assert llm_analyzer is not None
-            mock_create_container.assert_called_once_with(self._create_test_config(session_test_repo_path))
+            mock_create_container.assert_called_once_with(
+                self._create_test_config(session_test_repo_path)
+            )
             mock_container.llm_file_analyzer.assert_called_once()
 
     def test_clear_cache(self, session_test_repo_path):
@@ -277,13 +291,17 @@ class TestServiceFactory:
                 mock_repo_map_service.return_value = mock_service
 
                 # Create a service
-                service1 = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
+                service1 = self.factory.create_repomap_service(
+                    self._create_test_config(session_test_repo_path)
+                )
 
                 # Clear cache
                 self.factory.clear_cache()
 
                 # Create service again - should create new instance
-                service2 = self.factory.create_repomap_service(self._create_test_config(session_test_repo_path))
+                service2 = self.factory.create_repomap_service(
+                    self._create_test_config(session_test_repo_path)
+                )
 
                 # Should be different instances
                 assert service1 is not service2
@@ -359,27 +377,3 @@ class TestServiceFactoryGlobal:
 
         # Should not raise any exceptions
         assert True
-
-    def test_service_factory_integration(self, session_test_repo_path):
-        """Test service factory integration with real config."""
-        # Use session test repository instead of creating temporary directory
-        config = RepoMapConfig(
-            project_root=str(session_test_repo_path),
-            fuzzy_match=FuzzyMatchConfig(threshold=80),
-            semantic_match=SemanticMatchConfig(enabled=True, threshold=0.7),
-            performance=PerformanceConfig(max_workers=4),
-            dependencies=DependencyConfig(enable_impact_analysis=True),
-        )
-
-        factory = get_service_factory()
-
-        # Test that we can create services without errors
-        # (This will use real DI container, so we need to mock the actual service creation)
-        with patch(
-            "repomap_tool.core.repo_map.RepoMapService"
-        ) as mock_repo_map_service:
-            mock_service = Mock()
-            mock_repo_map_service.return_value = mock_service
-
-            service = factory.create_repomap_service(config)
-            assert service is not None

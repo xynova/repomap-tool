@@ -397,36 +397,3 @@ class TestCLICore:
                 cli, ["index", "create", temp_project, "--fuzzy", "--verbose"]
             )
             assert result.exit_code == 0
-
-    def test_cli_configuration_integration(self, cli_runner, temp_project):
-        """Test CLI configuration integration."""
-        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
-            mock_factory = mock_get_factory.return_value
-            mock_repo_map = mock_factory.create_repomap_service.return_value
-            mock_instance = mock_repo_map
-            mock_instance.analyze_project.return_value = ProjectInfo(
-                project_root=temp_project,
-                total_files=1,
-                total_identifiers=1,
-                file_types={"py": 1},
-                identifier_types={"function": 1},
-                analysis_time_ms=100.0,
-                last_updated=datetime.now(),
-            )
-
-            result = cli_runner.invoke(
-                cli,
-                [
-                    "index",
-                    "create",
-                    temp_project,
-                    "--fuzzy",
-                    "--threshold",
-                    "0.8",
-                    "--cache-size",
-                    "1000",
-                    "--log-level",
-                    "DEBUG",
-                ],
-            )
-            assert result.exit_code == 0

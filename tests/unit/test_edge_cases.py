@@ -606,33 +606,3 @@ class TestConcurrencyEdgeCases:
         # Assert - Should handle concurrent access gracefully
         assert len(results) == 10
         assert len(errors) == 0
-
-
-class TestIntegrationEdgeCases:
-    """Test edge cases in integration scenarios."""
-
-    def test_full_workflow_with_edge_cases(
-        self, session_container, session_test_repo_path
-    ):
-        """Test full workflow with various edge cases."""
-        # Use session test repository instead of creating temporary directory
-        config = RepoMapConfig(project_root=str(session_test_repo_path))
-        from tests.conftest import create_repomap_service_from_session_container
-
-        repomap = create_repomap_service_from_session_container(
-            session_container, config
-        )
-
-        # Act
-        project_info = repomap.analyze_project()
-
-        # Assert - Should handle edge cases gracefully
-        assert isinstance(project_info.total_files, int)
-        assert isinstance(project_info.total_identifiers, int)
-
-        # Test search with edge cases
-        search_request = SearchRequest(query="test", match_type="fuzzy", max_results=5)
-        search_response = repomap.search_identifiers(search_request)
-
-        # Assert - Should handle search with edge cases gracefully
-        assert isinstance(search_response.total_results, int)

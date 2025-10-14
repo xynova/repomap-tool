@@ -23,7 +23,6 @@ class TestTreeDependencyIntegration:
     """Test integration between tree exploration and dependency analysis."""
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_discovery_engine_initialization_with_dependencies(
         self, session_container, session_test_repo_path
     ):
@@ -68,7 +67,6 @@ class TestTreeDependencyIntegration:
         assert discoverer.impact_analyzer is not None
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_enhance_entrypoints_with_dependencies(
         self, session_container, session_test_repo_path
     ):
@@ -137,7 +135,6 @@ class TestTreeDependencyIntegration:
         assert discoverer._enhance_single_entrypoint.call_count == 2
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_extract_file_path_from_location(
         self, session_container, session_test_repo_path
     ):
@@ -217,7 +214,6 @@ class TestTreeDependencyIntegration:
         assert normalized_path == expected_constructed_path
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_dependency_graph_integration(
         self, session_container, session_test_repo_path
     ):
@@ -259,7 +255,6 @@ class TestTreeDependencyIntegration:
         assert hasattr(discoverer.dependency_graph, "get_dependents")
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_import_analyzer_integration(
         self, session_container, session_test_repo_path
     ):
@@ -300,7 +295,6 @@ class TestTreeDependencyIntegration:
         assert hasattr(discoverer.import_analyzer, "analyze_file_imports")
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_lazy_initialization_of_analysis_components(
         self, session_container, session_test_repo_path
     ):
@@ -369,7 +363,6 @@ class TestEntrypointEnhancement:
     """Test the enhancement of entrypoints with dependency information."""
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_entrypoint_model_with_dependency_fields(self):
         """Test that Entrypoint model includes dependency analysis fields."""
         entrypoint = Entrypoint(
@@ -396,7 +389,6 @@ class TestEntrypointEnhancement:
         assert entrypoint.refactoring_priority is None
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_entrypoint_model_with_dependency_values(self):
         """Test that Entrypoint model can store dependency analysis values."""
         entrypoint = Entrypoint(
@@ -423,7 +415,6 @@ class TestTreeNodeEnhancement:
     """Test the enhancement of TreeNode model with dependency information."""
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_treenode_model_with_dependency_fields(self):
         """Test that TreeNode model includes dependency analysis fields."""
         from repomap_tool.models import TreeNode

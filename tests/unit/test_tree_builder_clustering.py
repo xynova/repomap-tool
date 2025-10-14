@@ -32,7 +32,6 @@ class TestTreeBuilderClustering:
         )
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_from_search_results_empty_results(self):
         """Test build_tree_from_search_results with empty search results."""
         # Create empty search results
@@ -61,7 +60,6 @@ class TestTreeBuilderClustering:
         assert len(trees) == 0
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_from_search_results_single_file(self):
         """Test build_tree_from_search_results with single file results."""
         # Create search results with single file
@@ -116,7 +114,6 @@ class TestTreeBuilderClustering:
         )
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_from_search_results_multiple_files(self):
         """Test build_tree_from_search_results with multiple file results."""
         # Create search results with multiple files
@@ -170,7 +167,6 @@ class TestTreeBuilderClustering:
         assert trees[1] == mock_tree2
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_from_search_results_max_trees_limit(self):
         """Test build_tree_from_search_results respects max trees limit."""
         # Create search results with many files
@@ -225,7 +221,6 @@ class TestTreeBuilderClustering:
         assert len(trees) == 3  # Should be limited to 3
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_expand_area_no_matching_nodes(self):
         """Test expand_area with no matching nodes."""
         # Create tree with no matching nodes
@@ -249,7 +244,6 @@ class TestTreeBuilderClustering:
         assert "nonexistent" in tree.expanded_areas
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_expand_area_with_matching_nodes(self):
         """Test expand_area with matching nodes."""
         # Create tree with matching nodes
@@ -303,7 +297,6 @@ class TestTreeBuilderClustering:
         assert len(mock_node.children) == 1
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_prune_area_no_matching_nodes(self):
         """Test prune_area with no matching nodes."""
         # Create tree with no matching nodes
@@ -324,7 +317,6 @@ class TestTreeBuilderClustering:
         assert "nonexistent" not in tree.pruned_areas
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_prune_area_with_matching_nodes(self):
         """Test prune_area with matching nodes."""
         # Create tree with matching nodes
@@ -367,7 +359,6 @@ class TestTreeBuilderClustering:
         assert mock_node not in mock_parent.children
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_find_nodes_by_area_matches_identifier(self):
         """Test _find_nodes_by_area finds nodes by identifier."""
         # Create tree structure
@@ -397,7 +388,6 @@ class TestTreeBuilderClustering:
         assert matching_nodes[0] == child_node
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_find_nodes_by_area_matches_location(self):
         """Test _find_nodes_by_area finds nodes by location."""
         # Create tree structure
@@ -425,7 +415,6 @@ class TestTreeBuilderClustering:
         assert matching_nodes[0] == child_node
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_get_all_descendants(self):
         """Test _get_all_descendants returns all descendant nodes."""
         # Create tree structure
@@ -474,7 +463,6 @@ class TestTreeBuilderClustering:
         assert grandchild in descendants
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_get_all_nodes(self):
         """Test _get_all_nodes returns all nodes in tree."""
         # Create tree structure
@@ -515,7 +503,6 @@ class TestTreeBuilderClustering:
         assert child2 in all_nodes
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_get_related_symbols_from_tree_sitter_no_repo_map(self):
         """Test _get_related_symbols_from_tree_sitter with no repo_map."""
         # Create node
@@ -538,7 +525,6 @@ class TestTreeBuilderClustering:
         assert symbols == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_get_related_symbols_from_tree_sitter_with_repo_map(self):
         """Test _get_related_symbols_from_tree_sitter with repo_map."""
         # Create node
@@ -591,7 +577,6 @@ class TestTreeBuilderClustering:
         mock_repo_map.get_tags.assert_called_once()
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_build_tree_from_search_results_error_handling(self):
         """Test build_tree_from_search_results handles errors gracefully."""
         # Create search results
@@ -625,7 +610,6 @@ class TestTreeBuilderClustering:
         assert trees == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_expand_area_error_handling(self):
         """Test expand_area handles errors gracefully."""
         # Create tree
@@ -649,7 +633,6 @@ class TestTreeBuilderClustering:
         assert new_symbols == []
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
-
     def test_prune_area_error_handling(self):
         """Test prune_area handles errors gracefully."""
         # Create tree
