@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Unit tests for analyzer functions.
+Unit tests for analyzer functions using session fixtures.
 
 This module tests the core analyzer functions that currently have no unit tests:
 - analyze_file_types()

@@ -15,7 +15,8 @@ help:
 	@echo "Available commands:"
 	@echo "  venv        - Create virtual environment with uv"
 	@echo "  install     - Install dependencies in .venv"
-	@echo "  test        - Run tests with coverage"
+	@echo "  test        - Run tests with coverage (parallel)"
+	@echo "  test-unit   - Run unit tests (parallel)"
 	@echo "  lint        - Run linting checks"
 	@echo "  format      - Format code with black"
 	@echo "  mypy        - Run type checking with mypy"
@@ -66,15 +67,15 @@ install: venv
 
 # Run tests with coverage
 test: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html -n auto
 
 # Run only unit tests
 test-unit: install
-	$(VENV_PYTHON) -m pytest tests/unit/ -v
+	REPOMAP_DISABLE_CACHE=1 $(VENV_PYTHON) -m pytest tests/unit/ -v --tb=short -n auto
 
 # Run only integration tests
 test-integration: install
-	$(VENV_PYTHON) -m pytest tests/integration/ -v
+	$(VENV_PYTHON) -m pytest tests/integration/ -v -n auto
 
 # Run performance tests
 performance: install
@@ -129,9 +130,9 @@ ci: test security build check
 
 # Run comprehensive nightly tests
 nightly: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10 -n auto
 	$(VENV_PYTHON) -m pytest tests/integration/test_self_integration.py -v --durations=10
-	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10
+	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10 -n auto
 
 # Run performance demo
 demo: install

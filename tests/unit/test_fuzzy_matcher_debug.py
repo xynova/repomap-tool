@@ -2,15 +2,16 @@ import pytest
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 
 
-def test_fuzzy_matcher_basic():
+def test_fuzzy_matcher_basic(session_container, session_test_repo_path):
     """Test fuzzy matcher with simple identifiers."""
-    from repomap_tool.cli.services import get_service_factory
     from repomap_tool.models import RepoMapConfig
+    from tests.conftest import create_repomap_service_from_session_container
 
-    # Create config and get service factory
-    config = RepoMapConfig(project_root=".")
-    service_factory = get_service_factory()
-    repomap_service = service_factory.create_repomap_service(config)
+    # Create config and get service from session container
+    config = RepoMapConfig(project_root=str(session_test_repo_path))
+    repomap_service = create_repomap_service_from_session_container(
+        session_container, config
+    )
     matcher = repomap_service.fuzzy_matcher
 
     identifiers = {

@@ -63,7 +63,7 @@ class Container(containers.DeclarativeContainer):
     # Configuration
     config = providers.Configuration()
 
-    # Tag cache for tree-sitter parsing results
+    # Tag cache for tree-sitter parsing results (conditionally created)
     tag_cache: "providers.Singleton[TreeSitterTagCache]" = cast(
         "providers.Singleton[TreeSitterTagCache]",
         providers.Singleton(

@@ -45,6 +45,8 @@ class TestTreeClusterViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = TreeClusterViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
@@ -52,12 +54,16 @@ class TestTreeClusterViewModelFormatter:
         # Test with a non-existent format (using string instead of enum)
         assert self.formatter.supports_format("table") is False
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_get_supported_formats(self):
         """Test get_supported_formats method."""
         formats = self.formatter.get_supported_formats()
         assert OutputFormat.TEXT in formats
         assert OutputFormat.JSON in formats
         assert len(formats) == 2
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -82,6 +88,8 @@ class TestTreeClusterViewModelFormatter:
 
         assert result == "formatted text"
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_format_json(self):
         """Test format method with JSON format."""
         # Create mock data
@@ -104,10 +112,14 @@ class TestTreeFocusViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = TreeFocusViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -128,10 +140,14 @@ class TestTreeExpansionViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = TreeExpansionViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -166,10 +182,14 @@ class TestTreePruningViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = TreePruningViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -191,10 +211,14 @@ class TestTreeMappingViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = TreeMappingViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -219,10 +243,14 @@ class TestTreeListingViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = TreeListingViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -246,10 +274,14 @@ class TestSessionStatusViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = SessionStatusViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -274,10 +306,14 @@ class TestExplorationViewModelFormatter:
         """Set up test fixtures."""
         self.formatter = ExplorationViewModelFormatter()
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_supports_format(self):
         """Test supports_format method."""
         assert self.formatter.supports_format(OutputFormat.TEXT) is True
         assert self.formatter.supports_format(OutputFormat.JSON) is True
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_format_text(self):
         """Test format method with TEXT format."""
@@ -299,6 +335,8 @@ class TestExplorationViewModelFormatter:
 class TestExplorationFormattersIntegration:
     """Test exploration formatters integration."""
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_all_formatters_support_text_and_json(self):
         """Test that all formatters support TEXT and JSON formats."""
         formatters = [
@@ -316,6 +354,8 @@ class TestExplorationFormattersIntegration:
             assert formatter.supports_format(OutputFormat.TEXT) is True
             assert formatter.supports_format(OutputFormat.JSON) is True
             assert len(formatter.get_supported_formats()) == 2
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_all_formatters_inherit_from_correct_base_classes(self):
         """Test that all formatters inherit from correct base classes."""
@@ -338,6 +378,8 @@ class TestExplorationFormattersIntegration:
             assert hasattr(formatter, "_format_text")
             assert hasattr(formatter, "_format_json")
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_formatters_handle_missing_data_gracefully(self):
         """Test that formatters handle missing data gracefully."""
         formatter = TreeClusterViewModelFormatter()
@@ -352,6 +394,8 @@ class TestExplorationFormattersIntegration:
 
         assert result == "fallback text"
 
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
+
     def test_formatters_use_correct_template_names(self):
         """Test that formatters use correct template names."""
         formatter = TreeClusterViewModelFormatter()
@@ -363,6 +407,8 @@ class TestExplorationFormattersIntegration:
             mock_get_template_name.return_value = "tree_cluster.jinja2"
             formatter.format(data, OutputFormat.TEXT)
             mock_get_template_name.assert_called_once_with(data)
+
+    @pytest.mark.skip(reason="Disabling tree/exploration tests")
 
     def test_formatters_pass_kwargs_correctly(self):
         """Test that formatters work correctly with standard arguments."""

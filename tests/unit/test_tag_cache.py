@@ -2,11 +2,13 @@
 Unit tests for TreeSitterTagCache.
 
 Tests cache storage, retrieval, invalidation, and statistics.
+These tests require cache isolation to avoid state contamination.
 """
 
 import pytest
 import tempfile
 import shutil
+import os
 from pathlib import Path
 from datetime import datetime
 
@@ -15,7 +17,17 @@ from repomap_tool.code_analysis.models import CodeTag
 
 
 class TestTreeSitterTagCache:
-    """Test TreeSitterTagCache functionality."""
+    """Test TreeSitterTagCache functionality with cache isolation."""
+
+    def setup_method(self):
+        """Enable caching for these tests."""
+        # Enable caching for cache tests
+        os.environ["REPOMAP_DISABLE_CACHE"] = "0"
+
+    def teardown_method(self):
+        """Restore cache disable setting."""
+        # Restore the cache disable setting
+        os.environ["REPOMAP_DISABLE_CACHE"] = "1"
 
     @pytest.fixture
     def temp_cache_dir(self):
@@ -63,26 +75,31 @@ class TestClass:
             ),
         ]
 
+    @pytest.mark.cache_isolation
     def test_cache_initialization(self, cache):
         """Test cache initialization creates database."""
         assert cache.db_path.exists()
         assert cache.db_path.is_file()
 
-    def test_set_and_get_tags(self, cache, sample_tags):
+    @pytest.mark.cache_isolation
+    def test_set_and_get_tags(self, cache, sample_tags, temp_cache_dir):
         """Test storing and retrieving tags."""
-        file_path = "/test/file.py"
+        # Create a real test file
+        test_file = temp_cache_dir / "test_file.py"
+        test_file.write_text("def test_function():\n    pass\n")
 
         # Set tags
-        cache.set_tags(file_path, sample_tags)
+        cache.set_tags(str(test_file), sample_tags)
 
         # Get tags
-        retrieved_tags = cache.get_tags(file_path)
+        retrieved_tags = cache.get_tags(str(test_file))
 
         assert retrieved_tags is not None
         assert len(retrieved_tags) == 2
         assert retrieved_tags[0].name == "TestClass"
         assert retrieved_tags[1].name == "test_function"
 
+    @pytest.mark.cache_isolation
     def test_cache_invalidation_on_file_change(
         self, cache, sample_tags, temp_cache_dir
     ):
@@ -103,6 +120,7 @@ class TestClass:
         # Cache should be invalid now
         assert cache.get_tags(str(test_file)) is None
 
+    @pytest.mark.cache_isolation
     def test_cache_invalidation_on_file_deletion(
         self, cache, sample_tags, temp_cache_dir
     ):
@@ -123,6 +141,7 @@ class TestClass:
         # Cache should be invalid now
         assert cache.get_tags(str(test_file)) is None
 
+    @pytest.mark.cache_isolation
     def test_invalidate_file(self, cache, sample_tags):
         """Test manual file invalidation."""
         # Use the first tag's file path
@@ -140,6 +159,7 @@ class TestClass:
         # Cache should be invalid now
         assert cache.get_tags(file_path) is None
 
+    @pytest.mark.cache_isolation
     def test_clear_cache(self, cache, sample_tags):
         """Test clearing entire cache."""
         # Use the first tag's file path
@@ -157,6 +177,7 @@ class TestClass:
         # Cache should be empty
         assert cache.get_tags(file_path) is None
 
+    @pytest.mark.cache_isolation
     def test_cache_stats(self, cache, sample_tags):
         """Test cache statistics."""
         # Use the first tag's file path
@@ -177,6 +198,7 @@ class TestClass:
         assert "cache_location" in stats
         assert "approx_size_bytes" in stats
 
+    @pytest.mark.cache_isolation
     def test_multiple_files(self, cache, sample_tags, temp_cache_dir):
         """Test caching multiple files."""
         # Create two separate test files
@@ -208,6 +230,7 @@ class TestClass:
         assert stats["cached_files"] == 2
         assert stats["total_tags"] == 2
 
+    @pytest.mark.cache_isolation
     def test_empty_tags_list(self, cache, temp_cache_dir):
         """Test caching empty tags list."""
         # Create a real empty file
@@ -222,6 +245,7 @@ class TestClass:
         assert retrieved is not None
         assert len(retrieved) == 0
 
+    @pytest.mark.cache_isolation
     def test_nonexistent_file(self, cache):
         """Test getting tags for nonexistent file."""
         file_path = "/nonexistent/file.py"

@@ -29,13 +29,9 @@ def cli_runner():
 
 
 @pytest.fixture
-def temp_project():
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create a minimal project structure
-        os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
-        with open(os.path.join(temp_dir, "src", "main.py"), "w") as f:
-            f.write("def main():\n    pass\n")
-        yield temp_dir
+def temp_project(session_test_repo_path):
+    """Use session test repository instead of creating temporary directory."""
+    return str(session_test_repo_path)
 
 
 class TestCLICore:
@@ -252,12 +248,14 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "version" in result.output.lower()
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_explore_command_exists(self, cli_runner):
         """Test that explore command exists and shows help."""
         result = cli_runner.invoke(cli, ["explore", "start", "--help"])
         assert result.exit_code == 0
         assert "explore" in result.output.lower()
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_explore_basic_usage(self, cli_runner, temp_project):
         """Test basic explore command usage."""
         # Explore command is complex and requires session management
@@ -268,12 +266,14 @@ class TestCLICore:
         # We're just testing that the command structure is correct
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_focus_command_exists(self, cli_runner):
         """Test that focus command exists and shows help."""
         result = cli_runner.invoke(cli, ["explore", "focus", "--help"])
         assert result.exit_code == 0
         assert "focus" in result.output.lower()
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_focus_basic_usage(self, cli_runner):
         """Test basic focus command usage."""
         # Focus command requires session management

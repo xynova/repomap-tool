@@ -8,6 +8,7 @@ This module provides TreeSitterTagCache class that implements:
 - Cache statistics and management
 """
 
+import os
 import sqlite3
 import hashlib
 from datetime import datetime
@@ -32,7 +33,13 @@ class TreeSitterTagCache:
         self.cache_dir = cache_dir or Path.home() / ".repomap-tool" / "cache"
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.db_path = self.cache_dir / "tags.db"
-        self._init_db()
+
+        # Check if cache is disabled via environment variable
+        if os.getenv("REPOMAP_DISABLE_CACHE", "0").lower() in ("1", "true", "yes"):
+            self._cache_disabled = True
+        else:
+            self._cache_disabled = False
+            self._init_db()
 
     def _init_db(self) -> None:
         """Initialize SQLite database schema"""
@@ -98,6 +105,9 @@ class TreeSitterTagCache:
         Returns:
             List of CodeTag objects if cache is valid, None otherwise
         """
+        if self._cache_disabled:
+            return None
+
         if not self._is_cache_valid(file_path):
             return None
 
@@ -137,6 +147,9 @@ class TreeSitterTagCache:
             file_path: Path to the file being cached
             tags: List of CodeTag objects to cache
         """
+        if self._cache_disabled:
+            return
+
         file_hash = self._compute_file_hash(file_path)
         mtime = Path(file_path).stat().st_mtime
 
@@ -187,6 +200,9 @@ class TreeSitterTagCache:
         Args:
             file_path: Path to the file to invalidate
         """
+        if self._cache_disabled:
+            return
+
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_cache WHERE file_path = ?", (file_path,))
@@ -198,6 +214,9 @@ class TreeSitterTagCache:
 
     def clear(self) -> None:
         """Clear entire cache"""
+        if self._cache_disabled:
+            return
+
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_cache")
@@ -216,6 +235,9 @@ class TreeSitterTagCache:
         Returns:
             True if cache is valid, False otherwise
         """
+        if self._cache_disabled:
+            return False
+
         if not Path(file_path).exists():
             return False
 

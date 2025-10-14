@@ -17,34 +17,32 @@ def test_search_config_creation():
     assert config.fuzzy_match.enabled is True
 
 
-def test_fuzzy_matcher_initialization():
+def test_fuzzy_matcher_initialization(session_container, session_test_repo_path):
     """Test that fuzzy matcher is initialized correctly."""
     config, was_created = load_or_create_config(
-        project_path=".",
+        project_path=str(session_test_repo_path),
         config_file=None,
         create_if_missing=False,
         verbose=True,
     )
-    from repomap_tool.cli.services import get_service_factory
+    from tests.conftest import create_repomap_service_from_session_container
 
-    service_factory = get_service_factory()
-    dm = service_factory.create_repomap_service(config)
+    dm = create_repomap_service_from_session_container(session_container, config)
 
     assert dm.fuzzy_matcher is not None
 
 
-def test_fuzzy_matcher_functionality():
+def test_fuzzy_matcher_functionality(session_container, session_test_repo_path):
     """Test that fuzzy matcher works correctly."""
     config, was_created = load_or_create_config(
-        project_path=".",
+        project_path=str(session_test_repo_path),
         config_file=None,
         create_if_missing=False,
         verbose=True,
     )
-    from repomap_tool.cli.services import get_service_factory
+    from tests.conftest import create_repomap_service_from_session_container
 
-    service_factory = get_service_factory()
-    dm = service_factory.create_repomap_service(config)
+    dm = create_repomap_service_from_session_container(session_container, config)
 
     if dm.fuzzy_matcher:
         test_identifiers = {"RepoMapService", "parse_gitignore", "should_ignore_file"}

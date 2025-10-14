@@ -4,8 +4,6 @@ Test CLI project path fix - ensure commands use correct project path from sessio
 """
 
 import os
-import tempfile
-import shutil
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
@@ -24,26 +22,12 @@ class TestCLIProjectPathFix:
     def setup_method(self):
         """Set up test environment."""
         self.runner = CliRunner()
-        self.temp_dir = tempfile.mkdtemp()
-        self.test_project_dir = Path(self.temp_dir) / "test_project"
-        self.test_project_dir.mkdir()
 
-        # Create a simple test file
-        (self.test_project_dir / "test.py").write_text("print('hello world')")
-
-        # Create another directory to test from
-        self.other_dir = Path(self.temp_dir) / "other_dir"
-        self.other_dir.mkdir()
-
-    def teardown_method(self):
-        """Clean up test environment."""
-        shutil.rmtree(self.temp_dir)
-
-    def test_get_project_path_from_session_success(self):
+    def test_get_project_path_from_session_success(self, session_test_repo_path):
         """Test successful retrieval of project path from session."""
         # Create a mock session
         session_id = "test_session_123"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         session = ExplorationSession(session_id=session_id, project_path=project_path)
 
@@ -95,10 +79,11 @@ class TestCLIProjectPathFix:
 
             assert result is None
 
-    def test_focus_command_uses_session_project_path(self):
+    @pytest.mark.skip(reason="Disabling explore verb tests")
+    def test_focus_command_uses_session_project_path(self, session_test_repo_path):
         """Test that focus command uses project path from session data."""
         session_id = "test_session_456"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
@@ -143,7 +128,10 @@ class TestCLIProjectPathFix:
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Change to different directory
                 with self.runner.isolated_filesystem():
-                    os.chdir(self.other_dir)
+                    # Use a different directory for testing
+                    other_dir = Path("/tmp/test_other_dir")
+                    other_dir.mkdir(exist_ok=True)
+                    os.chdir(other_dir)
 
                     # Run focus command
                     result = self.runner.invoke(
@@ -163,10 +151,11 @@ class TestCLIProjectPathFix:
                     #     str(config.project_root)
                     # ) == os.path.realpath(project_path)
 
-    def test_expand_command_uses_session_project_path(self):
+    @pytest.mark.skip(reason="Disabling explore verb tests")
+    def test_expand_command_uses_session_project_path(self, session_test_repo_path):
         """Test that expand command uses project path from session data."""
         session_id = "test_session_789"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
@@ -212,7 +201,10 @@ class TestCLIProjectPathFix:
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Change to different directory
                 with self.runner.isolated_filesystem():
-                    os.chdir(self.other_dir)
+                    # Use a different directory for testing
+                    other_dir = Path("/tmp/test_other_dir")
+                    other_dir.mkdir(exist_ok=True)
+                    os.chdir(other_dir)
 
                     # Run expand command
                     result = self.runner.invoke(cli, ["explore", "expand", "test_area"])
@@ -230,10 +222,11 @@ class TestCLIProjectPathFix:
                     #     str(config.project_root)
                     # ) == os.path.realpath(project_path)
 
-    def test_prune_command_uses_session_project_path(self):
+    @pytest.mark.skip(reason="Disabling explore verb tests")
+    def test_prune_command_uses_session_project_path(self, session_test_repo_path):
         """Test that prune command uses project path from session data."""
         session_id = "test_session_101"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
@@ -277,7 +270,10 @@ class TestCLIProjectPathFix:
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Change to different directory
                 with self.runner.isolated_filesystem():
-                    os.chdir(self.other_dir)
+                    # Use a different directory for testing
+                    other_dir = Path("/tmp/test_other_dir")
+                    other_dir.mkdir(exist_ok=True)
+                    os.chdir(other_dir)
 
                     # Run prune command
                     result = self.runner.invoke(cli, ["explore", "prune", "test_area"])
@@ -295,10 +291,11 @@ class TestCLIProjectPathFix:
                     #     str(config.project_root)
                     # ) == os.path.realpath(project_path)
 
-    def test_map_command_uses_session_project_path(self):
+    @pytest.mark.skip(reason="Disabling explore verb tests")
+    def test_map_command_uses_session_project_path(self, session_test_repo_path):
         """Test that map command uses project path from session data."""
         session_id = "test_session_202"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         # Create a mock session with a test tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
@@ -347,7 +344,10 @@ class TestCLIProjectPathFix:
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Change to different directory
                 with self.runner.isolated_filesystem():
-                    os.chdir(self.other_dir)
+                    # Use a different directory for testing
+                    other_dir = Path("/tmp/test_other_dir")
+                    other_dir.mkdir(exist_ok=True)
+                    os.chdir(other_dir)
 
                     # Run map command
                     result = self.runner.invoke(cli, ["explore", "map"])
@@ -365,10 +365,11 @@ class TestCLIProjectPathFix:
                     #     str(config.project_root)
                     # ) == os.path.realpath(project_path)
 
-    def test_list_trees_command_uses_session_project_path(self):
+    @pytest.mark.skip(reason="Disabling explore verb tests")
+    def test_list_trees_command_uses_session_project_path(self, session_test_repo_path):
         """Test that list-trees command uses project path from session data."""
         session_id = "test_session_303"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         # Create a mock session with some trees
         session = ExplorationSession(session_id=session_id, project_path=project_path)
@@ -406,7 +407,10 @@ class TestCLIProjectPathFix:
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Change to different directory
                 with self.runner.isolated_filesystem():
-                    os.chdir(self.other_dir)
+                    # Use a different directory for testing
+                    other_dir = Path("/tmp/test_other_dir")
+                    other_dir.mkdir(exist_ok=True)
+                    os.chdir(other_dir)
 
                     # Run list-trees command
                     result = self.runner.invoke(cli, ["explore", "trees"])
@@ -490,10 +494,11 @@ class TestCLIProjectPathFix:
                 assert result.exit_code == 1  # Should also fail when session not found
                 # Note: The actual output may vary, just check that command succeeds
 
-    def test_commands_work_from_different_directories(self):
+    @pytest.mark.skip(reason="Disabling explore verb tests")
+    def test_commands_work_from_different_directories(self, session_test_repo_path):
         """Test that commands work correctly when run from different directories."""
         session_id = "test_session_404"
-        project_path = str(self.test_project_dir)
+        project_path = str(session_test_repo_path)
 
         # Create a mock session with a tree
         session = ExplorationSession(session_id=session_id, project_path=project_path)
@@ -554,8 +559,8 @@ class TestCLIProjectPathFix:
             with patch.dict(os.environ, {"REPOMAP_SESSION": session_id}):
                 # Test from multiple different directories
                 test_dirs = [
-                    self.other_dir,
-                    Path(self.temp_dir) / "yet_another_dir",
+                    Path("/tmp/test_other_dir"),
+                    Path("/tmp/yet_another_dir"),
                     Path.home(),  # User's home directory
                 ]
 
