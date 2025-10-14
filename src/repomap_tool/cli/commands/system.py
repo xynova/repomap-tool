@@ -115,7 +115,48 @@ def version(ctx: click.Context) -> None:
     version_info = {
         "tool": "RepoMap-Tool",
         "version": "0.1.0",
-        "description": "A portable code analysis tool using aider libraries with fuzzy and semantic matching capabilities.",
+        "description": "A portable code analysis tool using tree-sitter with fuzzy and semantic matching capabilities.",
     }
 
     output_manager.display(version_info, output_config)
+
+
+@system.command()
+@click.pass_context
+def cache_info(ctx: click.Context) -> None:
+    """Show tree-sitter tag cache statistics"""
+    from repomap_tool.core.tag_cache import TreeSitterTagCache
+    
+    cache = TreeSitterTagCache()
+    stats = cache.get_cache_stats()
+    
+    output_manager = get_output_manager()
+    output_config = OutputConfig(format=OutputFormat.TEXT)
+    
+    cache_info_text = f"""Tree-Sitter Tag Cache Information
+{'=' * 50}
+Cache Location: {stats['cache_location']}
+Cached Files: {stats['cached_files']}
+Total Tags: {stats['total_tags']}
+Approx Size: {stats['approx_size_bytes'] / 1024:.2f} KB
+"""
+    output_manager.display(cache_info_text, output_config)
+
+
+@system.command()
+@click.option("--force", is_flag=True, help="Clear without confirmation")
+@click.pass_context
+def cache_clear(ctx: click.Context, force: bool) -> None:
+    """Clear the tree-sitter tag cache"""
+    from repomap_tool.core.tag_cache import TreeSitterTagCache
+    
+    if not force:
+        if not click.confirm("Clear all cached tags?"):
+            return
+    
+    cache = TreeSitterTagCache()
+    cache.clear()
+    
+    output_manager = get_output_manager()
+    output_config = OutputConfig(format=OutputFormat.TEXT)
+    output_manager.display_success("Tag cache cleared", output_config)

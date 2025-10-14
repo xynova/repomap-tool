@@ -145,258 +145,37 @@ class RepoMapService:
 
     def _initialize_components(self) -> None:
         """Initialize all components based on configuration."""
-        # Require aider dependencies - no fallback
-        try:
-            from aider.io import InputOutput
-            from pathlib import Path
-            from diskcache import Cache
-        except ImportError as e:
-            raise ImportError(
-                f"aider-chat is required but not installed: {e}\n"
-                "Install with: pip install aider-chat"
-            ) from e
-
-        # Create real components without LLM model to avoid unnecessary initialization
-        io = InputOutput()
-
-        # Create custom RepoMap that can use absolute cache directory
-        class CustomRepoMap:
-            def __init__(
-                self,
-                config,
-                cache_dir: str | None = None,
-                *args: object,
-                **kwargs: object,
-            ) -> None:
-                # Set cache directory BEFORE calling parent __init__ to ensure
-                # load_tags_cache() uses the correct directory
-                if cache_dir:
-                    self.TAGS_CACHE_DIR = cache_dir
-                # Initialize basic attributes
-                self.TAGS_CACHE = {}
-                self.config = config
-                self.root = str(self.config.project_root)
-
-                # Import logger
-                from repomap_tool.core.logging_service import get_logger
-
-                self.logger = get_logger(__name__)
-
-            def load_tags_cache(self) -> None:
-                # Override to use absolute path if cache_dir is absolute
-                if hasattr(self, "TAGS_CACHE_DIR") and os.path.isabs(
-                    self.TAGS_CACHE_DIR
-                ):
-                    path = Path(self.TAGS_CACHE_DIR)
-                else:
-                    path = Path(self.root) / self.TAGS_CACHE_DIR
-
-                try:
-                    self.TAGS_CACHE = Cache(path)
-                except Exception as e:
-                    self.tags_cache_error(e)
-
-            def get_tags(self, fname: str, rel_fname: str) -> List[CodeTag]:
-                """Get tags for a single file.
-
-                Args:
-                    fname: Absolute path to the file
-                    rel_fname: Relative path to the file (for display/cache keys)
-
-                Returns:
-                    List of tag dictionaries from tree-sitter parsing
-                """
-                try:
-                    # Use tree-sitter parser for proper tag extraction
-                    from repomap_tool.code_analysis.tree_sitter_parser import (
-                        TreeSitterParser,
-                    )
-
-                    parser = TreeSitterParser()
-                    return parser.parse_file(fname)
-                except Exception as e:
-                    self.logger.debug(f"Error extracting tags from {fname}: {e}")
-                    return []
-
-            def get_ranked_tags_map(
-                self, files: List[str], max_tokens: int
-            ) -> Optional[str]:
-                """Get a map of tags with their relevance scores."""
-                try:
-                    self.logger.info(
-                        f"get_ranked_tags_map called with {len(files)} files"
-                    )
-                    # Use tree-sitter to extract tags from files
-                    all_tags = []
-                    processed_files = 0
-                    for file_path in files:
-                        try:
-                            # Skip binary files and non-text files
-                            if not file_path.endswith(
-                                (
-                                    ".py",
-                                    ".js",
-                                    ".ts",
-                                    ".java",
-                                    ".go",
-                                    ".rs",
-                                    ".cpp",
-                                    ".c",
-                                    ".h",
-                                    ".hpp",
-                                )
-                            ):
-                                continue
-                            # Convert absolute path to relative path for rel_fname
-                            import os
-
-                            rel_fname = (
-                                os.path.relpath(file_path, self.root)
-                                if hasattr(self, "root")
-                                else file_path
-                            )
-                            tags = self.get_tags(file_path, rel_fname)
-                            all_tags.extend(tags)
-                            processed_files += 1
-                            if processed_files <= 3:  # Log first few files
-                                self.logger.info(
-                                    f"Processed {file_path}: {len(tags)} tags"
-                                )
-                        except Exception as e:
-                            self.logger.debug(f"Error processing file {file_path}: {e}")
-                            continue
-
-                    self.logger.info(
-                        f"Total processed files: {processed_files}, total tags: {len(all_tags)}"
-                    )
-                    if not all_tags:
-                        self.logger.warning(
-                            "No tags found after tree-sitter extraction - empty project?"
-                        )
-                        return None
-
-                    # Store tags in cache for _get_cached_tags() to find
-                    self.TAGS_CACHE = {}
-                    for tag in all_tags:
-                        if tag.name and tag.file:
-                            file_path = tag.file
-                            if file_path not in self.TAGS_CACHE:
-                                self.TAGS_CACHE[file_path] = {"data": []}
-                            self.TAGS_CACHE[file_path]["data"].append(tag)
-
-                    # Extract identifiers from tags
-                    identifiers = set()
-                    for tag in all_tags:
-                        if tag.name:
-                            identifiers.add(tag.name)
-
-                    self.logger.info(
-                        f"Extracted {len(identifiers)} unique identifiers from {len(all_tags)} tags"
-                    )
-                    self.logger.info(
-                        f"Cached tags in TAGS_CACHE: {len(self.TAGS_CACHE)} files"
-                    )
-
-                    # Simple ranking based on identifier characteristics
-                    ranked_map = {}
-                    for identifier in identifiers:
-                        score = 1.0
-
-                        # Boost score for common patterns
-                        if identifier.startswith("get_") or identifier.startswith(
-                            "set_"
-                        ):
-                            score = 1.5
-                        elif identifier[0].isupper():  # Class names
-                            score = 1.3
-                        elif (
-                            "_" in identifier and identifier.islower()
-                        ):  # function_names
-                            score = 1.2
-
-                        ranked_map[identifier] = score
-
-                    # Convert to string representation
-                    result_lines = []
-                    for identifier, score in sorted(
-                        ranked_map.items(), key=lambda x: x[1], reverse=True
-                    ):
-                        result_lines.append(f"{identifier}: {score}")
-
-                    # Limit output based on max_tokens (rough estimation)
-                    result = "\n".join(result_lines)
-                    if len(result) > max_tokens:
-                        # Truncate to fit within token limit
-                        lines = result.split("\n")
-                        truncated_lines = []
-                        current_length = 0
-                        for line in lines:
-                            if current_length + len(line) + 1 <= max_tokens:
-                                truncated_lines.append(line)
-                                current_length += len(line) + 1
-                            else:
-                                break
-                        result = "\n".join(truncated_lines)
-
-                    return result
-
-                except Exception as e:
-                    self.logger.error(f"Error in get_ranked_tags_map: {e}")
-                    return None
-
-            def _extract_identifiers_from_files(self, files: List[str]) -> List[str]:
-                """Extract identifiers from files."""
-                identifiers = []
-                for file_path in files:
-                    try:
-                        # Skip binary files and non-text files
-                        if not file_path.endswith(
-                            (
-                                ".py",
-                                ".js",
-                                ".ts",
-                                ".java",
-                                ".go",
-                                ".rs",
-                                ".cpp",
-                                ".c",
-                                ".h",
-                                ".hpp",
-                            )
-                        ):
-                            continue
-
-                        with open(file_path, "r", encoding="utf-8") as f:
-                            content = f.read()
-                        # Simple identifier extraction (in real usage, this would use AST)
-                        import re
-
-                        found = re.findall(r"\b[a-zA-Z_][a-zA-Z0-9_]*\b", content)
-                        identifiers.extend(found)
-                    except (UnicodeDecodeError, Exception) as e:
-                        self.logger.debug(f"Error reading file {file_path}: {e}")
-                return identifiers
-
-        # Determine cache directory
-        cache_dir = None
-        if self.config.cache_dir:
-            cache_dir = str(self.config.cache_dir)
-        elif os.environ.get("CACHE_DIR"):
-            cache_dir = os.environ.get("CACHE_DIR")
-
-        # Initialize RepoMap without LLM model since we use our own semantic analysis
-        self.repo_map = CustomRepoMap(
-            config=self.config,
-            cache_dir=cache_dir,
-            map_tokens=self.config.map_tokens,
-            root=str(self.config.project_root),
-            main_model=None,  # No LLM model needed - we use our own matchers
-            io=io,
-            verbose=self.config.verbose,
-            refresh="auto" if self.config.refresh_cache else "no",
+        # Initialize tree-sitter parser with caching
+        from ..code_analysis.tree_sitter_parser import TreeSitterParser
+        from .tag_cache import TreeSitterTagCache
+        
+        # Create tag cache
+        cache_dir = self.config.cache_dir if hasattr(self.config, 'cache_dir') else None
+        tag_cache = TreeSitterTagCache(cache_dir)
+        
+        # Create tree-sitter parser with cache
+        self.tree_sitter_parser = TreeSitterParser(
+            project_root=self.config.project_root,
+            cache=tag_cache
         )
 
-        # Matchers are now initialized via DI container in _initialize_with_di_container
+        # CustomRepoMap removed - using TreeSitterParser directly
+
+    def _get_cached_identifiers(self) -> List[str]:
+        """Get all identifiers from tree-sitter cache"""
+        all_identifiers = set()
+        
+        # Get project files
+        project_files = get_project_files(
+            str(self.config.project_root), self.config.verbose
+        )
+        
+        for file_path in project_files:
+            tags = self.tree_sitter_parser.get_tags(file_path)
+            for tag in tags:
+                all_identifiers.add(tag.name)
+                
+        return list(all_identifiers)
 
     def _invalidate_stale_caches(self) -> None:
         """Invalidate cache entries for files that have been modified since caching."""
@@ -562,9 +341,9 @@ class RepoMapService:
                 try:
                     self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
                 except ZeroDivisionError:
-                    # Handle case where aider library encounters division by zero
+                    # Handle case where tree-sitter library encounters division by zero
                     self.logger.warning(
-                        "No files found for RepoMap integration, skipping aider processing"
+                        "No files found for RepoMap integration, skipping tree-sitter processing"
                     )
                     pass
 
@@ -589,9 +368,9 @@ class RepoMapService:
                 try:
                     self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
                 except ZeroDivisionError:
-                    # Handle case where aider library encounters division by zero
+                    # Handle case where tree-sitter library encounters division by zero
                     self.logger.warning(
-                        "No files found for RepoMap integration, skipping aider processing"
+                        "No files found for RepoMap integration, skipping tree-sitter processing"
                     )
                     pass
 
@@ -718,13 +497,13 @@ class RepoMapService:
 
     def _get_cached_identifiers(self) -> List[str]:
         """
-        Get all identifiers from the aider cache.
+        Get all identifiers from the tree-sitter cache.
 
         Returns:
             List of identifier names from cache, or empty list if cache unavailable
         """
         if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("No aider cache available")
+            self.logger.debug("No tree-sitter cache available")
             return []
 
         try:
@@ -757,13 +536,13 @@ class RepoMapService:
 
     def _get_cached_tags(self) -> List[CodeTag]:
         """
-        Get all tags with full information from the aider cache.
+        Get all tags with full information from the tree-sitter cache.
 
         Returns:
             List of tag dictionaries with name, type, file, and line information
         """
         if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("No aider cache available")
+            self.logger.debug("No tree-sitter cache available")
             return []
 
         self.logger.info(
@@ -991,7 +770,7 @@ class RepoMapService:
         for file_path in project_files:
             try:
                 if self.repo_map is not None:
-                    # file_path is already relative, so we need to make it absolute for aider
+                    # file_path is already relative, so we need to make it absolute for tree-sitter
                     abs_path = os.path.join(self.config.project_root, file_path)
                     self.logger.debug(f"Processing {file_path} -> {abs_path}")
                     tags = self.repo_map.get_tags(abs_path, file_path)
@@ -1016,7 +795,7 @@ class RepoMapService:
             Cached ProjectImports object or None if not available
         """
         if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("No aider cache available for import analysis")
+            self.logger.debug("No tree-sitter cache available for import analysis")
             return None
 
         try:
@@ -1051,7 +830,7 @@ class RepoMapService:
             project_imports: ProjectImports object to cache
         """
         if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("No aider cache available for caching import analysis")
+            self.logger.debug("No tree-sitter cache available for caching import analysis")
             return
 
         try:

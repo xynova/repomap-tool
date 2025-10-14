@@ -492,7 +492,7 @@ class ExplorationController(BaseController):
             return []
 
     def _extract_entrypoints(self, tree: Any) -> List[Dict[str, Any]]:
-        """Extract entrypoints from tree using aider RepoMap."""
+        """Extract entrypoints from tree using tree-sitter RepoMap."""
         try:
             from repomap_tool.core.config_service import get_config
             from repomap_tool.core.logging_service import get_logger

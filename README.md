@@ -1,4 +1,4 @@
-# RepoMap Tool (Inspired by Aider)
+# RepoMap Tool
 
 *A Tool to Help AI Assistants Navigate and Understand Codebases*
 
@@ -20,7 +20,7 @@
 
 **Why?** AI code assistants struggle with large codebases. They often miss context, can't find related code when names don't match exactly, and waste precious context window space searching for the right files. This leads to inaccurate suggestions and inefficient code generation.
 
-**What?** RepoMap Tool is an intelligent code analysis engine that supercharges AI code assistants by providing comprehensive codebase understanding. It combines fuzzy matching (finding similar names) with semantic analysis (understanding meaning) to give AI assistants the context they need for accurate code suggestions.
+**What?** RepoMap Tool is an intelligent code analysis engine that supercharges AI code assistants by providing comprehensive codebase understanding. Built with tree-sitter for accurate code parsing, it combines fuzzy matching (finding similar names) with semantic analysis (understanding meaning) to give AI assistants the context they need for accurate code suggestions.
 
 **How?** It analyzes your codebase structure, maps relationships between files and functions, and provides AI assistants with intelligent search capabilities to discover and understand the code they need to work with effectively.
 

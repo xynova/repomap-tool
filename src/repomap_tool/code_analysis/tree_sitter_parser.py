@@ -3,7 +3,7 @@
 Tree-sitter parser for multi-language code analysis.
 
 This module provides direct access to tree-sitter parsing capabilities,
-bypassing aider's filtering to get detailed tag information including
+providing detailed tag information including
 imports, function calls, and definitions.
 """
 
@@ -29,6 +29,7 @@ class TreeSitterParser:
         self,
         project_root: Optional[str] = None,
         custom_queries_dir: Optional[str] = None,
+        cache: Optional[Any] = None,
     ):
         """Initialize the tree-sitter parser.
 
@@ -39,6 +40,7 @@ class TreeSitterParser:
         """
         self.project_root = project_root or "."
         self._query_cache: Dict[str, str] = {}
+        self.tag_cache = cache  # Can be None to disable caching
 
         # Set custom queries directory - use package resources for reliable access
         if custom_queries_dir is None:
@@ -171,6 +173,32 @@ class TreeSitterParser:
             logger.error(f"Error parsing file {file_path} with tree-sitter: {e}")
             return []
 
+    def get_tags(self, file_path: str, use_cache: bool = True) -> List[CodeTag]:
+        """Get tags for a file, using cache if available
+        
+        Args:
+            file_path: Path to the file to get tags for
+            use_cache: Whether to use cache if available
+            
+        Returns:
+            List of CodeTag objects
+        """
+        if use_cache and self.tag_cache:
+            cached_tags = self.tag_cache.get_tags(file_path)
+            if cached_tags is not None:
+                logger.debug(f"Using cached tags for {file_path}")
+                return cached_tags
+        
+        # Parse file using existing parse_file method
+        tags = self.parse_file(file_path)
+        
+        # Cache results
+        if use_cache and self.tag_cache:
+            self.tag_cache.set_tags(file_path, tags)
+            logger.debug(f"Cached {len(tags)} tags for {file_path}")
+        
+        return tags
+
     def _load_query(self, lang: str) -> Optional[str]:
         """Load the .scm query file for this language.
 
@@ -200,27 +228,23 @@ class TreeSitterParser:
         else:
             logger.debug(f"Custom query file does not exist: {custom_query_path}")
 
-        # 2. Fall back to aider's query files
-        try:
-            from aider.queries import get_scm_fname
-
-            query_path = get_scm_fname(lang)
-            logger.debug(f"Looking for aider query at: {query_path}")
-            if query_path and query_path.exists():
-                query_content = query_path.read_text()
-                self._query_cache[lang] = query_content
-                logger.debug(f"Using aider query file: {query_path}")
-                return str(query_content)
-        except Exception as e:
-            logger.debug(f"Could not load aider query for {lang}: {e}")
-
-        # 3. Fallback: try to find query files directly
+        # 2. Fallback: try to find query files directly
         try:
             import pkg_resources
 
-            query_path = pkg_resources.resource_filename(
-                "aider.queries.tree-sitter-language-pack", f"{lang}-tags.scm"
-            )
+            # Try to find query files in common locations
+            query_path = None
+            for base_path in [
+                f"tree-sitter-{lang}-queries/queries/{lang}-tags.scm",
+                f"tree-sitter-{lang}/queries/{lang}-tags.scm",
+                f"queries/{lang}-tags.scm"
+            ]:
+                try:
+                    query_path = pkg_resources.resource_filename("", base_path)
+                    if os.path.exists(query_path):
+                        break
+                except:
+                    continue
             logger.debug(f"Looking for pkg_resources query at: {query_path}")
             if os.path.exists(query_path):
                 with open(query_path, "r") as f:

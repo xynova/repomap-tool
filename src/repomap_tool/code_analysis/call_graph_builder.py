@@ -109,10 +109,10 @@ class PythonCallAnalyzer(CallAnalyzer):
 
 
 class JavaScriptCallAnalyzer(CallAnalyzer):
-    """Parser for JavaScript/TypeScript function calls using aider's tree-sitter."""
+    """Parser for JavaScript/TypeScript function calls using tree-sitter."""
 
     def __init__(self, project_root: Optional[str] = None):
-        """Initialize with project root for aider's RepoMap."""
+        """Initialize with project root for tree-sitter RepoMap."""
         super().__init__()
         self.project_root = project_root
         self._repo_map = None

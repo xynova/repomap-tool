@@ -434,7 +434,7 @@ class TestRealWorldBreakScenarios:
         """Network timeouts commonly break systems that depend on external services."""
         # Arrange - Mock network timeout
         with patch(
-            "aider.repomap.RepoMap.get_tags",
+            "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser.get_tags",
             side_effect=TimeoutError("Network timeout"),
         ):
             config = RepoMapConfig(project_root=".")

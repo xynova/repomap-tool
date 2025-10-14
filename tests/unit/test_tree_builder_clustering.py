@@ -258,7 +258,7 @@ class TestTreeBuilderClustering:
         with patch.object(
             self.tree_builder, "_find_nodes_by_area", return_value=[mock_node]
         ):
-            # Mock _get_related_symbols_from_aider
+            # Mock _get_related_symbols_from_tree_sitter
             mock_symbols = [
                 {
                     "identifier": "related_function",
@@ -271,7 +271,7 @@ class TestTreeBuilderClustering:
             ]
             with patch.object(
                 self.tree_builder,
-                "_get_related_symbols_from_aider",
+                "_get_related_symbols_from_tree_sitter",
                 return_value=mock_symbols,
             ):
                 # Mock _get_all_nodes
@@ -490,8 +490,8 @@ class TestTreeBuilderClustering:
         assert child1 in all_nodes
         assert child2 in all_nodes
 
-    def test_get_related_symbols_from_aider_no_repo_map(self):
-        """Test _get_related_symbols_from_aider with no repo_map."""
+    def test_get_related_symbols_from_tree_sitter_no_repo_map(self):
+        """Test _get_related_symbols_from_tree_sitter with no repo_map."""
         # Create node
         node = TreeNode(
             identifier="test_function",
@@ -504,15 +504,15 @@ class TestTreeBuilderClustering:
         self.tree_builder.repo_map = None
 
         # Call method
-        symbols = self.tree_builder._get_related_symbols_from_aider(
+        symbols = self.tree_builder._get_related_symbols_from_tree_sitter(
             node, "/test/project"
         )
 
         # Assertions
         assert symbols == []
 
-    def test_get_related_symbols_from_aider_with_repo_map(self):
-        """Test _get_related_symbols_from_aider with repo_map."""
+    def test_get_related_symbols_from_tree_sitter_with_repo_map(self):
+        """Test _get_related_symbols_from_tree_sitter with repo_map."""
         # Create node
         node = TreeNode(
             identifier="test_function",
@@ -529,7 +529,7 @@ class TestTreeBuilderClustering:
         self.tree_builder.repo_map = Mock()
         self.tree_builder.repo_map.repo_map = mock_repo_map
 
-        # Mock _extract_file_path and _process_aider_tags
+        # Mock _extract_file_path and _process_tree_sitter_tags
         with patch.object(
             self.tree_builder,
             "_extract_file_path",
@@ -537,7 +537,7 @@ class TestTreeBuilderClustering:
         ):
             with patch.object(
                 self.tree_builder,
-                "_process_aider_tags",
+                "_process_tree_sitter_tags",
                 return_value=[
                     {
                         "identifier": "test_function_related",  # Changed to match node identifier
@@ -553,7 +553,7 @@ class TestTreeBuilderClustering:
                     "repomap_tool.core.config_service.get_config", return_value=5
                 ):
                     # Call method
-                    symbols = self.tree_builder._get_related_symbols_from_aider(
+                    symbols = self.tree_builder._get_related_symbols_from_tree_sitter(
                         node, "/test/project"
                     )
 

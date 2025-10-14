@@ -2,7 +2,7 @@
 """
 PageRank-based code importance ranking.
 
-This module implements a PageRank algorithm inspired by aider's approach
+This module implements a PageRank algorithm inspired by tree-sitter analysis
 for ranking code elements by importance and relevance.
 """
 
@@ -21,7 +21,7 @@ logger = get_logger(__name__)
 
 
 class CodeRanker:
-    """PageRank-based code importance ranking (inspired by aider)."""
+    """PageRank-based code importance ranking (inspired by tree-sitter analysis)."""
 
     def rank_tags(
         self,
@@ -55,7 +55,7 @@ class CodeRanker:
                 all_tags, context_files or set(), mentioned_identifiers or set()
             )
 
-            # Apply smart weights (aider's heuristics)
+            # Apply smart weights (tree-sitter heuristics)
             self._apply_weights(
                 G, all_tags, context_files or set(), mentioned_identifiers or set()
             )
@@ -134,7 +134,7 @@ class CodeRanker:
         context_files: Set[str],
         mentioned_identifiers: Set[str],
     ) -> None:
-        """Apply smart weights to graph edges (aider's heuristics).
+        """Apply smart weights to graph edges (tree-sitter heuristics).
 
         Args:
             G: The dependency graph
@@ -146,7 +146,7 @@ class CodeRanker:
             ident = data.get("ident", "")
             weight = data.get("weight", 1.0)
 
-            # Apply multipliers based on aider's heuristics
+            # Apply multipliers based on tree-sitter heuristics
 
             # Mentioned identifiers are important
             if mentioned_identifiers and ident in mentioned_identifiers:

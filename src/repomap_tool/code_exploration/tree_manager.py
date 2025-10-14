@@ -116,7 +116,7 @@ class TreeManager:
             # Find expansion point in tree
             expansion_node = self._find_expansion_point(tree, expansion_area)
             if expansion_node:
-                # Expand this node using existing aider infrastructure
+                # Expand this node using existing tree-sitter infrastructure
                 self._expand_tree_node(expansion_node, tree)
                 tree.expanded_areas.add(expansion_area)
                 tree.last_modified = datetime.now()
@@ -337,7 +337,7 @@ class TreeManager:
         return False
 
     def _expand_tree_node(self, node: TreeNode, tree: ExplorationTree) -> None:
-        """Expand a specific tree node using aider infrastructure.
+        """Expand a specific tree node using tree-sitter infrastructure.
 
         Args:
             node: Node to expand
@@ -349,7 +349,7 @@ class TreeManager:
                 # Get more detailed information about this node
                 file_path = self._extract_file_path(node.location)
                 if file_path and os.path.exists(file_path):
-                    # Use aider's get_tags method if available
+                    # Use tree-sitter's get_tags method if available
                     if self.repo_map.repo_map:
                         tags = self.repo_map.repo_map.get_tags(file_path, node.location)
 

@@ -2,7 +2,7 @@
 Tree-sitter-based file analyzer for detailed file-level dependency analysis.
 
 This module provides comprehensive tree-sitter-based analysis of individual files using
-aider's RepoMap functionality to extract imports, function calls, class usage, and other
+TreeSitterParser to extract imports, function calls, class usage, and other
 relationships for LLM-optimized impact and centrality analysis.
 """
 
@@ -46,8 +46,7 @@ class ASTFileAnalyzer:
         """
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
-        self._repo_map = None
-        self._io = None
+        # Removed aider dependencies - using TreeSitterParser directly
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
@@ -63,7 +62,7 @@ class ASTFileAnalyzer:
     def analyze_file(
         self, file_path: str, analysis_type: AnalysisType = AnalysisType.ALL
     ) -> FileAnalysisResult:
-        """Analyze a single file using aider's tree-sitter.
+        """Analyze a single file using tree-sitter.
 
         Args:
             file_path: Path to the file to analyze
@@ -163,7 +162,7 @@ class ASTFileAnalyzer:
     def _extract_imports_from_tags(
         self, tags: List[Any], file_path: str
     ) -> List[Import]:
-        """Extract imports from file content since aider tags don't include imports."""
+        """Extract imports from file content since tree-sitter tags don't include imports."""
         imports = []
 
         try:
@@ -302,12 +301,12 @@ class ASTFileAnalyzer:
         return imports
 
     def _extract_functions_from_tags(self, tags: List[Any]) -> List[str]:
-        """Extract function names from aider tags."""
+        """Extract function names from tree-sitter tags."""
         functions = []
 
         for tag in tags:
             if tag.kind in ["def", "function"]:
-                # Filter out false positives - aider sometimes tags variable assignments as 'def'
+                # Filter out false positives - tree-sitter sometimes tags variable assignments as 'def'
                 # We can identify these by checking if the name appears to be a variable assignment
                 # in the context of the file content
                 if not self._is_likely_variable_assignment(
@@ -319,8 +318,8 @@ class ASTFileAnalyzer:
 
     def _is_likely_variable_assignment(self, tag: Any) -> bool:
         """Check if a tag is likely a variable assignment rather than a function definition."""
-        # This is a heuristic to filter out false positives from aider's tree-sitter
-        # Variable assignments that aider incorrectly tags as 'def' often have these characteristics:
+        # This is a heuristic to filter out false positives from tree-sitter parsing
+        # Variable assignments that tree-sitter incorrectly tags as 'def' often have these characteristics:
 
         # 1. Single word names that are common variable names
         common_variable_names = {
@@ -420,14 +419,14 @@ class ASTFileAnalyzer:
         return False
 
     def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
-        """Extract class names from aider tags."""
+        """Extract class names from tree-sitter tags."""
         classes = []
 
         for tag in tags:
             if tag.kind in ["class"]:
                 classes.append(tag.name)
             elif tag.kind == "def" and self._is_likely_class_definition(tag):
-                # Aider sometimes tags class definitions as 'def'
+                # Tree-sitter sometimes tags class definitions as 'def'
                 classes.append(tag.name)
 
         return classes
@@ -451,7 +450,7 @@ class ASTFileAnalyzer:
     def _extract_function_calls_from_tags(
         self, tags: List[Any], file_path: str
     ) -> List[FunctionCall]:
-        """Extract function calls from aider tags."""
+        """Extract function calls from tree-sitter tags."""
         calls = []
 
         # For now, we'll create basic function calls from tag references

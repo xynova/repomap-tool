@@ -1,8 +1,8 @@
 """
 Tree builder for exploration tree construction.
 
-This module builds exploration trees from discovered entrypoints using existing
-aider infrastructure for dependency analysis and tree structure creation.
+This module builds exploration trees from discovered entrypoints using
+TreeSitterParser for dependency analysis and tree structure creation.
 """
 
 import os
@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 
 
 class TreeBuilder:
-    """Builds exploration trees from entrypoints using existing aider infrastructure."""
+    """Builds exploration trees from entrypoints using TreeSitterParser infrastructure."""
 
     def __init__(
         self,
@@ -30,7 +30,7 @@ class TreeBuilder:
         """Initialize tree builder with injected dependencies.
 
         Args:
-            repo_map: RepoMapService instance with aider infrastructure
+            repo_map: RepoMapService instance with TreeSitterParser infrastructure
             entrypoint_discoverer: Entrypoint discoverer instance (injected)
         """
         self.repo_map = repo_map
@@ -74,7 +74,7 @@ class TreeBuilder:
             max_depth=max_depth,
         )
 
-        # Build tree structure using existing aider infrastructure
+        # Build tree structure using tree-sitter infrastructure
         if self.repo_map and self.repo_map.repo_map:
             # Get tags and dependencies for this entrypoint
             tree_structure = self._build_tree_structure(entrypoint, max_depth)
@@ -154,7 +154,7 @@ class TreeBuilder:
             depth=0,
         )
 
-        # Recursively build tree using aider's dependency information
+        # Recursively build tree using tree-sitter dependency information
         self._expand_node(root, entrypoint, max_depth, 0)
 
         return root
@@ -477,15 +477,15 @@ class TreeBuilder:
             List of related symbol dictionaries
         """
         try:
-            # Try to use existing aider infrastructure
+            # Try to use existing tree-sitter infrastructure
             if self.repo_map and self.repo_map.repo_map:
                 # Get tags for the current node's file
                 file_path = self._extract_file_path(node.location)
                 if file_path and os.path.exists(file_path):
-                    # Use aider's get_tags method if available
+                    # Use tree-sitter's get_tags method if available
                     if self.repo_map.repo_map:
                         tags = self.repo_map.repo_map.get_tags(file_path, node.location)
-                        return self._process_aider_tags(tags)
+                        return self._process_tree_sitter_tags(tags)
 
             # Fallback: return empty list
             return []
@@ -494,11 +494,11 @@ class TreeBuilder:
             logger.debug(f"Error getting related symbols for {node.identifier}: {e}")
             return []
 
-    def _process_aider_tags(self, tags: List) -> List[Dict[str, Any]]:
-        """Process tags returned by aider infrastructure.
+    def _process_tree_sitter_tags(self, tags: List) -> List[Dict[str, Any]]:
+        """Process tags returned by tree-sitter infrastructure.
 
         Args:
-            tags: Raw tags from aider
+            tags: Raw tags from tree-sitter
 
         Returns:
             Processed symbol dictionaries
@@ -625,7 +625,7 @@ class TreeBuilder:
             return None
 
     def _create_simple_tree_structure(self, entrypoint: Entrypoint) -> TreeNode:
-        """Create a simple tree structure when aider infrastructure is not available.
+        """Create a simple tree structure when tree-sitter infrastructure is not available.
 
         Args:
             entrypoint: Root entrypoint
@@ -745,7 +745,7 @@ class TreeBuilder:
         area: str,
         project_path: str,
     ) -> List[SymbolViewModel]:
-        """Expand specific area in tree using aider RepoMap.
+        """Expand specific area in tree using tree-sitter RepoMap.
 
         Args:
             tree: ExplorationTree to expand
@@ -768,9 +768,9 @@ class TreeBuilder:
             matching_nodes = self._find_nodes_by_area(tree_structure, area)
 
             for node in matching_nodes:
-                # Use aider RepoMap to get related symbols
+                # Use tree-sitter RepoMap to get related symbols
                 if self.repo_map and self.repo_map.repo_map:
-                    related_symbols = self._get_related_symbols_from_aider(
+                    related_symbols = self._get_related_symbols_from_tree_sitter(
                         node, project_path
                     )
 
@@ -872,10 +872,10 @@ class TreeBuilder:
 
         return matching_nodes
 
-    def _get_related_symbols_from_aider(
+    def _get_related_symbols_from_tree_sitter(
         self, node: TreeNode, project_path: str
     ) -> List[Dict[str, Any]]:
-        """Get related symbols using aider RepoMap."""
+        """Get related symbols using tree-sitter RepoMap."""
         try:
             if not self.repo_map or not self.repo_map.repo_map:
                 return []
@@ -885,14 +885,14 @@ class TreeBuilder:
             if not file_path:
                 return []
 
-            # Get relative path for aider
+            # Get relative path for tree-sitter
             rel_path = os.path.relpath(file_path, project_path)
 
-            # Use aider to get tags for the file
+            # Use tree-sitter to get tags for the file
             tags = self.repo_map.repo_map.get_tags(file_path, rel_path)
 
             # Process tags into symbols
-            symbols = self._process_aider_tags(tags)
+            symbols = self._process_tree_sitter_tags(tags)
 
             # Filter symbols related to the node
             related_symbols = []
@@ -908,7 +908,7 @@ class TreeBuilder:
             ]
 
         except Exception as e:
-            logger.error(f"Error getting related symbols from aider: {e}")
+            logger.error(f"Error getting related symbols from tree-sitter: {e}")
             return []
 
     def _get_all_descendants(self, node: TreeNode) -> List[TreeNode]:

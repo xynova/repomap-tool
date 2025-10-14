@@ -1,16 +1,16 @@
 ; Enhanced Python tree-sitter queries for RepoMap-Tool
-; Extends aider's default queries with import and call information
-; that aider filters out for LLM context optimization
+; Comprehensive queries for code analysis with import and call information
+; Optimized for detailed code understanding and dependency analysis
 
-; Classes (from aider)
+; Classes
 (class_definition
   name: (identifier) @name.definition.class) @definition.class
 
-; Functions (from aider)
+; Functions
 (function_definition
   name: (identifier) @name.definition.function) @definition.function
 
-; Function calls (from aider)
+; Function calls
 (call
   function: [
       (identifier) @name.reference.call
@@ -18,7 +18,7 @@
         attribute: (identifier) @name.reference.call)
   ]) @reference.call
 
-; Constants (from aider)
+; Constants
 (module (expression_statement (assignment left: (identifier) @name.definition.constant) @definition.constant))
 
 ; ✨ NEW: Import statements

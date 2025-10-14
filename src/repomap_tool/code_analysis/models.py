@@ -16,7 +16,7 @@ class CodeTag:
     column: int = 0  # Column position
     end_line: Optional[int] = None
     end_column: Optional[int] = None
-    rel_fname: Optional[str] = None  # Relative file path (for aider compat)
+    rel_fname: Optional[str] = None  # Relative file path (for compatibility)
 
 
 class AnalysisFormat(str, Enum):

@@ -1,0 +1,269 @@
+"""
+Tree-sitter tag caching system for persistent tag storage.
+
+This module provides TreeSitterTagCache class that implements:
+- SQLite backend for persistent tag caching
+- File hash + mtime validation for cache invalidation
+- CodeTag dataclass integration
+- Cache statistics and management
+"""
+
+import sqlite3
+import hashlib
+from datetime import datetime
+from pathlib import Path
+from typing import Dict, List, Optional, Any
+
+from ..core.logging_service import get_logger
+from ..code_analysis.models import CodeTag
+
+logger = get_logger(__name__)
+
+
+class TreeSitterTagCache:
+    """Generic tag caching system for tree-sitter parsing results using CodeTag"""
+    
+    def __init__(self, cache_dir: Optional[Path] = None):
+        """Initialize cache with SQLite backend
+        
+        Args:
+            cache_dir: Directory for cache storage. Defaults to ~/.repomap-tool/cache
+        """
+        self.cache_dir = cache_dir or Path.home() / ".repomap-tool" / "cache"
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        self.db_path = self.cache_dir / "tags.db"
+        self._init_db()
+        
+    def _init_db(self):
+        """Initialize SQLite database schema"""
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        
+        # File cache table - tracks file metadata
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS file_cache (
+                file_path TEXT PRIMARY KEY,
+                file_hash TEXT NOT NULL,
+                mtime REAL NOT NULL,
+                cached_at REAL NOT NULL
+            )
+        """)
+        
+        # Tags table - stores CodeTag data
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tags (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                file_path TEXT NOT NULL,
+                name TEXT NOT NULL,
+                kind TEXT NOT NULL,
+                file TEXT NOT NULL,
+                line INTEGER NOT NULL,
+                column INTEGER NOT NULL,
+                end_line INTEGER,
+                end_column INTEGER,
+                rel_fname TEXT,
+                FOREIGN KEY (file_path) REFERENCES file_cache(file_path)
+                    ON DELETE CASCADE
+            )
+        """)
+        
+        # Indices for fast lookups
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tags_file 
+            ON tags(file_path)
+        """)
+        
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_tags_kind 
+            ON tags(kind)
+        """)
+        
+        conn.commit()
+        conn.close()
+        
+    def get_tags(self, file_path: str) -> Optional[List[CodeTag]]:
+        """Get cached tags for a file if valid - returns CodeTag objects
+        
+        Args:
+            file_path: Path to the file to get cached tags for
+            
+        Returns:
+            List of CodeTag objects if cache is valid, None otherwise
+        """
+        if not self._is_cache_valid(file_path):
+            return None
+            
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT name, kind, file, line, column, end_line, end_column, rel_fname
+            FROM tags WHERE file_path = ?
+        """, (file_path,))
+        
+        tags = []
+        for row in cursor.fetchall():
+            name, kind, file, line, column, end_line, end_column, rel_fname = row
+            tag = CodeTag(
+                name=name,
+                kind=kind,
+                file=file,
+                line=line,
+                column=column,
+                end_line=end_line,
+                end_column=end_column,
+                rel_fname=rel_fname
+            )
+            tags.append(tag)
+        
+        conn.close()
+        return tags
+        
+    def set_tags(self, file_path: str, tags: List[CodeTag]):
+        """Cache tags for a file - accepts CodeTag objects
+        
+        Args:
+            file_path: Path to the file being cached
+            tags: List of CodeTag objects to cache
+        """
+        file_hash = self._compute_file_hash(file_path)
+        mtime = Path(file_path).stat().st_mtime
+        
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        
+        # Delete old entry if exists
+        cursor.execute("DELETE FROM file_cache WHERE file_path = ?", (file_path,))
+        cursor.execute("DELETE FROM tags WHERE file_path = ?", (file_path,))
+        
+        # Insert file cache entry
+        cursor.execute("""
+            INSERT INTO file_cache (file_path, file_hash, mtime, cached_at)
+            VALUES (?, ?, ?, ?)
+        """, (file_path, file_hash, mtime, datetime.now().timestamp()))
+        
+        # Insert tags
+        for tag in tags:
+            cursor.execute("""
+                INSERT INTO tags (file_path, name, kind, file, line, column, end_line, end_column, rel_fname)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                file_path,
+                tag.name,
+                tag.kind,
+                tag.file,
+                tag.line,
+                tag.column,
+                tag.end_line,
+                tag.end_column,
+                tag.rel_fname,
+            ))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.debug(f"Cached {len(tags)} tags for {file_path}")
+        
+    def invalidate_file(self, file_path: str):
+        """Invalidate cache for a file
+        
+        Args:
+            file_path: Path to the file to invalidate
+        """
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM file_cache WHERE file_path = ?", (file_path,))
+        cursor.execute("DELETE FROM tags WHERE file_path = ?", (file_path,))
+        conn.commit()
+        conn.close()
+        
+        logger.debug(f"Invalidated cache for {file_path}")
+        
+    def clear(self):
+        """Clear entire cache"""
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM file_cache")
+        cursor.execute("DELETE FROM tags")
+        conn.commit()
+        conn.close()
+        
+        logger.info("Tag cache cleared")
+        
+    def _is_cache_valid(self, file_path: str) -> bool:
+        """Check if cached data is still valid (mtime + hash)
+        
+        Args:
+            file_path: Path to the file to check
+            
+        Returns:
+            True if cache is valid, False otherwise
+        """
+        if not Path(file_path).exists():
+            return False
+            
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT file_hash, mtime FROM file_cache WHERE file_path = ?
+        """, (file_path,))
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if not result:
+            return False
+            
+        cached_hash, cached_mtime = result
+        current_mtime = Path(file_path).stat().st_mtime
+        
+        # Check if file modified
+        if current_mtime > cached_mtime:
+            return False
+            
+        # Check if content changed
+        current_hash = self._compute_file_hash(file_path)
+        return current_hash == cached_hash
+        
+    def _compute_file_hash(self, file_path: str) -> str:
+        """Compute SHA256 hash of file content
+        
+        Args:
+            file_path: Path to the file
+            
+        Returns:
+            SHA256 hash as hex string
+        """
+        hasher = hashlib.sha256()
+        with open(file_path, 'rb') as f:
+            for chunk in iter(lambda: f.read(8192), b''):
+                hasher.update(chunk)
+        return hasher.hexdigest()
+        
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics
+        
+        Returns:
+            Dictionary with cache statistics
+        """
+        conn = sqlite3.connect(str(self.db_path))
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT COUNT(*) FROM file_cache")
+        file_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM tags")
+        tag_count = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT SUM(LENGTH(name) + LENGTH(kind)) FROM tags")
+        approx_size = cursor.fetchone()[0] or 0
+        
+        conn.close()
+        
+        return {
+            "cached_files": file_count,
+            "total_tags": tag_count,
+            "approx_size_bytes": approx_size,
+            "cache_location": str(self.db_path),
+        }

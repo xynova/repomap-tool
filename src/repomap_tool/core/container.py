@@ -62,6 +62,15 @@ class Container(containers.DeclarativeContainer):
     # Configuration
     config = providers.Configuration()
 
+    # Tag cache for tree-sitter parsing results
+    tag_cache: "providers.Singleton[TreeSitterTagCache]" = cast(
+        "providers.Singleton[TreeSitterTagCache]",
+        providers.Singleton(
+            "repomap_tool.core.tag_cache.TreeSitterTagCache",
+            cache_dir=config.cache_dir,
+        ),
+    )
+
     # Core dependency graph
     dependency_graph: "providers.Singleton[AdvancedDependencyGraph]" = cast(
         "providers.Singleton[AdvancedDependencyGraph]",
@@ -144,6 +153,7 @@ class Container(containers.DeclarativeContainer):
             tree_sitter_parser=providers.Singleton(
                 "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
                 project_root=config.project_root,
+                cache=tag_cache,
             ),
         ),
     )
@@ -259,6 +269,7 @@ class Container(containers.DeclarativeContainer):
             tree_sitter_parser=providers.Singleton(
                 "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
                 project_root=config.project_root,
+                cache=tag_cache,
             ),
         ),
     )

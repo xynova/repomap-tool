@@ -1,15 +1,15 @@
 # Tree-Sitter Query Files
 
-This directory contains custom tree-sitter query files (.scm) that extend aider's default queries to capture additional code elements for RepoMap-Tool.
+This directory contains custom tree-sitter query files (.scm) that extend default queries to capture additional code elements for RepoMap-Tool.
 
 ## Why Custom Queries?
 
-Aider's default query files are optimized for LLM context and filter out many code elements like imports and detailed function calls. Our custom queries capture these elements while maintaining compatibility with aider's approach.
+Default query files are optimized for LLM context and filter out many code elements like imports and detailed function calls. Our custom queries capture these elements while maintaining compatibility with standard approaches.
 
 ## Query Loading Priority
 
 1. **Custom queries** (this directory) - `src/repomap_tool/code_analysis/queries/*.scm`
-2. **Aider's queries** (fallback) - `.venv/.../aider/queries/tree-sitter-language-pack/*.scm`
+2. **Standard queries** (fallback) - `.venv/.../tree-sitter-language-pack/*.scm`
 
 ## File Structure
 
@@ -41,7 +41,7 @@ Tree-sitter queries use S-expression syntax to match AST nodes:
 ## Adding New Languages
 
 1. Create `{language}-tags.scm` file
-2. Include all aider's default queries for that language
+2. Include all standard queries for that language
 3. Add custom queries for imports, calls, etc.
 4. Test with TreeSitterParser
 
