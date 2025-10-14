@@ -299,7 +299,10 @@ class SearchRequest(BaseModel):
         default="hybrid", description="Type of matching"
     )
     threshold: float = Field(
-        default=0.3, ge=0.0, le=1.0, description="Minimum similarity threshold (0.0-1.0)"
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity threshold (0.0-1.0)",
     )
     max_results: int = Field(
         default=10, ge=1, le=100, description="Maximum results to return"

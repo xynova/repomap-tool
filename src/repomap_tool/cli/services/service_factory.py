@@ -67,7 +67,7 @@ class ServiceFactory:
             impact_analyzer = container.impact_analyzer()
         centrality_calculator = container.centrality_calculator()
         spellchecker_service = container.spellchecker_service()
-        
+
         # Create RepoMapService with injected dependencies
         service = RepoMapService(
             config=config,

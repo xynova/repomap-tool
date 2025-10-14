@@ -84,15 +84,15 @@ def search(
     cache_size: int,
 ) -> None:
     """Search for identifiers using intelligent matching strategies.
-    
+
     Supports fuzzy, semantic, and hybrid matching via --match-type flag.
-    
+
     Examples:
         repomap search "user authentication" --match-type hybrid
         repomap search "matcher" --match-type fuzzy --threshold 0.3
         repomap search "database" --match-type semantic --max-results 20
     """
-    
+
     # Get console instance (automatically configured with no-color if set)
     console = get_console(ctx)
 
@@ -122,9 +122,10 @@ def search(
 
         # Create search request
         from repomap_tool.models import SearchRequest
+
         request = SearchRequest(
             query=query,
-            match_type=match_type,
+            match_type=match_type,  # type: ignore[arg-type]
             threshold=threshold,  # Keep as float for API consistency
             max_results=max_results,
             strategies=list(strategies) if strategies else None,
@@ -132,6 +133,7 @@ def search(
 
         # Initialize services using service factory with detailed progress
         from rich.progress import Progress, SpinnerColumn, TextColumn
+
         with Progress(
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
@@ -149,16 +151,18 @@ def search(
 
             progress.update(task, description="Creating service factory...")
             service_factory = get_service_factory()
-            
+
             progress.update(task, description="Initializing RepoMap service...")
             repomap = service_factory.create_repomap_service(config_obj)
 
-            progress.update(task, description="Loading dependency injection container...")
+            progress.update(
+                task, description="Loading dependency injection container..."
+            )
             container = create_container(config_obj)
-            
+
             progress.update(task, description="Initializing fuzzy matcher...")
             fuzzy_matcher = container.fuzzy_matcher()
-            
+
             progress.update(task, description="Initializing semantic matcher...")
             semantic_matcher = (
                 container.adaptive_semantic_matcher()
@@ -168,7 +172,7 @@ def search(
 
             progress.update(task, description="Loading embedding model...")
             embedding_matcher = container.embedding_matcher()
-            
+
             progress.update(task, description="Initializing hybrid matcher...")
             hybrid_matcher = container.hybrid_matcher()
 

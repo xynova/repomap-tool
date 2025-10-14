@@ -22,7 +22,7 @@ class MatcherProtocol(Protocol):
     """Protocol for matcher objects."""
 
     def match_identifiers(
-        self, query: str, all_identifiers: Set[str]
+        self, query: str, all_identifiers: Set[str], threshold: Optional[float] = None
     ) -> List[tuple[str, int]]: ...
 
     def clear_cache(self) -> None: ...

@@ -883,15 +883,11 @@ def handle_authentication_request():
         )
         assert result.exit_code != 0  # Should fail with invalid output format
 
-    def test_search_command_edge_cases(
-        self, cli_runner, empty_project, large_project
-    ):
+    def test_search_command_edge_cases(self, cli_runner, empty_project, large_project):
         """Test search command with edge cases."""
 
         # Test with empty query
-        result = cli_runner.invoke(
-            cli, ["--no-color", "search", "", empty_project]
-        )
+        result = cli_runner.invoke(cli, ["--no-color", "search", "", empty_project])
         assert result.exit_code in [0, 1]
 
         # Test with very long query

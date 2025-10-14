@@ -703,23 +703,30 @@ class ImportAnalyzer:
             if self.project_root:
                 project_root = Path(self.project_root)
                 module_parts = module.split(".")
-                
+
                 # Try to find the module within the project
                 for ext in self.analyzable_extensions:
                     # Try as a file: module.py
-                    candidate_path = project_root / "src" / "/".join(module_parts) / f"{module_parts[-1]}.{ext}"
+                    candidate_path = (
+                        project_root
+                        / "src"
+                        / "/".join(module_parts)
+                        / f"{module_parts[-1]}.{ext}"
+                    )
                     if candidate_path.exists():
                         return candidate_path
-                    
+
                     # Try as a directory with __init__.py
                     candidate_dir = project_root / "src" / "/".join(module_parts)
                     init_file = candidate_dir / f"__init__.{ext}"
                     if init_file.exists():
                         return init_file
-                    
+
                     # Try without the last part (for imports like 'repomap_tool.cli' -> 'repomap_tool/cli/__init__.py')
                     if len(module_parts) > 1:
-                        candidate_dir = project_root / "src" / "/".join(module_parts[:-1])
+                        candidate_dir = (
+                            project_root / "src" / "/".join(module_parts[:-1])
+                        )
                         init_file = candidate_dir / f"__init__.{ext}"
                         if init_file.exists():
                             return init_file

@@ -225,7 +225,9 @@ class RepoMapService:
                         )
 
             # Invalidate embedding caches
-            if self.embedding_matcher and hasattr(self.embedding_matcher, "cache_manager"):
+            if self.embedding_matcher and hasattr(
+                self.embedding_matcher, "cache_manager"
+            ):
                 cache_manager = self.embedding_matcher.cache_manager
                 if cache_manager:
                     invalidated = cache_manager.invalidate_stale_files(project_files)
@@ -352,51 +354,65 @@ class RepoMapService:
         start_time = time.time()
 
         # Debug logging (only shows with --verbose)
-        self.logger.debug(f"Search request: query='{request.query}', match_type={request.match_type}, threshold={request.threshold}")
+        self.logger.debug(
+            f"Search request: query='{request.query}', match_type={request.match_type}, threshold={request.threshold}"
+        )
 
         # Force cache refresh if empty
-        if not self.repo_map or not hasattr(self.repo_map, 'TAGS_CACHE') or not self.repo_map.TAGS_CACHE:
+        if (
+            not self.repo_map
+            or not hasattr(self.repo_map, "TAGS_CACHE")
+            or not self.repo_map.TAGS_CACHE
+        ):
             self.logger.debug("TAGS_CACHE is empty or missing, forcing refresh")
-            project_files = get_project_files(str(self.config.project_root), self.config.verbose)
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
             if self.repo_map and project_files:
                 try:
-                    self.repo_map.get_ranked_tags_map(project_files)
+                    self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
                 except ZeroDivisionError:
                     # Handle case where aider library encounters division by zero
-                    self.logger.warning("No files found for RepoMap integration, skipping aider processing")
+                    self.logger.warning(
+                        "No files found for RepoMap integration, skipping aider processing"
+                    )
                     pass
 
         # ALWAYS use tree-sitter - no fallbacks
         tags = self._get_cached_tags()
-        
+
         # Log tag count
         self.logger.debug(f"Found {len(tags) if tags else 0} cached tags")
 
         if not tags:
             # Force tree-sitter to scan files and populate cache
             self.logger.debug("Cache empty, forcing tree-sitter tag extraction")
-            
+
             # Get project files
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
-            
+
             # Force tree-sitter to extract tags
             if self.repo_map:
                 # This populates TAGS_CACHE via tree-sitter
                 try:
-                    self.repo_map.get_ranked_tags_map(project_files)
+                    self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
                 except ZeroDivisionError:
                     # Handle case where aider library encounters division by zero
-                    self.logger.warning("No files found for RepoMap integration, skipping aider processing")
+                    self.logger.warning(
+                        "No files found for RepoMap integration, skipping aider processing"
+                    )
                     pass
-                
+
                 # Get cached tags from tree-sitter (now populated)
                 tags = self._get_cached_tags()
-            
+
             if not tags:
                 # If still no tags, the project has no identifiers (empty project)
-                self.logger.warning("No tags found after tree-sitter extraction - empty project?")
+                self.logger.warning(
+                    "No tags found after tree-sitter extraction - empty project?"
+                )
         else:
             self.logger.debug(f"Using cached tags from tree-sitter: {len(tags)} found")
 
@@ -412,7 +428,7 @@ class RepoMapService:
 
         # Extract identifiers for search
         identifiers = [tag["name"] for tag in tags]
-        
+
         # Log identifier count
         self.logger.debug(f"Extracted {len(identifiers)} identifiers from tags")
         self.logger.debug(f"Sample identifiers: {identifiers[:10]}")
@@ -428,7 +444,11 @@ class RepoMapService:
             )
         elif request.match_type == "hybrid" and self.hybrid_matcher:
             results = hybrid_search(
-                request.query, identifiers, self.hybrid_matcher, request.max_results, request.threshold
+                request.query,
+                identifiers,
+                self.hybrid_matcher,
+                request.max_results,
+                request.threshold,
             )
         else:
             # Fallback to basic search
@@ -468,11 +488,19 @@ class RepoMapService:
 
         # Get spellchecker suggestions if no results or few results
         spellcheck_suggestions = []
-        self.logger.debug(f"Spellchecker service available: {self.spellchecker_service is not None}")
-        if (len(enhanced_results) == 0 or len(enhanced_results) < 3) and self.spellchecker_service:
+        self.logger.debug(
+            f"Spellchecker service available: {self.spellchecker_service is not None}"
+        )
+        if (
+            len(enhanced_results) == 0 or len(enhanced_results) < 3
+        ) and self.spellchecker_service:
             try:
-                self.logger.debug(f"Getting spellchecker suggestions for: '{request.query}'")
-                suggestions = self.spellchecker_service.get_did_you_mean_suggestions(request.query)
+                self.logger.debug(
+                    f"Getting spellchecker suggestions for: '{request.query}'"
+                )
+                suggestions = self.spellchecker_service.get_did_you_mean_suggestions(
+                    request.query
+                )
                 spellcheck_suggestions = suggestions
                 if suggestions:
                     self.logger.debug(f"Spellchecker suggestions: {suggestions}")
@@ -481,9 +509,13 @@ class RepoMapService:
             except Exception as e:
                 self.logger.error(f"Spellchecker error: {e}")
         else:
-            self.logger.debug(f"Skipping spellchecker: results={len(enhanced_results)}, service={self.spellchecker_service is not None}")
+            self.logger.debug(
+                f"Skipping spellchecker: results={len(enhanced_results)}, service={self.spellchecker_service is not None}"
+            )
 
-        self.logger.debug(f"Creating SearchResponse with spellcheck_suggestions: {spellcheck_suggestions}")
+        self.logger.debug(
+            f"Creating SearchResponse with spellcheck_suggestions: {spellcheck_suggestions}"
+        )
         return SearchResponse(
             query=request.query,
             match_type=request.match_type,
@@ -546,12 +578,14 @@ class RepoMapService:
 
         try:
             cache = self.repo_map.TAGS_CACHE
-            self.logger.debug(f"TAGS_CACHE type: {type(cache)}, size: {len(cache) if cache else 0}")
-            
+            self.logger.debug(
+                f"TAGS_CACHE type: {type(cache)}, size: {len(cache) if cache else 0}"
+            )
+
             if not cache:
                 self.logger.debug("TAGS_CACHE is empty")
                 return []
-            
+
             all_tags = []
 
             # Iterate through all cached files

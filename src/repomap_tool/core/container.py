@@ -7,7 +7,7 @@ and ensuring proper lifecycle management of services.
 
 import logging
 from .logging_service import get_logger
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
@@ -170,11 +170,8 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Spell checker service
-    spellchecker_service: "providers.Singleton[Any]" = cast(
-        "providers.Singleton[Any]",
-        providers.Singleton(
-            "repomap_tool.core.spellchecker_service.SpellCheckerService",
-        ),
+    spellchecker_service: "providers.Singleton[Any]" = providers.Singleton(
+        "repomap_tool.core.spellchecker_service.SpellCheckerService",
     )
 
     parallel_tag_extractor: "providers.Factory[ParallelTagExtractor]" = cast(
@@ -200,14 +197,11 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Embedding matcher with persistent caching
-    embedding_matcher: "providers.Singleton[Any]" = cast(
-        "providers.Singleton[Any]",
-        providers.Singleton(
-            "repomap_tool.code_search.embedding_matcher.EmbeddingMatcher",
-            model_name="nomic-ai/CodeRankEmbed",  # FIXED: Use hardcoded value instead of config
-            cache_manager=cache_manager,
-            cache_dir=config.embedding.cache_dir,
-        ),
+    embedding_matcher: "providers.Singleton[Any]" = providers.Singleton(
+        "repomap_tool.code_search.embedding_matcher.EmbeddingMatcher",
+        model_name="nomic-ai/CodeRankEmbed",  # FIXED: Use hardcoded value instead of config
+        cache_manager=cache_manager,
+        cache_dir=config.embedding.cache_dir,
     )
 
     adaptive_semantic_matcher: "providers.Factory[AdaptiveSemanticMatcher]" = cast(
@@ -219,24 +213,18 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Domain semantic matcher for programming knowledge
-    domain_semantic_matcher: "providers.Singleton[Any]" = cast(
-        "providers.Singleton[Any]",
-        providers.Singleton(
-            "repomap_tool.code_search.semantic_matcher.DomainSemanticMatcher",
-            verbose=config.verbose,
-        ),
+    domain_semantic_matcher: "providers.Singleton[Any]" = providers.Singleton(
+        "repomap_tool.code_search.semantic_matcher.DomainSemanticMatcher",
+        verbose=config.verbose,
     )
 
-    hybrid_matcher: "providers.Factory[HybridMatcher]" = cast(
-        "providers.Factory[HybridMatcher]",
-        providers.Factory(
-            "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
-            fuzzy_matcher=fuzzy_matcher,
-            embedding_matcher=embedding_matcher,
-            domain_semantic_matcher=domain_semantic_matcher,
-            semantic_threshold=config.semantic_match.threshold,
-            verbose=config.verbose,
-        ),
+    hybrid_matcher: "providers.Factory[HybridMatcher]" = providers.Factory(
+        "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
+        fuzzy_matcher=fuzzy_matcher,
+        embedding_matcher=embedding_matcher,
+        domain_semantic_matcher=domain_semantic_matcher,
+        semantic_threshold=config.semantic_match.threshold,
+        verbose=config.verbose,
     )
 
     # Additional services for trees and dependencies

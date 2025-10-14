@@ -100,7 +100,7 @@ class SearchViewModel:
     match_type: str = "hybrid"
     search_time_ms: float = 0.0
     cache_hit: bool = False
-    spellcheck_suggestions: List[str] = None
+    spellcheck_suggestions: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
     performance_metrics: Optional[Dict[str, Any]] = None
 

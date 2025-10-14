@@ -7,6 +7,7 @@ This module provides the main CLI group and orchestrates all command groups.
 
 # Configure external library logging as early as possible
 from ..core.logging_service import _suppress_external_library_logs
+
 _suppress_external_library_logs()
 
 import click

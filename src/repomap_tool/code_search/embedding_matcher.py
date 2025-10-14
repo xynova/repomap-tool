@@ -3,7 +3,7 @@
 import hashlib
 import numpy as np
 from pathlib import Path
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
@@ -19,7 +19,7 @@ class EmbeddingMatcher:
     def __init__(
         self,
         model_name: str = "nomic-ai/CodeRankEmbed",
-        cache_manager: Optional[any] = None,
+        cache_manager: Optional[Any] = None,
         cache_dir: Optional[str] = None,
     ):
         """
@@ -41,12 +41,14 @@ class EmbeddingMatcher:
         try:
             logger.debug(f"Initializing EmbeddingMatcher with model: {model_name}")
             logger.debug(f"Cache directory: {self.cache_dir}")
-            
+
             # Detect and use GPU if available
             device = self._detect_best_device()
             logger.debug(f"Using device: {device}")
-            
-            self.model = SentenceTransformer(model_name, trust_remote_code=True, device=device)
+
+            self.model = SentenceTransformer(
+                model_name, trust_remote_code=True, device=device
+            )
             self.enabled = True
             logger.debug(f"✓ EmbeddingMatcher initialized successfully on {device}")
         except Exception as e:
@@ -63,30 +65,30 @@ class EmbeddingMatcher:
     def _detect_best_device(self) -> str:
         """
         Detect the best available device for embedding computation.
-        
+
         Returns:
             Device string ('cuda', 'mps', or 'cpu')
         """
         try:
             import torch
-            
+
             # Check for CUDA (NVIDIA GPU)
             if torch.cuda.is_available():
                 gpu_count = torch.cuda.device_count()
                 gpu_name = torch.cuda.get_device_name(0)
                 logger.info(f"CUDA GPU detected: {gpu_name} (count: {gpu_count})")
                 return "cuda"
-            
+
             # Check for MPS (Apple Silicon GPU)
-            elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+            elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
                 logger.info("Apple Silicon GPU (MPS) detected")
                 return "mps"
-            
+
             # Fallback to CPU
             else:
                 logger.debug("No GPU detected, using CPU")
                 return "cpu"
-                
+
         except ImportError:
             logger.warning("PyTorch not available, using CPU")
             return "cpu"
@@ -118,11 +120,15 @@ class EmbeddingMatcher:
         if not self.enabled:
             logger.debug("EmbeddingMatcher is disabled")
             return None
-            
+
         if self.model is None:
-            logger.error("Model is None despite enabled=True - attempting re-initialization")
+            logger.error(
+                "Model is None despite enabled=True - attempting re-initialization"
+            )
             try:
-                self.model = SentenceTransformer(self.model_name, trust_remote_code=True)
+                self.model = SentenceTransformer(
+                    self.model_name, trust_remote_code=True
+                )
                 logger.info("Model re-initialized successfully")
             except Exception as e:
                 logger.error(f"Failed to re-initialize model: {e}")
@@ -143,10 +149,10 @@ class EmbeddingMatcher:
                     # If file was modified, cache is invalid
                     # For now, just load - cache invalidation happens at index time
                     pass
-
-                embedding = np.load(cache_path)
-                self.embedding_cache[cache_key] = embedding
-                return embedding
+                else:
+                    embedding = np.load(cache_path)
+                    self.embedding_cache[cache_key] = embedding
+                    return embedding  # type: ignore[no-any-return]
             except Exception as e:
                 logger.debug(f"Failed to load cached embedding: {e}")
 
@@ -155,18 +161,14 @@ class EmbeddingMatcher:
             logger.debug(f"Computing embedding for text: '{text[:50]}...'")
             logger.debug(f"Model type: {type(self.model)}")
             logger.debug(f"Model enabled: {self.enabled}")
-            if hasattr(self.model, 'tokenizer'):
+            if hasattr(self.model, "tokenizer"):
                 logger.debug(f"Model tokenizer: {type(self.model.tokenizer)}")
             else:
                 logger.debug("Model has no tokenizer attribute")
-            
-            # Verify model is still valid before encoding
-            if self.model is None:
-                logger.error("Model became None during encoding - this should not happen")
-                return None
-                
+
+            # Model should be valid at this point
             embedding = self.model.encode(text, convert_to_numpy=True)
-            
+
             # Save to persistent cache
             try:
                 np.save(cache_path, embedding)
@@ -227,7 +229,9 @@ class EmbeddingMatcher:
         # Batch compute remaining
         if to_compute:
             try:
-                logger.info(f"Computing embeddings for {len(to_compute)} identifiers...")
+                logger.info(
+                    f"Computing embeddings for {len(to_compute)} identifiers..."
+                )
                 embeddings = self.model.encode(to_compute, convert_to_numpy=True)
 
                 for i, identifier in enumerate(to_compute):
@@ -344,4 +348,3 @@ class EmbeddingMatcher:
             "memory_cache_size": len(self.embedding_cache),
             "persistent_cache_size": persistent_count,
         }
-

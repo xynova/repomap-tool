@@ -93,10 +93,10 @@ def cycles(
 
             progress.update(task, description="Creating service factory...")
             service_factory = get_service_factory()
-            
+
             progress.update(task, description="Initializing RepoMap service...")
             repomap = service_factory.create_repomap_service(config_obj)
-            
+
             progress.update(task, description="Building dependency graph...")
 
             # Build dependency graph
