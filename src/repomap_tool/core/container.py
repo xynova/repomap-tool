@@ -42,6 +42,7 @@ if TYPE_CHECKING:
     from repomap_tool.code_exploration.tree_clusters import TreeClusterer
     from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
     from repomap_tool.code_exploration.tree_builder import TreeBuilder
+    from repomap_tool.core.tag_cache import TreeSitterTagCache
     from repomap_tool.cli.controllers.centrality_controller import CentralityController
     from repomap_tool.cli.controllers.impact_controller import ImpactController
     from repomap_tool.cli.controllers.search_controller import SearchController

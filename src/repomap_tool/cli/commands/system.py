@@ -126,13 +126,13 @@ def version(ctx: click.Context) -> None:
 def cache_info(ctx: click.Context) -> None:
     """Show tree-sitter tag cache statistics"""
     from repomap_tool.core.tag_cache import TreeSitterTagCache
-    
+
     cache = TreeSitterTagCache()
     stats = cache.get_cache_stats()
-    
+
     output_manager = get_output_manager()
     output_config = OutputConfig(format=OutputFormat.TEXT)
-    
+
     cache_info_text = f"""Tree-Sitter Tag Cache Information
 {'=' * 50}
 Cache Location: {stats['cache_location']}
@@ -149,14 +149,14 @@ Approx Size: {stats['approx_size_bytes'] / 1024:.2f} KB
 def cache_clear(ctx: click.Context, force: bool) -> None:
     """Clear the tree-sitter tag cache"""
     from repomap_tool.core.tag_cache import TreeSitterTagCache
-    
+
     if not force:
         if not click.confirm("Clear all cached tags?"):
             return
-    
+
     cache = TreeSitterTagCache()
     cache.clear()
-    
+
     output_manager = get_output_manager()
     output_config = OutputConfig(format=OutputFormat.TEXT)
     output_manager.display_success("Tag cache cleared", output_config)

@@ -148,15 +148,14 @@ class RepoMapService:
         # Initialize tree-sitter parser with caching
         from ..code_analysis.tree_sitter_parser import TreeSitterParser
         from .tag_cache import TreeSitterTagCache
-        
+
         # Create tag cache
-        cache_dir = self.config.cache_dir if hasattr(self.config, 'cache_dir') else None
+        cache_dir = self.config.cache_dir if hasattr(self.config, "cache_dir") else None
         tag_cache = TreeSitterTagCache(cache_dir)
-        
+
         # Create tree-sitter parser with cache
         self.tree_sitter_parser = TreeSitterParser(
-            project_root=self.config.project_root,
-            cache=tag_cache
+            project_root=self.config.project_root, cache=tag_cache
         )
 
         # CustomRepoMap removed - using TreeSitterParser directly
@@ -164,17 +163,17 @@ class RepoMapService:
     def _get_cached_identifiers(self) -> List[str]:
         """Get all identifiers from tree-sitter cache"""
         all_identifiers = set()
-        
+
         # Get project files
         project_files = get_project_files(
             str(self.config.project_root), self.config.verbose
         )
-        
+
         for file_path in project_files:
             tags = self.tree_sitter_parser.get_tags(file_path)
             for tag in tags:
                 all_identifiers.add(tag.name)
-                
+
         return list(all_identifiers)
 
     def _invalidate_stale_caches(self) -> None:
@@ -495,45 +494,6 @@ class RepoMapService:
             spellcheck_suggestions=spellcheck_suggestions,
         )
 
-    def _get_cached_identifiers(self) -> List[str]:
-        """
-        Get all identifiers from the tree-sitter cache.
-
-        Returns:
-            List of identifier names from cache, or empty list if cache unavailable
-        """
-        if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("No tree-sitter cache available")
-            return []
-
-        try:
-            cache = self.repo_map.TAGS_CACHE
-            all_identifiers = set()
-
-            # Iterate through all cached files
-            for key in cache:
-                try:
-                    value = cache[key]
-                    if isinstance(value, dict) and "data" in value:
-                        data = value["data"]
-                        if isinstance(data, list):
-                            for tag in data:
-                                if tag.name:
-                                    all_identifiers.add(tag.name)
-                except Exception as e:
-                    self.logger.debug(f"Error processing cache entry {key}: {e}")
-                    continue
-
-            identifiers_list = list(all_identifiers)
-            self.logger.debug(
-                f"Retrieved {len(identifiers_list)} identifiers from cache"
-            )
-            return identifiers_list
-
-        except Exception as e:
-            self.logger.warning(f"Failed to retrieve identifiers from cache: {e}")
-            return []
-
     def _get_cached_tags(self) -> List[CodeTag]:
         """
         Get all tags with full information from the tree-sitter cache.
@@ -830,7 +790,9 @@ class RepoMapService:
             project_imports: ProjectImports object to cache
         """
         if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("No tree-sitter cache available for caching import analysis")
+            self.logger.debug(
+                "No tree-sitter cache available for caching import analysis"
+            )
             return
 
         try:

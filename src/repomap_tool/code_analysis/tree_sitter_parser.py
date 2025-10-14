@@ -175,11 +175,11 @@ class TreeSitterParser:
 
     def get_tags(self, file_path: str, use_cache: bool = True) -> List[CodeTag]:
         """Get tags for a file, using cache if available
-        
+
         Args:
             file_path: Path to the file to get tags for
             use_cache: Whether to use cache if available
-            
+
         Returns:
             List of CodeTag objects
         """
@@ -188,15 +188,15 @@ class TreeSitterParser:
             if cached_tags is not None:
                 logger.debug(f"Using cached tags for {file_path}")
                 return cached_tags
-        
+
         # Parse file using existing parse_file method
         tags = self.parse_file(file_path)
-        
+
         # Cache results
         if use_cache and self.tag_cache:
             self.tag_cache.set_tags(file_path, tags)
             logger.debug(f"Cached {len(tags)} tags for {file_path}")
-        
+
         return tags
 
     def _load_query(self, lang: str) -> Optional[str]:
@@ -237,13 +237,13 @@ class TreeSitterParser:
             for base_path in [
                 f"tree-sitter-{lang}-queries/queries/{lang}-tags.scm",
                 f"tree-sitter-{lang}/queries/{lang}-tags.scm",
-                f"queries/{lang}-tags.scm"
+                f"queries/{lang}-tags.scm",
             ]:
                 try:
                     query_path = pkg_resources.resource_filename("", base_path)
                     if os.path.exists(query_path):
                         break
-                except:
+                except Exception:
                     continue
             logger.debug(f"Looking for pkg_resources query at: {query_path}")
             if os.path.exists(query_path):
