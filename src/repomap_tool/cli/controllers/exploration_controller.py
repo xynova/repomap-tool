@@ -165,7 +165,7 @@ class ExplorationController(BaseController):
                 trees=trees,
                 total_trees=len(trees),
                 confidence_scores=confidence_scores,
-                token_count=self._estimate_token_count(trees),
+                token_count=self._estimate_token_count(trees) if trees else 0,
                 max_tokens=max_tokens,
                 execution_time=execution_time,
                 discovery_strategy="hybrid",
@@ -344,7 +344,7 @@ class ExplorationController(BaseController):
                 max_depth=tree.max_depth,
                 include_code=include_code,
                 code_snippets=code_snippets,
-                token_count=self._estimate_token_count([tree]),
+                token_count=self._estimate_token_count([tree]) if tree else 0,
                 max_tokens=max_tokens,
             )
 
@@ -595,7 +595,7 @@ class ExplorationController(BaseController):
             logger = get_logger(__name__)
             base_tokens_per_node = get_config("EXPLORATION_TOKENS_PER_NODE", 50)
 
-            if not trees:
+            if not trees or trees is None:
                 return 0
 
             total_tokens = 0

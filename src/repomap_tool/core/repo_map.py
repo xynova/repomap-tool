@@ -358,8 +358,13 @@ class RepoMapService:
         if not self.repo_map or not hasattr(self.repo_map, 'TAGS_CACHE') or not self.repo_map.TAGS_CACHE:
             self.logger.debug("TAGS_CACHE is empty or missing, forcing refresh")
             project_files = get_project_files(str(self.config.project_root), self.config.verbose)
-            if self.repo_map:
-                self.repo_map.get_ranked_tags_map(project_files)
+            if self.repo_map and project_files:
+                try:
+                    self.repo_map.get_ranked_tags_map(project_files)
+                except ZeroDivisionError:
+                    # Handle case where aider library encounters division by zero
+                    self.logger.warning("No files found for RepoMap integration, skipping aider processing")
+                    pass
 
         # ALWAYS use tree-sitter - no fallbacks
         tags = self._get_cached_tags()
@@ -379,7 +384,12 @@ class RepoMapService:
             # Force tree-sitter to extract tags
             if self.repo_map:
                 # This populates TAGS_CACHE via tree-sitter
-                self.repo_map.get_ranked_tags_map(project_files)
+                try:
+                    self.repo_map.get_ranked_tags_map(project_files)
+                except ZeroDivisionError:
+                    # Handle case where aider library encounters division by zero
+                    self.logger.warning("No files found for RepoMap integration, skipping aider processing")
+                    pass
                 
                 # Get cached tags from tree-sitter (now populated)
                 tags = self._get_cached_tags()

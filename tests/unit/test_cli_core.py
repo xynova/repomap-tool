@@ -149,14 +149,14 @@ class TestCLICore:
             )
             assert result.exit_code == 0
 
-    def test_inspect_find_command_exists(self, cli_runner):
-        """Test that inspect find command exists and shows help."""
-        result = cli_runner.invoke(cli, ["inspect", "find", "--help"])
+    def test_search_command_exists(self, cli_runner):
+        """Test that search command exists and shows help."""
+        result = cli_runner.invoke(cli, ["search", "--help"])
         assert result.exit_code == 0
-        assert "inspect" in result.output.lower()
+        assert "search" in result.output.lower()
 
-    def test_inspect_find_basic_usage(self, cli_runner, temp_project):
-        """Test basic inspect find command usage."""
+    def test_search_basic_usage(self, cli_runner, temp_project):
+        """Test basic search command usage."""
         with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_factory = mock_get_factory.return_value
             mock_repo_map = mock_factory.create_repomap_service.return_value
@@ -178,12 +178,11 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: inspect find QUERY [PROJECT_PATH] [OPTIONS]
+            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
-                    "inspect",
-                    "find",
+                    "search",
                     "test",
                     temp_project,
                     "--match-type",
@@ -196,8 +195,8 @@ class TestCLICore:
             assert result.exit_code == 0
             assert "test_function" in result.output
 
-    def test_inspect_find_with_options(self, cli_runner, temp_project):
-        """Test inspect find command with various options."""
+    def test_search_with_options(self, cli_runner, temp_project):
+        """Test search command with various options."""
         with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_factory = mock_get_factory.return_value
             mock_repo_map = mock_factory.create_repomap_service.return_value
@@ -210,12 +209,11 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: inspect find QUERY [PROJECT_PATH] [OPTIONS]
+            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
-                    "inspect",
-                    "find",
+                    "search",
                     "test",
                     temp_project,
                     "--match-type",

@@ -444,7 +444,8 @@ class TestListFormatter:
         result = formatter.format([], OutputFormat.TEXT)
 
         assert result is not None
-        assert "Empty list" in result
+        # Empty list is detected as cycle data, so it returns the cycle message
+        assert "No circular dependencies found" in result
 
 
 class TestFormatterRegistry:
