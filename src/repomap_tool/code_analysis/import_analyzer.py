@@ -62,7 +62,8 @@ class PythonImportParser(ImportParser):
 
             # Look for import-related tags
             for tag in tags:
-                kind = tag["kind"]
+                # All tags are now CodeTag objects
+                kind = tag.kind
 
                 # Handle import statements
                 if "import" in kind.lower():
@@ -87,29 +88,27 @@ class PythonImportParser(ImportParser):
 
         return imports
 
-    def _parse_import_tag(
-        self, tag: Dict[str, Any], file_path: str
-    ) -> Optional[Import]:
+    def _parse_import_tag(self, tag: Any, file_path: str) -> Optional[Import]:
         """Parse a single import tag into Import object.
 
         Args:
-            tag: Tree-sitter tag dictionary
+            tag: Tree-sitter tag (CodeTag object or dict)
             file_path: Path to the file
 
         Returns:
             Import object or None if parsing fails
         """
         try:
-            # For now, create a basic import from the tag name
-            # This is a simplified approach - could be enhanced with more detailed parsing
-            module = tag["name"]
+            # All tags are now CodeTag objects
+            module = tag.name
+            line_number = tag.line
 
             return Import(
                 module=module,
                 alias=None,
                 is_relative=False,  # Simplified - could parse from tag details
                 import_type=ImportType.ABSOLUTE,
-                line_number=tag["line"],
+                line_number=line_number,
             )
         except Exception as e:
             logger.debug(f"Error parsing import tag {tag}: {e}")
@@ -138,7 +137,7 @@ class JavaScriptImportParser(ImportParser):
 
             # Extract imports from tree-sitter tags
             for tag in tags:
-                if tag.get("kind") in [
+                if tag.kind in [
                     "import.statement",
                     "import.named",
                     "import.default",
@@ -163,12 +162,14 @@ class JavaScriptImportParser(ImportParser):
 
         return imports
 
-    def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
+    def _parse_import_tag(self, tag: Any, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.get("kind", "")
-            name = tag.get("name", "")
-            line = tag.get("line", 0)
+            # All tags are now CodeTag objects
+            kind = tag.kind
+            name = tag.name
+            line = tag.line
+            source = getattr(tag, "source", "")
 
             # Handle different import types
             if kind in [
@@ -178,14 +179,12 @@ class JavaScriptImportParser(ImportParser):
                 "import.namespace",
             ]:
                 # Extract module from source
-                source = tag.get("source", "")
                 if source:
                     module = source.strip("'\"")
                     is_relative = module.startswith(".")
 
                     return Import(
                         module=module,
-                        symbols=[],
                         is_relative=is_relative,
                         import_type=(
                             ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
@@ -195,14 +194,12 @@ class JavaScriptImportParser(ImportParser):
 
             elif kind in ["require.statement", "require.var"]:
                 # Handle CommonJS requires
-                source = tag.get("source", "")
                 if source:
                     module = source.strip("'\"")
                     is_relative = module.startswith(".")
 
                     return Import(
                         module=module,
-                        symbols=[],
                         is_relative=is_relative,
                         import_type=(
                             ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
@@ -239,7 +236,7 @@ class JavaImportParser(ImportParser):
 
             # Extract imports from tree-sitter tags
             for tag in tags:
-                if tag.get("kind") in ["import.statement", "import.static"]:
+                if tag.kind in ["import.statement", "import.static"]:
                     import_obj = self._parse_import_tag(tag, file_path)
                     if import_obj:
                         imports.append(import_obj)
@@ -259,9 +256,9 @@ class JavaImportParser(ImportParser):
     def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.get("kind", "")
-            name = tag.get("name", "")
-            line = tag.get("line", 0)
+            kind = tag.kind
+            name = tag.name
+            line = tag.line
 
             # Handle import statements
             if kind == "import.statement":
@@ -315,7 +312,7 @@ class GoImportParser(ImportParser):
 
             # Extract imports from tree-sitter tags
             for tag in tags:
-                if tag.get("kind") in ["import.single", "import.grouped"]:
+                if tag.kind in ["import.single", "import.grouped"]:
                     import_obj = self._parse_import_tag(tag, file_path)
                     if import_obj:
                         imports.append(import_obj)
@@ -335,9 +332,9 @@ class GoImportParser(ImportParser):
     def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.get("kind", "")
-            path = tag.get("path", "")
-            line = tag.get("line", 0)
+            kind = tag.kind
+            path = tag.rel_fname or tag.file
+            line = tag.line
 
             # Handle import statements
             if kind in ["import.single", "import.grouped"]:
@@ -384,7 +381,7 @@ class CSharpImportParser(ImportParser):
 
             # Extract imports from tree-sitter tags
             for tag in tags:
-                if tag.get("kind") in [
+                if tag.kind in [
                     "using.directive",
                     "using.static",
                     "using.alias",
@@ -409,9 +406,9 @@ class CSharpImportParser(ImportParser):
     def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.get("kind", "")
-            name = tag.get("name", "")
-            line = tag.get("line", 0)
+            kind = tag.kind
+            name = tag.name
+            line = tag.line
 
             # Handle using directives
             if kind in [
@@ -544,7 +541,7 @@ class ImportAnalyzer:
             max_workers = get_config("MAX_WORKERS", 4)
 
         all_files = self._get_all_files(project_path, ignore_dirs, file_extensions)
-        project_imports = ProjectImports(project_path=project_path, file_imports={})
+        project_imports = ProjectImports(files={}, project_path=project_path)
 
         # Filter to only analyzable files
         analyzable_files = [
@@ -583,9 +580,7 @@ class ImportAnalyzer:
                 file_imports_obj = self.analyze_file_imports(file_path)
                 file_imports[file_path] = file_imports_obj
 
-        project_imports = ProjectImports(
-            project_path=project_path, file_imports=file_imports
-        )
+        project_imports = ProjectImports(project_path=project_path, files=file_imports)
 
         logger.debug(
             f"Project import analysis complete: {project_imports.total_files} files, {project_imports.total_imports} imports"

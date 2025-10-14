@@ -75,11 +75,7 @@ class TreeBuilder:
         )
 
         # Build tree structure using existing aider infrastructure
-        if (
-            self.repo_map
-            and hasattr(self.repo_map, "repo_map")
-            and self.repo_map.repo_map
-        ):
+        if self.repo_map and self.repo_map.repo_map:
             # Get tags and dependencies for this entrypoint
             tree_structure = self._build_tree_structure(entrypoint, max_depth)
             tree.tree_structure = tree_structure
@@ -233,11 +229,11 @@ class TreeBuilder:
             for symbol in related_symbols:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
-                        identifier=symbol.get("name", "Unknown"),
+                        identifier=symbol.name,
                         location=self._get_symbol_location(
                             symbol, str(entrypoint.location)
                         ),
-                        node_type=symbol.get("kind", "symbol"),
+                        node_type=symbol.kind,
                         depth=current_depth + 1,
                     )
 
@@ -388,11 +384,7 @@ class TreeBuilder:
             Dictionary with centrality information
         """
         try:
-            if (
-                not self.repo_map
-                or not hasattr(self.repo_map, "centrality_calculator")
-                or not self.repo_map.centrality_calculator
-            ):
+            if not self.repo_map or not self.repo_map.centrality_calculator:
                 return {"centrality_score": 0.0, "centrality_rank": 0}
 
             centrality_scores = (
@@ -453,11 +445,11 @@ class TreeBuilder:
             for symbol in related_symbols:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
-                        identifier=symbol.get("name", "Unknown"),
+                        identifier=symbol.name,
                         location=self._get_symbol_location(
                             symbol, str(entrypoint.location)
                         ),
-                        node_type=symbol.get("kind", "symbol"),
+                        node_type=symbol.kind,
                         depth=current_depth + 1,
                     )
                     child.parent = node
@@ -486,16 +478,12 @@ class TreeBuilder:
         """
         try:
             # Try to use existing aider infrastructure
-            if (
-                self.repo_map
-                and hasattr(self.repo_map, "repo_map")
-                and self.repo_map.repo_map
-            ):
+            if self.repo_map and self.repo_map.repo_map:
                 # Get tags for the current node's file
                 file_path = self._extract_file_path(node.location)
                 if file_path and os.path.exists(file_path):
                     # Use aider's get_tags method if available
-                    if hasattr(self.repo_map.repo_map, "get_tags"):
+                    if self.repo_map.repo_map:
                         tags = self.repo_map.repo_map.get_tags(file_path, node.location)
                         return self._process_aider_tags(tags)
 
@@ -519,26 +507,14 @@ class TreeBuilder:
 
         for tag in tags:
             try:
-                # Handle different tag formats
-                if hasattr(tag, "name"):
-                    symbol = {
-                        "name": tag.name,
-                        "kind": getattr(tag, "kind", "symbol"),
-                        "file_path": getattr(tag, "file_path", ""),
-                        "line_number": getattr(tag, "line_number", 0),
-                    }
-                    processed_symbols.append(symbol)
-                elif isinstance(tag, dict):
-                    processed_symbols.append(tag)
-                elif isinstance(tag, str):
-                    processed_symbols.append(
-                        {
-                            "name": tag,
-                            "kind": "symbol",
-                            "file_path": "",
-                            "line_number": 0,
-                        }
-                    )
+                # All tags are now CodeTag objects
+                symbol = {
+                    "name": tag.name,
+                    "kind": getattr(tag, "kind", "symbol"),
+                    "file_path": getattr(tag, "file", ""),
+                    "line_number": getattr(tag, "line", 0),
+                }
+                processed_symbols.append(symbol)
 
             except Exception as e:
                 logger.debug(f"Error processing tag {tag}: {e}")
@@ -559,21 +535,19 @@ class TreeBuilder:
             True if symbol should be added as child
         """
         # Don't add if it's the same as parent
-        if symbol.get("name") == parent_node.identifier:
+        if symbol.name == parent_node.identifier:
             return False
 
         # Don't add if it's already a child
-        if any(
-            child.identifier == symbol.get("name") for child in parent_node.children
-        ):
+        if any(child.identifier == symbol.name for child in parent_node.children):
             return False
 
         # Don't add if it's the parent's parent
-        if parent_node.parent and symbol.get("name") == parent_node.parent.identifier:
+        if parent_node.parent and symbol.name == parent_node.parent.identifier:
             return False
 
         # Add if it's a reasonable symbol
-        symbol_name = symbol.get("name", "")
+        symbol_name = symbol.name
         if symbol_name and len(symbol_name) > 1:
             return True
 
@@ -597,8 +571,8 @@ class TreeBuilder:
                 # Make path relative if possible
                 if (
                     self.repo_map
-                    and hasattr(self.repo_map, "config")
-                    and hasattr(self.repo_map.config, "project_root")
+                    and self.repo_map.config
+                    and self.repo_map.config.project_root
                 ):
                     try:
                         rel_path = os.path.relpath(
@@ -637,8 +611,8 @@ class TreeBuilder:
             # Resolve to absolute path if possible
             if (
                 self.repo_map
-                and hasattr(self.repo_map, "config")
-                and hasattr(self.repo_map.config, "project_root")
+                and self.repo_map.config
+                and self.repo_map.config.project_root
             ):
                 abs_path = os.path.join(self.repo_map.config.project_root, file_path)
                 if os.path.exists(abs_path):
@@ -795,11 +769,7 @@ class TreeBuilder:
 
             for node in matching_nodes:
                 # Use aider RepoMap to get related symbols
-                if (
-                    self.repo_map
-                    and hasattr(self.repo_map, "repo_map")
-                    and self.repo_map.repo_map
-                ):
+                if self.repo_map and self.repo_map.repo_map:
                     related_symbols = self._get_related_symbols_from_aider(
                         node, project_path
                     )
@@ -907,11 +877,7 @@ class TreeBuilder:
     ) -> List[Dict[str, Any]]:
         """Get related symbols using aider RepoMap."""
         try:
-            if (
-                not self.repo_map
-                or not hasattr(self.repo_map, "repo_map")
-                or not self.repo_map.repo_map
-            ):
+            if not self.repo_map or not self.repo_map.repo_map:
                 return []
 
             # Extract file path from node location

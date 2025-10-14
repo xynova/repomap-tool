@@ -281,10 +281,8 @@ class ComplexProcessor:
 
         # Test ProjectImports model
         project_imports = ProjectImports(
+            files={str(Path(temp_project_with_dependencies) / "main.py"): file_imports},
             project_path=str(temp_project_with_dependencies),
-            file_imports={
-                str(Path(temp_project_with_dependencies) / "main.py"): file_imports
-            },
             total_files=1,
         )
         assert project_imports.project_path == str(temp_project_with_dependencies)

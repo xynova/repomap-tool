@@ -55,11 +55,7 @@ class EntrypointDiscoverer:
         self.fuzzy_matcher = getattr(repo_map, "fuzzy_matcher", None)
 
         # Use semantic matcher threshold from config if available
-        if (
-            repo_map
-            and hasattr(repo_map, "config")
-            and hasattr(repo_map.config, "trees")
-        ):
+        if repo_map and repo_map.config and repo_map.config.trees:
             self.semantic_threshold = repo_map.config.trees.entrypoint_threshold
         else:
             self.semantic_threshold = 0.6
@@ -207,7 +203,7 @@ class EntrypointDiscoverer:
         """
         try:
             # Use existing repo_map to get symbols
-            if self.repo_map and hasattr(self.repo_map, "get_tags"):
+            if self.repo_map and self.repo_map.get_tags:
                 symbol_strings = self.repo_map.get_tags()
                 # Convert strings to dictionaries
                 symbols = [{"identifier": s, "type": "unknown"} for s in symbol_strings]
@@ -215,7 +211,7 @@ class EntrypointDiscoverer:
                 return symbols
 
             # Fallback: try to get symbols from search engine
-            elif hasattr(self.repo_map, "search_engine"):
+            elif self.repo_map.search_engine:
                 # This would need to be implemented based on existing search engine
                 logger.debug("Using search engine fallback for symbol discovery")
                 return []

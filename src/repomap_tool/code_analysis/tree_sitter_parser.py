@@ -17,6 +17,7 @@ from grep_ast import filename_to_lang
 from grep_ast.tsl import get_language, get_parser
 
 from repomap_tool.core.logging_service import get_logger
+from repomap_tool.code_analysis.models import CodeTag
 
 logger = get_logger(__name__)
 
@@ -81,14 +82,14 @@ class TreeSitterParser:
         else:
             self.custom_queries_dir = Path(custom_queries_dir)
 
-    def parse_file(self, file_path: str) -> List[Dict[str, Any]]:
+    def parse_file(self, file_path: str) -> List[CodeTag]:
         """Parse file and return ALL tree-sitter tags (unfiltered).
 
         Args:
             file_path: Path to the file to parse
 
         Returns:
-            List of tag dictionaries with detailed information
+            List of CodeTag objects with detailed information
         """
         try:
             # Get language for the file
@@ -123,20 +124,20 @@ class TreeSitterParser:
 
             # Handle different capture formats
             if hasattr(captures, "items"):
-                # Dictionary format: {tag_name: [nodes]}
+                # CodeTag format: {tag_name: [nodes]}
                 for tag_kind, nodes in captures.items():
                     for node in nodes:
                         tags.append(
-                            {
-                                "name": node.text.decode("utf-8"),
-                                "kind": tag_kind,  # Keep full kind: name.definition.class, etc.
-                                "line": node.start_point[0]
+                            CodeTag(
+                                name=node.text.decode("utf-8"),
+                                kind=tag_kind,  # Keep full kind: name.definition.class, etc.
+                                line=node.start_point[0]
                                 + 1,  # Convert to 1-based line numbers
-                                "column": node.start_point[1],
-                                "file": file_path,
-                                "end_line": node.end_point[0] + 1,
-                                "end_column": node.end_point[1],
-                            }
+                                column=node.start_point[1],
+                                file=file_path,
+                                end_line=node.end_point[0] + 1,
+                                end_column=node.end_point[1],
+                            )
                         )
             else:
                 # List format: [(node, tag_kind), ...]
@@ -144,16 +145,16 @@ class TreeSitterParser:
                     if len(capture) == 2:
                         node, tag_kind = capture
                         tags.append(
-                            {
-                                "name": node.text.decode("utf-8"),
-                                "kind": tag_kind,  # Keep full kind: name.definition.class, etc.
-                                "line": node.start_point[0]
+                            CodeTag(
+                                name=node.text.decode("utf-8"),
+                                kind=tag_kind,  # Keep full kind: name.definition.class, etc.
+                                line=node.start_point[0]
                                 + 1,  # Convert to 1-based line numbers
-                                "column": node.start_point[1],
-                                "file": file_path,
-                                "end_line": node.end_point[0] + 1,
-                                "end_column": node.end_point[1],
-                            }
+                                column=node.start_point[1],
+                                file=file_path,
+                                end_line=node.end_point[0] + 1,
+                                end_column=node.end_point[1],
+                            )
                         )
                     else:
                         logger.debug(f"Unexpected capture format: {capture}")
@@ -234,8 +235,8 @@ class TreeSitterParser:
         return None
 
     def _associate_comments_with_code(
-        self, tags: List[Dict], root_node: Any, code: str
-    ) -> List[Dict]:
+        self, tags: List[CodeTag], root_node: Any, code: str
+    ) -> List[CodeTag]:
         """Associate comments with nearest code elements.
 
         Args:
@@ -253,7 +254,10 @@ class TreeSitterParser:
 
             # Associate comments with nearest code elements
             for tag in tags:
-                tag["comment"] = self._find_nearest_comment(tag, comment_nodes, code)
+                comment = self._find_nearest_comment(tag, comment_nodes, code)
+                if comment:
+                    # Add comment as a new attribute to CodeTag
+                    tag.comment = comment
 
             return tags
         except Exception as e:
@@ -294,7 +298,7 @@ class TreeSitterParser:
             logger.debug(f"Error finding comment nodes: {e}")
 
     def _find_nearest_comment(
-        self, tag: Dict, comment_nodes: List[Dict], code: str
+        self, tag: CodeTag, comment_nodes: List[Dict], code: str
     ) -> Optional[str]:
         """Find the nearest comment for a code element.
 
@@ -307,7 +311,7 @@ class TreeSitterParser:
             Associated comment text or None
         """
         try:
-            tag_line = tag.get("line", 0)
+            tag_line = tag.line
             if tag_line <= 0:
                 return None
 

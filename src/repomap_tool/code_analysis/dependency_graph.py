@@ -6,6 +6,7 @@ code dependencies across a project.
 """
 
 import logging
+from dataclasses import asdict
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 import networkx as nx
@@ -49,11 +50,11 @@ class DependencyGraph:
         self.nodes.clear()
 
         # Add nodes
-        for file_path in project_imports.file_imports.keys():
+        for file_path in project_imports.files.keys():
             self._add_node(file_path)
 
         # Add edges
-        for file_path, file_imports in project_imports.file_imports.items():
+        for file_path, file_imports in project_imports.files.items():
             if file_path not in self.nodes:
                 continue
 
@@ -82,7 +83,7 @@ class DependencyGraph:
                 file_path=file_path, language=Path(file_path).suffix.lstrip(".")
             )
             self.nodes[file_path] = node
-            self.graph.add_node(file_path, **node.model_dump())
+            self.graph.add_node(file_path, **asdict(node))
         except Exception as e:
             logger.error(f"Error adding node for {file_path}: {e}")
 
@@ -177,7 +178,7 @@ class DependencyGraph:
             # Create node
             node = DependencyNode(file_path=file_path)
             self.nodes[file_path] = node
-            self.graph.add_node(file_path, **node.model_dump())
+            self.graph.add_node(file_path, **asdict(node))
 
             # Analyze imports and add edges
             file_imports = self.import_analyzer.analyze_file_imports(file_path)

@@ -98,9 +98,9 @@ class CodeRanker:
         references = defaultdict(list)  # identifier -> list of files
 
         for tag in tags:
-            file_path = tag["file"]
-            name = tag["name"]
-            kind = tag["kind"]
+            file_path = tag.file
+            name = tag.name
+            kind = tag.kind
 
             if "definition" in kind:
                 defines[name].add(file_path)
@@ -169,16 +169,7 @@ class CodeRanker:
                 weight *= 50
 
             # Over-defined identifiers are less important
-            if (
-                len(
-                    [
-                        t
-                        for t in tags
-                        if t["name"] == ident and "definition" in t["kind"]
-                    ]
-                )
-                > 5
-            ):
+            if len([t for t in tags if t.name == ident and "definition" in t.kind]) > 5:
                 weight *= 0.1
 
             data["weight"] = weight
@@ -202,7 +193,7 @@ class CodeRanker:
         personalization: Dict[str, float] = {}
 
         # Get all unique files
-        files = set(tag["file"] for tag in tags)
+        files = set(tag.file for tag in tags)
         if not files:
             return personalization
 
@@ -217,8 +208,8 @@ class CodeRanker:
 
             # Files with mentioned identifiers
             if mentioned_identifiers:
-                file_tags = [t for t in tags if t["file"] == file_path]
-                file_idents = set(t["name"] for t in file_tags)
+                file_tags = [t for t in tags if t.file == file_path]
+                file_idents = set(t.name for t in file_tags)
                 if file_idents.intersection(mentioned_identifiers):
                     score = max(score, base_score)
 
@@ -245,7 +236,7 @@ class CodeRanker:
         ranked_tags = []
 
         for tag in tags:
-            file_path = tag["file"]
+            file_path = tag.file
             tag_rank = ranked.get(file_path, 0.0)
 
             ranked_tags.append({**tag, "rank": tag_rank})
@@ -268,17 +259,3 @@ class CodeRanker:
             Top-ranked tags
         """
         return ranked_tags[:limit]
-
-    def get_tags_by_rank_threshold(
-        self, ranked_tags: List[Dict[str, Any]], min_rank: float = 0.01
-    ) -> List[Dict[str, Any]]:
-        """Get tags above a rank threshold.
-
-        Args:
-            ranked_tags: List of ranked tags
-            min_rank: Minimum rank threshold
-
-        Returns:
-            Tags above the threshold
-        """
-        return [tag for tag in ranked_tags if tag.get("rank", 0.0) >= min_rank]

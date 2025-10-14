@@ -172,6 +172,7 @@ class Container(containers.DeclarativeContainer):
     # Spell checker service
     spellchecker_service: "providers.Singleton[Any]" = providers.Singleton(
         "repomap_tool.core.spellchecker_service.SpellCheckerService",
+        custom_dictionary=set(),
     )
 
     parallel_tag_extractor: "providers.Factory[ParallelTagExtractor]" = cast(

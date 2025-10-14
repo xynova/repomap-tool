@@ -39,23 +39,14 @@ def validate_project_map(data: Optional[Dict[str, Any]]) -> ProjectMap:
             raise ValueError("Tags must be a list")
         tags = []
         for tag in data["tags"]:
-            if isinstance(tag, dict):
-                validated_tag = Tag(
-                    name=tag.get("name", ""),
-                    type=tag.get("type"),
-                    file=tag.get("file"),
-                    line=tag.get("line"),
-                )
-                tags.append(validated_tag)
-            elif hasattr(tag, "name"):
-                # Handle Tag objects from aider
-                validated_tag = Tag(
-                    name=getattr(tag, "name", ""),
-                    type=getattr(tag, "type", None),
-                    file=getattr(tag, "file", None),
-                    line=getattr(tag, "line", None),
-                )
-                tags.append(validated_tag)
+            # All tags are now CodeTag objects
+            validated_tag = Tag(
+                name=tag.name,
+                type=getattr(tag, "kind", None),
+                file=tag.file,
+                line=tag.line,
+            )
+            tags.append(validated_tag)
 
     # Validate and extract identifiers
     identifiers = None

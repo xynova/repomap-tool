@@ -174,8 +174,8 @@ def create(
             if hasattr(repomap, "_get_cached_tags"):
                 tags = repomap._get_cached_tags()
                 for tag in tags:
-                    if "name" in tag and "file" in tag:
-                        identifiers_with_files[tag["name"]] = tag["file"]
+                    if tag.name and tag.file:
+                        identifiers_with_files[tag.name] = tag.file
 
             # Batch compute and cache
             if identifiers_with_files:

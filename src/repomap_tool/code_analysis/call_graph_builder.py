@@ -60,7 +60,7 @@ class PythonCallAnalyzer(CallAnalyzer):
 
             # Look for function call tags
             for tag in tags:
-                kind = tag["kind"]
+                kind = tag.kind
 
                 # Handle function calls
                 if kind == "name.reference.call":
@@ -88,7 +88,7 @@ class PythonCallAnalyzer(CallAnalyzer):
         """Parse a single call tag into FunctionCall object.
 
         Args:
-            tag: Tree-sitter tag dictionary
+            tag: CodeTag object
             file_path: Path to the file
 
         Returns:
@@ -97,9 +97,9 @@ class PythonCallAnalyzer(CallAnalyzer):
         try:
             return FunctionCall(
                 caller="unknown",  # Simplified - could be enhanced with context analysis
-                callee=tag["name"],
+                callee=tag.name,
                 file_path=file_path,
-                line_number=tag["line"],
+                line_number=tag.line,
                 is_method_call=False,  # Simplified - could parse from tag details
                 object_name=None,
             )
@@ -117,19 +117,18 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
         self.project_root = project_root
         self._repo_map = None
 
+        # Initialize tree-sitter parser
+        from .tree_sitter_parser import TreeSitterParser
+
+        self.tree_sitter_parser = TreeSitterParser()
+
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
-        """Extract JavaScript/TypeScript function calls using aider's tree-sitter."""
+        """Extract JavaScript/TypeScript function calls using TreeSitterParser."""
         calls = []
 
         try:
-            # Get aider's RepoMap for tree-sitter parsing
-            repo_map = self._get_repo_map()
-
-            # Get relative path for aider
-            rel_path = self._get_relative_path(file_path)
-
-            # Use aider's tree-sitter to get tags
-            tags = repo_map.get_tags(file_path, rel_path)
+            # Use TreeSitterParser directly for tag extraction
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
             # Extract function calls from tags
             for tag in tags:
@@ -155,33 +154,6 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
             )
 
         return calls
-
-    def _get_repo_map(self) -> Any:
-        """Get or create aider's RepoMap instance."""
-        if self._repo_map is None:
-            try:
-                from aider.repomap import RepoMap
-                from aider.io import InputOutput
-
-                io = InputOutput()
-                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
-                logger.debug(
-                    "Created aider RepoMap instance for JavaScript call analysis"
-                )
-            except ImportError as e:
-                logger.error(f"Failed to import aider modules: {e}")
-                raise RuntimeError(
-                    "aider modules not available for tree-sitter parsing"
-                )
-
-        return self._repo_map
-
-    def _get_relative_path(self, file_path: str) -> str:
-        """Get relative path for aider's RepoMap."""
-
-        if self.project_root and file_path.startswith(self.project_root):
-            return os.path.relpath(file_path, self.project_root)
-        return os.path.basename(file_path)
 
     def _get_line_number(self, content: str, position: int) -> Optional[int]:
         """Get line number for a given position in content."""

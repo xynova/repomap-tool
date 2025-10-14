@@ -345,28 +345,23 @@ class TreeManager:
         """
         try:
             # Use existing repo_map to get dependencies and build sub-tree
-            if (
-                hasattr(self.repo_map, "repo_map")
-                and self.repo_map.repo_map
-                and node.depth < tree.max_depth
-            ):
+            if self.repo_map.repo_map and node.depth < tree.max_depth:
                 # Get more detailed information about this node
                 file_path = self._extract_file_path(node.location)
                 if file_path and os.path.exists(file_path):
                     # Use aider's get_tags method if available
-                    if hasattr(self.repo_map.repo_map, "get_tags"):
+                    if self.repo_map.repo_map:
                         tags = self.repo_map.repo_map.get_tags(file_path, node.location)
 
                         # Add children nodes based on dependencies/calls
                         for tag in tags:
-                            if hasattr(tag, "name") and tag.name != node.identifier:
+                            if tag.name != node.identifier:
                                 child = TreeNode(
                                     identifier=tag.name,
                                     location=f"{node.location}",  # Same file for now
                                     node_type=(
                                         "function"
-                                        if hasattr(tag, "kind")
-                                        and tag.kind == "function"
+                                        if tag.kind == "function"
                                         else "symbol"
                                     ),
                                     depth=node.depth + 1,
@@ -429,9 +424,7 @@ class TreeManager:
                 file_path = location
 
             # Resolve to absolute path if possible
-            if hasattr(self.repo_map, "config") and hasattr(
-                self.repo_map.config, "project_root"
-            ):
+            if self.repo_map.config and hasattr(self.repo_map.config, "project_root"):
                 abs_path = os.path.join(self.repo_map.config.project_root, file_path)
                 if os.path.exists(abs_path):
                     return abs_path

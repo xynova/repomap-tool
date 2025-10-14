@@ -257,7 +257,8 @@ class ParallelTagExtractor:
                 # Extract identifier names
                 identifiers = []
                 for tag in tags:
-                    if hasattr(tag, "name") and tag.name:
+                    # Now all tags are CodeTag objects
+                    if tag.name:
                         identifiers.append(tag.name)
 
                 return identifiers

@@ -51,6 +51,11 @@ class ASTFileAnalyzer:
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
+        # Initialize tree-sitter parser
+        from .tree_sitter_parser import TreeSitterParser
+
+        self.tree_sitter_parser = TreeSitterParser()
+
         logger.debug(
             f"ASTFileAnalyzer initialized with tree-sitter for project: {self.project_root}"
         )
@@ -96,14 +101,8 @@ class ASTFileAnalyzer:
             except Exception as e:
                 analysis_errors.append(f"File read error: {str(e)}")
 
-            # Get aider's RepoMap for tree-sitter parsing
-            repo_map = self._get_repo_map()
-
-            # Get relative path for aider
-            rel_path = self._get_relative_path(full_path)
-
-            # Use aider's tree-sitter to get tags
-            tags = repo_map.get_tags(full_path, rel_path)
+            # Use TreeSitterParser directly for tag extraction
+            tags = self.tree_sitter_parser.parse_file(full_path)
 
             # Extract information from tags
             imports = self._extract_imports_from_tags(tags, full_path)
@@ -160,30 +159,6 @@ class ASTFileAnalyzer:
             return os.path.join(self.project_root, file_path)
 
         return file_path
-
-    def _get_repo_map(self) -> Any:
-        """Get or create aider's RepoMap instance."""
-        if self._repo_map is None:
-            try:
-                from aider.repomap import RepoMap
-                from aider.io import InputOutput
-
-                self._io = InputOutput()
-                self._repo_map = RepoMap(io=self._io, root=self.project_root or "/")
-                logger.debug("Created aider RepoMap instance for tree-sitter parsing")
-            except ImportError as e:
-                logger.error(f"Failed to import aider modules: {e}")
-                raise RuntimeError(
-                    "aider modules not available for tree-sitter parsing"
-                )
-
-        return self._repo_map
-
-    def _get_relative_path(self, file_path: str) -> str:
-        """Get relative path for aider's RepoMap."""
-        if self.project_root and file_path.startswith(self.project_root):
-            return os.path.relpath(file_path, self.project_root)
-        return os.path.basename(file_path)
 
     def _extract_imports_from_tags(
         self, tags: List[Any], file_path: str
