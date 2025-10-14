@@ -4,7 +4,13 @@ from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 
 def test_fuzzy_matcher_basic():
     """Test fuzzy matcher with simple identifiers."""
-    matcher = FuzzyMatcher(threshold=30)
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig
+
+    # Create config and get service factory
+    config = RepoMapConfig(project_root=".")
+    service_factory = get_service_factory()
+    matcher = service_factory.create_fuzzy_matcher(config)
 
     identifiers = {
         "FuzzyMatcher",

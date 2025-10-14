@@ -30,7 +30,9 @@ class SpellCheckerService:
         Args:
             custom_dictionary: Optional set of custom words to add to the dictionary
         """
-        self.custom_dictionary = custom_dictionary or set()
+        if custom_dictionary is None:
+            raise ValueError("custom_dictionary must be provided - no fallback allowed")
+        self.custom_dictionary = custom_dictionary
 
         # Check if codespell is available
         self.codespell_available = self._check_codespell_availability()
