@@ -170,7 +170,7 @@ class TestParallelTagExtractor:
         )
 
         # This should raise an exception with helpful error message
-        # (We can't easily test the full RepoMapService without mocking aider)
+        # (We can't easily test the full RepoMapService without mocking tree-sitter)
         assert config.performance.allow_fallback is False
 
     def test_get_performance_metrics(self):

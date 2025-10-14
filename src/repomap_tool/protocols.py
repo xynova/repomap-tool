@@ -7,11 +7,13 @@ This module defines protocols and type-safe interfaces for the core components.
 from typing import Protocol, List, Set, Optional, Dict, Any, TypedDict
 from pathlib import Path
 
+from repomap_tool.code_analysis.models import CodeTag
+
 
 class RepoMapProtocol(Protocol):
     """Protocol for RepoMap-like objects."""
 
-    def get_tags(self, file_path: str, rel_fname: str) -> List[Any]: ...
+    def get_tags(self, file_path: str, rel_fname: str) -> List[CodeTag]: ...
 
     def get_ranked_tags_map(
         self, files: List[str], max_tokens: int
@@ -22,7 +24,7 @@ class MatcherProtocol(Protocol):
     """Protocol for matcher objects."""
 
     def match_identifiers(
-        self, query: str, all_identifiers: Set[str]
+        self, query: str, all_identifiers: Set[str], threshold: Optional[float] = None
     ) -> List[tuple[str, int]]: ...
 
     def clear_cache(self) -> None: ...

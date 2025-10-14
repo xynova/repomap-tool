@@ -1,8 +1,8 @@
 """
 Tree builder for exploration tree construction.
 
-This module builds exploration trees from discovered entrypoints using existing
-aider infrastructure for dependency analysis and tree structure creation.
+This module builds exploration trees from discovered entrypoints using
+TreeSitterParser for dependency analysis and tree structure creation.
 """
 
 import os
@@ -14,22 +14,23 @@ from pathlib import Path
 
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
+from repomap_tool.cli.controllers.view_models import SearchViewModel, SymbolViewModel
 
 logger = get_logger(__name__)
 
 
 class TreeBuilder:
-    """Builds exploration trees from entrypoints using existing aider infrastructure."""
+    """Builds exploration trees from entrypoints using TreeSitterParser infrastructure."""
 
     def __init__(
         self,
-        repo_map: RepoMapService,
+        repo_map: Optional[RepoMapService] = None,
         entrypoint_discoverer: Optional[Any] = None,
     ):
         """Initialize tree builder with injected dependencies.
 
         Args:
-            repo_map: RepoMapService instance with aider infrastructure
+            repo_map: RepoMapService instance with TreeSitterParser infrastructure
             entrypoint_discoverer: Entrypoint discoverer instance (injected)
         """
         self.repo_map = repo_map
@@ -73,8 +74,8 @@ class TreeBuilder:
             max_depth=max_depth,
         )
 
-        # Build tree structure using existing aider infrastructure
-        if hasattr(self.repo_map, "repo_map") and self.repo_map.repo_map:
+        # Build tree structure using tree-sitter infrastructure
+        if self.repo_map and self.repo_map.repo_map:
             # Get tags and dependencies for this entrypoint
             tree_structure = self._build_tree_structure(entrypoint, max_depth)
             tree.tree_structure = tree_structure
@@ -153,7 +154,7 @@ class TreeBuilder:
             depth=0,
         )
 
-        # Recursively build tree using aider's dependency information
+        # Recursively build tree using tree-sitter dependency information
         self._expand_node(root, entrypoint, max_depth, 0)
 
         return root
@@ -228,11 +229,11 @@ class TreeBuilder:
             for symbol in related_symbols:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
-                        identifier=symbol.get("name", "Unknown"),
+                        identifier=symbol.get("name") or "unknown",
                         location=self._get_symbol_location(
                             symbol, str(entrypoint.location)
                         ),
-                        node_type=symbol.get("kind", "symbol"),
+                        node_type=symbol.get("kind") or "unknown",
                         depth=current_depth + 1,
                     )
 
@@ -383,10 +384,7 @@ class TreeBuilder:
             Dictionary with centrality information
         """
         try:
-            if (
-                not hasattr(self.repo_map, "centrality_calculator")
-                or not self.repo_map.centrality_calculator
-            ):
+            if not self.repo_map or not self.repo_map.centrality_calculator:
                 return {"centrality_score": 0.0, "centrality_rank": 0}
 
             centrality_scores = (
@@ -447,11 +445,11 @@ class TreeBuilder:
             for symbol in related_symbols:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
-                        identifier=symbol.get("name", "Unknown"),
+                        identifier=symbol.get("name") or "unknown",
                         location=self._get_symbol_location(
                             symbol, str(entrypoint.location)
                         ),
-                        node_type=symbol.get("kind", "symbol"),
+                        node_type=symbol.get("kind") or "unknown",
                         depth=current_depth + 1,
                     )
                     child.parent = node
@@ -479,15 +477,15 @@ class TreeBuilder:
             List of related symbol dictionaries
         """
         try:
-            # Try to use existing aider infrastructure
-            if hasattr(self.repo_map, "repo_map") and self.repo_map.repo_map:
+            # Try to use existing tree-sitter infrastructure
+            if self.repo_map and self.repo_map.repo_map:
                 # Get tags for the current node's file
                 file_path = self._extract_file_path(node.location)
                 if file_path and os.path.exists(file_path):
-                    # Use aider's get_tags method if available
-                    if hasattr(self.repo_map.repo_map, "get_tags"):
+                    # Use tree-sitter's get_tags method if available
+                    if self.repo_map.repo_map:
                         tags = self.repo_map.repo_map.get_tags(file_path, node.location)
-                        return self._process_aider_tags(tags)
+                        return self._process_tree_sitter_tags(tags)
 
             # Fallback: return empty list
             return []
@@ -496,11 +494,11 @@ class TreeBuilder:
             logger.debug(f"Error getting related symbols for {node.identifier}: {e}")
             return []
 
-    def _process_aider_tags(self, tags: List) -> List[Dict[str, Any]]:
-        """Process tags returned by aider infrastructure.
+    def _process_tree_sitter_tags(self, tags: List) -> List[Dict[str, Any]]:
+        """Process tags returned by tree-sitter infrastructure.
 
         Args:
-            tags: Raw tags from aider
+            tags: Raw tags from tree-sitter
 
         Returns:
             Processed symbol dictionaries
@@ -509,26 +507,14 @@ class TreeBuilder:
 
         for tag in tags:
             try:
-                # Handle different tag formats
-                if hasattr(tag, "name"):
-                    symbol = {
-                        "name": tag.name,
-                        "kind": getattr(tag, "kind", "symbol"),
-                        "file_path": getattr(tag, "file_path", ""),
-                        "line_number": getattr(tag, "line_number", 0),
-                    }
-                    processed_symbols.append(symbol)
-                elif isinstance(tag, dict):
-                    processed_symbols.append(tag)
-                elif isinstance(tag, str):
-                    processed_symbols.append(
-                        {
-                            "name": tag,
-                            "kind": "symbol",
-                            "file_path": "",
-                            "line_number": 0,
-                        }
-                    )
+                # All tags are now CodeTag objects
+                symbol = {
+                    "name": tag.get("name"),
+                    "kind": tag.get("kind", "symbol"),
+                    "file_path": tag.get("file", ""),
+                    "line_number": tag.get("line", 0),
+                }
+                processed_symbols.append(symbol)
 
             except Exception as e:
                 logger.debug(f"Error processing tag {tag}: {e}")
@@ -563,7 +549,7 @@ class TreeBuilder:
             return False
 
         # Add if it's a reasonable symbol
-        symbol_name = symbol.get("name", "")
+        symbol_name = symbol.get("name")
         if symbol_name and len(symbol_name) > 1:
             return True
 
@@ -585,8 +571,10 @@ class TreeBuilder:
 
             if file_path and line_number:
                 # Make path relative if possible
-                if hasattr(self.repo_map, "config") and hasattr(
-                    self.repo_map.config, "project_root"
+                if (
+                    self.repo_map
+                    and self.repo_map.config
+                    and self.repo_map.config.project_root
                 ):
                     try:
                         rel_path = os.path.relpath(
@@ -623,8 +611,10 @@ class TreeBuilder:
                 file_path = location
 
             # Resolve to absolute path if possible
-            if hasattr(self.repo_map, "config") and hasattr(
-                self.repo_map.config, "project_root"
+            if (
+                self.repo_map
+                and self.repo_map.config
+                and self.repo_map.config.project_root
             ):
                 abs_path = os.path.join(self.repo_map.config.project_root, file_path)
                 if os.path.exists(abs_path):
@@ -637,7 +627,7 @@ class TreeBuilder:
             return None
 
     def _create_simple_tree_structure(self, entrypoint: Entrypoint) -> TreeNode:
-        """Create a simple tree structure when aider infrastructure is not available.
+        """Create a simple tree structure when tree-sitter infrastructure is not available.
 
         Args:
             entrypoint: Root entrypoint
@@ -689,6 +679,258 @@ class TreeBuilder:
             count += self._count_nodes(child)
 
         return count
+
+    def build_tree_from_search_results(
+        self,
+        search_results: SearchViewModel,
+        intent: str,
+        max_depth: int,
+        project_path: str,
+    ) -> List[ExplorationTree]:
+        """Build exploration trees from search results.
+
+        Args:
+            search_results: Search results from SearchController
+            intent: User's exploration intent
+            max_depth: Maximum tree depth
+            project_path: Project root path
+
+        Returns:
+            List of ExplorationTree objects
+        """
+        try:
+            logger.info(
+                f"Building trees from {len(search_results.results)} search results for intent: {intent}"
+            )
+
+            trees = []
+
+            # Group results by file for clustering
+            file_groups: Dict[str, List[Any]] = {}
+            for result in search_results.results:
+                file_path = getattr(result, "file_path", "unknown")
+                if file_path not in file_groups:
+                    file_groups[file_path] = []
+                file_groups[file_path].append(result)
+
+            # Create trees for each file group
+            for i, (file_path, results) in enumerate(file_groups.items()):
+                if i >= get_config("EXPLORATION_MAX_TREES", 5):
+                    break
+
+                # Create entrypoint from first result
+                first_result = results[0]
+                entrypoint = Entrypoint(
+                    identifier=getattr(first_result, "name", f"cluster_{i}"),
+                    file_path=Path(file_path),
+                    score=getattr(first_result, "importance_score", 0.5) or 0.5,
+                )
+
+                # Build tree from entrypoint
+                tree = self.build_exploration_tree(entrypoint, max_depth)
+
+                # Add context information
+                tree.context_name = f"Tree for {intent} exploration in {file_path}"
+
+                trees.append(tree)
+
+            logger.info(f"Built {len(trees)} exploration trees from search results")
+            return trees
+
+        except Exception as e:
+            logger.error(f"Error building trees from search results: {e}")
+            return []
+
+    def expand_area(
+        self,
+        tree: ExplorationTree,
+        area: str,
+        project_path: str,
+    ) -> List[SymbolViewModel]:
+        """Expand specific area in tree using tree-sitter RepoMap.
+
+        Args:
+            tree: ExplorationTree to expand
+            area: Area identifier to expand
+            project_path: Project root path
+
+        Returns:
+            List of new SymbolViewModel objects
+        """
+        try:
+            logger.info(f"Expanding area '{area}' in tree {tree.tree_id}")
+
+            new_symbols = []
+
+            # Find nodes matching the area
+            tree_structure = getattr(tree, "tree_structure", None)
+            if tree_structure is None:
+                logger.warning(f"No tree structure found for tree {tree.tree_id}")
+                return []
+            matching_nodes = self._find_nodes_by_area(tree_structure, area)
+
+            for node in matching_nodes:
+                # Use tree-sitter RepoMap to get related symbols
+                if self.repo_map and self.repo_map.repo_map:
+                    related_symbols = self._get_related_symbols_from_tree_sitter(
+                        node, project_path
+                    )
+
+                    # Convert to SymbolViewModel
+                    for symbol in related_symbols:
+                        symbol_view = SymbolViewModel(
+                            name=symbol.get("identifier", "unknown"),
+                            file_path=symbol.get("file_path", "unknown"),
+                            line_number=symbol.get("line_number", 1),
+                            symbol_type=symbol.get("type", "unknown"),
+                        )
+                        new_symbols.append(symbol_view)
+
+                        # Add as child node
+                        child_node = TreeNode(
+                            identifier=symbol_view.name,
+                            location=f"{symbol_view.file_path}:{symbol_view.line_number}",
+                            node_type=symbol_view.symbol_type,
+                            depth=node.depth + 1,
+                            parent=node,
+                        )
+                        node.children.append(child_node)
+
+            # Update tree metadata
+            tree.expanded_areas.add(area)
+
+            logger.info(f"Expanded area '{area}' with {len(new_symbols)} new symbols")
+            return new_symbols
+
+        except Exception as e:
+            logger.error(f"Error expanding area '{area}': {e}")
+            return []
+
+    def prune_area(
+        self,
+        tree: ExplorationTree,
+        area: str,
+    ) -> List[str]:
+        """Prune specific area from tree.
+
+        Args:
+            tree: ExplorationTree to prune
+            area: Area identifier to prune
+
+        Returns:
+            List of removed node identifiers
+        """
+        try:
+            logger.info(f"Pruning area '{area}' from tree {tree.tree_id}")
+
+            removed_identifiers = []
+
+            # Find nodes matching the area
+            tree_structure = getattr(tree, "tree_structure", None)
+            if tree_structure is None:
+                logger.warning(f"No tree structure found for tree {tree.tree_id}")
+                return []
+            matching_nodes = self._find_nodes_by_area(tree_structure, area)
+
+            for node in matching_nodes:
+                # Remove from parent's children
+                if node.parent:
+                    node.parent.children = [
+                        child for child in node.parent.children if child != node
+                    ]
+
+                # Collect all descendant identifiers
+                descendants = self._get_all_descendants(node)
+                removed_identifiers.extend([desc.identifier for desc in descendants])
+                removed_identifiers.append(node.identifier)
+
+            # Update tree metadata
+            tree.pruned_areas.add(area)
+            tree.expanded_areas.discard(area)  # Remove from expanded if it was there
+
+            logger.info(
+                f"Pruned area '{area}' removing {len(removed_identifiers)} nodes"
+            )
+            return removed_identifiers
+
+        except Exception as e:
+            logger.error(f"Error pruning area '{area}': {e}")
+            return []
+
+    def _find_nodes_by_area(self, root_node: TreeNode, area: str) -> List[TreeNode]:
+        """Find nodes matching the given area identifier."""
+        matching_nodes = []
+
+        # Check if current node matches
+        if (
+            area.lower() in root_node.identifier.lower()
+            or area.lower() in root_node.location.lower()
+        ):
+            matching_nodes.append(root_node)
+
+        # Recursively check children
+        for child in root_node.children:
+            matching_nodes.extend(self._find_nodes_by_area(child, area))
+
+        return matching_nodes
+
+    def _get_related_symbols_from_tree_sitter(
+        self, node: TreeNode, project_path: str
+    ) -> List[Dict[str, Any]]:
+        """Get related symbols using tree-sitter RepoMap."""
+        try:
+            if not self.repo_map or not self.repo_map.repo_map:
+                return []
+
+            # Extract file path from node location
+            file_path = self._extract_file_path(node.location)
+            if not file_path:
+                return []
+
+            # Get relative path for tree-sitter
+            rel_path = os.path.relpath(file_path, project_path)
+
+            # Use tree-sitter to get tags for the file
+            tags = self.repo_map.repo_map.get_tags(file_path, rel_path)
+
+            # Process tags into symbols
+            symbols = self._process_tree_sitter_tags(tags)
+
+            # Filter symbols related to the node
+            related_symbols = []
+            for symbol in symbols:
+                if (
+                    symbol.get("identifier", "").lower() in node.identifier.lower()
+                    or node.identifier.lower() in symbol.get("identifier", "").lower()
+                ):
+                    related_symbols.append(symbol)
+
+            return related_symbols[
+                : get_config("EXPLORATION_MAX_EXPANSION_SYMBOLS", 10)
+            ]
+
+        except Exception as e:
+            logger.error(f"Error getting related symbols from tree-sitter: {e}")
+            return []
+
+    def _get_all_descendants(self, node: TreeNode) -> List[TreeNode]:
+        """Get all descendant nodes of a given node."""
+        descendants = []
+
+        for child in node.children:
+            descendants.append(child)
+            descendants.extend(self._get_all_descendants(child))
+
+        return descendants
+
+    def _get_all_nodes(self, root_node: TreeNode) -> List[TreeNode]:
+        """Get all nodes in the tree."""
+        nodes = [root_node]
+
+        for child in root_node.children:
+            nodes.extend(self._get_all_nodes(child))
+
+        return nodes
 
     def clear_cache(self) -> None:
         """Clear the tree cache."""

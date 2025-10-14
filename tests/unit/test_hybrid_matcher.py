@@ -24,10 +24,9 @@ from repomap_tool.models import (
     PerformanceConfig,
     DependencyConfig,
 )
-from repomap_tool.cli.services import get_service_factory
 
 
-def test_hybrid_matcher():
+def test_hybrid_matcher(session_container, session_test_repo_path):
     """Test the hybrid matcher with various scenarios."""
 
     print("🧪 Testing Hybrid Matcher vs Rigid Dictionary Approach")
@@ -140,9 +139,9 @@ def test_hybrid_matcher():
 
     clear_service_cache()
 
-    # Create config and use service factory
+    # Create config and use session container
     config = RepoMapConfig(
-        project_root=".",
+        project_root=str(session_test_repo_path),
         fuzzy_match=FuzzyMatchConfig(
             threshold=60, strategies=["prefix", "substring", "levenshtein"]
         ),
@@ -150,8 +149,11 @@ def test_hybrid_matcher():
         performance=PerformanceConfig(),
         dependencies=DependencyConfig(),
     )
-    service_factory = get_service_factory()
-    repomap_service = service_factory.create_repomap_service(config)
+    from tests.conftest import create_repomap_service_from_session_container
+
+    repomap_service = create_repomap_service_from_session_container(
+        session_container, config
+    )
     matcher = repomap_service.hybrid_matcher
 
     # Build TF-IDF model

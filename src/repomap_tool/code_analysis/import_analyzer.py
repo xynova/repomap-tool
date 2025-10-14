@@ -7,7 +7,6 @@ project dependencies.
 """
 
 import os
-import ast
 import logging
 import re
 from pathlib import Path
@@ -38,401 +37,437 @@ class ImportParser:
 
 
 class PythonImportParser(ImportParser):
-    """Parser for Python import statements using AST."""
+    """Parser for Python import statements using tree-sitter."""
+
+    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+        """Initialize with tree-sitter parser.
+
+        Args:
+            tree_sitter_parser: TreeSitterParser instance for parsing
+        """
+        super().__init__()
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract Python imports using AST parsing."""
+        """Extract Python imports using tree-sitter parsing."""
         imports = []
 
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available - cannot extract imports")
+            return []
+
         try:
-            tree = ast.parse(file_content)
+            # Get all tags from tree-sitter
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Import):
-                    # Handle: import os, import sys as system
-                    for alias in node.names:
-                        import_obj = Import(
-                            module=alias.name,
-                            alias=alias.asname,
-                            is_relative=False,
-                            import_type=ImportType.ABSOLUTE,
-                            line_number=getattr(node, "lineno", None),
-                        )
+            # Look for import-related tags
+            for tag in tags:
+                # All tags are now CodeTag objects
+                kind = tag.kind
+
+                # Handle import statements
+                if "import" in kind.lower():
+                    # Parse import details from the tag
+                    import_obj = self._parse_import_tag(tag, file_path)
+                    if import_obj:
                         imports.append(import_obj)
 
-                elif isinstance(node, ast.ImportFrom):
-                    # Handle: from os import path, from . import utils
-                    module = node.module or ""
-                    is_relative = node.level > 0
+            logger.debug(
+                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
+            )
 
-                    for alias in node.names:
-                        import_obj = Import(
-                            module=module,
-                            symbols=[alias.name],
-                            alias=alias.asname,
-                            is_relative=is_relative,
-                            import_type=(
-                                ImportType.RELATIVE
-                                if is_relative
-                                else ImportType.ABSOLUTE
-                            ),
-                            line_number=getattr(node, "lineno", None),
-                        )
-                        imports.append(import_obj)
-
-        except SyntaxError as e:
-            logger.warning(f"Syntax error parsing Python file {file_path}: {e}")
         except Exception as e:
-            logger.error(f"Error parsing Python file {file_path}: {e}")
+            logger.error(f"Error extracting Python imports from {file_path}: {e}")
+            return []
+
+        # Log debug message if no imports found (this is normal for files without imports)
+        if not imports:
+            logger.debug(
+                f"No imports found via tree-sitter for {file_path} - file may not contain imports"
+            )
 
         return imports
+
+    def _parse_import_tag(self, tag: Any, file_path: str) -> Optional[Import]:
+        """Parse a single import tag into Import object.
+
+        Args:
+            tag: Tree-sitter tag (CodeTag object or dict)
+            file_path: Path to the file
+
+        Returns:
+            Import object or None if parsing fails
+        """
+        try:
+            # All tags are now CodeTag objects
+            module = tag.name
+            line_number = tag.line
+
+            return Import(
+                module=module,
+                alias=None,
+                is_relative=False,  # Simplified - could parse from tag details
+                import_type=ImportType.ABSOLUTE,
+                line_number=line_number,
+            )
+        except Exception as e:
+            logger.debug(f"Error parsing import tag {tag}: {e}")
+            return None
 
 
 class JavaScriptImportParser(ImportParser):
-    """Parser for JavaScript/TypeScript import statements using aider's tree-sitter."""
+    """Parser for JavaScript/TypeScript import statements using tree-sitter."""
 
-    def __init__(self, project_root: Optional[str] = None):
-        """Initialize with project root for aider's RepoMap."""
+    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+        """Initialize with TreeSitterParser."""
         super().__init__()
-        self.project_root = project_root
-        self._repo_map = None
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract JavaScript/TypeScript imports using aider's tree-sitter."""
+        """Extract JavaScript/TypeScript imports using tree-sitter parsing."""
         imports = []
 
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available - cannot extract imports")
+            return []
+
         try:
-            # Get aider's RepoMap for tree-sitter parsing
-            repo_map = self._get_repo_map()
+            # Use tree-sitter to parse the file
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
-            # Get relative path for aider
-            rel_path = self._get_relative_path(file_path)
-
-            # Use aider's tree-sitter to get tags
-            tags = repo_map.get_tags(file_path, rel_path)
-
-            # Extract imports from file content (simplified approach)
-            # TODO: Enhance this to use aider's more detailed parsing
-            import_lines = [
-                line.strip()
-                for line in file_content.split("\n")
-                if line.strip().startswith("import ") or "require(" in line
-            ]
-
-            for line_num, line in enumerate(import_lines, 1):
-                if line.startswith("import "):
-                    # Basic ES6 import parsing
-                    if " from " in line:
-                        parts = line.split(" from ")
-                        if len(parts) == 2:
-                            module = parts[1].strip().strip("'\"")
-                            imports.append(
-                                Import(
-                                    module=module,
-                                    symbols=[],
-                                    is_relative=module.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-                elif "require(" in line:
-                    # Basic CommonJS require parsing
-                    start = line.find("require(") + 8
-                    end = line.find(")", start)
-                    if start < end:
-                        module = line[start:end].strip().strip("'\"")
-                        imports.append(
-                            Import(
-                                module=module,
-                                symbols=[],
-                                is_relative=module.startswith("."),
-                                import_type=(
-                                    ImportType.RELATIVE
-                                    if module.startswith(".")
-                                    else ImportType.ABSOLUTE
-                                ),
-                                line_number=line_num,
-                            )
-                        )
-
-            logger.debug(
-                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
-            )
+            # Extract imports from tree-sitter tags
+            for tag in tags:
+                if tag.kind in [
+                    "import.statement",
+                    "import.named",
+                    "import.default",
+                    "import.namespace",
+                    "import.type",
+                    "require.statement",
+                    "require.var",
+                ]:
+                    import_obj = self._parse_import_tag(tag, file_path)
+                    if import_obj:
+                        imports.append(import_obj)
 
         except Exception as e:
-            logger.error(
-                f"Error parsing JavaScript file {file_path} with tree-sitter: {e}"
+            logger.error(f"Error extracting JavaScript imports from {file_path}: {e}")
+            return []
+
+        # Log warning if tree-sitter returns no imports (might indicate query issue)
+        if not imports:
+            logger.warning(
+                f"No imports found via tree-sitter for {file_path} - check query file"
             )
 
         return imports
 
-    def _get_repo_map(self) -> Any:
-        """Get or create aider's RepoMap instance."""
-        if self._repo_map is None:
-            try:
-                from aider.repomap import RepoMap
-                from aider.io import InputOutput
+    def _parse_import_tag(self, tag: Any, file_path: str) -> Optional[Import]:
+        """Parse a single import tag from tree-sitter."""
+        try:
+            # All tags are now CodeTag objects
+            kind = tag.get("kind")
+            name = tag.get("name")
+            line = tag.get("line")
+            source = getattr(tag, "source", "")
 
-                io = InputOutput()
-                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
-                logger.debug(
-                    "Created aider RepoMap instance for JavaScript import parsing"
-                )
-            except ImportError as e:
-                logger.error(f"Failed to import aider modules: {e}")
-                raise RuntimeError(
-                    "aider modules not available for tree-sitter parsing"
-                )
+            # Handle different import types
+            if kind in [
+                "import.statement",
+                "import.named",
+                "import.default",
+                "import.namespace",
+            ]:
+                # Extract module from source
+                if source:
+                    module = source.strip("'\"")
+                    is_relative = module.startswith(".")
 
-        return self._repo_map
+                    return Import(
+                        module=module,
+                        is_relative=is_relative,
+                        import_type=(
+                            ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                        ),
+                        line_number=line or 0,
+                    )
 
-    def _get_relative_path(self, file_path: str) -> str:
-        """Get relative path for aider's RepoMap."""
-        import os
+            elif kind in ["require.statement", "require.var"]:
+                # Handle CommonJS requires
+                if source:
+                    module = source.strip("'\"")
+                    is_relative = module.startswith(".")
 
-        if self.project_root and file_path.startswith(self.project_root):
-            return os.path.relpath(file_path, self.project_root)
-        return os.path.basename(file_path)
+                    return Import(
+                        module=module,
+                        is_relative=is_relative,
+                        import_type=(
+                            ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                        ),
+                        line_number=line or 0,
+                    )
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error parsing import tag: {e}")
+            return None
 
 
 class JavaImportParser(ImportParser):
-    """Parser for Java import statements using aider's tree-sitter."""
+    """Parser for Java import statements using tree-sitter."""
 
-    def __init__(self, project_root: Optional[str] = None):
-        """Initialize with project root for aider's RepoMap."""
+    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+        """Initialize with TreeSitterParser."""
         super().__init__()
-        self.project_root = project_root
-        self._repo_map = None
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract Java imports using aider's tree-sitter."""
+        """Extract Java imports using tree-sitter parsing."""
         imports = []
 
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available - cannot extract imports")
+            return []
+
         try:
-            # Get aider's RepoMap for tree-sitter parsing
-            repo_map = self._get_repo_map()
+            # Use tree-sitter to parse the file
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
-            # Get relative path for aider
-            rel_path = self._get_relative_path(file_path)
-
-            # Use aider's tree-sitter to get tags
-            tags = repo_map.get_tags(file_path, rel_path)
-
-            # Extract imports from file content (simplified approach)
-            import_lines = [
-                line.strip()
-                for line in file_content.split("\n")
-                if line.strip().startswith("import ")
-            ]
-
-            for line_num, line in enumerate(import_lines, 1):
-                if line.startswith("import ") and line.endswith(";"):
-                    # Extract module name from import statement
-                    module = line[7:-1].strip()  # Remove 'import ' and ';'
-
-                    # Skip static imports for now
-                    if not module.startswith("static "):
-                        imports.append(
-                            Import(
-                                module=module,
-                                symbols=[],
-                                is_relative=False,  # Java imports are always absolute
-                                import_type=ImportType.ABSOLUTE,
-                                line_number=line_num,
-                            )
-                        )
-
-            logger.debug(
-                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
-            )
+            # Extract imports from tree-sitter tags
+            for tag in tags:
+                if tag.kind in ["import.statement", "import.static"]:
+                    import_obj = self._parse_import_tag(tag, file_path)
+                    if import_obj:
+                        imports.append(import_obj)
 
         except Exception as e:
-            logger.error(f"Error parsing Java file {file_path} with tree-sitter: {e}")
+            logger.error(f"Error extracting Java imports from {file_path}: {e}")
+            return []
+
+        # Log warning if tree-sitter returns no imports (might indicate query issue)
+        if not imports:
+            logger.warning(
+                f"No imports found via tree-sitter for {file_path} - check query file"
+            )
 
         return imports
 
-    def _get_repo_map(self) -> Any:
-        """Get or create aider's RepoMap instance."""
-        if self._repo_map is None:
-            try:
-                from aider.repomap import RepoMap
-                from aider.io import InputOutput
+    def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
+        """Parse a single import tag from tree-sitter."""
+        try:
+            kind = tag.get("kind")
+            name = tag.get("name")
+            line = tag.get("line")
 
-                io = InputOutput()
-                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
-                logger.debug("Created aider RepoMap instance for Java import parsing")
-            except ImportError as e:
-                logger.error(f"Failed to import aider modules: {e}")
-                raise RuntimeError(
-                    "aider modules not available for tree-sitter parsing"
-                )
+            # Handle import statements
+            if kind == "import.statement":
+                # Extract module name
+                if name:
+                    return Import(
+                        module=name,
+                        symbols=[],
+                        is_relative=False,  # Java imports are always absolute
+                        import_type=ImportType.ABSOLUTE,
+                        line_number=line or 0,
+                    )
 
-        return self._repo_map
+            elif kind == "import.static":
+                # Handle static imports
+                if name:
+                    return Import(
+                        module=name,
+                        symbols=[],
+                        is_relative=False,
+                        import_type=ImportType.ABSOLUTE,
+                        line_number=line or 0,
+                    )
 
-    def _get_relative_path(self, file_path: str) -> str:
-        """Get relative path for aider's RepoMap."""
-        import os
+            return None
 
-        if self.project_root and file_path.startswith(self.project_root):
-            return os.path.relpath(file_path, self.project_root)
-        return os.path.basename(file_path)
+        except Exception as e:
+            logger.error(f"Error parsing import tag: {e}")
+            return None
 
 
 class GoImportParser(ImportParser):
-    """Parser for Go import statements using aider's tree-sitter."""
+    """Parser for Go import statements using tree-sitter."""
 
-    def __init__(self, project_root: Optional[str] = None):
-        """Initialize with project root for aider's RepoMap."""
+    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+        """Initialize with TreeSitterParser."""
         super().__init__()
-        self.project_root = project_root
-        self._repo_map = None
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
-        """Extract Go imports using aider's tree-sitter."""
+        """Extract Go imports using tree-sitter parsing."""
         imports = []
 
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available - cannot extract imports")
+            return []
+
         try:
-            # Get aider's RepoMap for tree-sitter parsing
-            repo_map = self._get_repo_map()
+            # Use tree-sitter to parse the file
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
-            # Get relative path for aider
-            rel_path = self._get_relative_path(file_path)
-
-            # Use aider's tree-sitter to get tags
-            tags = repo_map.get_tags(file_path, rel_path)
-
-            # Extract imports from file content (simplified approach)
-            import_lines = [
-                line.strip()
-                for line in file_content.split("\n")
-                if line.strip().startswith("import ")
-            ]
-
-            for line_num, line in enumerate(import_lines, 1):
-                if line.startswith("import "):
-                    # Handle single import: import "fmt"
-                    if '"' in line or "'" in line:
-                        # Extract module name from quotes
-                        start_quote = line.find('"') if '"' in line else line.find("'")
-                        end_quote = line.rfind('"') if '"' in line else line.rfind("'")
-                        if (
-                            start_quote != -1
-                            and end_quote != -1
-                            and start_quote != end_quote
-                        ):
-                            module = line[start_quote + 1 : end_quote]
-                            imports.append(
-                                Import(
-                                    module=module,
-                                    symbols=[],
-                                    is_relative=module.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-                    # Handle grouped imports: import ( "fmt" "os" )
-                    elif "(" in line:
-                        # Find the import block content
-                        start_paren = line.find("(")
-                        if start_paren != -1:
-                            # Look for the rest of the import block in subsequent lines
-                            lines = file_content.split("\n")
-                            import_block = line[start_paren + 1 :]
-                            i = line_num
-                            while i < len(lines) and ")" not in import_block:
-                                import_block += " " + lines[i].strip()
-                                i += 1
-
-                            # Extract modules from the block
-                            for quote_char in ['"', "'"]:
-                                start = 0
-                                while True:
-                                    start_quote = import_block.find(quote_char, start)
-                                    if start_quote == -1:
-                                        break
-                                    end_quote = import_block.find(
-                                        quote_char, start_quote + 1
-                                    )
-                                    if end_quote == -1:
-                                        break
-                                    module = import_block[start_quote + 1 : end_quote]
-                                    if module.strip():
-                                        imports.append(
-                                            Import(
-                                                module=module,
-                                                symbols=[],
-                                                is_relative=module.startswith("."),
-                                                import_type=(
-                                                    ImportType.RELATIVE
-                                                    if module.startswith(".")
-                                                    else ImportType.ABSOLUTE
-                                                ),
-                                                line_number=line_num,
-                                            )
-                                        )
-                                    start = end_quote + 1
-
-            logger.debug(
-                f"Tree-sitter extracted {len(imports)} imports from {file_path}"
-            )
+            # Extract imports from tree-sitter tags
+            for tag in tags:
+                if tag.kind in ["import.single", "import.grouped"]:
+                    import_obj = self._parse_import_tag(tag, file_path)
+                    if import_obj:
+                        imports.append(import_obj)
 
         except Exception as e:
-            logger.error(f"Error parsing Go file {file_path} with tree-sitter: {e}")
+            logger.error(f"Error extracting Go imports from {file_path}: {e}")
+            return []
+
+        # Log warning if tree-sitter returns no imports (might indicate query issue)
+        if not imports:
+            logger.warning(
+                f"No imports found via tree-sitter for {file_path} - check query file"
+            )
 
         return imports
 
-    def _get_repo_map(self) -> Any:
-        """Get or create aider's RepoMap instance."""
-        if self._repo_map is None:
-            try:
-                from aider.repomap import RepoMap
-                from aider.io import InputOutput
+    def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
+        """Parse a single import tag from tree-sitter."""
+        try:
+            kind = tag.get("kind")
+            path = tag.get("rel_fname") or tag.get("file")
+            line = tag.get("line")
 
-                io = InputOutput()
-                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
-                logger.debug("Created aider RepoMap instance for Go import parsing")
-            except ImportError as e:
-                logger.error(f"Failed to import aider modules: {e}")
-                raise RuntimeError(
-                    "aider modules not available for tree-sitter parsing"
-                )
+            # Handle import statements
+            if kind in ["import.single", "import.grouped"]:
+                if path:
+                    module = path.strip("'\"")
+                    is_relative = module.startswith(".")
 
-        return self._repo_map
+                    return Import(
+                        module=module,
+                        symbols=[],
+                        is_relative=is_relative,
+                        import_type=(
+                            ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                        ),
+                        line_number=line or 0,
+                    )
 
-    def _get_relative_path(self, file_path: str) -> str:
-        """Get relative path for aider's RepoMap."""
-        import os
+            return None
 
-        if self.project_root and file_path.startswith(self.project_root):
-            return os.path.relpath(file_path, self.project_root)
-        return os.path.basename(file_path)
+        except Exception as e:
+            logger.error(f"Error parsing import tag: {e}")
+            return None
+
+
+class CSharpImportParser(ImportParser):
+    """Parser for C# using directives using tree-sitter."""
+
+    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+        """Initialize with TreeSitterParser."""
+        super().__init__()
+        self.tree_sitter_parser = tree_sitter_parser
+
+    def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
+        """Extract C# using directives using tree-sitter parsing."""
+        imports = []
+
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available - cannot extract imports")
+            return []
+
+        try:
+            # Use tree-sitter to parse the file
+            tags = self.tree_sitter_parser.parse_file(file_path)
+
+            # Extract imports from tree-sitter tags
+            for tag in tags:
+                if tag.kind in [
+                    "using.directive",
+                    "using.static",
+                    "using.alias",
+                    "using.global",
+                ]:
+                    import_obj = self._parse_import_tag(tag, file_path)
+                    if import_obj:
+                        imports.append(import_obj)
+
+        except Exception as e:
+            logger.error(f"Error extracting C# imports from {file_path}: {e}")
+            return []
+
+        # Log warning if tree-sitter returns no imports (might indicate query issue)
+        if not imports:
+            logger.warning(
+                f"No imports found via tree-sitter for {file_path} - check query file"
+            )
+
+        return imports
+
+    def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
+        """Parse a single import tag from tree-sitter."""
+        try:
+            kind = tag.get("kind")
+            name = tag.get("name")
+            line = tag.get("line")
+
+            # Handle using directives
+            if kind in [
+                "using.directive",
+                "using.static",
+                "using.alias",
+                "using.global",
+            ]:
+                if name:
+                    return Import(
+                        module=name,
+                        symbols=[],
+                        is_relative=False,  # C# using directives are always absolute
+                        import_type=ImportType.ABSOLUTE,
+                        line_number=line or 0,
+                    )
+
+            return None
+
+        except Exception as e:
+            logger.error(f"Error parsing import tag: {e}")
+            return None
 
 
 class ImportAnalyzer:
     """Main import analyzer that coordinates multi-language parsing."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(
+        self,
+        project_root: Optional[str] = None,
+        tree_sitter_parser: Optional[Any] = None,
+    ) -> None:
         """Initialize the import analyzer with language parsers."""
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
+        self.tree_sitter_parser = tree_sitter_parser
+
+        # Create tree_sitter_parser if not provided
+        if tree_sitter_parser is None:
+            from .tree_sitter_parser import TreeSitterParser
+
+            tree_sitter_parser = TreeSitterParser(project_root=project_root)
+
+        self.tree_sitter_parser = tree_sitter_parser
+
+        # All parsers use TreeSitterParser - no regex fallbacks
         self.language_parsers: Dict[str, ImportParser] = {
-            "py": PythonImportParser(),
-            "js": JavaScriptImportParser(project_root=self.project_root),
+            "py": PythonImportParser(tree_sitter_parser=tree_sitter_parser),
+            "js": JavaScriptImportParser(tree_sitter_parser=tree_sitter_parser),
             "ts": JavaScriptImportParser(
-                project_root=self.project_root
+                tree_sitter_parser=tree_sitter_parser
             ),  # TypeScript uses same parser
-            "jsx": JavaScriptImportParser(project_root=self.project_root),
-            "tsx": JavaScriptImportParser(project_root=self.project_root),
-            "java": JavaImportParser(project_root=self.project_root),
-            "go": GoImportParser(project_root=self.project_root),
+            "jsx": JavaScriptImportParser(tree_sitter_parser=tree_sitter_parser),
+            "tsx": JavaScriptImportParser(tree_sitter_parser=tree_sitter_parser),
+            "java": JavaImportParser(tree_sitter_parser=tree_sitter_parser),
+            "go": GoImportParser(tree_sitter_parser=tree_sitter_parser),
+            "cs": CSharpImportParser(
+                tree_sitter_parser=tree_sitter_parser
+            ),  # NEW: C# support
         }
 
         # File extensions that should be analyzed
@@ -506,7 +541,7 @@ class ImportAnalyzer:
             max_workers = get_config("MAX_WORKERS", 4)
 
         all_files = self._get_all_files(project_path, ignore_dirs, file_extensions)
-        project_imports = ProjectImports(project_path=project_path, file_imports={})
+        project_imports = ProjectImports(files={}, project_path=project_path)
 
         # Filter to only analyzable files
         analyzable_files = [
@@ -545,9 +580,7 @@ class ImportAnalyzer:
                 file_imports_obj = self.analyze_file_imports(file_path)
                 file_imports[file_path] = file_imports_obj
 
-        project_imports = ProjectImports(
-            project_path=project_path, file_imports=file_imports
-        )
+        project_imports = ProjectImports(project_path=project_path, files=file_imports)
 
         logger.debug(
             f"Project import analysis complete: {project_imports.total_files} files, {project_imports.total_imports} imports"
@@ -656,10 +689,44 @@ class ImportAnalyzer:
     def _resolve_absolute_import(self, module: str, file_dir: Path) -> Optional[Path]:
         """Resolve an absolute import to a path."""
         try:
-            # This is a simplified resolver - in practice, you'd want more sophisticated
-            # module resolution logic that understands Python paths, node_modules, etc.
+            # Check if this is a known external library that shouldn't be resolved locally
+            if self._is_external_library(module):
+                logger.debug(f"Skipping external library import: {module}")
+                return None
 
-            # For now, try to find the module relative to the current file
+            # If we have a project root, try to resolve within the project
+            if self.project_root:
+                project_root = Path(self.project_root)
+                module_parts = module.split(".")
+
+                # Try to find the module within the project
+                for ext in self.analyzable_extensions:
+                    # Try as a file: module.py
+                    candidate_path = (
+                        project_root
+                        / "src"
+                        / "/".join(module_parts)
+                        / f"{module_parts[-1]}.{ext}"
+                    )
+                    if candidate_path.exists():
+                        return candidate_path
+
+                    # Try as a directory with __init__.py
+                    candidate_dir = project_root / "src" / "/".join(module_parts)
+                    init_file = candidate_dir / f"__init__.{ext}"
+                    if init_file.exists():
+                        return init_file
+
+                    # Try without the last part (for imports like 'repomap_tool.cli' -> 'repomap_tool/cli/__init__.py')
+                    if len(module_parts) > 1:
+                        candidate_dir = (
+                            project_root / "src" / "/".join(module_parts[:-1])
+                        )
+                        init_file = candidate_dir / f"__init__.{ext}"
+                        if init_file.exists():
+                            return init_file
+
+            # Fallback: try to find the module relative to the current file
             module_parts = module.split(".")
 
             # Try to find the module file
@@ -679,6 +746,128 @@ class ImportAnalyzer:
             logger.debug(f"Error resolving absolute import {module}: {e}")
 
         return None
+
+    def _is_external_library(self, module: str) -> bool:
+        """Check if a module is a known external library that shouldn't be resolved locally."""
+        # Common external libraries that should not be resolved to local files
+        external_libraries = {
+            "rich",
+            "click",
+            "typing",
+            "pathlib",
+            "os",
+            "sys",
+            "json",
+            "logging",
+            "collections",
+            "itertools",
+            "functools",
+            "operator",
+            "re",
+            "datetime",
+            "time",
+            "random",
+            "math",
+            "statistics",
+            "decimal",
+            "fractions",
+            "numpy",
+            "pandas",
+            "matplotlib",
+            "requests",
+            "urllib",
+            "http",
+            "socket",
+            "threading",
+            "multiprocessing",
+            "asyncio",
+            "concurrent",
+            "subprocess",
+            "shutil",
+            "tempfile",
+            "glob",
+            "fnmatch",
+            "linecache",
+            "pickle",
+            "copy",
+            "weakref",
+            "gc",
+            "traceback",
+            "warnings",
+            "contextlib",
+            "abc",
+            "enum",
+            "dataclasses",
+            "typing_extensions",
+            "pydantic",
+            "fastapi",
+            "flask",
+            "django",
+            "sqlalchemy",
+            "pytest",
+            "unittest",
+            "doctest",
+            "pdb",
+            "profile",
+            "cProfile",
+            "timeit",
+            "dis",
+            "inspect",
+            "ast",
+            "tokenize",
+            "keyword",
+            "token",
+            "symbol",
+            "parser",
+            "compiler",
+            "py_compile",
+            "compileall",
+            "pyclbr",
+            "tabnanny",
+            "trace",
+            "distutils",
+            "setuptools",
+            "pip",
+            "wheel",
+            "venv",
+            "virtualenv",
+            "conda",
+            "poetry",
+            "pipenv",
+            "pyenv",
+            "black",
+            "flake8",
+            "mypy",
+            "pylint",
+            "bandit",
+            "safety",
+            "coverage",
+            "pytest",
+            "tox",
+            "pre-commit",
+            "isort",
+            "autopep8",
+        }
+
+        # Get the top-level module name
+        top_level = module.split(".")[0]
+        return top_level in external_libraries
+
+    def _is_same_file(self, candidate_path: Path, file_dir: Path) -> bool:
+        """Check if the candidate path is the same as the file being analyzed."""
+        try:
+            # Get the current file being analyzed from the file_dir
+            # This is a bit of a hack since we don't have direct access to the current file
+            # We'll check if the candidate path is in the same directory and has a common name
+            # that might indicate it's the same file
+
+            # For now, we'll be conservative and only skip if it's clearly the same file
+            # This prevents the rich.console -> console.py self-reference issue
+            return False  # Let's be conservative and not skip anything for now
+
+        except Exception as e:
+            logger.debug(f"Error checking if same file: {e}")
+            return False
 
     def _is_in_project(self, resolved_path: Path, project_root: Path) -> bool:
         """Check if a resolved path is within the project."""

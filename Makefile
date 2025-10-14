@@ -15,7 +15,8 @@ help:
 	@echo "Available commands:"
 	@echo "  venv        - Create virtual environment with uv"
 	@echo "  install     - Install dependencies in .venv"
-	@echo "  test        - Run tests with coverage"
+	@echo "  test        - Run tests with coverage (parallel)"
+	@echo "  test-unit   - Run unit tests (parallel)"
 	@echo "  lint        - Run linting checks"
 	@echo "  format      - Format code with black"
 	@echo "  mypy        - Run type checking with mypy"
@@ -66,15 +67,15 @@ install: venv
 
 # Run tests with coverage
 test: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html -n auto
 
 # Run only unit tests
 test-unit: install
-	$(VENV_PYTHON) -m pytest tests/unit/ -v
+	REPOMAP_DISABLE_CACHE=1 $(VENV_PYTHON) -m pytest tests/unit/ -v --tb=short -n auto
 
 # Run only integration tests
 test-integration: install
-	$(VENV_PYTHON) -m pytest tests/integration/ -v
+	$(VENV_PYTHON) -m pytest tests/integration/ -v -n auto
 
 # Run performance tests
 performance: install
@@ -82,7 +83,7 @@ performance: install
 
 # Run linting checks
 lint: install
-	$(VENV_PYTHON) -m flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503,E501,E402,F401,F541,F841,W293
+	$(VENV_PYTHON) -m flake8 src/ tests/ examples/ --max-line-length=88 --extend-ignore=E203,W503,E501,E402,F401,F541,F841,W293,E304
 	$(VENV_PYTHON) -m black --check --diff src/ tests/ examples/
 	@echo "🔍 Running DI linter..."
 	$(VENV_PYTHON) scripts/di_linter.py src/ tests/
@@ -129,9 +130,9 @@ ci: test security build check
 
 # Run comprehensive nightly tests
 nightly: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10 -n auto
 	$(VENV_PYTHON) -m pytest tests/integration/test_self_integration.py -v --durations=10
-	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10
+	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10 -n auto
 
 # Run performance demo
 demo: install

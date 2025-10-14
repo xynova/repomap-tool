@@ -43,39 +43,39 @@ run_test() {
 
 # Test 1: Search for identifiers in the real repomap-tool codebase
 run_test "Test 1: Search for DockerRepoMap Class" \
-    inspect find "DockerRepoMap" /project --match-type hybrid --threshold 0.5 --verbose --output json || exit 1
+    search "DockerRepoMap" /project --match-type hybrid --threshold 0.5 --verbose --output json || exit 1
 
 # Test 2: Search for function names
 run_test "Test 2: Search for analyze_project Function" \
-    inspect find "analyze_project" /project --match-type fuzzy --threshold 0.6 --verbose --output json || exit 1
+    search "analyze_project" /project --match-type fuzzy --threshold 0.6 --verbose --output json || exit 1
 
 # Test 3: Search for matcher classes
 run_test "Test 3: Search for FuzzyMatcher Class" \
-    inspect find "FuzzyMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "FuzzyMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 4: Search for SemanticMatcher
 run_test "Test 4: Search for SemanticMatcher Class" \
-    inspect find "SemanticMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "SemanticMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 5: Search for CLI commands
 run_test "Test 5: Search for CLI Commands" \
-    inspect find "analyze" /project --match-type semantic --threshold 0.4 --verbose --output json || exit 1
+    search "analyze" /project --match-type semantic --threshold 0.4 --verbose --output json || exit 1
 
 # Test 6: Search for configuration related code
 run_test "Test 6: Search for Configuration Code" \
-    inspect find "config" /project --match-type semantic --threshold 0.3 --verbose --output json || exit 1
+    search "config" /project --match-type semantic --threshold 0.3 --verbose --output json || exit 1
 
 # Test 7: Search for test related code
 run_test "Test 7: Search for Test Code" \
-    inspect find "test" /project --match-type hybrid --threshold 0.4 --verbose --output json || exit 1
+    search "test" /project --match-type hybrid --threshold 0.4 --verbose --output json || exit 1
 
 # Test 8: Search for specific function types
 run_test "Test 8: Search for Function Definitions" \
-    inspect find "def" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "def" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 9: Search for class definitions
 run_test "Test 9: Search for Class Definitions" \
-    inspect find "class" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "class" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 10: Find circular dependencies
 run_test "Test 10: Find Circular Dependencies" \

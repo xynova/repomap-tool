@@ -100,6 +100,7 @@ class SearchViewModel:
     match_type: str = "hybrid"
     search_time_ms: float = 0.0
     cache_hit: bool = False
+    spellcheck_suggestions: Optional[List[str]] = None
     metadata: Optional[Dict[str, Any]] = None
     performance_metrics: Optional[Dict[str, Any]] = None
 
@@ -109,20 +110,113 @@ class SearchViewModel:
             self.metadata = {}
         if self.performance_metrics is None:
             self.performance_metrics = {}
+        if self.spellcheck_suggestions is None:
+            self.spellcheck_suggestions = []
+
+
+@dataclass
+class TreeClusterViewModel:
+    """ViewModel for tree cluster information."""
+
+    tree_id: str
+    context_name: str
+    confidence: float
+    entrypoints: List[Dict[str, Any]]
+    total_nodes: int
+    max_depth: int
+    root_file: str
+    description: str
+
+
+@dataclass
+class TreeFocusViewModel:
+    """ViewModel for tree focus operations."""
+
+    tree_id: str
+    context_name: str
+    current_focus: bool
+    tree_structure: Dict[str, Any]
+    expanded_areas: List[str]
+    pruned_areas: List[str]
+    total_nodes: int
+    max_depth: int
+
+
+@dataclass
+class TreeExpansionViewModel:
+    """ViewModel for tree expansion operations."""
+
+    tree_id: str
+    expanded_area: str
+    new_nodes: List[SymbolViewModel]
+    total_nodes: int
+    expansion_depth: int
+    confidence_score: float
+
+
+@dataclass
+class TreePruningViewModel:
+    """ViewModel for tree pruning operations."""
+
+    tree_id: str
+    pruned_area: str
+    removed_nodes: List[str]
+    remaining_nodes: int
+    pruning_reason: str
+
+
+@dataclass
+class TreeMappingViewModel:
+    """ViewModel for tree mapping operations."""
+
+    tree_id: str
+    tree_structure: Dict[str, Any]
+    total_nodes: int
+    max_depth: int
+    include_code: bool
+    code_snippets: List[Dict[str, Any]]
+    token_count: int
+    max_tokens: int
+
+
+@dataclass
+class TreeListingViewModel:
+    """ViewModel for tree listing operations."""
+
+    session_id: str
+    trees: List[TreeClusterViewModel]
+    total_trees: int
+    current_focus: Optional[str] = None
+
+
+@dataclass
+class SessionStatusViewModel:
+    """ViewModel for session status operations."""
+
+    session_id: str
+    project_path: str
+    total_trees: int
+    current_focus: Optional[str]
+    created_at: str
+    last_activity: str
+    session_stats: Dict[str, Any]
 
 
 @dataclass
 class ExplorationViewModel:
-    """ViewModel for code exploration results."""
+    """ViewModel for exploration session results."""
 
-    entry_point: str
-    exploration_tree: Dict[str, Any]
-    discovered_symbols: List[SymbolViewModel]
-    navigation_hints: List[Dict[str, Any]]
-    session_id: Optional[str] = None
-    token_count: int = 0
-    max_tokens = get_config("MAX_TOKENS", 4000)
+    session_id: str
+    project_path: str
+    intent: str
+    trees: List[TreeClusterViewModel]
+    total_trees: int
+    confidence_scores: Dict[str, float]
+    token_count: int
+    max_tokens: int
     compression_level: str = "medium"
+    execution_time: float = 0.0
+    discovery_strategy: str = "hybrid"
 
 
 @dataclass

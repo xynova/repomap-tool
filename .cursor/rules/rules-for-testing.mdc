@@ -53,6 +53,13 @@ alwaysApply: true
 4. **Verify end-to-end** functionality works
 5. **Never skip testing** - it's mandatory, not optional
 
+## 🐛 **DEBUG TEST NAMING CONVENTIONS:**
+- **ALWAYS** prefix debug/investigation tests with `ignore.test_*` 
+- **ALWAYS** use this naming pattern for temporary tests created to debug issues
+- **ALWAYS** ensure debug tests don't get captured in git commits
+- **EXAMPLES**: `ignore.test_debug_import_issue.py`, `ignore.test_investigate_parser.py`
+- **PURPOSE**: Keep formal test suite clean while allowing debugging investigations
+
 ## ⚠️ **TESTING RULES:**
 - **NO FAKE SOLUTIONS**: Every test must actually pass
 - **NO SKIPPED TESTS**: All tests must run and pass

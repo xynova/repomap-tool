@@ -295,8 +295,9 @@ class ListFormatter(BaseFormatter, DataFormatter):
 
     def _is_cycle_data(self, data: List[Any]) -> bool:
         """Check if data looks like cycle detection results."""
+        # Empty list is valid cycle data (no cycles found)
         if not data:
-            return False
+            return True
         return all(isinstance(item, list) and len(item) > 0 for item in data)
 
     def _format_cycle_data(self, data: List[List[str]], use_emojis: bool) -> str:
@@ -484,3 +485,38 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
     from ..controllers.view_models import SearchViewModel
 
     registry.register_formatter(SearchViewModelFormatter(), SearchViewModel)
+
+    # Register exploration ViewModel formatters
+    from .exploration_formatters import (
+        TreeClusterViewModelFormatter,
+        TreeFocusViewModelFormatter,
+        TreeExpansionViewModelFormatter,
+        TreePruningViewModelFormatter,
+        TreeMappingViewModelFormatter,
+        TreeListingViewModelFormatter,
+        SessionStatusViewModelFormatter,
+        ExplorationViewModelFormatter,
+    )
+    from ..controllers.view_models import (
+        TreeClusterViewModel,
+        TreeFocusViewModel,
+        TreeExpansionViewModel,
+        TreePruningViewModel,
+        TreeMappingViewModel,
+        TreeListingViewModel,
+        SessionStatusViewModel,
+        ExplorationViewModel,
+    )
+
+    registry.register_formatter(TreeClusterViewModelFormatter(), TreeClusterViewModel)
+    registry.register_formatter(TreeFocusViewModelFormatter(), TreeFocusViewModel)
+    registry.register_formatter(
+        TreeExpansionViewModelFormatter(), TreeExpansionViewModel
+    )
+    registry.register_formatter(TreePruningViewModelFormatter(), TreePruningViewModel)
+    registry.register_formatter(TreeMappingViewModelFormatter(), TreeMappingViewModel)
+    registry.register_formatter(TreeListingViewModelFormatter(), TreeListingViewModel)
+    registry.register_formatter(
+        SessionStatusViewModelFormatter(), SessionStatusViewModel
+    )
+    registry.register_formatter(ExplorationViewModelFormatter(), ExplorationViewModel)

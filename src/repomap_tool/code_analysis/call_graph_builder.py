@@ -5,13 +5,14 @@ This module analyzes function calls within and across files to build a comprehen
 call graph that shows how functions depend on each other.
 """
 
-import ast
 import logging
+import os
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 import re
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any
+from .models import CodeTag
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import FunctionCall, CallGraph
@@ -36,132 +37,105 @@ class CallAnalyzer:
 
 
 class PythonCallAnalyzer(CallAnalyzer):
-    """Parser for Python function calls using AST."""
+    """Parser for Python function calls using tree-sitter."""
+
+    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+        """Initialize with tree-sitter parser.
+
+        Args:
+            tree_sitter_parser: TreeSitterParser instance for parsing
+        """
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
-        """Extract Python function calls using AST parsing."""
+        """Extract Python function calls using tree-sitter parsing with AST fallback."""
         calls = []
 
+        if not self.tree_sitter_parser:
+            logger.warning("No tree-sitter parser available - cannot extract calls")
+            return []
+
         try:
-            tree = ast.parse(file_content)
+            # Get all tags from tree-sitter
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
-            for node in ast.walk(tree):
-                if isinstance(node, ast.Call):
-                    # Handle function calls
-                    call_info = self._analyze_call_node(node, file_path)
-                    if call_info:
-                        calls.append(call_info)
+            # Look for function call tags
+            for tag in tags:
+                kind = tag.kind
 
-        except SyntaxError as e:
-            logger.warning(f"Syntax error parsing Python file {file_path}: {e}")
+                # Handle function calls
+                if kind == "name.reference.call":
+                    call_obj = self._parse_call_tag(tag, file_path)
+                    if call_obj:
+                        calls.append(call_obj)
+
+            logger.debug(f"Tree-sitter extracted {len(calls)} calls from {file_path}")
+
         except Exception as e:
-            logger.error(f"Error parsing Python file {file_path}: {e}")
+            logger.error(f"Error extracting Python calls from {file_path}: {e}")
+            return []
+
+        # Log warning if tree-sitter returns no calls (might indicate query issue)
+        if not calls:
+            logger.warning(
+                f"No function calls found via tree-sitter for {file_path} - check query file"
+            )
 
         return calls
 
-    def _analyze_call_node(
-        self, node: ast.Call, file_path: str
-    ) -> Optional[FunctionCall]:
-        """Analyze a single function call node."""
+    def _parse_call_tag(self, tag: CodeTag, file_path: str) -> Optional[FunctionCall]:
+        """Parse a single call tag into FunctionCall object.
+
+        Args:
+            tag: CodeTag object
+            file_path: Path to the file
+
+        Returns:
+            FunctionCall object or None if parsing fails
+        """
         try:
-            # Get the caller function name (if we can determine it)
-            caller = self._get_calling_function_name(node)
-
-            # Get the callee function name
-            callee = self._get_called_function_name(node)
-
-            if not callee:
-                return None
-
-            # Determine if it's a method call
-            is_method_call = False
-            object_name = None
-
-            if isinstance(node.func, ast.Attribute):
-                is_method_call = True
-                if isinstance(node.func.value, ast.Name):
-                    object_name = node.func.value.id
-
-            # Create function call object
-            call = FunctionCall(
-                caller=caller or "unknown",
-                callee=callee,
+            return FunctionCall(
+                name=tag.name,
+                caller="unknown",  # Simplified - could be enhanced with context analysis
+                callee=tag.name,
                 file_path=file_path,
-                line_number=getattr(node, "lineno", 0),
-                is_method_call=is_method_call,
-                object_name=object_name,
+                line_number=tag.line,
+                is_method_call=False,  # Simplified - could parse from tag details
+                object_name=None,
             )
-
-            return call
-
         except Exception as e:
-            logger.debug(f"Error analyzing call node: {e}")
-            return None
-
-    def _get_calling_function_name(self, node: ast.Call) -> Optional[str]:
-        """Get the name of the function that contains this call."""
-        try:
-            # Walk up the AST to find the containing function
-            current = node
-            while hasattr(current, "parent"):
-                current = current.parent
-                if isinstance(current, ast.FunctionDef):
-                    return current.name
-                elif isinstance(current, ast.AsyncFunctionDef):
-                    return current.name
-                elif isinstance(current, ast.ClassDef):
-                    return f"{current.name}.__init__"
-
-            return None
-
-        except Exception:
-            return None
-
-    def _get_called_function_name(self, node: ast.Call) -> Optional[str]:
-        """Get the name of the function being called."""
-        try:
-            if isinstance(node.func, ast.Name):
-                return node.func.id
-            elif isinstance(node.func, ast.Attribute):
-                return node.func.attr
-            elif isinstance(node.func, ast.Call):
-                # Handle cases like func()()
-                return self._get_called_function_name(node.func)
-            else:
-                return None
-
-        except Exception:
+            logger.debug(f"Error parsing call tag {tag}: {e}")
             return None
 
 
 class JavaScriptCallAnalyzer(CallAnalyzer):
-    """Parser for JavaScript/TypeScript function calls using aider's tree-sitter."""
+    """Parser for JavaScript/TypeScript function calls using tree-sitter."""
 
     def __init__(self, project_root: Optional[str] = None):
-        """Initialize with project root for aider's RepoMap."""
+        """Initialize with project root for tree-sitter RepoMap."""
         super().__init__()
         self.project_root = project_root
         self._repo_map = None
 
+        # Initialize tree-sitter parser
+        from .tree_sitter_parser import TreeSitterParser
+
+        self.tree_sitter_parser = TreeSitterParser()
+
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
-        """Extract JavaScript/TypeScript function calls using aider's tree-sitter."""
+        """Extract JavaScript/TypeScript function calls using TreeSitterParser."""
         calls = []
 
         try:
-            # Get aider's RepoMap for tree-sitter parsing
-            repo_map = self._get_repo_map()
-
-            # Get relative path for aider
-            rel_path = self._get_relative_path(file_path)
-
-            # Use aider's tree-sitter to get tags
-            tags = repo_map.get_tags(file_path, rel_path)
+            # Use TreeSitterParser directly for tag extraction
+            tags = self.tree_sitter_parser.parse_file(file_path)
 
             # Extract function calls from tags
             for tag in tags:
                 if tag.kind in ["ref"]:  # References to functions
                     calls.append(
                         FunctionCall(
+                            name=tag.name,
                             caller="unknown",  # TODO: Extract caller from context
                             callee=tag.name,
                             file_path=file_path,
@@ -181,34 +155,6 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
             )
 
         return calls
-
-    def _get_repo_map(self) -> Any:
-        """Get or create aider's RepoMap instance."""
-        if self._repo_map is None:
-            try:
-                from aider.repomap import RepoMap
-                from aider.io import InputOutput
-
-                io = InputOutput()
-                self._repo_map = RepoMap(io=io, root=self.project_root or "/")
-                logger.debug(
-                    "Created aider RepoMap instance for JavaScript call analysis"
-                )
-            except ImportError as e:
-                logger.error(f"Failed to import aider modules: {e}")
-                raise RuntimeError(
-                    "aider modules not available for tree-sitter parsing"
-                )
-
-        return self._repo_map
-
-    def _get_relative_path(self, file_path: str) -> str:
-        """Get relative path for aider's RepoMap."""
-        import os
-
-        if self.project_root and file_path.startswith(self.project_root):
-            return os.path.relpath(file_path, self.project_root)
-        return os.path.basename(file_path)
 
     def _get_line_number(self, content: str, position: int) -> Optional[int]:
         """Get line number for a given position in content."""
@@ -242,10 +188,20 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
 class CallGraphBuilder:
     """Main call graph builder that coordinates multi-language analysis."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        project_root: Optional[str] = None,
+        tree_sitter_parser: Optional[Any] = None,
+    ) -> None:
         """Initialize the call graph builder with language analyzers."""
+        self.project_root = project_root
+        self.tree_sitter_parser = tree_sitter_parser
+
+        # Initialize Python analyzer with tree-sitter
+        python_analyzer = PythonCallAnalyzer(tree_sitter_parser=tree_sitter_parser)
+
         self.language_analyzers: Dict[str, CallAnalyzer] = {
-            "py": PythonCallAnalyzer(),
+            "py": python_analyzer,
             "js": JavaScriptCallAnalyzer(),
             "ts": JavaScriptCallAnalyzer(),  # TypeScript uses same analyzer
             "jsx": JavaScriptCallAnalyzer(),
@@ -303,7 +259,7 @@ class CallGraphBuilder:
 
                         # Track function locations
                         for call in file_calls:
-                            if call.caller != "unknown":
+                            if call.caller and call.caller != "unknown":
                                 function_locations[call.caller] = file_path
 
                     except Exception as e:
@@ -316,12 +272,11 @@ class CallGraphBuilder:
 
                 # Track function locations
                 for call in file_calls:
-                    if call.caller != "unknown":
+                    if call.caller and call.caller != "unknown":
                         function_locations[call.caller] = file_path
 
         # Build call graph
         call_graph = CallGraph(
-            project_path=str(Path(project_files[0]).parent) if project_files else "",
             function_calls=all_calls,
             function_locations=function_locations,
         )
@@ -383,7 +338,7 @@ class CallGraphBuilder:
         # Build a map of function names to their file locations
         function_locations = {}
         for call in calls:
-            if call.caller != "unknown":
+            if call.caller and call.caller != "unknown":
                 function_locations[call.caller] = call.file_path
 
         # Resolve cross-file calls
@@ -434,7 +389,8 @@ class CallGraphBuilder:
             # Call frequency analysis
             callee_counts: Dict[str, int] = {}
             for call in call_graph.function_calls:
-                callee_counts[call.callee] = callee_counts.get(call.callee, 0) + 1
+                if call.callee:
+                    callee_counts[call.callee] = callee_counts.get(call.callee, 0) + 1
 
             if callee_counts:
                 most_called = max(callee_counts.items(), key=lambda x: x[1])
@@ -481,7 +437,7 @@ class CallGraphBuilder:
 
             # Find all calls made by this function
             for call in call_graph.function_calls:
-                if call.caller == function_name:
+                if call.caller == function_name and call.callee:
                     dependencies.add(call.callee)
 
             return list(dependencies)
@@ -507,7 +463,7 @@ class CallGraphBuilder:
 
             # Find all calls to this function
             for call in call_graph.function_calls:
-                if call.callee == function_name:
+                if call.callee == function_name and call.caller:
                     dependents.add(call.caller)
 
             return list(dependents)

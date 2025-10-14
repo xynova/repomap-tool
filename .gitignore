@@ -28,7 +28,11 @@ wheels/
 
 # Cache
 cache/
-.aider.tags.cache.v4/
+# Old aider cache (legacy)
+.aider*
+
+# New repomap-tool cache
+.repomap-tool/
 
 # IDE
 .vscode/
@@ -41,7 +45,7 @@ cache/
 Thumbs.db
 
 # Testing
-.coverage
+.coverage*
 htmlcov/
 .pytest_cache/
 coverage.xml

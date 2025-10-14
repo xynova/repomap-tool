@@ -78,15 +78,17 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
                 # If we can't load this config file, continue searching
                 continue
 
-    # Also check /workspace directory (for Docker usage)
-    workspace_dir = Path("/workspace")
-    if workspace_dir.exists():
-        config_path = workspace_dir / ".repomap" / "config.json"
-        if config_path.exists():
-            try:
-                return load_config_file(str(config_path))
-            except Exception:
-                pass
+    # Also check Docker workspace directory (configurable via env var)
+    workspace_dir = os.environ.get("REPOMAP_WORKSPACE_DIR", "/workspace")
+    if workspace_dir:
+        workspace_path = Path(workspace_dir)
+        if workspace_path.exists():
+            config_path = workspace_path / ".repomap" / "config.json"
+            if config_path.exists():
+                try:
+                    return load_config_file(str(config_path))
+                except Exception:
+                    pass
 
     return None
 

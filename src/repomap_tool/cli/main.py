@@ -5,11 +5,17 @@ Main CLI entry point for RepoMap-Tool.
 This module provides the main CLI group and orchestrates all command groups.
 """
 
+# Configure external library logging as early as possible
+from ..core.logging_service import _suppress_external_library_logs
+
+_suppress_external_library_logs()
+
 import click
 
 # Import command groups
 from .commands.system import system
 from .commands.index import index
+from .commands.search import search
 from .commands.explore import explore
 from .commands.inspect import inspect
 from .utils.console import ConsoleProvider, RichConsoleFactory
@@ -31,6 +37,7 @@ def cli(ctx: click.Context, no_color: bool) -> None:
 # Register command groups
 cli.add_command(system)
 cli.add_command(index)
+cli.add_command(search)
 cli.add_command(explore)
 cli.add_command(inspect)
 

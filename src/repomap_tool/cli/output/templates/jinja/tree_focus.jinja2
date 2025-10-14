@@ -1,0 +1,59 @@
+{# Tree Focus Template #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}🎯{% endif %} Tree Focus: {{ data.context_name }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Tree ID: {{ data.tree_id }}
+{% if hierarchical %}├──{% else %}•{% endif %} Current Focus: {{ "Yes" if data.current_focus else "No" }}
+{% if hierarchical %}├──{% else %}•{% endif %} Total Nodes: {{ data.total_nodes }}
+{% if hierarchical %}├──{% else %}•{% endif %} Max Depth: {{ data.max_depth }}
+{% if hierarchical %}├──{% else %}•{% endif %} Expanded Areas: {{ data.expanded_areas | length }}
+{% if hierarchical %}└──{% else %}•{% endif %} Pruned Areas: {{ data.pruned_areas | length }}
+
+{# Tree structure section #}
+{% if data.tree_structure %}
+{% if emoji %}🌳{% endif %} TREE STRUCTURE:
+{% if hierarchical %}├──{% else %}•{% endif %} Node Count: {{ data.tree_structure.node_count }}
+{% if hierarchical %}├──{% else %}•{% endif %} Current Depth: {{ data.tree_structure.current_depth }}
+{% if hierarchical %}└──{% else %}•{% endif %} Max Depth: {{ data.tree_structure.max_depth }}
+
+{# Node details #}
+{% if data.tree_structure.nodes %}
+{% if emoji %}📋{% endif %} NODES:
+{% for node in data.tree_structure.nodes[:10] %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ node.identifier }}
+{% if hierarchical %}│   {% else %}  {% endif %}Location: {{ node.location }}
+{% if hierarchical %}│   {% else %}  {% endif %}Type: {{ node.type }}
+{% if hierarchical %}│   {% else %}  {% endif %}Depth: {{ node.depth }}
+{% if hierarchical %}│   {% else %}  {% endif %}Expanded: {{ "Yes" if node.expanded else "No" }}
+{% if hierarchical %}│   {% else %}  {% endif %}Children: {{ node.children_count }}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% if data.tree_structure.nodes | length > 10 %}
+{% if hierarchical %}└──{% else %}•{% endif %} ... and {{ data.tree_structure.nodes | length - 10 }} more nodes
+{% endif %}
+{% endif %}
+{% endif %}
+
+{# Expanded areas section #}
+{% if data.expanded_areas %}
+{% if emoji %}📈{% endif %} EXPANDED AREAS:
+{% for area in data.expanded_areas %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ area }}
+{% endfor %}
+{% endif %}
+
+{# Pruned areas section #}
+{% if data.pruned_areas %}
+{% if emoji %}✂️{% endif %} PRUNED AREAS:
+{% for area in data.pruned_areas %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ area }}
+{% endfor %}
+{% endif %}

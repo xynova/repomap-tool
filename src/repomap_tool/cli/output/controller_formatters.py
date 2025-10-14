@@ -453,6 +453,7 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             "match_type": data.match_type,
             "search_time_ms": data.search_time_ms,
             "cache_hit": data.cache_hit,
+            "spellcheck_suggestions": data.spellcheck_suggestions,
             "token_count": data.token_count,
             "max_tokens": data.max_tokens,
             "compression_level": data.compression_level,

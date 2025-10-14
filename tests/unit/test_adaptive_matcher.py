@@ -24,10 +24,9 @@ from repomap_tool.models import (
     PerformanceConfig,
     DependencyConfig,
 )
-from repomap_tool.cli.services import get_service_factory
 
 
-def test_adaptive_matcher():
+def test_adaptive_matcher(session_container, session_test_repo_path):
     """Test the adaptive semantic matcher with various scenarios."""
 
     print("🧪 Testing Adaptive Semantic Matcher")
@@ -155,14 +154,17 @@ def test_adaptive_matcher():
 
     # Initialize adaptive matcher
     config = RepoMapConfig(
-        project_root=".",
+        project_root=str(session_test_repo_path),
         fuzzy_match=FuzzyMatchConfig(),
         semantic_match=SemanticMatchConfig(enabled=True),
         performance=PerformanceConfig(),
         dependencies=DependencyConfig(),
     )
-    service_factory = get_service_factory()
-    repomap_service = service_factory.create_repomap_service(config)
+    from tests.conftest import create_repomap_service_from_session_container
+
+    repomap_service = create_repomap_service_from_session_container(
+        session_container, config
+    )
     matcher = repomap_service.semantic_matcher
 
     # Learn from the codebase

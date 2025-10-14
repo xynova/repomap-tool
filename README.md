@@ -1,4 +1,4 @@
-# RepoMap Tool (Inspired by Aider)
+# RepoMap Tool
 
 *A Tool to Help AI Assistants Navigate and Understand Codebases*
 
@@ -20,7 +20,7 @@
 
 **Why?** AI code assistants struggle with large codebases. They often miss context, can't find related code when names don't match exactly, and waste precious context window space searching for the right files. This leads to inaccurate suggestions and inefficient code generation.
 
-**What?** RepoMap Tool is an intelligent code analysis engine that supercharges AI code assistants by providing comprehensive codebase understanding. It combines fuzzy matching (finding similar names) with semantic analysis (understanding meaning) to give AI assistants the context they need for accurate code suggestions.
+**What?** RepoMap Tool is an intelligent code analysis engine that supercharges AI code assistants by providing comprehensive codebase understanding. Built with tree-sitter for accurate code parsing, it combines fuzzy matching (finding similar names) with semantic analysis (understanding meaning) to give AI assistants the context they need for accurate code suggestions.
 
 **How?** It analyzes your codebase structure, maps relationships between files and functions, and provides AI assistants with intelligent search capabilities to discover and understand the code they need to work with effectively.
 
@@ -189,31 +189,54 @@ docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghc
 
 ### Docker Images
 
-We provide several Docker image variants:
+We provide GPU-optimized and CPU-only Docker image variants:
 
-**Latest Release:**
+**GPU-Enabled (Default - Recommended):**
 ```bash
+# Latest release with GPU acceleration
 docker pull ghcr.io/xynova/repomap-tool:latest
+docker pull ghcr.io/xynova/repomap-tool:gpu
 ```
 
-**Nightly Build (Latest Development):**
+**CPU-Only (For Constrained Environments):**
 ```bash
-docker pull ghcr.io/xynova/repomap-tool:nightly
+# CPU-only version for environments without GPU
+docker pull ghcr.io/xynova/repomap-tool:cpu
 ```
 
-**Specific Version:**
+**Building Images Locally:**
 ```bash
-docker pull ghcr.io/xynova/repomap-tool:v1.2.3
+# Build both GPU and CPU images
+./scripts/build-docker.sh both
+
+# Build only GPU image (default)
+./scripts/build-docker.sh gpu
+
+# Build only CPU image
+./scripts/build-docker.sh cpu
 ```
 
 **Using Pre-built Images:**
-```bash
-# Use the latest release
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:latest analyze /workspace
 
-# Use the nightly build for latest features
-docker run -v $(pwd)/.repomap:/app/cache -v /path/to/your/project:/workspace ghcr.io/xynova/repomap-tool:nightly analyze /workspace
+**GPU Environments (Default):**
+```bash
+# Use GPU acceleration (requires NVIDIA GPU with CUDA)
+docker run --rm -t --gpus all -v $(pwd):/workspace repomap-tool:latest explore find "authentication"
+
+# Apple Silicon with MPS acceleration
+docker run --rm -t -v $(pwd):/workspace repomap-tool:latest explore find "authentication"
 ```
+
+**CPU-Only Environments:**
+```bash
+# Use CPU-only version (for constrained environments)
+docker run --rm -t -v $(pwd):/workspace repomap-tool:cpu explore find "authentication"
+```
+
+**Performance Notes:**
+- **GPU images** automatically detect and use CUDA (NVIDIA) or MPS (Apple Silicon) when available
+- **CPU images** are smaller and work in any environment but are slower for embedding computation
+- **Default behavior**: Falls back to CPU if no GPU is detected
 
 ## Key Benefits for AI Code Assistants
 

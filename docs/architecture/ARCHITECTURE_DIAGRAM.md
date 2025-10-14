@@ -10,10 +10,10 @@ graph TB
     end
     
     subgraph "Core Processing Layer"
-        C --> D[External RepoMap]
-        D --> E[RepoMap Core]
-        E --> F[Code Parser]
-        F --> G[Tree-sitter]
+        C --> D[RepoMap Service]
+        D --> E[TreeSitterParser]
+        E --> F[TreeSitterTagCache]
+        E --> G[Tree-sitter]
     end
     
     subgraph "Analysis Layer"

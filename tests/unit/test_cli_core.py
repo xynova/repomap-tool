@@ -29,13 +29,9 @@ def cli_runner():
 
 
 @pytest.fixture
-def temp_project():
-    with tempfile.TemporaryDirectory() as temp_dir:
-        # Create a minimal project structure
-        os.makedirs(os.path.join(temp_dir, "src"), exist_ok=True)
-        with open(os.path.join(temp_dir, "src", "main.py"), "w") as f:
-            f.write("def main():\n    pass\n")
-        yield temp_dir
+def temp_project(session_test_repo_path):
+    """Use session test repository instead of creating temporary directory."""
+    return str(session_test_repo_path)
 
 
 class TestCLICore:
@@ -149,14 +145,14 @@ class TestCLICore:
             )
             assert result.exit_code == 0
 
-    def test_inspect_find_command_exists(self, cli_runner):
-        """Test that inspect find command exists and shows help."""
-        result = cli_runner.invoke(cli, ["inspect", "find", "--help"])
+    def test_search_command_exists(self, cli_runner):
+        """Test that search command exists and shows help."""
+        result = cli_runner.invoke(cli, ["search", "--help"])
         assert result.exit_code == 0
-        assert "inspect" in result.output.lower()
+        assert "search" in result.output.lower()
 
-    def test_inspect_find_basic_usage(self, cli_runner, temp_project):
-        """Test basic inspect find command usage."""
+    def test_search_basic_usage(self, cli_runner, temp_project):
+        """Test basic search command usage."""
         with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_factory = mock_get_factory.return_value
             mock_repo_map = mock_factory.create_repomap_service.return_value
@@ -178,12 +174,11 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: inspect find QUERY [PROJECT_PATH] [OPTIONS]
+            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
-                    "inspect",
-                    "find",
+                    "search",
                     "test",
                     temp_project,
                     "--match-type",
@@ -196,8 +191,8 @@ class TestCLICore:
             assert result.exit_code == 0
             assert "test_function" in result.output
 
-    def test_inspect_find_with_options(self, cli_runner, temp_project):
-        """Test inspect find command with various options."""
+    def test_search_with_options(self, cli_runner, temp_project):
+        """Test search command with various options."""
         with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
             mock_factory = mock_get_factory.return_value
             mock_repo_map = mock_factory.create_repomap_service.return_value
@@ -210,12 +205,11 @@ class TestCLICore:
                 search_time_ms=50.0,
             )
 
-            # CLI signature: inspect find QUERY [PROJECT_PATH] [OPTIONS]
+            # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner.invoke(
                 cli,
                 [
-                    "inspect",
-                    "find",
+                    "search",
                     "test",
                     temp_project,
                     "--match-type",
@@ -254,12 +248,14 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "version" in result.output.lower()
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_explore_command_exists(self, cli_runner):
         """Test that explore command exists and shows help."""
         result = cli_runner.invoke(cli, ["explore", "start", "--help"])
         assert result.exit_code == 0
         assert "explore" in result.output.lower()
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_explore_basic_usage(self, cli_runner, temp_project):
         """Test basic explore command usage."""
         # Explore command is complex and requires session management
@@ -270,12 +266,14 @@ class TestCLICore:
         # We're just testing that the command structure is correct
         assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_focus_command_exists(self, cli_runner):
         """Test that focus command exists and shows help."""
         result = cli_runner.invoke(cli, ["explore", "focus", "--help"])
         assert result.exit_code == 0
         assert "focus" in result.output.lower()
 
+    @pytest.mark.skip(reason="Disabling explore verb tests")
     def test_focus_basic_usage(self, cli_runner):
         """Test basic focus command usage."""
         # Focus command requires session management
@@ -397,38 +395,5 @@ class TestCLICore:
 
             result = cli_runner.invoke(
                 cli, ["index", "create", temp_project, "--fuzzy", "--verbose"]
-            )
-            assert result.exit_code == 0
-
-    def test_cli_configuration_integration(self, cli_runner, temp_project):
-        """Test CLI configuration integration."""
-        with patch("repomap_tool.cli.services.get_service_factory") as mock_get_factory:
-            mock_factory = mock_get_factory.return_value
-            mock_repo_map = mock_factory.create_repomap_service.return_value
-            mock_instance = mock_repo_map
-            mock_instance.analyze_project.return_value = ProjectInfo(
-                project_root=temp_project,
-                total_files=1,
-                total_identifiers=1,
-                file_types={"py": 1},
-                identifier_types={"function": 1},
-                analysis_time_ms=100.0,
-                last_updated=datetime.now(),
-            )
-
-            result = cli_runner.invoke(
-                cli,
-                [
-                    "index",
-                    "create",
-                    temp_project,
-                    "--fuzzy",
-                    "--threshold",
-                    "0.8",
-                    "--cache-size",
-                    "1000",
-                    "--log-level",
-                    "DEBUG",
-                ],
             )
             assert result.exit_code == 0

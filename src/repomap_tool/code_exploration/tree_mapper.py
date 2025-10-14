@@ -131,7 +131,7 @@ class TreeMapper:
         """
         try:
             # Use existing repo_map infrastructure to get code details
-            if hasattr(self.repo_map, "repo_map") and self.repo_map.repo_map:
+            if self.repo_map.repo_map:
                 file_path = self._extract_file_path(node.location)
                 if file_path and os.path.exists(file_path):
                     with open(file_path, "r", encoding="utf-8") as f:
@@ -177,9 +177,7 @@ class TreeMapper:
                 file_path = location
 
             # Resolve to absolute path if possible
-            if hasattr(self.repo_map, "config") and hasattr(
-                self.repo_map.config, "project_root"
-            ):
+            if self.repo_map.config and hasattr(self.repo_map.config, "project_root"):
                 abs_path = os.path.join(self.repo_map.config.project_root, file_path)
                 if os.path.exists(abs_path):
                     return abs_path

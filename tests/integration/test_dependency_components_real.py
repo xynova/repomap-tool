@@ -163,8 +163,16 @@ class ComplexProcessor:
     def test_import_analyzer_real(self, temp_project_with_dependencies):
         """Test import analysis with real Python files."""
         from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+        from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 
-        analyzer = ImportAnalyzer()
+        # Create TreeSitterParser for the test
+        tree_sitter_parser = TreeSitterParser(
+            project_root=temp_project_with_dependencies
+        )
+        analyzer = ImportAnalyzer(
+            project_root=temp_project_with_dependencies,
+            tree_sitter_parser=tree_sitter_parser,
+        )
 
         # Test analyzing a real file
         main_file = Path(temp_project_with_dependencies) / "main.py"
@@ -273,10 +281,8 @@ class ComplexProcessor:
 
         # Test ProjectImports model
         project_imports = ProjectImports(
+            files={str(Path(temp_project_with_dependencies) / "main.py"): file_imports},
             project_path=str(temp_project_with_dependencies),
-            file_imports={
-                str(Path(temp_project_with_dependencies) / "main.py"): file_imports
-            },
             total_files=1,
         )
         assert project_imports.project_path == str(temp_project_with_dependencies)

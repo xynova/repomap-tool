@@ -1,352 +1,223 @@
-"""
-Data models for dependency analysis.
+"""Code analysis data models for tree-sitter parsing."""
 
-This module defines the core data structures used throughout the dependency analysis system.
-"""
-
-from typing import List, Dict, Set, Optional, Any, Tuple
-from pathlib import Path
-from pydantic import BaseModel, Field
-from enum import Enum
 from dataclasses import dataclass
+from typing import Optional, List, Dict, Any, Set
+from enum import Enum
+
+
+@dataclass
+class CodeTag:
+    """Universal code tag from tree-sitter parsing."""
+
+    name: str  # Identifier name
+    kind: str  # Tag kind (def, class, import, etc.)
+    file: str  # Absolute file path
+    line: int  # 1-based line number
+    column: int = 0  # Column position
+    end_line: Optional[int] = None
+    end_column: Optional[int] = None
+    rel_fname: Optional[str] = None  # Relative file path (for compatibility)
+    comment: Optional[str] = None  # Associated comment
+
+
+class AnalysisFormat(str, Enum):
+    """Format options for analysis output."""
+
+    TEXT = "text"
+    JSON = "json"
+    TABLE = "table"
 
 
 class ImportType(str, Enum):
     """Types of import statements."""
 
-    ABSOLUTE = "absolute"
+    STANDARD = "standard"
     RELATIVE = "relative"
+    ABSOLUTE = "absolute"
+    THIRD_PARTY = "third_party"
     EXTERNAL = "external"
-    UNKNOWN = "unknown"
 
 
-class Import(BaseModel):
-    """Represents a single import statement."""
+@dataclass
+class Import:
+    """Import statement information."""
 
-    module: str = Field(description="Module name being imported")
-    alias: Optional[str] = Field(
-        default=None, description="Alias if imported as something else"
-    )
-    is_relative: bool = Field(description="Whether this is a relative import")
-    import_type: ImportType = Field(
-        default=ImportType.UNKNOWN, description="Type of import"
-    )
-    resolved_path: Optional[str] = Field(
-        default=None, description="Resolved absolute file path"
-    )
-    line_number: Optional[int] = Field(
-        default=None, description="Line number of import"
-    )
-    symbols: List[str] = Field(
-        default_factory=list, description="Specific symbols imported"
-    )
-
-    def __str__(self) -> str:
-        if self.alias:
-            return f"import {self.module} as {self.alias}"
-        elif self.symbols:
-            return f"from {self.module} import {', '.join(self.symbols)}"
-        else:
-            return f"import {self.module}"
+    module: str
+    alias: Optional[str] = None
+    file_path: str = ""
+    line_number: int = 0
+    import_type: ImportType = ImportType.STANDARD
+    is_relative: bool = False
+    resolved_path: Optional[str] = None
+    symbols: Optional[List[str]] = None
 
 
-class FileImports(BaseModel):
-    """Represents all imports for a single file."""
+@dataclass
+class FileImports:
+    """Import information for a single file."""
 
-    file_path: str = Field(description="Path to the file")
-    imports: List[Import] = Field(
-        default_factory=list, description="List of imports in this file"
-    )
-    language: Optional[str] = Field(
-        default=None, description="Programming language of the file"
-    )
-    total_imports: int = Field(
-        default=0, description="Total number of import statements"
-    )
+    file_path: str
+    imports: List[Import]
+    language: Optional[str] = None
 
-    def model_post_init(self, __context: Any) -> None:
-        self.total_imports = len(self.imports)
-
-    def get_absolute_imports(self) -> List[Import]:
-        """Get only absolute imports."""
-        return [imp for imp in self.imports if not imp.is_relative]
-
-    def get_relative_imports(self) -> List[Import]:
-        """Get only relative imports."""
-        return [imp for imp in self.imports if imp.is_relative]
-
-    def get_external_imports(self) -> List[Import]:
-        """Get only external imports."""
-        return [imp for imp in self.imports if imp.import_type == ImportType.EXTERNAL]
+    @property
+    def total_imports(self) -> int:
+        """Total number of imports in this file."""
+        return len(self.imports)
 
 
-class ProjectImports(BaseModel):
-    """Represents all imports found in a project."""
+@dataclass
+class ProjectImports:
+    """Import information for the entire project."""
 
-    project_path: str = Field(description="Path to the project root")
-    file_imports: Dict[str, FileImports] = Field(
-        default_factory=dict, description="Imports by file path"
-    )
-    total_files: int = Field(default=0, description="Total number of files analyzed")
-    total_imports: int = Field(
-        default=0, description="Total number of import statements"
-    )
-    language_stats: Dict[str, int] = Field(
-        default_factory=dict, description="Count of files by language"
-    )
+    files: Dict[str, FileImports]
+    project_path: Optional[str] = None
+    file_imports: Optional[Dict[str, FileImports]] = None
+    total_files: Optional[int] = None
 
-    def __len__(self) -> int:
-        """Return the number of files with imports."""
-        return len(self.file_imports)
-
-    def __getitem__(self, key: str) -> FileImports:
-        """Allow subscripting to access file_imports."""
-        return self.file_imports[key]
-
-    def get_files_importing(self, module_name: str) -> List[str]:
-        """Get a list of files that import a specific module."""
-        importing_files = []
-        for file_path, file_imports in self.file_imports.items():
-            for imp in file_imports.imports:
-                if imp.module == module_name:
-                    importing_files.append(file_path)
-        return importing_files
-
-    def model_post_init(self, __context: Any) -> None:
-        self.total_files = len(self.file_imports)
-        self.total_imports = sum(len(fi.imports) for fi in self.file_imports.values())
-
-        # Count files by language
-        for file_imports in self.file_imports.values():
-            lang = file_imports.language or "unknown"
-            self.language_stats[lang] = self.language_stats.get(lang, 0) + 1
-
-    def get_file_by_path(self, file_path: str) -> Optional[FileImports]:
-        """Get imports for a specific file."""
-        return self.file_imports.get(file_path)
-
-    def get_all_imported_modules(self) -> Set[str]:
-        """Get all unique modules that are imported."""
-        modules = set()
-        for file_imports in self.file_imports.values():
-            for imp in file_imports.imports:
-                modules.add(imp.module)
-        return modules
+    @property
+    def total_imports(self) -> int:
+        """Total number of imports across all files."""
+        return sum(len(file_imports.imports) for file_imports in self.files.values())
 
 
-class FunctionCall(BaseModel):
-    """Represents a function call."""
+@dataclass
+class FunctionCall:
+    """Function call information."""
 
-    caller: str = Field(description="Name of the calling function")
-    callee: str = Field(description="Name of the called function")
-    file_path: str = Field(description="File where the call occurs")
-    line_number: int = Field(description="Line number of the call")
-    is_method_call: bool = Field(
-        default=False, description="Whether this is a method call"
-    )
-    object_name: Optional[str] = Field(
-        default=None, description="Object name for method calls"
-    )
-    resolved_callee: Optional[str] = Field(
-        default=None, description="Resolved function path if cross-file"
-    )
-
-    def __str__(self) -> str:
-        if self.is_method_call and self.object_name:
-            return f"{self.object_name}.{self.callee}()"
-        else:
-            return f"{self.callee}()"
+    name: str
+    file_path: str
+    line_number: int
+    arguments: Optional[List[str]] = None
+    caller: Optional[str] = None
+    callee: Optional[str] = None
+    is_method_call: bool = False
+    object_name: Optional[str] = None
+    resolved_callee: Optional[str] = None
 
 
-class CallGraph(BaseModel):
-    """Represents the function call graph for a project."""
+@dataclass
+@dataclass
+class CallGraph:
+    """Function call graph."""
 
-    project_path: str = Field(description="Path to the project root")
-    function_calls: List[FunctionCall] = Field(
-        default_factory=list, description="All function calls"
-    )
-    function_locations: Dict[str, str] = Field(
-        default_factory=dict, description="File location of each function"
-    )
-    call_relationships: Dict[str, List[str]] = Field(
-        default_factory=dict, description="Functions called by each function"
-    )
-    total_calls: int = Field(default=0, description="Total number of function calls")
-
-    def model_post_init(self, __context: Any) -> None:
-        self.total_calls = len(self.function_calls)
-
-        # Build call relationships
-        for call in self.function_calls:
-            if call.caller not in self.call_relationships:
-                self.call_relationships[call.caller] = []
-            self.call_relationships[call.caller].append(call.callee)
-
-    def get_functions_called_by(self, function_name: str) -> List[str]:
-        """Get all functions called by a specific function."""
-        return self.call_relationships.get(function_name, [])
-
-    def get_functions_calling(self, function_name: str) -> List[str]:
-        """Get all functions that call a specific function."""
-        callers = []
-        for caller, callees in self.call_relationships.items():
-            if function_name in callees:
-                callers.append(caller)
-        return callers
+    function_calls: List[FunctionCall]
+    function_locations: Dict[str, str]
+    relationships: Optional[Dict[str, List[str]]] = None
 
 
-class DependencyNode(BaseModel):
-    """Represents a node in the dependency graph."""
+@dataclass
+class DependencyNode:
+    """Dependency graph node."""
 
-    file_path: str = Field(description="Path to the file")
-    imports: List[str] = Field(
-        default_factory=list, description="Files this file imports"
-    )
-    imported_by: List[str] = Field(
-        default_factory=list, description="Files that import this file"
-    )
-    functions: List[str] = Field(
-        default_factory=list, description="Functions defined in this file"
-    )
-    classes: List[str] = Field(
-        default_factory=list, description="Classes defined in this file"
-    )
-    language: Optional[str] = Field(default=None, description="Programming language")
-    centrality_score: Optional[float] = Field(
-        default=None, description="Centrality importance score"
-    )
-    dependency_depth: Optional[int] = Field(
-        default=None, description="Depth in dependency chain"
-    )
-    structural_info: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional structural information"
-    )
+    file_path: str
+    language: str
+    dependencies: Optional[List[str]] = None
+    dependents: Optional[List[str]] = None
+    imports: Optional[List[str]] = None
+    imported_by: Optional[List[str]] = None
+    centrality_score: float = 0.0
+    functions: Optional[List[str]] = None
+    structural_info: Optional[Dict[str, Any]] = None
 
-    def get_total_dependencies(self) -> int:
-        """Get total number of dependencies (imports + imported_by)."""
-        return len(self.imports) + len(self.imported_by)
-
-    def is_leaf_node(self) -> bool:
-        """Check if this is a leaf node (no outgoing dependencies)."""
-        return len(self.imports) == 0
-
-    def is_root_node(self) -> bool:
-        """Check if this is a root node (no incoming dependencies)."""
-        return len(self.imported_by) == 0
+    def __post_init__(self) -> None:
+        if self.dependencies is None:
+            self.dependencies = []
+        if self.dependents is None:
+            self.dependents = []
+        if self.imports is None:
+            self.imports = []
+        if self.imported_by is None:
+            self.imported_by = []
 
 
-class ImpactReport(BaseModel):
-    """Report on the impact of potential changes to files."""
+@dataclass
+class ImpactReport:
+    """Impact analysis report."""
 
-    changed_files: List[str] = Field(description="Files that are being changed")
-    affected_files: List[str] = Field(description="Files that would be affected")
-    risk_score: float = Field(
-        ge=0.0, le=1.0, description="Overall risk score (0=low, 1=high)"
-    )
-    direct_impact: List[str] = Field(
-        default_factory=list, description="Files directly affected"
-    )
-    transitive_impact: List[str] = Field(
-        default_factory=list, description="Files transitively affected"
-    )
-    breaking_change_potential: Dict[str, str] = Field(
-        default_factory=dict, description="Risk level for each changed file"
-    )
-    suggested_tests: List[str] = Field(
-        default_factory=list, description="Test files that should be run"
-    )
-    impact_summary: str = Field(description="Human-readable impact summary")
-
-    def get_total_impact_count(self) -> int:
-        """Get total number of affected files."""
-        return len(self.affected_files)
-
-    def get_high_risk_files(self) -> List[str]:
-        """Get files with high breaking change potential."""
-        return [
-            f for f, risk in self.breaking_change_potential.items() if risk == "HIGH"
-        ]
+    changed_file: str
+    affected_files: List[str]
+    impact_score: float
+    risk_level: str
+    changed_files: Optional[List[str]] = None
+    risk_score: Optional[float] = None
+    impact_summary: Optional[str] = None
+    direct_impact: Optional[List[str]] = None
+    transitive_impact: Optional[List[str]] = None
+    breaking_change_potential: Optional[bool] = None
+    suggested_tests: Optional[List[str]] = None
 
 
-class BreakingChangeRisk(str, Enum):
-    """Risk levels for breaking changes."""
+@dataclass
+class BreakingChangeRisk:
+    """Breaking change risk assessment."""
 
-    LOW = "LOW"
-    MEDIUM = "MEDIUM"
-    HIGH = "HIGH"
-    CRITICAL = "CRITICAL"
+    file_path: str
+    risk_level: str
+    risk_factors: List[str]
+    mitigation_suggestions: List[str]
 
 
-class RefactoringOpportunity(BaseModel):
-    """Represents an opportunity for refactoring."""
+@dataclass
+class RefactoringOpportunity:
+    """Refactoring opportunity identification."""
 
-    file_path: str = Field(description="File that could benefit from refactoring")
-    opportunity_type: str = Field(description="Type of refactoring opportunity")
-    description: str = Field(description="Description of the opportunity")
-    priority: str = Field(description="Priority level (LOW, MEDIUM, HIGH)")
-    affected_files: List[str] = Field(
-        default_factory=list, description="Files that would be affected"
-    )
-    estimated_effort: str = Field(description="Estimated effort required")
-    benefits: List[str] = Field(
-        default_factory=list, description="Benefits of refactoring"
-    )
+    file_path: str
+    opportunity_type: str
+    description: str
+    potential_impact: str
 
 
 @dataclass
 class FileAnalysisResult:
-    """Result of AST analysis for a single file."""
+    """Result of file analysis."""
 
     file_path: str
-    imports: List["Import"]
-    function_calls: List["FunctionCall"]
+    imports: List[Import]
     defined_functions: List[str]
     defined_classes: List[str]
-    used_classes: List[str]
+    function_calls: List[FunctionCall]
     used_variables: List[str]
     line_count: int
     analysis_errors: List[str]
+    used_classes: Optional[List[str]] = None
 
 
 @dataclass
 class CrossFileRelationship:
-    """Relationship between files based on AST analysis."""
+    """Relationship between files."""
 
     source_file: str
     target_file: str
-    relationship_type: str  # "imports", "calls_function", "uses_class", etc.
-    line_number: int
-    details: str
-
-
-class AnalysisFormat(str, Enum):
-    """Output formats for analysis results."""
-
-    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
-    JSON = "json"  # Raw data for programmatic consumption
+    relationship_type: str
+    strength: float
+    line_number: Optional[int] = None
+    details: Optional[str] = None
 
 
 @dataclass
 class FileImpactAnalysis:
-    """Comprehensive impact analysis for a file."""
+    """File impact analysis result."""
 
     file_path: str
     impact_score: float
     affected_files: List[str]
-    dependency_chain_length: int
-    risk_level: str
-    impact_categories: List[str]
-    suggested_tests: List[str]
-    direct_dependencies: List[Dict[str, Any]]
-    reverse_dependencies: List[Dict[str, Any]]
-    function_call_analysis: List[Dict[str, Any]]
-    structural_impact: Dict[str, Any]
-    risk_assessment: Dict[str, Any]
+    risk_factors: List[str]
+    mitigation_suggestions: List[str]
+    dependency_chain_length: Optional[int] = None
+    risk_level: Optional[str] = None
+    impact_categories: Optional[List[str]] = None
+    suggested_tests: Optional[List[str]] = None
+    direct_dependencies: Optional[List[Dict[str, Any]]] = None
+    reverse_dependencies: Optional[List[Dict[str, Any]]] = None
+    function_call_analysis: Optional[List[Dict[str, Any]]] = None
+    structural_impact: Optional[Dict[str, Any]] = None
+    risk_assessment: Optional[Dict[str, Any]] = None
 
 
 @dataclass
 class FileCentralityAnalysis:
-    """Comprehensive centrality analysis for a file."""
+    """File centrality analysis result."""
 
     file_path: str
     centrality_score: float
@@ -354,5 +225,5 @@ class FileCentralityAnalysis:
     total_files: int
     dependency_analysis: Dict[str, Any]
     function_call_analysis: Dict[str, Any]
-    centrality_breakdown: Optional[Dict[str, float]]
     structural_impact: Dict[str, Any]
+    centrality_breakdown: Optional[Dict[str, Any]] = None

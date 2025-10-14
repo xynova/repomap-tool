@@ -112,11 +112,13 @@ class ImpactAnalysisEngine:
             risk_level=risk_level,
             impact_categories=impact_categories,
             suggested_tests=suggested_tests,
-            direct_dependencies=direct_dependencies,
-            reverse_dependencies=reverse_dependencies,
-            function_call_analysis=function_call_analysis,
+            direct_dependencies=direct_dependencies,  # Keep as List[Dict[str, Any]]
+            reverse_dependencies=reverse_dependencies,  # Keep as List[Dict[str, Any]]
+            function_call_analysis=function_call_analysis,  # Keep as List[Dict[str, Any]]
             structural_impact=structural_impact,
             risk_assessment=risk_assessment,
+            risk_factors=risk_assessment.get("risk_factors", []),
+            mitigation_suggestions=risk_assessment.get("mitigation_suggestions", []),
         )
 
     def _analyze_direct_dependencies(self, imports: List[Any]) -> List[Dict[str, Any]]:

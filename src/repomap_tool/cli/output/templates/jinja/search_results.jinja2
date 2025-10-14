@@ -60,6 +60,13 @@
 {% if emoji %}❌{% endif %} No results found
 {% endif %}
 
+{% if data.spellcheck_suggestions %}
+{% if emoji %}💡{% endif %} Did you mean:
+{% for suggestion in data.spellcheck_suggestions %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ suggestion }}
+{% endfor %}
+{% endif %}
+
 {% if data.performance_metrics %}
 {% if emoji %}⚡{% endif %} PERFORMANCE METRICS:
 {% for key, value in data.performance_metrics.items() %}

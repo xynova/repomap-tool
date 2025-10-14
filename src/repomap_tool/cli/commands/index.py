@@ -160,6 +160,36 @@ def create(
         # Analyze project
         project_info = repomap.analyze_project()
 
+        # Pre-compute embeddings during indexing
+        if (
+            hasattr(repomap, "embedding_matcher")
+            and repomap.embedding_matcher
+            and repomap.embedding_matcher.enabled
+        ):
+            console = get_index_console()
+            console.print("[cyan]Computing embeddings for all identifiers...[/cyan]")
+
+            # Get all identifiers from tree-sitter cache
+            identifiers_with_files = {}
+            if hasattr(repomap, "_get_cached_tags"):
+                tags = repomap._get_cached_tags()
+                for tag in tags:
+                    if tag.name and tag.file:
+                        identifiers_with_files[tag.name] = tag.file
+
+            # Batch compute and cache
+            if identifiers_with_files:
+                repomap.embedding_matcher.batch_compute_embeddings(
+                    identifiers_with_files
+                )
+                console.print(
+                    f"[green]✓ Cached embeddings for {len(identifiers_with_files)} identifiers[/green]"
+                )
+            else:
+                console.print(
+                    "[yellow]No identifiers found for embedding computation[/yellow]"
+                )
+
         # Create output configuration
         output_config = OutputConfig(
             format=OutputFormat(output),

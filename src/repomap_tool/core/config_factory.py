@@ -17,6 +17,7 @@ from repomap_tool.models import (
     FuzzyMatchConfig,
     SemanticMatchConfig,
     PerformanceConfig,
+    TreeConfig,
 )
 
 logger = get_logger(__name__)
@@ -111,12 +112,41 @@ class ConfigFactory:
         )
 
     @staticmethod
+    def create_tree_config(
+        max_depth: int = get_config("MAX_DEPTH_LIMIT", 10),
+        max_trees_per_session: int = get_config("MAX_TREES_PER_SESSION", 10),
+        entrypoint_threshold: float = get_config("ENTRYPOINT_THRESHOLD", 0.6),
+        enable_code_snippets: bool = get_config("ENABLE_CODE_SNIPPETS", True),
+        cache_tree_structures: bool = get_config("CACHE_TREE_STRUCTURES", True),
+    ) -> TreeConfig:
+        """Create a TreeConfig with specified parameters.
+
+        Args:
+            max_depth: Maximum tree depth
+            max_trees_per_session: Maximum trees per session
+            entrypoint_threshold: Entrypoint discovery threshold
+            enable_code_snippets: Include code snippets in tree output
+            cache_tree_structures: Cache tree structures for performance
+
+        Returns:
+            Configured TreeConfig instance
+        """
+        return TreeConfig(
+            max_depth=max_depth,
+            max_trees_per_session=max_trees_per_session,
+            entrypoint_threshold=entrypoint_threshold,
+            enable_code_snippets=enable_code_snippets,
+            cache_tree_structures=cache_tree_structures,
+        )
+
+    @staticmethod
     def create_repomap_config(
         project_root: str,
         dependencies: Optional[DependencyConfig] = None,
         fuzzy_match: Optional[FuzzyMatchConfig] = None,
         semantic_match: Optional[SemanticMatchConfig] = None,
         performance: Optional[PerformanceConfig] = None,
+        trees: Optional[TreeConfig] = None,
         verbose: bool = False,
         **kwargs: Any,
     ) -> RepoMapConfig:
@@ -128,6 +158,7 @@ class ConfigFactory:
             fuzzy_match: Fuzzy matching configuration
             semantic_match: Semantic matching configuration
             performance: Performance configuration
+            trees: Tree exploration configuration
             verbose: Enable verbose output
             **kwargs: Additional configuration parameters
 
@@ -143,6 +174,8 @@ class ConfigFactory:
             semantic_match = ConfigFactory.create_semantic_match_config()
         if performance is None:
             performance = ConfigFactory.create_performance_config()
+        if trees is None:
+            trees = ConfigFactory.create_tree_config()
 
         return RepoMapConfig(
             project_root=project_root,
@@ -150,6 +183,7 @@ class ConfigFactory:
             fuzzy_match=fuzzy_match,
             semantic_match=semantic_match,
             performance=performance,
+            trees=trees,
             verbose=verbose,
             **kwargs,
         )

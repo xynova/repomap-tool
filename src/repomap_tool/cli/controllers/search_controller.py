@@ -53,10 +53,9 @@ class SearchController(BaseController):
         super().__init__(config)
 
         # All dependencies must be injected - no fallback allowed
-        if repomap_service is None:
-            raise ValueError("RepoMapService must be injected - no fallback allowed")
         if fuzzy_matcher is None:
             raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
+        # repomap_service is injected after creation in explore commands
         # semantic_matcher is optional - only needed for semantic/hybrid matching
 
         self.repomap_service = repomap_service
@@ -88,6 +87,8 @@ class SearchController(BaseController):
 
         try:
             # Perform search using RepoMap service
+            if not self.repomap_service:
+                raise ValueError("RepoMap service not available")
             search_response = self.repomap_service.search_identifiers(search_request)
 
             # Convert SearchResponse to SearchViewModel
@@ -158,6 +159,7 @@ class SearchController(BaseController):
             match_type=search_response.match_type,
             search_time_ms=search_response.search_time_ms,
             cache_hit=search_response.cache_hit,
+            spellcheck_suggestions=search_response.spellcheck_suggestions,
             metadata=search_response.metadata,
             performance_metrics=search_response.performance_metrics,
         )

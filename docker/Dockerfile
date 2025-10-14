@@ -1,5 +1,5 @@
-# Multi-stage Dockerfile for optimal caching
-# Stage 1: Base image with dependencies only
+# Multi-stage Dockerfile for GPU-enabled repomap-tool (DEFAULT)
+# Stage 1: Base image with Python (works on both x86_64 and arm64)
 ARG BASE_IMAGE=python:3.11-slim
 FROM ${BASE_IMAGE} AS base
 
@@ -22,8 +22,21 @@ RUN pip install pip-tools toml && pip-compile pyproject.toml --output-file requi
 # Create a hash of the requirements for the image tag
 RUN echo "deps-$(sha256sum requirements.txt | cut -d' ' -f1 | head -c 12)" > .deps-hash
 
-# Install production dependencies only (without the package itself)
+# Install PyTorch with platform-specific support
+# This will automatically detect and use CUDA on x86_64 or MPS on arm64
+RUN pip install torch torchvision torchaudio
+
+# Install other production dependencies
 RUN pip install -r requirements.txt
+
+# Install additional dependencies for CodeRankEmbed
+RUN pip install einops
+
+# Download and cache CodeRankEmbed model (happens at build time)
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('nomic-ai/CodeRankEmbed', trust_remote_code=True)"
+
+# Set environment variable for embedding model
+ENV REPOMAP_EMBEDDING_MODEL=nomic-ai/CodeRankEmbed
 
 # Stage 2: Final image with package
 FROM base AS final
@@ -36,6 +49,7 @@ RUN pip install -e . --no-deps
 
 # Set environment variables
 ENV PYTHONPATH=/app
+#ENV REPOMAP_WORKSPACE_DIR=/workspace
 ENV CACHE_DIR=/workspace/.repomap/cache
 ENV REPOMAP_SESSION_DIR=/workspace/.repomap/sessions
 
@@ -46,3 +60,5 @@ RUN chmod +x /app/entrypoint.sh
 # Set entrypoint to the shell wrapper
 ENTRYPOINT ["/app/entrypoint.sh"]
 CMD ["--help"]
+
+WORKDIR /workspace

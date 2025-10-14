@@ -395,8 +395,10 @@ class LLMFileAnalyzer:
                     suggested_tests=[],
                     direct_dependencies=[],
                     reverse_dependencies=[],
-                    function_call_analysis=[],
+                    function_call_analysis=None,
                     structural_impact={},
+                    risk_factors=[],
+                    mitigation_suggestions=[],
                     risk_assessment={},
                 )
                 impact_analyses.append(impact_analysis)

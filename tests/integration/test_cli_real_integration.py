@@ -107,11 +107,11 @@ def handle_authentication_request():
         export_expected = f"Set: export REPOMAP_SESSION={session_id}"
         if export_expected not in result.output:
             # If export command not found, just verify session was created
-            assert "Exploration session created" in result.output
+            assert "Exploration Session:" in result.output
         else:
             assert export_expected in result.output
         # The command should create an exploration session
-        assert "Exploration session created" in result.output
+        assert "Exploration Session:" in result.output
 
         # Note: Explore command is a placeholder implementation that doesn't create session files
         # The command shows status messages but doesn't actually persist sessions
@@ -181,14 +181,13 @@ def my_function():
         assert data["total_identifiers"] > 0
         assert data["total_files"] > 0
 
-    def test_inspect_find_command_real_integration(self, cli_runner, temp_project):
-        """Test inspect find command with real fuzzy matching."""
+    def test_search_command_real_integration(self, cli_runner, temp_project):
+        """Test search command with real fuzzy matching."""
         result = cli_runner.invoke(
             cli,
             [
                 "--no-color",
-                "inspect",
-                "find",
+                "search",
                 "main",
                 temp_project,
                 "--match-type",
@@ -203,7 +202,7 @@ def my_function():
         # Should succeed
         assert result.exit_code == 0
 
-        # Should contain find results (may be empty for temp directories)
+        # Should contain search results (may be empty for temp directories)
         output = result.output
         assert "Search Results" in output
 
@@ -884,21 +883,17 @@ def handle_authentication_request():
         )
         assert result.exit_code != 0  # Should fail with invalid output format
 
-    def test_inspect_find_command_edge_cases(
-        self, cli_runner, empty_project, large_project
-    ):
-        """Test inspect find command with edge cases."""
+    def test_search_command_edge_cases(self, cli_runner, empty_project, large_project):
+        """Test search command with edge cases."""
 
         # Test with empty query
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "find", "", empty_project]
-        )
+        result = cli_runner.invoke(cli, ["--no-color", "search", "", empty_project])
         assert result.exit_code in [0, 1]
 
         # Test with very long query
         long_query = "a" * 1000
         result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "find", long_query, large_project]
+            cli, ["--no-color", "search", long_query, large_project]
         )
         assert result.exit_code in [0, 1]
 
@@ -907,8 +902,7 @@ def handle_authentication_request():
             cli,
             [
                 "--no-color",
-                "inspect",
-                "find",
+                "search",
                 "!@#$%^&*()_+-=[]{}|;':\",./<>?",
                 large_project,
             ],
@@ -1110,8 +1104,8 @@ def handle_authentication_request():
         result = cli_runner.invoke(cli, ["--no-color", "index", "create"])
         assert result.exit_code == 0
 
-        # Test inspect find without query (should fail because query is required)
-        result = cli_runner.invoke(cli, ["--no-color", "inspect", "find"])
+        # Test search without query (should fail because query is required)
+        result = cli_runner.invoke(cli, ["--no-color", "search"])
         assert result.exit_code != 0
 
         # Test explore without intent (intent is now required as first argument)

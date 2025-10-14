@@ -7,7 +7,7 @@ and ensuring proper lifecycle management of services.
 
 import logging
 from .logging_service import get_logger
-from typing import TYPE_CHECKING, Optional, cast
+from typing import TYPE_CHECKING, Any, Optional, cast
 
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
@@ -40,8 +40,15 @@ if TYPE_CHECKING:
     )
     from repomap_tool.code_exploration.tree_mapper import TreeMapper
     from repomap_tool.code_exploration.tree_clusters import TreeClusterer
+    from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
+    from repomap_tool.code_exploration.tree_builder import TreeBuilder
+    from repomap_tool.core.tag_cache import TreeSitterTagCache
     from repomap_tool.cli.controllers.centrality_controller import CentralityController
     from repomap_tool.cli.controllers.impact_controller import ImpactController
+    from repomap_tool.cli.controllers.search_controller import SearchController
+    from repomap_tool.cli.controllers.exploration_controller import (
+        ExplorationController,
+    )
     from rich.console import Console
 
 # Legacy factory functions removed - using DI container instead
@@ -55,6 +62,15 @@ class Container(containers.DeclarativeContainer):
 
     # Configuration
     config = providers.Configuration()
+
+    # Tag cache for tree-sitter parsing results (conditionally created)
+    tag_cache: "providers.Singleton[TreeSitterTagCache]" = cast(
+        "providers.Singleton[TreeSitterTagCache]",
+        providers.Singleton(
+            "repomap_tool.core.tag_cache.TreeSitterTagCache",
+            cache_dir=config.cache_dir,
+        ),
+    )
 
     # Core dependency graph
     dependency_graph: "providers.Singleton[AdvancedDependencyGraph]" = cast(
@@ -135,6 +151,11 @@ class Container(containers.DeclarativeContainer):
         providers.Singleton(
             "repomap_tool.code_analysis.import_analyzer.ImportAnalyzer",
             project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+                cache=tag_cache,
+            ),
         ),
     )
 
@@ -156,8 +177,13 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[CacheManager]",
         providers.Singleton(
             "repomap_tool.core.cache_manager.CacheManager",
-            project_root=config.project_root,
         ),
+    )
+
+    # Spell checker service
+    spellchecker_service: "providers.Singleton[Any]" = providers.Singleton(
+        "repomap_tool.core.spellchecker_service.SpellCheckerService",
+        custom_dictionary=set(),
     )
 
     parallel_tag_extractor: "providers.Factory[ParallelTagExtractor]" = cast(
@@ -182,6 +208,14 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # Embedding matcher with persistent caching
+    embedding_matcher: "providers.Singleton[Any]" = providers.Singleton(
+        "repomap_tool.code_search.embedding_matcher.EmbeddingMatcher",
+        model_name="nomic-ai/CodeRankEmbed",  # FIXED: Use hardcoded value instead of config
+        cache_manager=cache_manager,
+        cache_dir=config.embedding.cache_dir,
+    )
+
     adaptive_semantic_matcher: "providers.Factory[AdaptiveSemanticMatcher]" = cast(
         "providers.Factory[AdaptiveSemanticMatcher]",
         providers.Factory(
@@ -190,14 +224,19 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    hybrid_matcher: "providers.Factory[HybridMatcher]" = cast(
-        "providers.Factory[HybridMatcher]",
-        providers.Factory(
-            "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
-            fuzzy_matcher=fuzzy_matcher,
-            semantic_threshold=config.semantic_match.threshold,
-            verbose=config.verbose,
-        ),
+    # Domain semantic matcher for programming knowledge
+    domain_semantic_matcher: "providers.Singleton[Any]" = providers.Singleton(
+        "repomap_tool.code_search.semantic_matcher.DomainSemanticMatcher",
+        verbose=config.verbose,
+    )
+
+    hybrid_matcher: "providers.Factory[HybridMatcher]" = providers.Factory(
+        "repomap_tool.code_search.hybrid_matcher.HybridMatcher",
+        fuzzy_matcher=fuzzy_matcher,
+        embedding_matcher=embedding_matcher,
+        domain_semantic_matcher=domain_semantic_matcher,
+        semantic_threshold=config.semantic_match.threshold,
+        verbose=config.verbose,
     )
 
     # Additional services for trees and dependencies
@@ -227,6 +266,12 @@ class Container(containers.DeclarativeContainer):
         "providers.Singleton[CallGraphBuilder]",
         providers.Singleton(
             "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
+            project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+                cache=tag_cache,
+            ),
         ),
     )
 
@@ -252,6 +297,52 @@ class Container(containers.DeclarativeContainer):
             impact_engine=impact_analysis_engine,
             ast_analyzer=ast_analyzer,
             path_resolver=path_resolver,
+        ),
+    )
+
+    # Entrypoint discoverer for exploration
+    entrypoint_discoverer: "providers.Factory[EntrypointDiscoverer]" = cast(
+        "providers.Factory[EntrypointDiscoverer]",
+        providers.Factory(
+            "repomap_tool.code_exploration.discovery_engine.EntrypointDiscoverer",
+            repo_map=None,  # Will be injected from context
+            import_analyzer=import_analyzer,
+            dependency_graph=dependency_graph,
+            centrality_calculator=centrality_calculator,
+            impact_analyzer=impact_analyzer,
+        ),
+    )
+
+    # Tree builder for exploration
+    tree_builder: "providers.Factory[TreeBuilder]" = cast(
+        "providers.Factory[TreeBuilder]",
+        providers.Factory(
+            "repomap_tool.code_exploration.tree_builder.TreeBuilder",
+            repo_map=None,  # Will be injected from context
+            entrypoint_discoverer=entrypoint_discoverer,
+        ),
+    )
+
+    # Search controller for exploration
+    search_controller: "providers.Factory[SearchController]" = cast(
+        "providers.Factory[SearchController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.search_controller.SearchController",
+            repomap_service=None,  # Will be injected from context
+            search_engine=None,  # Optional
+            fuzzy_matcher=fuzzy_matcher,
+            semantic_matcher=adaptive_semantic_matcher,
+        ),
+    )
+
+    # Exploration controller
+    exploration_controller: "providers.Factory[ExplorationController]" = cast(
+        "providers.Factory[ExplorationController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.exploration_controller.ExplorationController",
+            search_controller=search_controller,
+            session_manager=session_manager,
+            tree_builder=tree_builder,
         ),
     )
 
