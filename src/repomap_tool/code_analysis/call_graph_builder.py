@@ -12,6 +12,7 @@ from ..core.logging_service import get_logger
 import re
 from pathlib import Path
 from typing import List, Dict, Set, Optional, Tuple, Any
+from .models import CodeTag
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import FunctionCall, CallGraph
@@ -82,9 +83,7 @@ class PythonCallAnalyzer(CallAnalyzer):
 
         return calls
 
-    def _parse_call_tag(
-        self, tag: Dict[str, Any], file_path: str
-    ) -> Optional[FunctionCall]:
+    def _parse_call_tag(self, tag: CodeTag, file_path: str) -> Optional[FunctionCall]:
         """Parse a single call tag into FunctionCall object.
 
         Args:
@@ -96,6 +95,7 @@ class PythonCallAnalyzer(CallAnalyzer):
         """
         try:
             return FunctionCall(
+                name=tag.name,
                 caller="unknown",  # Simplified - could be enhanced with context analysis
                 callee=tag.name,
                 file_path=file_path,
@@ -135,6 +135,7 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
                 if tag.kind in ["ref"]:  # References to functions
                     calls.append(
                         FunctionCall(
+                            name=tag.name,
                             caller="unknown",  # TODO: Extract caller from context
                             callee=tag.name,
                             file_path=file_path,
@@ -258,7 +259,7 @@ class CallGraphBuilder:
 
                         # Track function locations
                         for call in file_calls:
-                            if call.caller != "unknown":
+                            if call.caller and call.caller != "unknown":
                                 function_locations[call.caller] = file_path
 
                     except Exception as e:
@@ -271,12 +272,11 @@ class CallGraphBuilder:
 
                 # Track function locations
                 for call in file_calls:
-                    if call.caller != "unknown":
+                    if call.caller and call.caller != "unknown":
                         function_locations[call.caller] = file_path
 
         # Build call graph
         call_graph = CallGraph(
-            project_path=str(Path(project_files[0]).parent) if project_files else "",
             function_calls=all_calls,
             function_locations=function_locations,
         )
@@ -338,7 +338,7 @@ class CallGraphBuilder:
         # Build a map of function names to their file locations
         function_locations = {}
         for call in calls:
-            if call.caller != "unknown":
+            if call.caller and call.caller != "unknown":
                 function_locations[call.caller] = call.file_path
 
         # Resolve cross-file calls
@@ -389,7 +389,8 @@ class CallGraphBuilder:
             # Call frequency analysis
             callee_counts: Dict[str, int] = {}
             for call in call_graph.function_calls:
-                callee_counts[call.callee] = callee_counts.get(call.callee, 0) + 1
+                if call.callee:
+                    callee_counts[call.callee] = callee_counts.get(call.callee, 0) + 1
 
             if callee_counts:
                 most_called = max(callee_counts.items(), key=lambda x: x[1])
@@ -436,7 +437,7 @@ class CallGraphBuilder:
 
             # Find all calls made by this function
             for call in call_graph.function_calls:
-                if call.caller == function_name:
+                if call.caller == function_name and call.callee:
                     dependencies.add(call.callee)
 
             return list(dependencies)
@@ -462,7 +463,7 @@ class CallGraphBuilder:
 
             # Find all calls to this function
             for call in call_graph.function_calls:
-                if call.callee == function_name:
+                if call.callee == function_name and call.caller:
                     dependents.add(call.caller)
 
             return list(dependents)

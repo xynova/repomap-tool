@@ -160,8 +160,10 @@ class ImpactController(BaseController):
                     suggested_tests=[],
                     direct_dependencies=[],
                     reverse_dependencies=[],
-                    function_call_analysis=[],
+                    function_call_analysis=None,
                     structural_impact={},
+                    risk_factors=[],
+                    mitigation_suggestions=[],
                     risk_assessment={},
                 )
                 impact_analyses.append(impact_analysis)
@@ -227,10 +229,14 @@ class ImpactController(BaseController):
         impact_scope = {
             "total_affected_files": len(all_affected_files),
             "total_related_symbols": sum(
-                len(analysis.impact_categories) for analysis in impact_analyses
+                len(analysis.impact_categories) if analysis.impact_categories else 0
+                for analysis in impact_analyses
             ),
             "impact_depth": (
-                max(analysis.dependency_chain_length for analysis in impact_analyses)
+                max(
+                    analysis.dependency_chain_length or 0
+                    for analysis in impact_analyses
+                )
                 if impact_analyses
                 else 1
             ),
@@ -258,7 +264,7 @@ class ImpactController(BaseController):
             "mitigation_suggestions": [
                 suggestion
                 for analysis in impact_analyses
-                for suggestion in analysis.suggested_tests
+                for suggestion in (analysis.suggested_tests or [])
             ],
             "confidence_score": (
                 sum(analysis.impact_score for analysis in impact_analyses)

@@ -200,6 +200,32 @@ class ServiceFactory:
         logger.debug(f"Created TreeManager for {config.project_root}")
         return tree_manager
 
+    def create_fuzzy_matcher(self, config: RepoMapConfig) -> FuzzyMatcher:
+        """Create a FuzzyMatcher with all dependencies injected.
+
+        Args:
+            config: RepoMap configuration
+
+        Returns:
+            FuzzyMatcher instance with injected dependencies
+        """
+        cache_key = f"fuzzy_matcher_{config.project_root}"
+
+        if cache_key in self._services:
+            return self._services[cache_key]  # type: ignore
+
+        # Get container (reuse existing one for this project)
+        container = self._containers.get(f"repomap_{config.project_root}")
+        if container is None:
+            container = create_container(config)
+            self._containers[f"repomap_{config.project_root}"] = container
+
+        # Get fuzzy matcher from container
+        fuzzy_matcher = container.fuzzy_matcher()
+        self._services[cache_key] = fuzzy_matcher
+        logger.debug(f"Created FuzzyMatcher for {config.project_root}")
+        return fuzzy_matcher
+
     def get_llm_analyzer(self, config: RepoMapConfig) -> Any:
         """Get LLM analyzer from container.
 

@@ -62,7 +62,12 @@ class AdvancedDependencyGraph(DependencyGraph):
 
             # Process all function calls
             for call in self.call_graph.function_calls:
-                if call.caller != "unknown" and call.callee != "unknown":
+                if (
+                    call.caller
+                    and call.callee
+                    and call.caller != "unknown"
+                    and call.callee != "unknown"
+                ):
                     # caller depends on callee
                     self.function_dependencies[call.caller].add(call.callee)
                     # callee is depended on by caller
@@ -113,9 +118,11 @@ class AdvancedDependencyGraph(DependencyGraph):
             return []
 
         dependencies = set()
-        for func_name in self.nodes[file_path].functions:
-            if func_name in self.function_dependencies:
-                dependencies.update(self.function_dependencies[func_name])
+        file_functions = self.nodes[file_path].functions
+        if file_functions:
+            for func_name in file_functions:
+                if func_name in self.function_dependencies:
+                    dependencies.update(self.function_dependencies[func_name])
 
         return list(dependencies)
 
@@ -125,9 +132,11 @@ class AdvancedDependencyGraph(DependencyGraph):
             return []
 
         dependents = set()
-        for func_name in self.nodes[file_path].functions:
-            if func_name in self.function_dependents:
-                dependents.update(self.function_dependents[func_name])
+        file_functions = self.nodes[file_path].functions
+        if file_functions:
+            for func_name in file_functions:
+                if func_name in self.function_dependents:
+                    dependents.update(self.function_dependents[func_name])
 
         return list(dependents)
 
@@ -326,26 +335,27 @@ class AdvancedDependencyGraph(DependencyGraph):
                     # Find functions in this file
                     file_functions = self.nodes[file_path].functions
 
-                    for func_name in file_functions:
-                        # Add files that call these functions
-                        if func_name in self.function_dependents:
-                            for caller in self.function_dependents[func_name]:
-                                if caller in self.call_graph.function_locations:
-                                    caller_file = self.call_graph.function_locations[
-                                        caller
-                                    ]
-                                    if caller_file not in enhanced_cluster:
-                                        enhanced_cluster.add(caller_file)
+                    if file_functions:
+                        for func_name in file_functions:
+                            # Add files that call these functions
+                            if func_name in self.function_dependents:
+                                for caller in self.function_dependents[func_name]:
+                                    if caller in self.call_graph.function_locations:
+                                        caller_file = (
+                                            self.call_graph.function_locations[caller]
+                                        )
+                                        if caller_file not in enhanced_cluster:
+                                            enhanced_cluster.add(caller_file)
 
-                        # Add files that these functions call
-                        if func_name in self.function_dependencies:
-                            for callee in self.function_dependencies[func_name]:
-                                if callee in self.call_graph.function_locations:
-                                    callee_file = self.call_graph.function_locations[
-                                        callee
-                                    ]
-                                    if callee_file not in enhanced_cluster:
-                                        enhanced_cluster.add(callee_file)
+                            # Add files that these functions call
+                            if func_name in self.function_dependencies:
+                                for callee in self.function_dependencies[func_name]:
+                                    if callee in self.call_graph.function_locations:
+                                        callee_file = (
+                                            self.call_graph.function_locations[callee]
+                                        )
+                                        if callee_file not in enhanced_cluster:
+                                            enhanced_cluster.add(callee_file)
 
                 enhanced_clusters.append(list(enhanced_cluster))
 
@@ -412,15 +422,21 @@ class AdvancedDependencyGraph(DependencyGraph):
 
                 # Afferent coupling (functions that depend on this file)
                 afferent_coupling = set()
-                for func_name in file_functions:
-                    if func_name in self.function_dependents:
-                        afferent_coupling.update(self.function_dependents[func_name])
+                if file_functions:
+                    for func_name in file_functions:
+                        if func_name in self.function_dependents:
+                            afferent_coupling.update(
+                                self.function_dependents[func_name]
+                            )
 
                 # Efferent coupling (functions this file depends on)
                 efferent_coupling = set()
-                for func_name in file_functions:
-                    if func_name in self.function_dependencies:
-                        efferent_coupling.update(self.function_dependencies[func_name])
+                if file_functions:
+                    for func_name in file_functions:
+                        if func_name in self.function_dependencies:
+                            efferent_coupling.update(
+                                self.function_dependencies[func_name]
+                            )
 
                 coupling_metrics[file_path] = {
                     "afferent_coupling": len(afferent_coupling),

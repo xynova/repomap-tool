@@ -98,13 +98,13 @@ class CodeRanker:
         references = defaultdict(list)  # identifier -> list of files
 
         for tag in tags:
-            file_path = tag.file
-            name = tag.name
-            kind = tag.kind
+            file_path = tag.get("file")
+            name = tag.get("name")
+            kind = tag.get("kind")
 
-            if "definition" in kind:
+            if kind and "definition" in kind:
                 defines[name].add(file_path)
-            elif "reference" in kind:
+            elif kind and "reference" in kind:
                 references[name].append(file_path)
 
         # Build edges: referencer -> definer
@@ -169,7 +169,16 @@ class CodeRanker:
                 weight *= 50
 
             # Over-defined identifiers are less important
-            if len([t for t in tags if t.name == ident and "definition" in t.kind]) > 5:
+            if (
+                len(
+                    [
+                        t
+                        for t in tags
+                        if t.get("name") == ident and "definition" in t.get("kind", "")
+                    ]
+                )
+                > 5
+            ):
                 weight *= 0.1
 
             data["weight"] = weight
@@ -193,7 +202,7 @@ class CodeRanker:
         personalization: Dict[str, float] = {}
 
         # Get all unique files
-        files = set(tag.file for tag in tags)
+        files = set(tag.get("file") for tag in tags)
         if not files:
             return personalization
 
@@ -208,12 +217,12 @@ class CodeRanker:
 
             # Files with mentioned identifiers
             if mentioned_identifiers:
-                file_tags = [t for t in tags if t.file == file_path]
-                file_idents = set(t.name for t in file_tags)
+                file_tags = [t for t in tags if t.get("file") == file_path]
+                file_idents = set(t.get("name") for t in file_tags)
                 if file_idents.intersection(mentioned_identifiers):
                     score = max(score, base_score)
 
-            if score > 0:
+            if score > 0 and file_path:
                 personalization[file_path] = score
 
         logger.debug(f"Created personalization for {len(personalization)} files")
@@ -236,8 +245,11 @@ class CodeRanker:
         ranked_tags = []
 
         for tag in tags:
-            file_path = tag.file
-            tag_rank = ranked.get(file_path, 0.0)
+            file_path = tag.get("file")
+            if file_path:
+                tag_rank = ranked.get(file_path, 0.0)
+            else:
+                tag_rank = 0.0
 
             ranked_tags.append({**tag, "rank": tag_rank})
 

@@ -10,7 +10,8 @@ def test_fuzzy_matcher_basic():
     # Create config and get service factory
     config = RepoMapConfig(project_root=".")
     service_factory = get_service_factory()
-    matcher = service_factory.create_fuzzy_matcher(config)
+    repomap_service = service_factory.create_repomap_service(config)
+    matcher = repomap_service.fuzzy_matcher
 
     identifiers = {
         "FuzzyMatcher",

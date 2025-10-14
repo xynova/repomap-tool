@@ -69,18 +69,24 @@ def format_single_file_impact_llm(
 
     # Direct dependencies
     output.append("DIRECT DEPENDENCIES (what this file imports/calls):")
-    for dep in analysis.direct_dependencies[:10]:  # Limit for token budget
-        output.append(f"├── {dep['file']}:{dep['line']} (import {dep['imported']})")
-    if len(analysis.direct_dependencies) > 10:
-        output.append(f"└── ... and {len(analysis.direct_dependencies) - 10} more")
+    if analysis.direct_dependencies:
+        for dep in analysis.direct_dependencies[:10]:  # Limit for token budget
+            output.append(f"├── {dep['file']}:{dep['line']} (import {dep['imported']})")
+        if len(analysis.direct_dependencies) > 10:
+            output.append(f"└── ... and {len(analysis.direct_dependencies) - 10} more")
+    else:
+        output.append("├── No direct dependencies found")
     output.append("")
 
     # Reverse dependencies
     output.append("REVERSE DEPENDENCIES (what imports/calls this file):")
-    for dep in analysis.reverse_dependencies[:10]:  # Limit for token budget
-        output.append(f"├── {dep['file']}:{dep['line']} ({dep['relationship']})")
-    if len(analysis.reverse_dependencies) > 10:
-        output.append(f"└── ... and {len(analysis.reverse_dependencies) - 10} more")
+    if analysis.reverse_dependencies:
+        for dep in analysis.reverse_dependencies[:10]:  # Limit for token budget
+            output.append(f"├── {dep['file']}:{dep['line']} ({dep['relationship']})")
+        if len(analysis.reverse_dependencies) > 10:
+            output.append(f"└── ... and {len(analysis.reverse_dependencies) - 10} more")
+    else:
+        output.append("├── No reverse dependencies found")
     output.append("")
 
     # Function call analysis
@@ -102,14 +108,21 @@ def format_single_file_impact_llm(
 
     # Structural impact
     output.append("STRUCTURAL IMPACT (if function signatures change):")
-    output.append(
-        f"├── If functions change → {analysis.structural_impact['defined_functions']} functions affected"
+    if analysis.structural_impact:
+        output.append(
+            f"├── If functions change → {analysis.structural_impact.get('defined_functions', 0)} functions affected"
+        )
+        output.append(
+            f"├── If classes change → {analysis.structural_impact.get('defined_classes', 0)} classes affected"
+        )
+    else:
+        output.append("├── No structural impact data available")
+
+    reverse_deps_count = (
+        len(analysis.reverse_dependencies) if analysis.reverse_dependencies else 0
     )
     output.append(
-        f"├── If classes change → {analysis.structural_impact['defined_classes']} classes affected"
-    )
-    output.append(
-        f"└── Total dependents → {len(analysis.reverse_dependencies)} files potentially affected"
+        f"└── Total dependents → {reverse_deps_count} files potentially affected"
     )
 
     # Optimize for token budget
@@ -140,10 +153,12 @@ def format_multiple_files_impact_llm(
     all_reverse_deps: Set[str] = set()
 
     for analysis in analyses:
-        for dep in analysis.direct_dependencies:
-            all_direct_deps.add(dep["file"])
-        for dep in analysis.reverse_dependencies:
-            all_reverse_deps.add(dep["file"])
+        if analysis.direct_dependencies:
+            for dep in analysis.direct_dependencies:
+                all_direct_deps.add(dep["file"])
+        if analysis.reverse_dependencies:
+            for dep in analysis.reverse_dependencies:
+                all_reverse_deps.add(dep["file"])
 
     output.append("COMBINED DEPENDENCIES:")
     for dep_name in list(all_direct_deps)[:10]:
@@ -567,14 +582,32 @@ def format_table_impact(analyses: List["FileImpactAnalysis"]) -> str:
         )
 
         # Calculate impact score from structural impact
-        impact_score = analysis.structural_impact.get("impact_score", 0.0)
+        impact_score = (
+            analysis.structural_impact.get("impact_score", 0.0)
+            if analysis.structural_impact
+            else 0.0
+        )
         impact_str = f"{impact_score:.3f}"
 
         # Get defined functions and classes from structural impact
-        defined_functions = analysis.structural_impact.get("defined_functions", 0)
-        defined_classes = analysis.structural_impact.get("defined_classes", 0)
+        defined_functions = (
+            analysis.structural_impact.get("defined_functions", 0)
+            if analysis.structural_impact
+            else 0
+        )
+        defined_classes = (
+            analysis.structural_impact.get("defined_classes", 0)
+            if analysis.structural_impact
+            else 0
+        )
 
-        row = f"{display_name:<{max_file_width}} {impact_str:<8} {len(analysis.direct_dependencies):<8} {len(analysis.reverse_dependencies):<8} {defined_functions:<10} {defined_classes:<8}"
+        direct_deps_count = (
+            len(analysis.direct_dependencies) if analysis.direct_dependencies else 0
+        )
+        reverse_deps_count = (
+            len(analysis.reverse_dependencies) if analysis.reverse_dependencies else 0
+        )
+        row = f"{display_name:<{max_file_width}} {impact_str:<8} {direct_deps_count:<8} {reverse_deps_count:<8} {defined_functions:<10} {defined_classes:<8}"
         lines.append(row)
 
     lines.append(separator)

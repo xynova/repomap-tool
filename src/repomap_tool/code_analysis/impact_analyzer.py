@@ -42,6 +42,9 @@ class ImpactAnalyzer:
         """
         if not changed_files:
             return ImpactReport(
+                changed_file="",
+                impact_score=0.0,
+                risk_level="low",
                 changed_files=[],
                 affected_files=[],
                 risk_score=0.0,
@@ -74,12 +77,19 @@ class ImpactAnalyzer:
 
             # Create impact report
             impact_report = ImpactReport(
+                changed_file=changed_files[0] if changed_files else "",
+                impact_score=risk_score,
+                risk_level=(
+                    "high"
+                    if risk_score > 0.7
+                    else "medium" if risk_score > 0.3 else "low"
+                ),
                 changed_files=changed_files,
                 affected_files=list(affected_files),
                 risk_score=risk_score,
                 direct_impact=changed_files,
                 transitive_impact=list(affected_files - set(changed_files)),
-                breaking_change_potential=breaking_change_potential,
+                breaking_change_potential=bool(breaking_change_potential),
                 suggested_tests=suggested_tests,
                 impact_summary=impact_summary,
             )
@@ -97,6 +107,9 @@ class ImpactAnalyzer:
         except Exception as e:
             logger.error(f"Error analyzing change impact: {e}")
             return ImpactReport(
+                changed_file=changed_files[0] if changed_files else "",
+                impact_score=1.0,  # High risk if analysis fails
+                risk_level="high",
                 changed_files=changed_files,
                 affected_files=[],
                 risk_score=1.0,  # High risk if analysis fails

@@ -8,9 +8,11 @@ code analysis and search functionality.
 import logging
 from .config_service import get_config
 from .logging_service import get_logger
+from .file_scanner import get_project_files
 import os
 import time
 import traceback
+from pathlib import Path
 from typing import List, Dict, Optional, Any
 from ..code_analysis.models import CodeTag
 from ..protocols import (
@@ -28,7 +30,6 @@ from ..models import (
     ProjectInfo,
     MatchResult,
 )
-from .file_scanner import get_project_files
 from .analyzer import analyze_file_types, analyze_identifier_types, get_cache_size
 from .search_engine import fuzzy_search, semantic_search, hybrid_search, basic_search
 from .parallel_processor import ParallelTagExtractor
@@ -151,29 +152,66 @@ class RepoMapService:
 
         # Create tag cache
         cache_dir = self.config.cache_dir if hasattr(self.config, "cache_dir") else None
+        if cache_dir and isinstance(cache_dir, str) and cache_dir.strip():
+            cache_dir = Path(cache_dir)
+        else:
+            cache_dir = None
         tag_cache = TreeSitterTagCache(cache_dir)
 
         # Create tree-sitter parser with cache
+        project_root_str = (
+            str(self.config.project_root) if self.config.project_root else None
+        )
         self.tree_sitter_parser = TreeSitterParser(
-            project_root=self.config.project_root, cache=tag_cache
+            project_root=project_root_str, cache=tag_cache
         )
 
+        # Populate cache by parsing all project files
+        self._populate_tree_sitter_cache()
+
         # CustomRepoMap removed - using TreeSitterParser directly
+
+    def _populate_tree_sitter_cache(self) -> None:
+        """Populate tree-sitter cache by parsing all project files."""
+        try:
+            # Get all project files
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
+
+            self.logger.info(
+                f"Populating tree-sitter cache with {len(project_files)} files"
+            )
+
+            # Parse each file to populate the cache
+            for file_path in project_files:
+                try:
+                    # This will parse the file and cache the results
+                    self.tree_sitter_parser.get_tags(file_path)
+                except Exception as e:
+                    self.logger.debug(f"Failed to parse {file_path}: {e}")
+                    continue
+
+            self.logger.info("Tree-sitter cache populated successfully")
+
+        except Exception as e:
+            self.logger.warning(f"Failed to populate tree-sitter cache: {e}")
 
     def _get_cached_identifiers(self) -> List[str]:
         """Get all identifiers from tree-sitter cache"""
         all_identifiers = set()
 
-        # Get project files
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
+        # Use cached tags directly instead of re-parsing
+        cached_tags = self._get_cached_tags()
+        self.logger.info(
+            f"_get_cached_identifiers: Retrieved {len(cached_tags)} cached tags"
         )
 
-        for file_path in project_files:
-            tags = self.tree_sitter_parser.get_tags(file_path)
-            for tag in tags:
-                all_identifiers.add(tag.name)
+        for tag in cached_tags:
+            all_identifiers.add(tag.name)
+            self.logger.debug(f"Added identifier: {tag.name} (type: {tag.kind})")
 
+        self.logger.info(f"Retrieved {len(all_identifiers)} identifiers from cache")
         return list(all_identifiers)
 
     def _invalidate_stale_caches(self) -> None:
@@ -331,8 +369,8 @@ class RepoMapService:
         )
 
         # Force cache refresh if empty
-        if not self.repo_map or not self.repo_map.TAGS_CACHE:
-            self.logger.debug("TAGS_CACHE is empty or missing, forcing refresh")
+        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
+            self.logger.debug("Tree-sitter cache is empty or missing, forcing refresh")
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
@@ -363,7 +401,7 @@ class RepoMapService:
 
             # Force tree-sitter to extract tags
             if self.repo_map:
-                # This populates TAGS_CACHE via tree-sitter
+                # This populates tree-sitter cache
                 try:
                     self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
                 except ZeroDivisionError:
@@ -501,46 +539,49 @@ class RepoMapService:
         Returns:
             List of tag dictionaries with name, type, file, and line information
         """
-        if not self.repo_map or not self.repo_map.TAGS_CACHE:
+        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
             self.logger.debug("No tree-sitter cache available")
             return []
 
         self.logger.info(
-            f"_get_cached_tags called - repo_map: {self.repo_map is not None}, has TAGS_CACHE: {self.repo_map.TAGS_CACHE is not None if self.repo_map else False}"
+            f"_get_cached_tags called - tree_sitter_parser: {self.tree_sitter_parser is not None}, has cache: {self.tree_sitter_parser.tag_cache is not None if self.tree_sitter_parser else False}"
         )
 
         try:
-            cache = self.repo_map.TAGS_CACHE
+            cache = self.tree_sitter_parser.tag_cache
             self.logger.info(
-                f"TAGS_CACHE type: {type(cache)}, size: {len(cache) if cache else 0}"
+                f"Tree-sitter cache type: {type(cache)}, size: {cache.get_cache_stats() if cache else 'N/A'}"
             )
 
             if not cache:
-                self.logger.info("TAGS_CACHE is empty")
+                self.logger.info("Tree-sitter cache is empty")
                 return []
 
-            all_tags = []
-            self.logger.info(
-                f"Cache keys: {list(cache.keys())[:5]}..."
-            )  # Show first 5 keys
+            # Get all project files and retrieve their cached tags
+            project_files = get_project_files(
+                str(self.config.project_root), self.config.verbose
+            )
 
-            # Iterate through all cached files
-            for key in cache:
+            all_tags = []
+            files_with_tags = 0
+            for file_path in project_files:
                 try:
-                    value = cache[key]
-                    if isinstance(value, dict) and "data" in value:
-                        data = value["data"]
-                        if isinstance(data, list):
-                            self.logger.info(f"File {key}: {len(data)} tags")
-                            for tag in data:
-                                # Now all tags are CodeTag objects
-                                if tag.name:
-                                    all_tags.append(tag)
+                    cached_tags = cache.get_tags(file_path)
+                    if cached_tags:
+                        all_tags.extend(cached_tags)
+                        files_with_tags += 1
+                        self.logger.debug(
+                            f"Retrieved {len(cached_tags)} tags from cache for {file_path}"
+                        )
                 except Exception as e:
-                    self.logger.debug(f"Error processing cache entry {key}: {e}")
+                    self.logger.debug(f"Error getting cached tags for {file_path}: {e}")
                     continue
 
-            self.logger.info(f"Total tags extracted: {len(all_tags)}")
+            self.logger.info(
+                f"Retrieved tags from {files_with_tags} files out of {len(project_files)} total files"
+            )
+
+            self.logger.info(f"Retrieved {len(all_tags)} total tags from cache")
             return all_tags
 
         except Exception as e:
@@ -729,18 +770,15 @@ class RepoMapService:
         identifiers = []
         for file_path in project_files:
             try:
-                if self.repo_map is not None:
-                    # file_path is already relative, so we need to make it absolute for tree-sitter
-                    abs_path = os.path.join(self.config.project_root, file_path)
-                    self.logger.debug(f"Processing {file_path} -> {abs_path}")
-                    tags = self.repo_map.get_tags(abs_path, file_path)
-                    self.logger.debug(f"Found {len(tags)} tags in {file_path}")
-                    for tag in tags:
-                        # Now all tags are CodeTag objects
-                        if tag.name:
-                            identifiers.append(tag.name)
-                else:
-                    self.logger.warning("repo_map is None")
+                # file_path is already relative, so we need to make it absolute for tree-sitter
+                abs_path = os.path.join(self.config.project_root, file_path)
+                self.logger.debug(f"Processing {file_path} -> {abs_path}")
+                tags = self.tree_sitter_parser.get_tags(abs_path)
+                self.logger.debug(f"Found {len(tags)} tags in {file_path}")
+                for tag in tags:
+                    # Now all tags are CodeTag objects
+                    if tag.name:
+                        identifiers.append(tag.name)
             except Exception as e:
                 self.logger.warning(f"Error processing {file_path}: {e}")
                 self.logger.debug(f"Traceback: {traceback.format_exc()}")
@@ -754,12 +792,12 @@ class RepoMapService:
         Returns:
             Cached ProjectImports object or None if not available
         """
-        if not self.repo_map or not self.repo_map.TAGS_CACHE:
+        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
             self.logger.debug("No tree-sitter cache available for import analysis")
             return None
 
         try:
-            cache = self.repo_map.TAGS_CACHE
+            cache = self.tree_sitter_parser.tag_cache
             # Include max_graph_size in cache key to ensure different configs get different cache entries
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"
@@ -789,14 +827,14 @@ class RepoMapService:
         Args:
             project_imports: ProjectImports object to cache
         """
-        if not self.repo_map or not self.repo_map.TAGS_CACHE:
+        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
             self.logger.debug(
                 "No tree-sitter cache available for caching import analysis"
             )
             return
 
         try:
-            cache = self.repo_map.TAGS_CACHE
+            cache = self.tree_sitter_parser.tag_cache
             # Include max_graph_size in cache key to ensure different configs get different cache entries
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"

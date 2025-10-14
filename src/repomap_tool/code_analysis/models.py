@@ -17,6 +17,7 @@ class CodeTag:
     end_line: Optional[int] = None
     end_column: Optional[int] = None
     rel_fname: Optional[str] = None  # Relative file path (for compatibility)
+    comment: Optional[str] = None  # Associated comment
 
 
 class AnalysisFormat(str, Enum):
@@ -48,6 +49,7 @@ class Import:
     import_type: ImportType = ImportType.STANDARD
     is_relative: bool = False
     resolved_path: Optional[str] = None
+    symbols: Optional[List[str]] = None
 
 
 @dataclass
@@ -88,14 +90,20 @@ class FunctionCall:
     line_number: int
     arguments: Optional[List[str]] = None
     caller: Optional[str] = None
+    callee: Optional[str] = None
+    is_method_call: bool = False
+    object_name: Optional[str] = None
+    resolved_callee: Optional[str] = None
 
 
+@dataclass
 @dataclass
 class CallGraph:
     """Function call graph."""
 
-    calls: List[FunctionCall]
-    relationships: Dict[str, List[str]]
+    function_calls: List[FunctionCall]
+    function_locations: Dict[str, str]
+    relationships: Optional[Dict[str, List[str]]] = None
 
 
 @dataclass
@@ -109,6 +117,8 @@ class DependencyNode:
     imports: Optional[List[str]] = None
     imported_by: Optional[List[str]] = None
     centrality_score: float = 0.0
+    functions: Optional[List[str]] = None
+    structural_info: Optional[Dict[str, Any]] = None
 
     def __post_init__(self) -> None:
         if self.dependencies is None:
@@ -129,6 +139,13 @@ class ImpactReport:
     affected_files: List[str]
     impact_score: float
     risk_level: str
+    changed_files: Optional[List[str]] = None
+    risk_score: Optional[float] = None
+    impact_summary: Optional[str] = None
+    direct_impact: Optional[List[str]] = None
+    transitive_impact: Optional[List[str]] = None
+    breaking_change_potential: Optional[bool] = None
+    suggested_tests: Optional[List[str]] = None
 
 
 @dataclass
@@ -174,6 +191,8 @@ class CrossFileRelationship:
     target_file: str
     relationship_type: str
     strength: float
+    line_number: Optional[int] = None
+    details: Optional[str] = None
 
 
 @dataclass
@@ -185,6 +204,15 @@ class FileImpactAnalysis:
     affected_files: List[str]
     risk_factors: List[str]
     mitigation_suggestions: List[str]
+    dependency_chain_length: Optional[int] = None
+    risk_level: Optional[str] = None
+    impact_categories: Optional[List[str]] = None
+    suggested_tests: Optional[List[str]] = None
+    direct_dependencies: Optional[List[Dict[str, Any]]] = None
+    reverse_dependencies: Optional[List[Dict[str, Any]]] = None
+    function_call_analysis: Optional[List[Dict[str, Any]]] = None
+    structural_impact: Optional[Dict[str, Any]] = None
+    risk_assessment: Optional[Dict[str, Any]] = None
 
 
 @dataclass
@@ -197,5 +225,5 @@ class FileCentralityAnalysis:
     total_files: int
     dependency_analysis: Dict[str, Any]
     function_call_analysis: Dict[str, Any]
-    centrality_breakdown: Dict[str, Any]
     structural_impact: Dict[str, Any]
+    centrality_breakdown: Optional[Dict[str, Any]] = None

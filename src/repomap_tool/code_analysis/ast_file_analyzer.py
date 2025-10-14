@@ -459,6 +459,7 @@ class ASTFileAnalyzer:
             if tag.kind in ["ref"]:  # References to functions
                 calls.append(
                     FunctionCall(
+                        name=tag.name,
                         caller="unknown",
                         callee=tag.name,
                         file_path=file_path,
@@ -542,6 +543,7 @@ class ASTFileAnalyzer:
                                     source_file=other_file,
                                     target_file=file_path,
                                     relationship_type="imports",
+                                    strength=1.0,
                                     line_number=import_stmt.line_number or 0,
                                     details=f"Imports {import_stmt.module}",
                                 )

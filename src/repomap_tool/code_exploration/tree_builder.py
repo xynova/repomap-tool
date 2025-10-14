@@ -229,11 +229,11 @@ class TreeBuilder:
             for symbol in related_symbols:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
-                        identifier=symbol.name,
+                        identifier=symbol.get("name") or "unknown",
                         location=self._get_symbol_location(
                             symbol, str(entrypoint.location)
                         ),
-                        node_type=symbol.kind,
+                        node_type=symbol.get("kind") or "unknown",
                         depth=current_depth + 1,
                     )
 
@@ -445,11 +445,11 @@ class TreeBuilder:
             for symbol in related_symbols:
                 if self._should_add_as_child(symbol, node):
                     child = TreeNode(
-                        identifier=symbol.name,
+                        identifier=symbol.get("name") or "unknown",
                         location=self._get_symbol_location(
                             symbol, str(entrypoint.location)
                         ),
-                        node_type=symbol.kind,
+                        node_type=symbol.get("kind") or "unknown",
                         depth=current_depth + 1,
                     )
                     child.parent = node
@@ -509,10 +509,10 @@ class TreeBuilder:
             try:
                 # All tags are now CodeTag objects
                 symbol = {
-                    "name": tag.name,
-                    "kind": getattr(tag, "kind", "symbol"),
-                    "file_path": getattr(tag, "file", ""),
-                    "line_number": getattr(tag, "line", 0),
+                    "name": tag.get("name"),
+                    "kind": tag.get("kind", "symbol"),
+                    "file_path": tag.get("file", ""),
+                    "line_number": tag.get("line", 0),
                 }
                 processed_symbols.append(symbol)
 
@@ -535,19 +535,21 @@ class TreeBuilder:
             True if symbol should be added as child
         """
         # Don't add if it's the same as parent
-        if symbol.name == parent_node.identifier:
+        if symbol.get("name") == parent_node.identifier:
             return False
 
         # Don't add if it's already a child
-        if any(child.identifier == symbol.name for child in parent_node.children):
+        if any(
+            child.identifier == symbol.get("name") for child in parent_node.children
+        ):
             return False
 
         # Don't add if it's the parent's parent
-        if parent_node.parent and symbol.name == parent_node.parent.identifier:
+        if parent_node.parent and symbol.get("name") == parent_node.parent.identifier:
             return False
 
         # Add if it's a reasonable symbol
-        symbol_name = symbol.name
+        symbol_name = symbol.get("name")
         if symbol_name and len(symbol_name) > 1:
             return True
 

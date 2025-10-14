@@ -30,25 +30,35 @@ class TestTreeSitterTagCache:
         return TreeSitterTagCache(cache_dir=temp_cache_dir)
 
     @pytest.fixture
-    def sample_tags(self):
+    def sample_tags(self, temp_cache_dir):
         """Create sample CodeTag objects for testing."""
+        # Create a real test file
+        test_file = temp_cache_dir / "test_file.py"
+        test_file.write_text(
+            """
+class TestClass:
+    def test_function(self):
+        pass
+"""
+        )
+
         return [
             CodeTag(
                 name="TestClass",
                 kind="class.name",
-                file="/test/file.py",
-                line=1,
+                file=str(test_file),
+                line=2,
                 column=0,
-                end_line=10,
+                end_line=4,
                 end_column=0,
             ),
             CodeTag(
                 name="test_function",
                 kind="name.definition.function",
-                file="/test/file.py",
-                line=5,
+                file=str(test_file),
+                line=3,
                 column=4,
-                end_line=8,
+                end_line=4,
                 end_column=0,
             ),
         ]
@@ -115,7 +125,8 @@ class TestTreeSitterTagCache:
 
     def test_invalidate_file(self, cache, sample_tags):
         """Test manual file invalidation."""
-        file_path = "/test/file.py"
+        # Use the first tag's file path
+        file_path = sample_tags[0].file
 
         # Set tags
         cache.set_tags(file_path, sample_tags)
@@ -131,7 +142,8 @@ class TestTreeSitterTagCache:
 
     def test_clear_cache(self, cache, sample_tags):
         """Test clearing entire cache."""
-        file_path = "/test/file.py"
+        # Use the first tag's file path
+        file_path = sample_tags[0].file
 
         # Set tags
         cache.set_tags(file_path, sample_tags)
@@ -147,7 +159,8 @@ class TestTreeSitterTagCache:
 
     def test_cache_stats(self, cache, sample_tags):
         """Test cache statistics."""
-        file_path = "/test/file.py"
+        # Use the first tag's file path
+        file_path = sample_tags[0].file
 
         # Initially empty
         stats = cache.get_cache_stats()
@@ -164,21 +177,25 @@ class TestTreeSitterTagCache:
         assert "cache_location" in stats
         assert "approx_size_bytes" in stats
 
-    def test_multiple_files(self, cache, sample_tags):
+    def test_multiple_files(self, cache, sample_tags, temp_cache_dir):
         """Test caching multiple files."""
-        file1 = "/test/file1.py"
-        file2 = "/test/file2.py"
+        # Create two separate test files
+        file1 = temp_cache_dir / "file1.py"
+        file1.write_text("class TestClass:\n    pass")
+
+        file2 = temp_cache_dir / "file2.py"
+        file2.write_text("def test_function():\n    pass")
 
         # Cache different tags for each file
         tags1 = [sample_tags[0]]  # Just the class
         tags2 = [sample_tags[1]]  # Just the function
 
-        cache.set_tags(file1, tags1)
-        cache.set_tags(file2, tags2)
+        cache.set_tags(str(file1), tags1)
+        cache.set_tags(str(file2), tags2)
 
         # Verify each file has correct tags
-        retrieved1 = cache.get_tags(file1)
-        retrieved2 = cache.get_tags(file2)
+        retrieved1 = cache.get_tags(str(file1))
+        retrieved2 = cache.get_tags(str(file2))
 
         assert len(retrieved1) == 1
         assert retrieved1[0].name == "TestClass"
@@ -191,15 +208,17 @@ class TestTreeSitterTagCache:
         assert stats["cached_files"] == 2
         assert stats["total_tags"] == 2
 
-    def test_empty_tags_list(self, cache):
+    def test_empty_tags_list(self, cache, temp_cache_dir):
         """Test caching empty tags list."""
-        file_path = "/test/empty.py"
+        # Create a real empty file
+        file_path = temp_cache_dir / "empty.py"
+        file_path.write_text("")
 
         # Cache empty list
-        cache.set_tags(file_path, [])
+        cache.set_tags(str(file_path), [])
 
         # Should return empty list, not None
-        retrieved = cache.get_tags(file_path)
+        retrieved = cache.get_tags(str(file_path))
         assert retrieved is not None
         assert len(retrieved) == 0
 

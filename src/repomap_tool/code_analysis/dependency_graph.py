@@ -60,9 +60,11 @@ class DependencyGraph:
 
             node = self.nodes[file_path]
             node.imports = [
-                imp.module for imp in file_imports.imports if imp.resolved_path
+                imp.module
+                for imp in file_imports.imports
+                if imp.resolved_path and imp.module
             ]
-            node.language = file_imports.language
+            node.language = file_imports.language or "unknown"
 
             for imp in file_imports.imports:
                 if imp.resolved_path:
@@ -70,7 +72,12 @@ class DependencyGraph:
                     resolved_path = imp.resolved_path
                     if resolved_path in self.nodes:
                         self.graph.add_edge(file_path, resolved_path)
-                        self.nodes[resolved_path].imported_by.append(file_path)
+                        if self.nodes[resolved_path].imported_by is None:
+                            self.nodes[resolved_path].imported_by = []
+                        # At this point, imported_by is guaranteed to be a list
+                        imported_by = self.nodes[resolved_path].imported_by
+                        assert imported_by is not None  # Type assertion for MyPy
+                        imported_by.append(file_path)
 
             logger.debug(
                 f"Graph built: {len(self.nodes)} nodes, {len(self.graph.edges)} edges"
@@ -113,26 +120,34 @@ class DependencyGraph:
         logger.info("Adding dependency edges to graph")
 
         # Build edges from import relationships
-        for file_path, file_imports in project_imports.file_imports.items():
-            if file_path not in self.nodes:
-                continue
+        if project_imports.file_imports:
+            for file_path, file_imports in project_imports.file_imports.items():
+                if file_path not in self.nodes:
+                    continue
 
-            # Update node with import information
-            node = self.nodes[file_path]
-            node.imports = [
-                imp.module for imp in file_imports.imports if imp.resolved_path
-            ]
-            node.language = file_imports.language
+                # Update node with import information
+                node = self.nodes[file_path]
+                node.imports = [
+                    imp.module
+                    for imp in file_imports.imports
+                    if imp.resolved_path and imp.module
+                ]
+                node.language = file_imports.language or "unknown"
 
-            # Add edges for each resolved import
-            for imp in file_imports.imports:
-                if imp.resolved_path and imp.resolved_path in self.nodes:
-                    # Add edge: file_path -> resolved_path (file_path depends on resolved_path)
-                    self.graph.add_edge(file_path, imp.resolved_path)
+                # Add edges for each resolved import
+                for imp in file_imports.imports:
+                    if imp.resolved_path and imp.resolved_path in self.nodes:
+                        # Add edge: file_path -> resolved_path (file_path depends on resolved_path)
+                        resolved_path = imp.resolved_path
+                        self.graph.add_edge(file_path, resolved_path)
 
-                    # Update imported_by lists
-                    if imp.resolved_path in self.nodes:
-                        self.nodes[imp.resolved_path].imported_by.append(file_path)
+                        # Update imported_by lists
+                        if self.nodes[resolved_path].imported_by is None:
+                            self.nodes[resolved_path].imported_by = []
+                        # At this point, imported_by is guaranteed to be a list
+                        imported_by = self.nodes[resolved_path].imported_by
+                        assert imported_by is not None  # Type assertion for MyPy
+                        imported_by.append(file_path)
 
         logger.info(f"Added {len(self.graph.edges)} dependency edges")
 
@@ -176,7 +191,7 @@ class DependencyGraph:
 
         try:
             # Create node
-            node = DependencyNode(file_path=file_path)
+            node = DependencyNode(file_path=file_path, language="python")
             self.nodes[file_path] = node
             self.graph.add_node(file_path, **asdict(node))
 
@@ -185,16 +200,24 @@ class DependencyGraph:
 
             # Update node with import information
             node.imports = [
-                imp.module for imp in file_imports.imports if imp.resolved_path
+                imp.module
+                for imp in file_imports.imports
+                if imp.resolved_path and imp.module
             ]
-            node.language = file_imports.language
+            node.language = file_imports.language or "unknown"
 
             # Add edges
             for imp in file_imports.imports:
                 if imp.resolved_path and imp.resolved_path in self.nodes:
                     # Edge direction: imported_file → importing_file (so predecessors give dependencies)
-                    self.graph.add_edge(imp.resolved_path, file_path)
-                    self.nodes[imp.resolved_path].imported_by.append(file_path)
+                    resolved_path = imp.resolved_path
+                    self.graph.add_edge(resolved_path, file_path)
+                    if self.nodes[resolved_path].imported_by is None:
+                        self.nodes[resolved_path].imported_by = []
+                    # At this point, imported_by is guaranteed to be a list
+                    imported_by = self.nodes[resolved_path].imported_by
+                    assert imported_by is not None  # Type assertion for MyPy
+                    imported_by.append(file_path)
 
             logger.info(f"Added file {file_path} to dependency graph")
 
@@ -220,7 +243,7 @@ class DependencyGraph:
 
             # Update imported_by lists in other nodes
             for node in self.nodes.values():
-                if file_path in node.imported_by:
+                if node.imported_by and file_path in node.imported_by:
                     node.imported_by.remove(file_path)
 
             logger.info(f"Removed file {file_path} from dependency graph")
@@ -491,7 +514,7 @@ class DependencyGraph:
                     self.nodes[node] = DependencyNode(**data)
                 else:
                     # Create basic node if data is incomplete
-                    self.nodes[node] = DependencyNode(file_path=node)
+                    self.nodes[node] = DependencyNode(file_path=node, language="python")
 
             logger.info(
                 f"Imported graph with {len(self.nodes)} nodes and {len(self.graph.edges)} edges"

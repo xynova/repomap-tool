@@ -238,7 +238,7 @@ class ParallelTagExtractor:
         Args:
             file_path: Path to the file to process
             project_root: Root directory of the project
-            repo_map: Repository map object
+            repo_map: Repository map object (can be None, will use tree_sitter_parser instead)
 
         Returns:
             List of identifiers extracted from the file
@@ -249,22 +249,34 @@ class ParallelTagExtractor:
             if abs_path.exists():
                 self._file_sizes[file_path] = abs_path.stat().st_size
 
-            # Extract tags using the repository map
+            # Extract tags using tree-sitter parser (preferred) or repo_map (fallback)
             if repo_map is not None:
                 abs_path_str = str(abs_path)
                 tags = repo_map.get_tags(abs_path_str, file_path)
-
-                # Extract identifier names
-                identifiers = []
-                for tag in tags:
-                    # Now all tags are CodeTag objects
-                    if tag.name:
-                        identifiers.append(tag.name)
-
-                return identifiers
             else:
-                self.logger.warning(f"Repository map is None for {file_path}")
-                return []
+                # Use tree_sitter_parser directly when repo_map is not available
+                from ..code_analysis.tree_sitter_parser import TreeSitterParser
+                from .tag_cache import TreeSitterTagCache
+
+                # Create tree-sitter parser with cache
+                cache_dir = Path.home() / ".repomap-tool" / "cache"
+                tag_cache = TreeSitterTagCache(cache_dir)
+                tree_sitter_parser = TreeSitterParser(
+                    project_root=project_root, cache=tag_cache
+                )
+
+                # Get tags directly from tree-sitter
+                abs_path_str = str(abs_path)
+                tags = tree_sitter_parser.get_tags(abs_path_str)
+
+            # Extract identifier names
+            identifiers = []
+            for tag in tags:
+                # Now all tags are CodeTag objects
+                if tag.name:
+                    identifiers.append(tag.name)
+
+            return identifiers
 
         except Exception as e:
             # Re-raise with context for better error handling

@@ -187,7 +187,13 @@ class TreeSitterParser:
             cached_tags = self.tag_cache.get_tags(file_path)
             if cached_tags is not None:
                 logger.debug(f"Using cached tags for {file_path}")
-                return cached_tags
+                # Ensure cached_tags is a List[CodeTag]
+                if isinstance(cached_tags, list):
+                    return cached_tags
+                else:
+                    logger.warning(
+                        f"Invalid cached tags type for {file_path}, falling back to parsing"
+                    )
 
         # Parse file using existing parse_file method
         tags = self.parse_file(file_path)
@@ -246,7 +252,7 @@ class TreeSitterParser:
                 except Exception:
                     continue
             logger.debug(f"Looking for pkg_resources query at: {query_path}")
-            if os.path.exists(query_path):
+            if query_path and os.path.exists(query_path):
                 with open(query_path, "r") as f:
                     query_content = f.read()
                     self._query_cache[lang] = query_content

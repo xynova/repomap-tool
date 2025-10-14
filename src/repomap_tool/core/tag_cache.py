@@ -34,7 +34,7 @@ class TreeSitterTagCache:
         self.db_path = self.cache_dir / "tags.db"
         self._init_db()
 
-    def _init_db(self):
+    def _init_db(self) -> None:
         """Initialize SQLite database schema"""
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
@@ -130,7 +130,7 @@ class TreeSitterTagCache:
         conn.close()
         return tags
 
-    def set_tags(self, file_path: str, tags: List[CodeTag]):
+    def set_tags(self, file_path: str, tags: List[CodeTag]) -> None:
         """Cache tags for a file - accepts CodeTag objects
 
         Args:
@@ -181,7 +181,7 @@ class TreeSitterTagCache:
 
         logger.debug(f"Cached {len(tags)} tags for {file_path}")
 
-    def invalidate_file(self, file_path: str):
+    def invalidate_file(self, file_path: str) -> None:
         """Invalidate cache for a file
 
         Args:
@@ -196,7 +196,7 @@ class TreeSitterTagCache:
 
         logger.debug(f"Invalidated cache for {file_path}")
 
-    def clear(self):
+    def clear(self) -> None:
         """Clear entire cache"""
         conn = sqlite3.connect(str(self.db_path))
         cursor = conn.cursor()
@@ -236,6 +236,9 @@ class TreeSitterTagCache:
             return False
 
         cached_hash, cached_mtime = result
+        if cached_hash is None or cached_mtime is None:
+            return False
+
         current_mtime = Path(file_path).stat().st_mtime
 
         # Check if file modified
@@ -244,7 +247,7 @@ class TreeSitterTagCache:
 
         # Check if content changed
         current_hash = self._compute_file_hash(file_path)
-        return current_hash == cached_hash
+        return bool(current_hash == cached_hash)
 
     def _compute_file_hash(self, file_path: str) -> str:
         """Compute SHA256 hash of file content

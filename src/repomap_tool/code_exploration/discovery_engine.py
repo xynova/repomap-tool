@@ -203,7 +203,7 @@ class EntrypointDiscoverer:
         """
         try:
             # Use existing repo_map to get symbols
-            if self.repo_map and self.repo_map.get_tags:
+            if self.repo_map and hasattr(self.repo_map, "get_tags"):
                 symbol_strings = self.repo_map.get_tags()
                 # Convert strings to dictionaries
                 symbols = [{"identifier": s, "type": "unknown"} for s in symbol_strings]
@@ -211,7 +211,11 @@ class EntrypointDiscoverer:
                 return symbols
 
             # Fallback: try to get symbols from search engine
-            elif self.repo_map.search_engine:
+            elif (
+                self.repo_map
+                and hasattr(self.repo_map, "search_engine")
+                and self.repo_map.search_engine
+            ):
                 # This would need to be implemented based on existing search engine
                 logger.debug("Using search engine fallback for symbol discovery")
                 return []

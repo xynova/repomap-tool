@@ -166,9 +166,9 @@ class JavaScriptImportParser(ImportParser):
         """Parse a single import tag from tree-sitter."""
         try:
             # All tags are now CodeTag objects
-            kind = tag.kind
-            name = tag.name
-            line = tag.line
+            kind = tag.get("kind")
+            name = tag.get("name")
+            line = tag.get("line")
             source = getattr(tag, "source", "")
 
             # Handle different import types
@@ -189,7 +189,7 @@ class JavaScriptImportParser(ImportParser):
                         import_type=(
                             ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
                         ),
-                        line_number=line,
+                        line_number=line or 0,
                     )
 
             elif kind in ["require.statement", "require.var"]:
@@ -204,7 +204,7 @@ class JavaScriptImportParser(ImportParser):
                         import_type=(
                             ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
                         ),
-                        line_number=line,
+                        line_number=line or 0,
                     )
 
             return None
@@ -256,9 +256,9 @@ class JavaImportParser(ImportParser):
     def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.kind
-            name = tag.name
-            line = tag.line
+            kind = tag.get("kind")
+            name = tag.get("name")
+            line = tag.get("line")
 
             # Handle import statements
             if kind == "import.statement":
@@ -269,7 +269,7 @@ class JavaImportParser(ImportParser):
                         symbols=[],
                         is_relative=False,  # Java imports are always absolute
                         import_type=ImportType.ABSOLUTE,
-                        line_number=line,
+                        line_number=line or 0,
                     )
 
             elif kind == "import.static":
@@ -280,7 +280,7 @@ class JavaImportParser(ImportParser):
                         symbols=[],
                         is_relative=False,
                         import_type=ImportType.ABSOLUTE,
-                        line_number=line,
+                        line_number=line or 0,
                     )
 
             return None
@@ -332,9 +332,9 @@ class GoImportParser(ImportParser):
     def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.kind
-            path = tag.rel_fname or tag.file
-            line = tag.line
+            kind = tag.get("kind")
+            path = tag.get("rel_fname") or tag.get("file")
+            line = tag.get("line")
 
             # Handle import statements
             if kind in ["import.single", "import.grouped"]:
@@ -349,7 +349,7 @@ class GoImportParser(ImportParser):
                         import_type=(
                             ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
                         ),
-                        line_number=line,
+                        line_number=line or 0,
                     )
 
             return None
@@ -406,9 +406,9 @@ class CSharpImportParser(ImportParser):
     def _parse_import_tag(self, tag: dict, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            kind = tag.kind
-            name = tag.name
-            line = tag.line
+            kind = tag.get("kind")
+            name = tag.get("name")
+            line = tag.get("line")
 
             # Handle using directives
             if kind in [
@@ -423,7 +423,7 @@ class CSharpImportParser(ImportParser):
                         symbols=[],
                         is_relative=False,  # C# using directives are always absolute
                         import_type=ImportType.ABSOLUTE,
-                        line_number=line,
+                        line_number=line or 0,
                     )
 
             return None
