@@ -97,12 +97,13 @@ def search(
     console = get_console(ctx)
 
     try:
-        # Resolve project path from argument, config file, or discovery
+        # Resolve project path and load config
         resolved_project_path = resolve_project_path(project_path, config)
+        if resolved_project_path is None:
+            raise click.BadParameter("Project path could not be resolved.")
 
-        # Load or create configuration (properly handles config files)
         config_obj, was_created = load_or_create_config(
-            project_path=resolved_project_path,
+            project_root=resolved_project_path,
             config_file=config,
             create_if_missing=False,
             verbose=verbose,
@@ -180,13 +181,10 @@ def search(
 
             # Create controller configuration
             controller_config = ControllerConfig(
-                max_tokens=get_config("MAX_TOKENS", 4000),
-                compression_level="medium",
+                project_root=resolved_project_path,  # Pass project_root
                 verbose=verbose,
-                output_format=output,
-                analysis_type=AnalysisType.SEARCH,
-                search_strategy=match_type,
-                context_selection="centrality_based",
+                output_format=OutputFormat(output),
+                max_tokens=get_config("MAX_TOKENS_SEARCH", 2000),
             )
 
             # Create search controller

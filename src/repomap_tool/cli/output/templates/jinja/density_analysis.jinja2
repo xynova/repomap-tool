@@ -1,0 +1,56 @@
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header #}
+{% if emoji %}📊{% endif %} CODE DENSITY ANALYSIS
+{{ "=" * 60 }}
+
+SCOPE: {{ data.scope|upper }}
+ANALYZED: {{ data.total_files_analyzed }} files
+SHOWING: Top {{ data.limit }} results (min {{ data.min_identifiers }} identifiers)
+
+{% if data.scope == "file" %}
+{# File-level density #}
+{% if emoji %}📁{% endif %} FILE DENSITY (by identifier count):
+
+{% for file in data.results %}
+{{ loop.index }}. {{ file.relative_path }}
+   Total: {{ file.total_identifiers }} identifiers
+   Primary: {{ file.primary_identifiers }}
+   {% if hierarchical %}├──{% else %}•{% endif %} Classes: {{ file.categories.classes }}
+   {% if hierarchical %}├──{% else %}•{% endif %} Functions: {{ file.categories.functions }}
+   {% if hierarchical %}└──{% else %}•{% endif %} Methods: {{ file.categories.methods }}
+   
+   Secondary:
+   {% if hierarchical %}├──{% else %}•{% endif %} Variables: {{ file.categories.variables }}
+   {% if hierarchical %}└──{% else %}•{% endif %} Imports: {{ file.categories.imports }}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+
+{% else %}
+{# Package-level density #}
+{% if emoji %}📦{% endif %} PACKAGE DENSITY (by total identifiers):
+
+{% for package in data.results %}
+{{ loop.index }}. {{ package.package_path }}/
+   Total: {{ package.total_identifiers }} identifiers across {{ package.file_count }} files
+   Avg per file: {{ "%.1f"|format(package.avg_identifiers_per_file) }}
+   
+   Category Breakdown:
+   {% if hierarchical %}├──{% else %}•{% endif %} Classes: {{ package.categories.classes }}
+   {% if hierarchical %}├──{% else %}•{% endif %} Functions: {{ package.categories.functions }}
+   {% if hierarchical %}├──{% else %}•{% endif %} Methods: {{ package.categories.methods }}
+   {% if hierarchical %}├──{% else %}•{% endif %} Variables: {{ package.categories.variables }}
+   {% if hierarchical %}└──{% else %}•{% endif %} Imports: {{ package.categories.imports }}
+   
+   Top files in package:
+   {% for file in package.files[:5] %}
+   {% if hierarchical %}  ├──{% else %}  •{% endif %} {{ file.relative_path }} ({{ file.total_identifiers }})
+   {% endfor %}
+{% if not loop.last %}
+
+{% endif %}
+{% endfor %}
+{% endif %}

@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from repomap_tool.core.logging_service import get_logger
 from repomap_tool.core.config_service import get_config
 
@@ -25,8 +25,10 @@ from .view_models import (
     TreeMappingViewModel,
     TreeListingViewModel,
     SessionStatusViewModel,
-    SymbolViewModel,
 )
+
+if TYPE_CHECKING:
+    from .view_models import SymbolViewModel
 
 logger = get_logger(__name__)
 

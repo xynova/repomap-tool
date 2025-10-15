@@ -16,10 +16,10 @@ from ...models import SearchRequest, SearchResponse, MatchResult
 from .base_controller import BaseController
 from .view_models import (
     SearchViewModel,
-    SymbolViewModel,
     ControllerConfig,
     AnalysisType,
 )
+from .view_models import SymbolViewModel
 
 
 logger = get_logger(__name__)

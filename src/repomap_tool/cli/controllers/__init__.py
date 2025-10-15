@@ -8,6 +8,7 @@ and return ViewModels for the view layer, following proper MVC architecture.
 from .base_controller import BaseController
 from .centrality_controller import CentralityController
 from .impact_controller import ImpactController
+from .density_controller import DensityController
 from .view_models import (
     SymbolViewModel,
     FileAnalysisViewModel,
@@ -18,6 +19,9 @@ from .view_models import (
     ProjectAnalysisViewModel,
     ControllerConfig,
     AnalysisType,
+    FileDensityViewModel,
+    PackageDensityViewModel,
+    DensityAnalysisViewModel,
 )
 
 __all__ = [
@@ -25,6 +29,7 @@ __all__ = [
     "BaseController",
     "CentralityController",
     "ImpactController",
+    "DensityController",
     # ViewModels
     "SymbolViewModel",
     "FileAnalysisViewModel",
@@ -35,4 +40,7 @@ __all__ = [
     "ProjectAnalysisViewModel",
     "ControllerConfig",
     "AnalysisType",
+    "FileDensityViewModel",
+    "PackageDensityViewModel",
+    "DensityAnalysisViewModel",
 ]

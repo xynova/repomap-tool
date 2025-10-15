@@ -10,18 +10,18 @@ from __future__ import annotations
 import logging
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from ...code_analysis.models import AnalysisFormat, FileImpactAnalysis
 from .base_controller import BaseController
 from .view_models import (
     ImpactViewModel,
     FileAnalysisViewModel,
-    SymbolViewModel,
     ControllerConfig,
     AnalysisType,
 )
-
+if TYPE_CHECKING:
+    from .view_models import SymbolViewModel
 
 logger = get_logger(__name__)
 

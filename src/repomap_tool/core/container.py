@@ -49,10 +49,12 @@ if TYPE_CHECKING:
     from repomap_tool.cli.controllers.exploration_controller import (
         ExplorationController,
     )
+    from repomap_tool.cli.controllers.density_controller import DensityController
     from rich.console import Console
 
 # Legacy factory functions removed - using DI container instead
 from ..models import RepoMapConfig
+from ..code_analysis.density_analyzer import DensityAnalyzer
 
 logger = get_logger(__name__)
 
@@ -180,6 +182,19 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # Density analysis services (Added)
+    density_analyzer: "providers.Factory[DensityAnalyzer]" = cast(
+        "providers.Factory[DensityAnalyzer]",
+        providers.Factory(
+            "repomap_tool.code_analysis.density_analyzer.DensityAnalyzer",
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+                cache=tag_cache,
+            ),
+        ),
+    )
+
     # Session manager
     session_manager: "providers.Singleton[SessionManager]" = cast(
         "providers.Singleton[SessionManager]",
@@ -232,7 +247,7 @@ class Container(containers.DeclarativeContainer):
     # Embedding matcher with persistent caching
     embedding_matcher: "providers.Singleton[Any]" = providers.Singleton(
         "repomap_tool.code_search.embedding_matcher.EmbeddingMatcher",
-        model_name="nomic-ai/CodeRankEmbed",  # FIXED: Use hardcoded value instead of config
+        model_name="nomic-ai/CodeRankEmbed",
         cache_manager=cache_manager,
         cache_dir=config.embedding.cache_dir,
     )
@@ -282,7 +297,6 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-
     # Controllers
     centrality_controller: "providers.Factory[CentralityController]" = cast(
         "providers.Factory[CentralityController]",
@@ -304,6 +318,16 @@ class Container(containers.DeclarativeContainer):
             impact_analyzer=impact_analyzer,
             impact_engine=impact_analysis_engine,
             ast_analyzer=ast_analyzer,
+            path_resolver=path_resolver,
+        ),
+    )
+
+    # Density controller (Added)
+    density_controller: "providers.Factory[DensityController]" = cast(
+        "providers.Factory[DensityController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.density_controller.DensityController",
+            density_analyzer=density_analyzer,
             path_resolver=path_resolver,
         ),
     )
@@ -339,7 +363,12 @@ class Container(containers.DeclarativeContainer):
             repomap_service=None,  # Will be injected from context
             search_engine=None,  # Optional
             fuzzy_matcher=fuzzy_matcher,
-            semantic_matcher=adaptive_semantic_matcher,
+            # Dynamically select semantic_matcher based on config
+            semantic_matcher=providers.Selector(
+                config.semantic_match.enabled,
+                true=adaptive_semantic_matcher, # Use adaptive if enabled
+                false=domain_semantic_matcher, # Fallback to domain if disabled
+            ),
         ),
     )
 
@@ -356,14 +385,7 @@ class Container(containers.DeclarativeContainer):
 
 
 def create_container(config: RepoMapConfig) -> Container:
-    """Create and configure the dependency injection container.
-
-    Args:
-        config: RepoMap configuration
-
-    Returns:
-        Configured container instance
-    """
+    """Create and configure the dependency injection container."""
     container = Container()
 
     # Configure the container with the provided config
@@ -402,9 +424,5 @@ def create_container(config: RepoMapConfig) -> Container:
 
 
 def get_container() -> Optional[Container]:
-    """Get the current container instance.
-
-    Returns:
-        Container instance if available, None otherwise
-    """
+    """Get the current container instance."""
     return Container.instance if hasattr(Container, "instance") else None

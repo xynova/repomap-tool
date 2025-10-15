@@ -445,7 +445,7 @@ class ImportAnalyzer:
         # Validate required dependency
         if tree_sitter_parser is None:
             raise ValueError("TreeSitterParser must be injected - no fallback allowed")
-        
+
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
         self.tree_sitter_parser = tree_sitter_parser

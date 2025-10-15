@@ -9,12 +9,14 @@ import os
 import logging
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from pathlib import Path
 
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
-from repomap_tool.cli.controllers.view_models import SearchViewModel, SymbolViewModel
+if TYPE_CHECKING:
+    from repomap_tool.cli.controllers.view_models import SearchViewModel
+from repomap_tool.cli.controllers.view_models import SymbolViewModel
 
 logger = get_logger(__name__)
 
@@ -682,7 +684,7 @@ class TreeBuilder:
 
     def build_tree_from_search_results(
         self,
-        search_results: SearchViewModel,
+        search_results: 'SearchViewModel', # Type hint for SearchViewModel
         intent: str,
         max_depth: int,
         project_path: str,

@@ -235,9 +235,45 @@ class ProjectAnalysisViewModel:
 
 
 @dataclass
+class FileDensityViewModel:
+    """ViewModel for file density display"""
+
+    file_path: str
+    relative_path: str
+    total_identifiers: int
+    primary_identifiers: int
+    categories: Dict[str, int]
+
+
+@dataclass
+class PackageDensityViewModel:
+    """ViewModel for package density display"""
+
+    package_path: str
+    total_identifiers: int
+    file_count: int
+    avg_identifiers_per_file: float
+    files: List[FileDensityViewModel]
+    categories: Dict[str, int]
+
+
+@dataclass
+class DensityAnalysisViewModel:
+    """Top-level ViewModel for density command"""
+
+    scope: str
+    results: List  # Union[FileDensityViewModel, PackageDensityViewModel]
+    total_files_analyzed: int
+    limit: int
+    min_identifiers: int
+    analysis_summary: Dict[str, Any]
+
+
+@dataclass
 class ControllerConfig:
     """Configuration for Controllers."""
 
+    project_root: str  # Moved project_root to the beginning
     max_tokens: int = get_config("MAX_TOKENS", 4000)
     compression_level: str = "medium"
     verbose: bool = False
@@ -245,3 +281,24 @@ class ControllerConfig:
     analysis_type: AnalysisType = AnalysisType.CENTRALITY
     search_strategy: str = "hybrid"
     context_selection: str = "centrality_based"
+    # New fields for density analysis
+    scope: str = "file"
+    limit: int = 10
+    min_identifiers: int = 1
+
+
+__all__ = [
+    # Existing exports...
+    "FileDensityViewModel",
+    "PackageDensityViewModel",
+    "DensityAnalysisViewModel",
+    "SymbolViewModel",
+    "FileAnalysisViewModel",
+    "CentralityViewModel",
+    "ImpactViewModel",
+    "SearchViewModel",
+    "ExplorationViewModel",
+    "ProjectAnalysisViewModel",
+    "ControllerConfig",
+    "AnalysisType",
+]

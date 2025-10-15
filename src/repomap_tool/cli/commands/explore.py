@@ -58,6 +58,7 @@ def create_exploration_controller_with_repomap(
 
     # Create controller configuration
     controller_config = ControllerConfig(
+        project_root=config_obj.project_root,  # Pass project_root from config_obj
         max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
         output_format=output_format,
         verbose=verbose,

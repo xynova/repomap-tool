@@ -25,14 +25,14 @@ class DependencyGraph:
 
     def __init__(self, import_analyzer: Optional[Any] = None) -> None:
         """Initialize an empty dependency graph.
-        
+
         Args:
             import_analyzer: ImportAnalyzer instance (required dependency)
         """
         # Validate required dependency
         if import_analyzer is None:
             raise ValueError("ImportAnalyzer must be injected - no fallback allowed")
-        
+
         self.graph = nx.DiGraph()
         self.nodes: Dict[str, DependencyNode] = {}
         self.import_analyzer = import_analyzer

@@ -86,10 +86,10 @@ class TreeSitterParser:
 
     def _parse_file(self, file_path: str) -> List[CodeTag]:
         """Internal method for raw tree-sitter parsing without caching.
-        
+
         Args:
             file_path: Path to the file to parse
-            
+
         Returns:
             List of CodeTag objects
         """

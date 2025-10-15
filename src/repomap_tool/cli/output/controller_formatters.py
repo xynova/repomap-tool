@@ -17,7 +17,23 @@ from .protocols import DataFormatter
 from .formats import OutputFormat
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import get_template_engine
-from ..controllers.view_models import SearchViewModel
+from ..controllers.view_models import (
+    SearchViewModel,
+    CentralityViewModel,
+    ImpactViewModel,
+    TreeClusterViewModel,
+    TreeFocusViewModel,
+    TreeExpansionViewModel,
+    TreePruningViewModel,
+    TreeMappingViewModel,
+    TreeListingViewModel,
+    SessionStatusViewModel,
+    ExplorationViewModel,
+    ProjectAnalysisViewModel,
+    FileDensityViewModel,
+    PackageDensityViewModel,
+    DensityAnalysisViewModel,
+)
 
 
 logger = get_logger(__name__)
@@ -531,5 +547,100 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             output.append("Performance Metrics:")
             for key, value in data.performance_metrics.items():
                 output.append(f"  {key}: {value}")
+
+        return "\n".join(output)
+
+
+class DensityAnalysisFormatter(TemplateBasedFormatter, DataFormatter):
+    """Formatter for DensityAnalysisViewModel."""
+
+    def __init__(self, template_engine: Optional[Any] = None):
+        """Initialize the formatter."""
+        super().__init__(template_engine=template_engine)
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if this formatter supports the given output format."""
+        return output_format in [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported output formats."""
+        return [OutputFormat.TEXT, OutputFormat.JSON]
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[Any] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> str:
+        """Format DensityAnalysisViewModel data."""
+        if not isinstance(data, DensityAnalysisViewModel):
+            raise ValueError(f"Expected DensityAnalysisViewModel, got {type(data)}")
+
+        if output_format == OutputFormat.JSON:
+            return self._format_json(data)
+        elif output_format == OutputFormat.TEXT:
+            return self._format_text(data, config)
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def _format_json(self, data: DensityAnalysisViewModel) -> str:
+        """Format data as JSON."""
+        import json
+        from dataclasses import asdict
+
+        # Use asdict to convert dataclass to dictionary
+        json_data = asdict(data)
+        return json.dumps(json_data, indent=2)
+
+    def _format_text(
+        self, data: DensityAnalysisViewModel, config: Optional[Any] = None
+    ) -> str:
+        """Format data as text using template."""
+        try:
+            template_config = self._create_template_config(config)
+            return self._template_engine.render_template(
+                "density_analysis", data, template_config
+            )
+        except Exception as e:
+            logger.error(f"Template rendering failed: {e}")
+            return self._format_fallback(data)
+
+    def _format_fallback(
+        self, data: DensityAnalysisViewModel, template_config: Optional[Any] = None
+    ) -> str:
+        """Fallback formatting if template fails."""
+        output = []
+        output.append("Code Density Analysis")
+        output.append("=" * 40)
+        output.append(f"Scope: {data.scope.upper()}")
+        output.append(f"Total Files Analyzed: {data.total_files_analyzed}")
+        output.append(f"Showing Top: {data.limit} results")
+        output.append(f"Min Identifiers: {data.min_identifiers}")
+
+        if data.results:
+            output.append("\nResults:")
+            for i, result in enumerate(data.results, 1):
+                if isinstance(result, FileDensityViewModel):
+                    output.append(f"  {i}. File: {result.relative_path}")
+                    output.append(f"     Total Identifiers: {result.total_identifiers}")
+                    output.append(
+                        f"     Primary Identifiers: {result.primary_identifiers}"
+                    )
+                    output.append(f"     Categories: {result.categories}")
+                elif isinstance(result, PackageDensityViewModel):
+                    output.append(f"  {i}. Package: {result.package_path}/")
+                    output.append(f"     Total Identifiers: {result.total_identifiers}")
+                    output.append(f"     File Count: {result.file_count}")
+                    output.append(
+                        f"     Avg Identifiers per File: {result.avg_identifiers_per_file:.1f}"
+                    )
+                    output.append(f"     Categories: {result.categories}")
+                    output.append("       Top files:")
+                    for j, file_in_package in enumerate(result.files[:5]):
+                        output.append(
+                            f"         - {file_in_package.relative_path} ({file_in_package.total_identifiers})"
+                        )
+                output.append("")
 
         return "\n".join(output)

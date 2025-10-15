@@ -230,7 +230,11 @@ class ComplexProcessor:
     def test_call_graph_builder_real(self, temp_project_with_dependencies):
         """Test call graph building with real Python code."""
         from repomap_tool.cli.services import get_service_factory
-        from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+        from repomap_tool.models import (
+            RepoMapConfig,
+            PerformanceConfig,
+            DependencyConfig,
+        )
 
         # Use service factory for CallGraphBuilder
         config = RepoMapConfig(

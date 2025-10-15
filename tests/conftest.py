@@ -17,7 +17,6 @@ from repomap_tool.models import (
     PerformanceConfig,
     DependencyConfig,
 )
-from repomap_tool.core.container import create_container
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 
 # Disable cache for all tests to avoid database locks

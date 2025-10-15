@@ -17,10 +17,10 @@ from .base_controller import BaseController
 from .view_models import (
     CentralityViewModel,
     FileAnalysisViewModel,
-    SymbolViewModel,
     ControllerConfig,
     AnalysisType,
 )
+from .view_models import SymbolViewModel
 
 
 logger = get_logger(__name__)

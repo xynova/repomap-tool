@@ -7,7 +7,7 @@ Merges functionality from the previous 'analyze' and 'search' commands.
 
 import os
 import sys
-from typing import Optional, Literal
+from typing import Optional, Literal, List
 
 import click
 from rich.progress import Progress, SpinnerColumn, TextColumn
@@ -23,6 +23,7 @@ from ...models import (
 from ...core import RepoMapService
 from ..config.loader import (
     resolve_project_path,
+    load_or_create_config,
 )
 from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
@@ -72,8 +73,6 @@ def cycles(
         resolved_project_path = resolve_project_path(project_path, config)
 
         # Load or create configuration (properly handles config files)
-        from repomap_tool.cli.config.loader import load_or_create_config
-
         config_obj, was_created = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
@@ -117,6 +116,116 @@ def cycles(
 
     except Exception as e:
         # Use OutputManager for error handling
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error(e, output_config)
+        sys.exit(1)
+
+
+@inspect.command()
+@click.argument(
+    "project_path",
+    type=click.Path(exists=True, file_okay=False, dir_okay=True),
+    required=False,
+)
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+@click.option(
+    "--scope",
+    type=click.Choice(["file", "package"]),
+    default="file",
+    help="Analysis scope: 'file' for individual files, 'package' for directories",
+)
+@click.option(
+    "--limit",
+    "-l",
+    type=int,
+    default=10,
+    help="Maximum number of results to show",
+)
+@click.option(
+    "--min-identifiers",
+    type=int,
+    default=1,
+    help="Minimum number of identifiers to include",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.pass_context
+def density(
+    ctx: click.Context,
+    project_path: Optional[str],
+    config: Optional[str],
+    scope: str,
+    limit: int,
+    min_identifiers: int,
+    output: str,
+    verbose: bool,
+) -> None:
+    """Inspect code density - files/packages with most identifiers by type."""
+
+    console = get_console(ctx)
+
+    try:
+        # Resolve project path and load config
+        resolved_project_path = resolve_project_path(project_path, config)
+        if resolved_project_path is None:
+            raise click.BadParameter("Project path could not be resolved.")
+
+        config_obj, _ = load_or_create_config(
+            project_path=resolved_project_path,
+            config_file=config,
+            create_if_missing=False,
+            verbose=verbose,
+        )
+
+        # Use OutputManager for progress
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat(output))
+
+        output_manager.display_progress(
+            f"🎯 Analyzing code density: {resolved_project_path}"
+        )
+
+        # Create DI container and get controller
+        from repomap_tool.core.container import create_container
+        from repomap_tool.cli.controllers import ControllerConfig
+        from repomap_tool.cli.controllers import DensityController
+
+        container = create_container(config_obj)
+        density_controller = container.density_controller()
+
+        # Configure controller
+        controller_config = ControllerConfig(
+            project_root=resolved_project_path,  # Now a required argument
+            verbose=verbose,
+            output_format=output,
+            scope=scope,
+            limit=limit,
+            min_identifiers=min_identifiers,
+        )
+        density_controller.config = controller_config
+
+        # Execute analysis
+        view_model = density_controller.execute(
+            file_paths=None, scope=scope, limit=limit, min_identifiers=min_identifiers
+        )
+
+        # Display results
+        output_manager.display(view_model, output_config)
+        output_manager.display_success("Density analysis completed", output_config)
+
+    except Exception as e:
         output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error(e, output_config)
@@ -207,7 +316,10 @@ def centrality(
 
         # Configure Controller
         controller_config = ControllerConfig(
-            max_tokens=max_tokens, verbose=verbose, output_format=output
+            project_root=resolved_project_path,  # Add missing project_root
+            verbose=verbose,
+            output_format=output,
+            max_tokens=max_tokens,
         )
         centrality_controller.config = controller_config
 
@@ -327,7 +439,10 @@ def impact(
 
         # Configure Controller
         controller_config = ControllerConfig(
-            max_tokens=max_tokens, verbose=verbose, output_format=output
+            project_root=resolved_project_path,  # Add missing project_root
+            verbose=verbose,
+            output_format=output,
+            max_tokens=max_tokens,
         )
         impact_controller.config = controller_config
 

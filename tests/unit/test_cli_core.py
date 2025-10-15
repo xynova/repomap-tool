@@ -235,7 +235,7 @@ class TestCLICore:
 
         try:
             result = cli_runner.invoke(
-                cli, ["system", "config", temp_project, "--output", config_file]
+                cli, ["system", "config", temp_project, "--config", config_file]
             )
             assert result.exit_code == 0
             assert os.path.exists(config_file)

@@ -17,6 +17,9 @@ from repomap_tool.code_analysis import (
     ASTFileAnalyzer,
     AnalysisFormat,
 )
+from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+from repomap_tool.core.cache_manager import CacheManager
+from repomap_tool.core.tag_cache import TreeSitterTagCache
 
 
 class TestInspectCommandsIntegration:
@@ -667,7 +670,11 @@ counts = obj.method2(["a", "bb", "ccc"])
 
     def test_ast_analyzer_basic_functionality(self):
         """Test basic AST analyzer functionality."""
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        # Create a mock cache manager
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        # Create a TreeSitterParser with the project root and mock cache
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(self.test_file_path)
 
         assert result.file_path == self.test_file_path
@@ -684,7 +691,9 @@ counts = obj.method2(["a", "bb", "ccc"])
 
     def test_ast_analyzer_import_analysis(self):
         """Test AST analyzer import analysis."""
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(self.test_file_path)
 
         # Check specific imports
@@ -707,7 +716,9 @@ counts = obj.method2(["a", "bb", "ccc"])
 
     def test_ast_analyzer_function_call_analysis(self):
         """Test AST analyzer function call analysis."""
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(self.test_file_path)
 
         # Check function calls
@@ -732,7 +743,9 @@ def another_function():
 """
         )
 
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         results = analyzer.analyze_multiple_files(
             [self.test_file_path, str(test_file2)]
         )
@@ -762,7 +775,9 @@ def use_test_file():
 """
         )
 
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         all_files = [self.test_file_path, str(dependent_file)]
 
         reverse_deps = analyzer.find_reverse_dependencies(
@@ -784,7 +799,9 @@ def broken_function(
 """
         )
 
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(str(invalid_file))
 
         assert result.file_path == str(invalid_file)
@@ -793,7 +810,9 @@ def broken_function(
 
     def test_ast_analyzer_cache_functionality(self):
         """Test AST analyzer caching functionality."""
-        analyzer = ASTFileAnalyzer(str(self.project_root))
+        mock_cache_manager = MagicMock(spec=CacheManager)
+        tree_sitter_parser_instance = TreeSitterParser(str(self.project_root), cache=mock_cache_manager)
+        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
 
         # First analysis
         result1 = analyzer.analyze_file(self.test_file_path)

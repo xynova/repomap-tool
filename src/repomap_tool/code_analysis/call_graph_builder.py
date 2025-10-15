@@ -112,12 +112,12 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
     """Parser for JavaScript/TypeScript function calls using tree-sitter."""
 
     def __init__(
-        self, 
+        self,
         project_root: Optional[str] = None,
         tree_sitter_parser: Optional[Any] = None,
     ):
         """Initialize with project root for tree-sitter RepoMap.
-        
+
         Args:
             project_root: Root path of the project
             tree_sitter_parser: TreeSitterParser instance (required dependency)
@@ -125,7 +125,7 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
         # Validate required dependency
         if tree_sitter_parser is None:
             raise ValueError("TreeSitterParser must be injected - no fallback allowed")
-        
+
         super().__init__()
         self.project_root = project_root
         self._repo_map = None

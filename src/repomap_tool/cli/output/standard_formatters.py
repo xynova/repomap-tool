@@ -486,6 +486,12 @@ def _register_default_formatters(registry: FormatterRegistry) -> None:
 
     registry.register_formatter(SearchViewModelFormatter(), SearchViewModel)
 
+    # Register DensityAnalysisViewModel formatter
+    from .controller_formatters import DensityAnalysisFormatter
+    from ..controllers.view_models import DensityAnalysisViewModel
+
+    registry.register_formatter(DensityAnalysisFormatter(), DensityAnalysisViewModel)
+
     # Register exploration ViewModel formatters
     from .exploration_formatters import (
         TreeClusterViewModelFormatter,

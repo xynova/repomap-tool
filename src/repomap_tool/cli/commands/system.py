@@ -1,4 +1,5 @@
 from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
 
 """
 System commands for RepoMap-Tool CLI.
@@ -12,10 +13,19 @@ from typing import Optional
 
 import click
 
-from ...models import RepoMapConfig, create_error_response
+from ...models import (
+    RepoMapConfig,
+    create_error_response,
+    ProjectInfo,
+    PerformanceConfig,
+    DependencyConfig,
+)
 from ..config.loader import resolve_project_path, create_default_config
 from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
 from ..utils.console import get_console
+from ..services import get_service_factory
+
+logger = get_logger(__name__)
 
 
 @click.group()
@@ -31,7 +41,11 @@ def system() -> None:
     required=False,
 )
 @click.option(
-    "--output", "-o", type=click.Path(), help="Output configuration file path"
+    "--config",
+    "-c",
+    "config_file_path",  # Internal parameter name
+    type=click.Path(),
+    help="Output configuration file path",
 )
 @click.option("--fuzzy/--no-fuzzy", default=True, help="Enable fuzzy matching")
 @click.option("--semantic/--no-semantic", default=True, help="Enable semantic matching")
@@ -46,7 +60,7 @@ def system() -> None:
 def config(
     ctx: click.Context,
     project_path: Optional[str],
-    output: Optional[str],
+    config_file_path: Optional[str],  # Use the new internal parameter name
     fuzzy: bool,
     semantic: bool,
     threshold: float,
@@ -75,15 +89,15 @@ def config(
         # Convert to dictionary with proper serialization
         config_dict = config_obj.model_dump(mode="json")
 
-        if output:
+        if config_file_path:
             # Write to file
-            with open(output, "w") as f:
+            with open(config_file_path, "w") as f:
                 json.dump(config_dict, f, indent=2)
             # Use OutputManager for success message
             output_manager = get_output_manager()
             output_config = OutputConfig(format=OutputFormat.TEXT)
             output_manager.display_success(
-                f"Configuration saved to: {output}", output_config
+                f"Configuration saved to: {config_file_path}", output_config
             )
         else:
             # Display configuration
@@ -126,7 +140,6 @@ def version(ctx: click.Context) -> None:
 def cache_info(ctx: click.Context) -> None:
     """Show tree-sitter tag cache statistics"""
     from repomap_tool.cli.services import get_service_factory
-    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
 
     # Use service factory to get cache
     config = RepoMapConfig(
@@ -137,6 +150,11 @@ def cache_info(ctx: click.Context) -> None:
     service_factory = get_service_factory()
     repomap_service = service_factory.create_repomap_service(config)
     cache = repomap_service.tree_sitter_parser.tag_cache
+    if cache is None:  # Add None check
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error("Tag cache is not available.", output_config)
+        sys.exit(1)
     stats = cache.get_cache_stats()
 
     output_manager = get_output_manager()
@@ -164,9 +182,7 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
             return
 
     # Use service factory to get cache
-    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
-    from repomap_tool.cli.services import get_service_factory
-    
+
     config = RepoMapConfig(
         project_root=".",  # Default project root
         performance=PerformanceConfig(),
@@ -175,6 +191,11 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
     service_factory = get_service_factory()
     repomap_service = service_factory.create_repomap_service(config)
     cache = repomap_service.tree_sitter_parser.tag_cache
+    if cache is None:  # Add None check
+        output_manager = get_output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_error("Tag cache is not available.", output_config)
+        sys.exit(1)
     cache.clear()
 
     output_manager = get_output_manager()
