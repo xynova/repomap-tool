@@ -72,14 +72,6 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    # Core dependency graph
-    dependency_graph: "providers.Singleton[AdvancedDependencyGraph]" = cast(
-        "providers.Singleton[AdvancedDependencyGraph]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.advanced_dependency_graph.AdvancedDependencyGraph",
-        ),
-    )
-
     # Path normalizer
     path_normalizer: "providers.Singleton[PathNormalizer]" = cast(
         "providers.Singleton[PathNormalizer]",
@@ -89,12 +81,55 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # Import analyzer
+    import_analyzer: "providers.Singleton[ImportAnalyzer]" = cast(
+        "providers.Singleton[ImportAnalyzer]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.import_analyzer.ImportAnalyzer",
+            project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+                cache=tag_cache,
+            ),
+        ),
+    )
+
+    # Call graph builder
+    call_analyzer: "providers.Singleton[CallGraphBuilder]" = cast(
+        "providers.Singleton[CallGraphBuilder]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
+            project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+                cache=tag_cache,
+            ),
+        ),
+    )
+
+    # Core dependency graph
+    dependency_graph: "providers.Singleton[AdvancedDependencyGraph]" = cast(
+        "providers.Singleton[AdvancedDependencyGraph]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.advanced_dependency_graph.AdvancedDependencyGraph",
+            import_analyzer=import_analyzer,
+            call_graph_builder=call_analyzer,
+        ),
+    )
+
     # AST analyzer (needed by centrality engine)
     ast_analyzer: "providers.Singleton[ASTFileAnalyzer]" = cast(
         "providers.Singleton[ASTFileAnalyzer]",
         providers.Singleton(
             "repomap_tool.code_analysis.ast_file_analyzer.ASTFileAnalyzer",
             project_root=config.project_root,
+            tree_sitter_parser=providers.Singleton(
+                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+                project_root=config.project_root,
+                cache=tag_cache,
+            ),
         ),
     )
 
@@ -142,20 +177,6 @@ class Container(containers.DeclarativeContainer):
         providers.Singleton(
             "repomap_tool.code_analysis.path_resolver.PathResolver",
             project_root=config.project_root,
-        ),
-    )
-
-    # Import analyzer
-    import_analyzer: "providers.Singleton[ImportAnalyzer]" = cast(
-        "providers.Singleton[ImportAnalyzer]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.import_analyzer.ImportAnalyzer",
-            project_root=config.project_root,
-            tree_sitter_parser=providers.Singleton(
-                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
-                project_root=config.project_root,
-                cache=tag_cache,
-            ),
         ),
     )
 
@@ -261,19 +282,6 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    # Dependency analysis services
-    call_analyzer: "providers.Singleton[CallGraphBuilder]" = cast(
-        "providers.Singleton[CallGraphBuilder]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
-            project_root=config.project_root,
-            tree_sitter_parser=providers.Singleton(
-                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
-                project_root=config.project_root,
-                cache=tag_cache,
-            ),
-        ),
-    )
 
     # Controllers
     centrality_controller: "providers.Factory[CentralityController]" = cast(

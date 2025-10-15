@@ -21,11 +21,24 @@ logger = get_logger(__name__)
 class AdvancedDependencyGraph(DependencyGraph):
     """Enhanced dependency graph with call graph integration and advanced metrics."""
 
-    def __init__(self) -> None:
-        """Initialize the advanced dependency graph."""
-        super().__init__()
+    def __init__(
+        self, 
+        import_analyzer: Optional[Any] = None,
+        call_graph_builder: Optional[Any] = None,
+    ) -> None:
+        """Initialize the advanced dependency graph.
+        
+        Args:
+            import_analyzer: ImportAnalyzer instance (required dependency)
+            call_graph_builder: CallGraphBuilder instance (required dependency)
+        """
+        # Validate required dependencies
+        if call_graph_builder is None:
+            raise ValueError("CallGraphBuilder must be injected - no fallback allowed")
+        
+        super().__init__(import_analyzer=import_analyzer)
         self.call_graph: Optional[CallGraph] = None
-        self.call_graph_builder = CallGraphBuilder()
+        self.call_graph_builder = call_graph_builder
         self.function_dependencies: Dict[str, Set[str]] = {}
         self.function_dependents: Dict[str, Set[str]] = {}
         self.centrality_scores: Dict[str, float] = {}

@@ -212,8 +212,8 @@ class ComplexProcessor:
         repomap_service = service_factory.create_repomap_service(config)
         graph = repomap_service.dependency_graph
 
-        # Use ImportAnalyzer to get ProjectImports
-        analyzer = ImportAnalyzer()
+        # Use ImportAnalyzer from the dependency graph to get ProjectImports
+        analyzer = graph.import_analyzer
         project_imports = analyzer.analyze_project_imports(
             str(temp_project_with_dependencies)
         )
@@ -229,9 +229,19 @@ class ComplexProcessor:
 
     def test_call_graph_builder_real(self, temp_project_with_dependencies):
         """Test call graph building with real Python code."""
-        from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
+        from repomap_tool.cli.services import get_service_factory
+        from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
 
-        builder = CallGraphBuilder()
+        # Use service factory for CallGraphBuilder
+        config = RepoMapConfig(
+            project_root=str(temp_project_with_dependencies),
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        graph = repomap_service.dependency_graph
+        builder = graph.call_graph_builder
 
         # Test with a real file
         main_file = Path(temp_project_with_dependencies) / "main.py"

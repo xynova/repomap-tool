@@ -139,7 +139,20 @@ entrypoints = EntrypointDiscoverer(repo_map).discover_entrypoints(project_path, 
 # Output: [Entrypoint(id="AuthErrorHandler", score=0.9), ...]
 
 # Stage 2: Clustering (new semantic analysis)
-clusters = TreeClusterer().cluster_entrypoints(entrypoints)  
+from repomap_tool.cli.services import get_service_factory
+from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+
+# Use service factory for proper DI
+config = RepoMapConfig(
+    project_root=".",
+    performance=PerformanceConfig(),
+    dependencies=DependencyConfig(),
+)
+service_factory = get_service_factory()
+repomap_service = service_factory.create_repomap_service(config)
+
+clusterer = repomap_service.tree_clusterer
+clusters = clusterer.cluster_entrypoints(entrypoints)  
 # Output: [TreeCluster(name="Auth Error Handling", entrypoints=[...]), ...]
 
 # Stage 3: Tree Building (uses aider infrastructure)
@@ -150,15 +163,30 @@ for cluster in clusters:
 # Output: [ExplorationTree(tree_id="auth_errors_x1y2", structure=TreeNode(...)), ...]
 
 # Stage 4: Session Management (new external state)
-session = SessionManager().get_or_create_session(session_id, project_path)
+from repomap_tool.cli.services import get_service_factory
+from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+
+# Use service factory for proper DI
+config = RepoMapConfig(
+    project_root=project_path,
+    performance=PerformanceConfig(),
+    dependencies=DependencyConfig(),
+)
+service_factory = get_service_factory()
+repomap_service = service_factory.create_repomap_service(config)
+
+session_manager = repomap_service.session_manager
+session = session_manager.get_or_create_session(session_id, project_path)
 for tree in trees:
     session.exploration_trees[tree.tree_id] = tree
-SessionManager().persist_session(session)
+session_manager.persist_session(session)
 
 # Stage 5: User Interaction (CLI commands)
-TreeManager().focus_tree(session_id, "auth_errors_x1y2")  # stateful
-TreeManager().expand_tree(session_id, "password_validation")  # dynamic
-output = TreeMapper().generate_tree_map(tree, include_code=True)  # focused output
+tree_manager = repomap_service.tree_manager
+tree_manager.focus_tree(session_id, "auth_errors_x1y2")  # stateful
+tree_manager.expand_tree(session_id, "password_validation")  # dynamic
+tree_mapper = repomap_service.tree_mapper
+output = tree_mapper.generate_tree_map(tree, include_code=True)  # focused output
 ```
 
 ### Component Integration Map
@@ -393,7 +421,18 @@ def test_uses_existing_semantic_analysis():
 
 # Test 2: Title Generation Quality  
 def test_meaningful_title_generation():
-    clusterer = TreeClusterer()
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+    
+    # Use service factory for proper DI
+    config = RepoMapConfig(
+        project_root=".",
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    clusterer = repomap_service.tree_clusterer
     title = clusterer._generate_context_name(auth_entrypoints)
     
     # MUST be human-readable and meaningful
@@ -403,7 +442,18 @@ def test_meaningful_title_generation():
 # Test 3: External Session Control
 def test_external_session_control():
     os.environ['REPOMAP_SESSION'] = 'test_session'
-    session_manager = SessionManager()
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+    
+    # Use service factory for proper DI
+    config = RepoMapConfig(
+        project_root=".",
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    session_manager = repomap_service.session_manager
     
     # MUST respect external session ID
     session = session_manager.get_or_create_session(None, "/project")
@@ -743,8 +793,19 @@ class Entrypoint:
 class TreeManager:
     def __init__(self, repo_map: DockerRepoMap):
         self.repo_map = repo_map
-        self.session_manager = SessionManager()
-        self.tree_builder = TreeBuilder(repo_map)
+        from repomap_tool.cli.services import get_service_factory
+        from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+        
+        # Use service factory for proper DI
+        config = RepoMapConfig(
+            project_root=".",
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        self.session_manager = repomap_service.session_manager
+        self.tree_builder = repomap_service.tree_builder
         
     def focus_tree(self, session_id: str, tree_id: str):
         """Set focus to specific tree (stateful within session)"""
@@ -926,12 +987,24 @@ def explore(project_path: str, intent: str, session: Optional[str], max_depth: i
     entrypoints = discoverer.discover_entrypoints(project_path, intent)
     
     # Cluster into trees
-    clusterer = TreeClusterer()
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+    
+    # Use service factory for proper DI
+    config = RepoMapConfig(
+        project_root=project_path,
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    
+    clusterer = repomap_service.tree_clusterer
     clusters = clusterer.cluster_entrypoints(entrypoints)
     
     # Build exploration trees
-    tree_builder = TreeBuilder(repo_map)
-    session_manager = SessionManager()
+    tree_builder = repomap_service.tree_builder
+    session_manager = repomap_service.session_manager
     session = session_manager.get_or_create_session(session_id, project_path)
     
     console.print(f"🔍 Found {len(clusters)} exploration contexts:")

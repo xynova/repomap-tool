@@ -23,11 +23,19 @@ logger = get_logger(__name__)
 class DependencyGraph:
     """Main dependency graph representation using NetworkX."""
 
-    def __init__(self) -> None:
-        """Initialize an empty dependency graph."""
+    def __init__(self, import_analyzer: Optional[Any] = None) -> None:
+        """Initialize an empty dependency graph.
+        
+        Args:
+            import_analyzer: ImportAnalyzer instance (required dependency)
+        """
+        # Validate required dependency
+        if import_analyzer is None:
+            raise ValueError("ImportAnalyzer must be injected - no fallback allowed")
+        
         self.graph = nx.DiGraph()
         self.nodes: Dict[str, DependencyNode] = {}
-        self.import_analyzer = ImportAnalyzer()
+        self.import_analyzer = import_analyzer
         self.project_path: Optional[str] = None
         self.construction_time: Optional[float] = None
 

@@ -125,9 +125,18 @@ def version(ctx: click.Context) -> None:
 @click.pass_context
 def cache_info(ctx: click.Context) -> None:
     """Show tree-sitter tag cache statistics"""
-    from repomap_tool.core.tag_cache import TreeSitterTagCache
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
 
-    cache = TreeSitterTagCache()
+    # Use service factory to get cache
+    config = RepoMapConfig(
+        project_root=".",  # Default project root
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    cache = repomap_service.tree_sitter_parser.tag_cache
     stats = cache.get_cache_stats()
 
     output_manager = get_output_manager()
@@ -154,7 +163,18 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
         if not click.confirm("Clear all cached tags?"):
             return
 
-    cache = TreeSitterTagCache()
+    # Use service factory to get cache
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+    from repomap_tool.cli.services import get_service_factory
+    
+    config = RepoMapConfig(
+        project_root=".",  # Default project root
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    cache = repomap_service.tree_sitter_parser.tag_cache
     cache.clear()
 
     output_manager = get_output_manager()

@@ -38,22 +38,29 @@ class AnalysisType(str, Enum):
 class ASTFileAnalyzer:
     """Tree-sitter-based analyzer for individual files and cross-file relationships."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(
+        self, 
+        project_root: Optional[str] = None,
+        tree_sitter_parser: Optional[Any] = None,
+    ):
         """Initialize the tree-sitter file analyzer.
 
         Args:
             project_root: Root path of the project for resolving relative imports
+            tree_sitter_parser: TreeSitterParser instance (required dependency)
         """
+        # Validate required dependency
+        if tree_sitter_parser is None:
+            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
         # Removed aider dependencies - using TreeSitterParser directly
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
-        # Initialize tree-sitter parser
-        from .tree_sitter_parser import TreeSitterParser
-
-        self.tree_sitter_parser = TreeSitterParser()
+        # Use injected tree-sitter parser
+        self.tree_sitter_parser = tree_sitter_parser
 
         logger.debug(
             f"ASTFileAnalyzer initialized with tree-sitter for project: {self.project_root}"

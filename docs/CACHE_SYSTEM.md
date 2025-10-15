@@ -21,8 +21,20 @@ The core caching component is `TreeSitterTagCache`, which provides:
 from repomap_tool.core.tag_cache import TreeSitterTagCache
 from repomap_tool.code_analysis.models import CodeTag
 
-# Create cache
-cache = TreeSitterTagCache()
+# Use service factory for proper DI
+from repomap_tool.cli.services import get_service_factory
+from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+
+config = RepoMapConfig(
+    project_root="/path",
+    performance=PerformanceConfig(),
+    dependencies=DependencyConfig(),
+)
+service_factory = get_service_factory()
+repomap_service = service_factory.create_repomap_service(config)
+
+# Get cache through DI
+cache = repomap_service.tree_sitter_parser.tag_cache
 
 # Store tags
 tags = [CodeTag(name="MyClass", kind="class.name", file="/path/file.py", line=1, column=0)]
@@ -86,9 +98,21 @@ The cache integrates seamlessly with `TreeSitterParser`:
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from repomap_tool.core.tag_cache import TreeSitterTagCache
 
-# Create parser with cache
-cache = TreeSitterTagCache()
-parser = TreeSitterParser(cache=cache)
+# Use service factory for proper DI
+from repomap_tool.cli.services import get_service_factory
+from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+
+config = RepoMapConfig(
+    project_root=".",
+    performance=PerformanceConfig(),
+    dependencies=DependencyConfig(),
+)
+service_factory = get_service_factory()
+repomap_service = service_factory.create_repomap_service(config)
+
+# Get parser and cache through DI
+parser = repomap_service.tree_sitter_parser
+cache = parser.tag_cache
 
 # get_tags() automatically uses cache
 tags = parser.get_tags("/path/to/file.py")

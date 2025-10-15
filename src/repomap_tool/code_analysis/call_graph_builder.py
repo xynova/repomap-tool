@@ -111,16 +111,27 @@ class PythonCallAnalyzer(CallAnalyzer):
 class JavaScriptCallAnalyzer(CallAnalyzer):
     """Parser for JavaScript/TypeScript function calls using tree-sitter."""
 
-    def __init__(self, project_root: Optional[str] = None):
-        """Initialize with project root for tree-sitter RepoMap."""
+    def __init__(
+        self, 
+        project_root: Optional[str] = None,
+        tree_sitter_parser: Optional[Any] = None,
+    ):
+        """Initialize with project root for tree-sitter RepoMap.
+        
+        Args:
+            project_root: Root path of the project
+            tree_sitter_parser: TreeSitterParser instance (required dependency)
+        """
+        # Validate required dependency
+        if tree_sitter_parser is None:
+            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        
         super().__init__()
         self.project_root = project_root
         self._repo_map = None
 
-        # Initialize tree-sitter parser
-        from .tree_sitter_parser import TreeSitterParser
-
-        self.tree_sitter_parser = TreeSitterParser()
+        # Use injected tree-sitter parser
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
         """Extract JavaScript/TypeScript function calls using TreeSitterParser."""
@@ -202,10 +213,22 @@ class CallGraphBuilder:
 
         self.language_analyzers: Dict[str, CallAnalyzer] = {
             "py": python_analyzer,
-            "js": JavaScriptCallAnalyzer(),
-            "ts": JavaScriptCallAnalyzer(),  # TypeScript uses same analyzer
-            "jsx": JavaScriptCallAnalyzer(),
-            "tsx": JavaScriptCallAnalyzer(),
+            "js": JavaScriptCallAnalyzer(
+                project_root=project_root,
+                tree_sitter_parser=tree_sitter_parser,
+            ),
+            "ts": JavaScriptCallAnalyzer(
+                project_root=project_root,
+                tree_sitter_parser=tree_sitter_parser,
+            ),  # TypeScript uses same analyzer
+            "jsx": JavaScriptCallAnalyzer(
+                project_root=project_root,
+                tree_sitter_parser=tree_sitter_parser,
+            ),
+            "tsx": JavaScriptCallAnalyzer(
+                project_root=project_root,
+                tree_sitter_parser=tree_sitter_parser,
+            ),
         }
 
         # File extensions that should be analyzed

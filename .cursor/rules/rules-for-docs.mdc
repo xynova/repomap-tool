@@ -1,9 +1,19 @@
 ---
-description:
-globs:
-alwaysApply: true
+description: Documentation rules for RepoMap-Tool with reasoning protocols
+alwaysApply: false
+keywords: [docs, documentation, readme, guide, user guide, api docs, cli docs, module docs, actionplans, roadmap, documentation workflow, docs directory, user-facing docs, technical docs, documentation style, documentation requirements]
 ---
 
+# 🤖 **AI REASONING PROTOCOL**
+
+## **Before Taking Any Documentation Action:**
+**ALWAYS provide step-by-step reasoning that:**
+1. States what documentation action you're about to take
+2. Explains which rules from this document apply
+3. Shows how you've considered those rules in your approach
+4. Outlines your specific plan and next steps
+
+---
 
 # 📚 Documentation Rules for RepoMap-Tool
 
