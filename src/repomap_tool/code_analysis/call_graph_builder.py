@@ -57,7 +57,7 @@ class PythonCallAnalyzer(CallAnalyzer):
 
         try:
             # Get all tags from tree-sitter
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Look for function call tags
             for tag in tags:
@@ -139,7 +139,7 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
 
         try:
             # Use TreeSitterParser directly for tag extraction
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract function calls from tags
             for tag in tags:

@@ -84,14 +84,14 @@ class TreeSitterParser:
         else:
             self.custom_queries_dir = Path(custom_queries_dir)
 
-    def parse_file(self, file_path: str) -> List[CodeTag]:
-        """Parse file and return ALL tree-sitter tags (unfiltered).
-
+    def _parse_file(self, file_path: str) -> List[CodeTag]:
+        """Internal method for raw tree-sitter parsing without caching.
+        
         Args:
             file_path: Path to the file to parse
-
+            
         Returns:
-            List of CodeTag objects with detailed information
+            List of CodeTag objects
         """
         try:
             # Get language for the file
@@ -195,8 +195,8 @@ class TreeSitterParser:
                         f"Invalid cached tags type for {file_path}, falling back to parsing"
                     )
 
-        # Parse file using existing parse_file method
-        tags = self.parse_file(file_path)
+        # Parse file using internal _parse_file method
+        tags = self._parse_file(file_path)
 
         # Cache results
         if use_cache and self.tag_cache:

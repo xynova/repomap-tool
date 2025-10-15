@@ -108,7 +108,7 @@ class ASTFileAnalyzer:
                 analysis_errors.append(f"File read error: {str(e)}")
 
             # Use TreeSitterParser directly for tag extraction
-            tags = self.tree_sitter_parser.parse_file(full_path)
+            tags = self.tree_sitter_parser.get_tags(full_path, use_cache=True)
 
             # Extract information from tags
             imports = self._extract_imports_from_tags(tags, full_path)

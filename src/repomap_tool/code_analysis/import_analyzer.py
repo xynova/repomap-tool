@@ -58,7 +58,7 @@ class PythonImportParser(ImportParser):
 
         try:
             # Get all tags from tree-sitter
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Look for import-related tags
             for tag in tags:
@@ -133,7 +133,7 @@ class JavaScriptImportParser(ImportParser):
 
         try:
             # Use tree-sitter to parse the file
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract imports from tree-sitter tags
             for tag in tags:
@@ -232,7 +232,7 @@ class JavaImportParser(ImportParser):
 
         try:
             # Use tree-sitter to parse the file
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract imports from tree-sitter tags
             for tag in tags:
@@ -308,7 +308,7 @@ class GoImportParser(ImportParser):
 
         try:
             # Use tree-sitter to parse the file
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract imports from tree-sitter tags
             for tag in tags:
@@ -377,7 +377,7 @@ class CSharpImportParser(ImportParser):
 
         try:
             # Use tree-sitter to parse the file
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract imports from tree-sitter tags
             for tag in tags:

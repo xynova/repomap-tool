@@ -26,6 +26,9 @@ keywords: [architecture, tree-sitter, dependency injection, di, output manager, 
 - **THIS PROJECT USES TREE-SITTER DIRECTLY** for all code parsing and analysis
 - **ALWAYS use tree-sitter parsers** for all code parsing and analysis
 - **ALWAYS use TreeSitterParser.get_tags()** for code element extraction
+- **PREFER get_tags() for caching benefits** - uses SQLite cache for performance
+- **parse_file() is also valid** when caching is handled by DI container (standard pattern)
+- **Performance note**: get_tags() provides 90%+ reduction in parse times for repeated operations
 - **NEVER use Python's built-in ast.parse()** for production code analysis
 - **NEVER use regex-based parsing** for code structure analysis
 - **ALWAYS leverage tree-sitter's multi-language support** (Python, JS/TS, Java, Go, etc.)

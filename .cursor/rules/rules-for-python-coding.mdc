@@ -640,3 +640,49 @@ docker run --rm -t -v /path/to/test:/workspace repomap-tool:local <command>
 - **No direct service instantiation outside DI container**
 - **CLI commands use service factory pattern**
 - **All dependencies are validated and injected**
+
+## 🏗️ **INTERFACE DESIGN PRINCIPLES**
+
+### **Public vs Private Method Separation:**
+- **ALWAYS** mark internal methods as private using `_` prefix (e.g., `_parse_file()`)
+- **ALWAYS** provide clean public APIs for external consumers (e.g., `get_tags()`)
+- **NEVER** expose internal implementation details as public methods
+- **ALWAYS** use public methods that handle cross-cutting concerns (caching, validation, etc.)
+
+### **Caching Pattern Implementation:**
+```python
+# ✅ GOOD: Proper interface design with caching
+class TreeSitterParser:
+    def _parse_file(self, file_path: str) -> List[CodeTag]:  # PRIVATE - internal implementation
+        """Internal method for raw tree-sitter parsing."""
+        # Implementation details
+        pass
+    
+    def get_tags(self, file_path: str, use_cache: bool = True) -> List[CodeTag]:  # PUBLIC - with caching
+        """Public API for getting tags with optional caching."""
+        if use_cache and self.tag_cache:
+            cached_tags = self.tag_cache.get_tags(file_path)
+            if cached_tags is not None:
+                return cached_tags
+        
+        # Fall back to internal implementation
+        tags = self._parse_file(file_path)
+        
+        if use_cache and self.tag_cache:
+            self.tag_cache.set_tags(file_path, tags)
+        
+        return tags
+
+# ❌ BAD: Exposing internal implementation
+class BadParser:
+    def parse_file(self, file_path: str) -> List[CodeTag]:  # Should be _parse_file
+        # Internal implementation exposed publicly
+        pass
+```
+
+### **Interface Design Best Practices:**
+- **ALWAYS** design public APIs to handle common concerns (caching, validation, error handling)
+- **ALWAYS** make internal implementation details private
+- **ALWAYS** document the intended public API usage patterns
+- **NEVER** force consumers to manually handle cross-cutting concerns
+- **NEVER** expose methods that bypass important infrastructure (caching, DI, etc.)
