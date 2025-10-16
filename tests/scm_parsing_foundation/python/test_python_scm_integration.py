@@ -9,7 +9,7 @@ from pathlib import Path
 def python_parser_and_query():
     language = get_language("python")
     # Directly read the query string to ensure no caching issues
-    query_file_path = Path(__file__).parent.parent.parent / "src" / "repomap_tool" / "code_analysis" / "queries" / "python-tags.scm"
+    query_file_path = Path(__file__).parent.parent.parent.parent / "src" / "repomap_tool" / "code_analysis" / "queries" / "python-tags.scm"
     query_string = query_file_path.read_text()
     print(f"DEBUG: Query string loaded: {query_string[:200]}...") # Print first 200 chars for debug
     query = tree_sitter.Query(language, query_string)
