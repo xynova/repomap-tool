@@ -4,9 +4,34 @@ from grep_ast.tsl import get_language, get_parser
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from repomap_tool.code_analysis.models import CodeTag
 from pathlib import Path
+from typing import List, Tuple
+from unittest.mock import Mock
+from repomap_tool.protocols import QueryLoaderProtocol, TagCacheProtocol
+from tree_sitter import Parser, QueryCursor
 
 
-def test_import_statements(tmp_path):
+@pytest.fixture
+def mock_cache():
+    """A mock cache object for testing purposes."""
+    mock = Mock(spec=TagCacheProtocol)
+    mock.get_tags.return_value = None
+    mock.set_tags.return_value = None
+    mock.invalidate_file.return_value = None
+    mock.clear.return_value = None
+    mock.get_cache_stats.return_value = {}
+    return mock
+
+
+@pytest.fixture
+def mock_query_loader():
+    """A mock QueryLoader that can return specific query strings for testing."""
+    mock = Mock(spec=QueryLoaderProtocol)
+    # By default, it returns None, so tests must set side_effect or return_value
+    mock.load_query.return_value = None
+    return mock
+
+
+def test_import_statements(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
     language = get_language("python")
     import_query_string = """
 ; Capture direct imports like `import os`
@@ -38,7 +63,8 @@ def test_import_statements(tmp_path):
   name: (dotted_name (identifier) @name.reference.import)
   alias: (identifier) @name.definition.import_alias)
 """
-    ts_parser = TreeSitterParser(initial_query_string=import_query_string)
+    mock_query_loader.load_query.return_value = import_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
     # query = tree_sitter.Query(language, import_query_string)
 
     code = """
@@ -77,7 +103,7 @@ from ..another_module import some_func
             f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_class_and_function_definitions(tmp_path):
+def test_class_and_function_definitions(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
     # ts_parser = TreeSitterParser()
     language = get_language("python")
     class_func_query_string = """
@@ -116,7 +142,8 @@ def test_class_and_function_definitions(tmp_path):
   )
 )
 """
-    ts_parser = TreeSitterParser(initial_query_string=class_func_query_string)
+    mock_query_loader.load_query.return_value = class_func_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
     # query = tree_sitter.Query(language, class_func_query_string)
 
     code = """
@@ -165,7 +192,7 @@ class DecoratedClass:
             f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_calls_and_references(tmp_path):
+def test_calls_and_references(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
     language = get_language("python")
     calls_refs_query_string = """
 ; Capture function calls
@@ -183,7 +210,8 @@ def test_calls_and_references(tmp_path):
 ; Capture variable references
 (identifier) @reference.name
 """
-    ts_parser = TreeSitterParser(initial_query_string=calls_refs_query_string)
+    mock_query_loader.load_query.return_value = calls_refs_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
     # query = tree_sitter.Query(language, calls_refs_query_string)
 
     code = """
@@ -228,7 +256,7 @@ math.sqrt(y)
             f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_assignments_and_parameters(tmp_path):
+def test_assignments_and_parameters(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
     language = get_language("python")
     assign_params_query_string = """
 ; Capture assigned variables (left-hand side of assignment)
@@ -236,7 +264,8 @@ def test_assignments_and_parameters(tmp_path):
   left: (identifier) @name.definition.variable
 )
 """
-    ts_parser = TreeSitterParser(initial_query_string=assign_params_query_string)
+    mock_query_loader.load_query.return_value = assign_params_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
     # query = tree_sitter.Query(language, assign_params_query_string)
 
     code = """
@@ -249,9 +278,8 @@ def func(a, b: str, c=True, *, d, **kwargs):
     return local_var
 
 class MyClass:
-    def __init__(self, name: str, age=0, *args):
-        self.name = name
-        self.age = age
+    def __init__(self, name: str, age=0, *args, **attrs):
+        pass
 """
     temp_file = tmp_path / "temp_assign_params.py"
     temp_file.write_text(code)
@@ -275,7 +303,7 @@ class MyClass:
             f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_advanced_constructs(tmp_path):
+def test_advanced_constructs(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
     language = get_language("python")
     advanced_query_string = """
 ; Capture lambda functions
@@ -305,7 +333,8 @@ def test_advanced_constructs(tmp_path):
   )
 )
 """
-    ts_parser = TreeSitterParser(initial_query_string=advanced_query_string)
+    mock_query_loader.load_query.return_value = advanced_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
     # query = tree_sitter.Query(language, advanced_query_string)
 
     code = """
@@ -341,6 +370,113 @@ def process_data(data):
         ("comprehension.iterator", "x"),
         ("comprehension.iterator", "x"),
         ("comprehension.iterator", "x"),
+    ]
+
+    for expected_kind, expected_name in expected_tags_simplified:
+        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
+            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+
+
+def test_with_statement_variable_capture(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
+    language = get_language("python")
+    with_query_string = """
+; Capture variable definition in a 'with' statement (e.g., 'with open() as f:')
+(with_item
+  (as_pattern
+    alias: (as_pattern_target (identifier) @name.definition.variable)
+  )
+)
+"""
+    mock_query_loader.load_query.return_value = with_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+
+    code = """
+with open("file.txt", "r") as f:
+    pass
+with MyContext() as ctx, another_resource as res:
+    pass
+"""
+    temp_file = tmp_path / "temp_with.py"
+    temp_file.write_text(code)
+
+    tags = ts_parser.get_tags(str(temp_file))
+    actual_tags_simplified = [(tag.kind, tag.name) for tag in tags]
+    print(f"Actual Tags: {actual_tags_simplified}")
+    print(f"DEBUG: S-expression of code:\n{ts_parser.parse_file_to_sexp(str(temp_file))}")
+
+    expected_tags_simplified = [
+        ("name.definition.variable", "f"),
+        ("name.definition.variable", "ctx"),
+        ("name.definition.variable", "res"),
+    ]
+
+    for expected_kind, expected_name in expected_tags_simplified:
+        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
+            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+
+
+def test_function_parameter_capture(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
+    language = get_language("python")
+    param_query_string = """
+; Capture simple parameters (e.g., 'a')
+(function_definition
+  parameters: (parameters
+    (identifier) @name.definition.parameter
+  )
+)
+
+; Capture typed parameters (e.g., 'b: str')
+(typed_parameter
+  (identifier) @name.definition.parameter
+  ":"
+  type: (type)
+)
+
+; Capture default parameters (e.g., 'c=True', 'age=0')
+(default_parameter
+  name: (identifier) @name.definition.parameter
+)
+
+; Capture list splat patterns (e.g., '*args')
+(list_splat_pattern
+  (identifier) @name.definition.parameter.splat
+)
+
+; Capture dictionary splat patterns (e.g., '**kwargs')
+(dictionary_splat_pattern
+  (identifier) @name.definition.parameter.splat
+)
+"""
+    mock_query_loader.load_query.return_value = param_query_string
+    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+
+    code = """
+def func(a, b: str, c=True, *, d, **kwargs):
+    pass
+
+class MyClass:
+    def __init__(self, name: str, age=0, *args, **attrs):
+        pass
+"""
+    temp_file = tmp_path / "temp_params.py"
+    temp_file.write_text(code)
+
+    tags = ts_parser.get_tags(str(temp_file))
+    actual_tags_simplified = [(tag.kind, tag.name) for tag in tags]
+    print(f"Actual Tags: {actual_tags_simplified}")
+    print(f"DEBUG: S-expression of code:\n{ts_parser.parse_file_to_sexp(str(temp_file))}")
+
+    expected_tags_simplified = [
+        ("name.definition.parameter", "a"),
+        ("name.definition.parameter", "b"),
+        ("name.definition.parameter", "c"),
+        ("name.definition.parameter", "d"),
+        ("name.definition.parameter.splat", "kwargs"),
+        ("name.definition.parameter", "self"),
+        ("name.definition.parameter", "name"),
+        ("name.definition.parameter", "age"),
+        ("name.definition.parameter.splat", "args"),
+        ("name.definition.parameter.splat", "attrs"),
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:

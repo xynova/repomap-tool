@@ -124,3 +124,48 @@ IdentifierSet = Set[str]
 MatchResult = tuple[str, int]
 CacheStats = Dict[str, Any]
 ProjectInfo = Dict[str, Any]
+
+
+class QueryLoaderProtocol(Protocol):
+    """Protocol for loading tree-sitter query strings."""
+    def load_query(self, language: str) -> Optional[str]:
+        """Loads the query string for a given language."""
+        ...
+
+
+class TagCacheProtocol(Protocol):
+    """Protocol for caching tree-sitter tags (CodeTag objects)."""
+    def get_tags(self, file_path: str) -> Optional[List[CodeTag]]:
+        """Retrieve cached tags for a file.
+        Args:
+            file_path: The absolute path to the file.
+        Returns:
+            A list of CodeTag objects if found and valid, otherwise None.
+        """
+        ...
+
+    def set_tags(self, file_path: str, tags: List[CodeTag]) -> None:
+        """Cache tags for a file.
+        Args:
+            file_path: The absolute path to the file.
+            tags: The list of CodeTag objects to cache.
+        """
+        ...
+
+    def invalidate_file(self, file_path: str) -> None:
+        """Invalidate the cache for a specific file.
+        Args:
+            file_path: The absolute path to the file to invalidate.
+        """
+        ...
+
+    def clear(self) -> None:
+        """Clear the entire cache."""
+        ...
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get statistics about the cache usage.
+        Returns:
+            A dictionary containing cache statistics.
+        """
+        ...

@@ -14,6 +14,10 @@ alwaysApply: true
 - **Code Quality**: Format with black, lint with flake8, type-check with mypy
 - **Modern Python**: Use Python 3.11+ features and best practices
 
+### **Language Standards:**
+- **ALWAYS** write all code (comments, variable names, function names, etc.) exclusively in English.
+- **NEVER** use non-English characters or words in any part of the codebase.
+
 ## 📝 **CODE FORMATTING REQUIREMENTS**
 
 ### **MANDATORY FORMATTING STEPS:**

@@ -51,6 +51,8 @@ if TYPE_CHECKING:
     )
     from repomap_tool.cli.controllers.density_controller import DensityController
     from rich.console import Console
+    from repomap_tool.protocols import QueryLoaderProtocol
+    from repomap_tool.code_analysis.query_loader import FileQueryLoader
 
 # Legacy factory functions removed - using DI container instead
 from ..models import RepoMapConfig
@@ -65,9 +67,15 @@ class Container(containers.DeclarativeContainer):
     # Configuration
     config = providers.Configuration()
 
-    # Tag cache for tree-sitter parsing results (conditionally created)
-    tag_cache: "providers.Singleton[TreeSitterTagCache]" = cast(
-        "providers.Singleton[TreeSitterTagCache]",
+    # Query loader for tree-sitter queries
+    query_loader: "providers.Singleton[QueryLoaderProtocol]" = cast(
+        "providers.Singleton[QueryLoaderProtocol]",
+        providers.Singleton("repomap_tool.code_analysis.query_loader.FileQueryLoader"),
+    )
+
+    # Tag Cache
+    tag_cache: "providers.Singleton[TagCacheProtocol]" = cast(
+        "providers.Singleton[TagCacheProtocol]",
         providers.Singleton(
             "repomap_tool.core.tag_cache.TreeSitterTagCache",
             cache_dir=config.cache_dir,
@@ -93,6 +101,7 @@ class Container(containers.DeclarativeContainer):
                 "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
                 project_root=config.project_root,
                 cache=tag_cache,
+                query_loader=query_loader, # Inject query_loader here
             ),
         ),
     )
@@ -107,6 +116,7 @@ class Container(containers.DeclarativeContainer):
                 "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
                 project_root=config.project_root,
                 cache=tag_cache,
+                query_loader=query_loader, # Inject query_loader here
             ),
         ),
     )
@@ -131,6 +141,7 @@ class Container(containers.DeclarativeContainer):
                 "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
                 project_root=config.project_root,
                 cache=tag_cache,
+                query_loader=query_loader, # Inject query_loader here
             ),
         ),
     )
@@ -191,6 +202,7 @@ class Container(containers.DeclarativeContainer):
                 "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
                 project_root=config.project_root,
                 cache=tag_cache,
+                query_loader=query_loader, # Inject query_loader here
             ),
         ),
     )

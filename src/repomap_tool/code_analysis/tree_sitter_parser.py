@@ -17,6 +17,7 @@ import tree_sitter
 from grep_ast.tsl import get_language, get_parser
 from grep_ast.parsers import filename_to_lang
 from repomap_tool.code_analysis.models import CodeTag
+from repomap_tool.protocols import QueryLoaderProtocol, TagCacheProtocol
 
 from repomap_tool.core.logging_service import get_logger
 
@@ -29,36 +30,31 @@ class TreeSitterParser:
 
     def __init__(
         self,
-        project_root: Optional[str] = None,
-        custom_queries_dir: Optional[str] = None,
-        cache: Optional[Any] = None,
-        initial_query_string: Optional[str] = None,
+        project_root: Path,
+        cache: TagCacheProtocol,
+        query_loader: QueryLoaderProtocol,
     ):
         """Initialize the tree-sitter parser.
 
         Args:
             project_root: Root directory of the project for relative path resolution
-            custom_queries_dir: Directory containing custom query files (.scm).
-                              Defaults to code_analysis/queries/ directory
-            initial_query_string: Optional query string to use instead of loading from file.
+            cache: Optional cache for tags.
+            query_loader: An instance of QueryLoaderProtocol to load query strings.
         """
-        self.project_root = project_root or "."
-        self._query_cache: Dict[str, str] = {}
-        self.tag_cache = cache  # Can be None to disable caching
-        self.initial_query_string = initial_query_string
+        if not project_root.is_absolute():
+            raise ValueError("project_root must be an absolute path.")
+        if cache is None:
+            raise ValueError("Cache must be injected and cannot be None.")
+        if query_loader is None:
+            raise ValueError("QueryLoader must be injected and cannot be None.")
 
-        # Set custom queries directory - use package resources for reliable access
-        if custom_queries_dir is None:
-            self.custom_queries_dir = Path(__file__).parent / "queries"
-            logger.debug(
-                f"Using file-based queries directory: {self.custom_queries_dir}"
-            )
-            if not self.custom_queries_dir.exists():
-                logger.warning(
-                    f"Fallback queries directory does not exist: {self.custom_queries_dir}"
-                )
-        else:
-            self.custom_queries_dir = Path(custom_queries_dir)
+        self.project_root = project_root
+        self._query_cache: Dict[str, str] = {}
+        self.tag_cache = cache
+        self.query_loader = query_loader
+
+        # The custom_queries_dir is now managed by the QueryLoader, no need here.
+        # The initial_query_string parameter is also removed.
 
     def _parse_file(self, file_path: str) -> List[CodeTag]:
         """Internal method for raw tree-sitter parsing without caching.
@@ -82,16 +78,12 @@ class TreeSitterParser:
             language = get_language(lang)
             logger.debug(f"_parse_file: Retrieved parser and language for {lang}. Language object: {language}")
 
-            # Load query file (or use initial_query_string)
-            if self.initial_query_string:
-                query_scm = self.initial_query_string
-                logger.debug(f"_parse_file: Using initial_query_string. Length: {len(query_scm)}")
-            else:
-                query_scm = self._load_query(lang)
-                logger.debug(f"_parse_file: Loaded query SCM for {lang}. Query length: {len(query_scm) if query_scm else 0}")
+            # Load query file using the injected QueryLoader
+            query_scm = self.query_loader.load_query(lang)
+            logger.debug(f"_parse_file: Loaded query SCM for {lang}. Query length: {len(query_scm) if query_scm else 0}")
 
             if not query_scm:
-                logger.warning(f"_parse_file: No query SCM found for language {lang} or initial_query_string is empty.")
+                logger.warning(f"_parse_file: No query SCM found for language {lang}.")
                 return []
 
             logger.debug(f"_parse_file: Query SCM for {lang}:\n{query_scm}")
@@ -219,63 +211,6 @@ class TreeSitterParser:
         sexp_str += ")"
         return sexp_str
 
-    def _load_query(self, lang: str) -> Optional[str]:
-        """Load the .scm query file for this language.
-
-        Args:
-            lang: Language identifier
-
-        Returns:
-            Query string or None if not found
-        """
-        if lang in self._query_cache:
-            return self._query_cache[lang]
-
-        logger.debug(f"Loading query for language: {lang}")
-        logger.debug(f"Custom queries directory: {self.custom_queries_dir}")
-
-        # 1. Check custom queries directory FIRST
-        custom_query_path = self.custom_queries_dir / f"{lang}-tags.scm"
-        logger.debug(f"Looking for custom query at: {custom_query_path}")
-        if custom_query_path.exists():
-            try:
-                query_content = custom_query_path.read_text()
-                self._query_cache[lang] = query_content
-                logger.debug(f"Using custom query file: {custom_query_path}")
-                return query_content
-            except Exception as e:
-                logger.debug(f"Could not load custom query for {lang}: {e}")
-        else:
-            logger.debug(f"Custom query file does not exist: {custom_query_path}")
-
-        # 2. Fallback: try to find query files directly
-        try:
-            # Try to find query files in common locations
-            query_path = None
-            for base_path in [
-                f"tree-sitter-{lang}-queries/queries/{lang}-tags.scm",
-                f"tree-sitter-{lang}/queries/{lang}-tags.scm",
-                f"queries/{lang}-tags.scm",
-            ]:
-                try:
-                    query_path = pkg_resources.resource_filename("", base_path)
-                    if os.path.exists(query_path):
-                        break
-                except Exception:
-                    continue
-            logger.debug(f"Looking for pkg_resources query at: {query_path}")
-            if query_path and os.path.exists(query_path):
-                with open(query_path, "r") as f:
-                    query_content = f.read()
-                    self._query_cache[lang] = query_content
-                    logger.debug(f"Using pkg_resources query file: {query_path}")
-                    return query_content
-        except Exception as e:
-            logger.debug(f"Could not load pkg_resources query for {lang}: {e}")
-
-        logger.warning(f"No query file found for language: {lang}")
-        return None
-
     def _read_file(self, file_path: str) -> Optional[str]:
         """Read file content safely.
 
@@ -331,4 +266,4 @@ class TreeSitterParser:
             True if language is supported
         """
         lang = filename_to_lang(file_path)
-        return lang is not None and self._load_query(lang) is not None
+        return lang is not None and self.query_loader.load_query(lang) is not None

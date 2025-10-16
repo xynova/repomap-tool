@@ -3,16 +3,16 @@
 
 ; Capture docstrings (string literals as immediate children of definitions or modules)
 (expression_statement
-  (string) @docstring
+  (string) @module.docstring
 )
 (function_definition
   body: (block
-    (expression_statement (string) @docstring)
+    (expression_statement (string) @function.docstring)
   )
 )
 (class_definition
   body: (block
-    (expression_statement (string) @docstring)
+    (expression_statement (string) @class.docstring)
   )
 )
 
@@ -70,56 +70,82 @@
   )
 )
 
-; Capture async method definitions within a class
-(class_definition
-  body: (block
-    (function_definition
-      "async" @keyword.async
-      name: (identifier) @name.definition.async_method
-    )
+; Capture simple parameters (e.g., 'a')
+(function_definition
+  parameters: (parameters
+    (identifier) @name.definition.parameter
   )
 )
 
-; Capture assigned variables (left-hand side of assignment)
-(assignment
-  left: (identifier) @name.definition.variable
+; Capture typed parameters (e.g., 'b: str', 'name: str')
+(typed_parameter
+  (identifier) @name.definition.parameter
+  ":"
+  type: (type)
 )
 
-; Capture variables from 'with ... as' statements
-(with_item
-  value: (as_pattern
-    alias: (as_pattern_target
-      (identifier) @name.definition.variable
-    )
-  )
+; Capture default parameters (e.g., 'c=True', 'age=0')
+(default_parameter
+  name: (identifier) @name.definition.parameter
 )
 
-; Capture function calls
+; Capture list splat patterns (e.g., '*args')
+(list_splat_pattern
+  (identifier) @name.definition.parameter.splat
+)
+
+; Capture dictionary splat patterns (e.g., '**kwargs')
+(dictionary_splat_pattern
+  (identifier) @name.definition.parameter.splat
+)
+
+; Capture function calls (basic, non-method calls)
 (call
   function: (identifier) @call.name
 )
 
-; Capture method calls (attribute access followed by call)
+; Capture simple variable assignments
+(assignment
+  left: (identifier) @name.definition.variable
+)
+
+; Capture calls to attributes (e.g., logger.debug)
 (call
   function: (attribute
-    attribute: (identifier) @call.name
+    attribute: (identifier) @call.name.attribute
   )
 )
 
-; Capture variable references
-(identifier) @name.reference.name
-
-; Capture lambda function parameters
-(lambda_parameters
-  (identifier) @lambda.parameter
+; Capture loop variables in for statements
+(for_statement
+  left: (identifier) @name.definition.variable
 )
 
-; Capture lambda function body
-(lambda
-  body: (expression) @lambda.body
+; Capture variable definition in a 'with' statement (e.g., 'with open() as f:')
+(with_item
+  (as_pattern
+    alias: (as_pattern_target (identifier) @name.definition.variable)
+  )
 )
 
-; Capture comprehension iterators
+; Capture identifiers in expressions as general references
+(expression
+  (identifier) @name.reference.name
+)
+
+; Capture comprehension iterators (e.g., 'i' in '[i for i in range(10)]')
 (for_in_clause
   left: (identifier) @comprehension.iterator
+)
+
+; Capture lambda parameters
+(lambda
+  parameters: (lambda_parameters
+    (identifier) @lambda.parameter
+  )
+)
+
+; Capture lambda body
+(lambda
+  body: (expression) @lambda.body
 )
