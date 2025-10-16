@@ -1,173 +1,103 @@
-; JavaScript/TypeScript tree-sitter query for comprehensive code analysis
-; Captures imports, exports, function definitions, class definitions, and calls
+; Tree-sitter query for JavaScript to extract definitions and references
 
-; ES6 imports
-(import_statement
-  source: (string) @import.source
-) @import.statement
+; Class Definitions
+(class_declaration
+  name: (identifier) @name.definition.class
+) @definition.class
 
-; Import with specifiers
-(import_statement
-  import_clause: (named_imports
-    (import_specifier
-      name: (identifier) @import.name
-      alias: (identifier) @import.alias
-    )
-  )
-  source: (string) @import.source
-) @import.named
+; Function Definitions
+(function_declaration
+  name: (identifier) @name.definition.function
+) @definition.function
 
-; Default imports
-(import_statement
-  import_clause: (identifier) @import.default
-  source: (string) @import.source
-) @import.default
+; Arrow Function Expressions (when assigned to a variable)
+(variable_declarator
+  name: (identifier) @name.definition.function
+  value: (arrow_function)
+) @definition.function
 
-; Namespace imports
-(import_statement
-  import_clause: (namespace_import
-    (identifier) @import.namespace
-  )
-  source: (string) @import.source
-) @import.namespace
+; Method Definitions (inside classes or object literals)
+(method_definition
+  name: (property_identifier) @name.definition.method
+) @definition.method
 
-; Type imports (TypeScript)
+(pair
+  key: (property_identifier) @name.definition.method
+  value: (function)
+) @definition.method
+
+; Imports
 (import_statement
-  import_clause: (type_import
+  (import_clause
     (named_imports
       (import_specifier
-        name: (identifier) @import.type_name
-        alias: (identifier) @import.type_alias
+        name: (identifier) @name.reference.import
       )
     )
   )
-  source: (string) @import.source
-) @import.type
+) @reference.import
 
-; CommonJS requires
-(call_expression
-  function: (identifier) @require.name
-  arguments: (arguments
-    (string) @require.source
-  )
-) @require.statement
-
-; Variable declarations with require
-(variable_declaration
-  declarator: (variable_declarator
-    name: (identifier) @require.var_name
-    value: (call_expression
-      function: (identifier) @require.name
-      arguments: (arguments
-        (string) @require.source
-      )
+(import_statement
+  (import_clause
+    (namespace_import
+      name: (identifier) @name.reference.import
     )
   )
-) @require.var
+) @reference.import
 
-; Export statements
+(import_statement
+  (import_clause
+    (identifier) @name.reference.import
+  )
+) @reference.import
+
+; Exports
 (export_statement
   declaration: (function_declaration
-    name: (identifier) @export.function
+    name: (identifier) @name.definition.export
   )
-) @export.function
+) @definition.export
 
 (export_statement
   declaration: (class_declaration
-    name: (identifier) @export.class
+    name: (identifier) @name.definition.export
   )
-) @export.class
+) @definition.export
 
 (export_statement
   declaration: (variable_declaration
-    declarator: (variable_declarator
-      name: (identifier) @export.variable
+    (variable_declarator
+      name: (identifier) @name.definition.export
     )
   )
-) @export.variable
+) @definition.export
 
-; Named exports
-(named_export
-  specifiers: (export_specifier
-    name: (identifier) @export.name
-    alias: (identifier) @export.alias
-  )
-) @export.named
-
-; Default exports
 (export_statement
-  default: (identifier) @export.default
-) @export.default
+  (named_exports
+    (export_specifier
+      name: (identifier) @name.reference.export
+    )
+  )
+) @reference.export
 
-; Function definitions
-(function_declaration
-  name: (identifier) @function.name
-) @function.declaration
+; Variable Declarations
+(variable_declarator
+  name: (identifier) @name.definition.variable
+) @definition.variable
 
-(function_expression
-  name: (identifier) @function.name
-) @function.expression
-
-(arrow_function
-  parameter: (identifier) @function.param
-) @function.arrow
-
-; Method definitions
-(method_definition
-  name: (property_identifier) @method.name
-) @method.definition
-
-; Class definitions
-(class_declaration
-  name: (identifier) @class.name
-) @class.declaration
-
-(class_expression
-  name: (identifier) @class.name
-) @class.expression
-
-; Interface definitions (TypeScript)
-(interface_declaration
-  name: (identifier) @interface.name
-) @interface.declaration
-
-; Type aliases (TypeScript)
-(type_alias_declaration
-  name: (identifier) @type.name
-) @type.alias
-
-; Enum definitions (TypeScript)
-(enum_declaration
-  name: (identifier) @enum.name
-) @enum.declaration
-
-; Function calls
+; Function Calls
 (call_expression
-  function: (identifier) @call.name
-) @call.expression
+  function: (identifier) @name.call
+) @call.function
 
 (call_expression
   function: (member_expression
-    object: (identifier) @call.object
-    property: (property_identifier) @call.method
+    property: (property_identifier) @name.call
   )
-) @call.method
+) @call.function
 
-; Variable declarations
-(variable_declaration
-  declarator: (variable_declarator
-    name: (identifier) @variable.name
-  )
-) @variable.declaration
+; General Identifiers (references to variables, etc.)
+(identifier) @name.reference.identifier
 
-; Assignment expressions
-(assignment_expression
-  left: (identifier) @assignment.name
-  right: (expression) @assignment.value
-) @assignment.expression
-
-; ✨ NEW: Single-line comments
+; Comments
 (comment) @comment
-
-; ✨ NEW: JSDoc comments
-(comment) @comment.documentation

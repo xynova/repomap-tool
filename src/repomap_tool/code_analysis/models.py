@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import Optional, List, Dict, Any, Set
 from enum import Enum
+from pydantic import Field
 
 
 @dataclass
@@ -174,12 +175,13 @@ class FileAnalysisResult:
 
     file_path: str
     imports: List[Import]
-    defined_functions: List[str]
-    defined_classes: List[str]
-    function_calls: List[FunctionCall]
-    used_variables: List[str]
-    line_count: int
-    analysis_errors: List[str]
+    defined_functions: List[str] = Field(default_factory=list)
+    defined_classes: List[str] = Field(default_factory=list)
+    defined_methods: List[str] = Field(default_factory=list)
+    function_calls: List[FunctionCall] = Field(default_factory=list)
+    used_variables: List[str] = Field(default_factory=list)
+    line_count: int = Field(..., ge=0)
+    analysis_errors: List[str] = Field(default_factory=list)
     used_classes: Optional[List[str]] = None
 
 

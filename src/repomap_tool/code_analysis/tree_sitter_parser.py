@@ -12,14 +12,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import List, Dict, Any, Optional
-
-from grep_ast import filename_to_lang
+import logging
+import tree_sitter
 from grep_ast.tsl import get_language, get_parser
-
-from repomap_tool.core.logging_service import get_logger
+from grep_ast.parsers import filename_to_lang
 from repomap_tool.code_analysis.models import CodeTag
 
+from repomap_tool.core.logging_service import get_logger
+
 logger = get_logger(__name__)
+logger.debug("Attempting to import tree_sitter at module level.")
 
 
 class TreeSitterParser:
@@ -30,6 +32,7 @@ class TreeSitterParser:
         project_root: Optional[str] = None,
         custom_queries_dir: Optional[str] = None,
         cache: Optional[Any] = None,
+        initial_query_string: Optional[str] = None,
     ):
         """Initialize the tree-sitter parser.
 
@@ -37,10 +40,12 @@ class TreeSitterParser:
             project_root: Root directory of the project for relative path resolution
             custom_queries_dir: Directory containing custom query files (.scm).
                               Defaults to code_analysis/queries/ directory
+            initial_query_string: Optional query string to use instead of loading from file.
         """
         self.project_root = project_root or "."
         self._query_cache: Dict[str, str] = {}
         self.tag_cache = cache  # Can be None to disable caching
+        self.initial_query_string = initial_query_string
 
         # Set custom queries directory - use package resources for reliable access
         if custom_queries_dir is None:
@@ -96,6 +101,7 @@ class TreeSitterParser:
         try:
             # Get language for the file
             lang = filename_to_lang(file_path)
+            logger.debug(f"_parse_file: Detected language: {lang} for file: {file_path}")
             if not lang:
                 logger.debug(f"No language detected for {file_path}")
                 return []
@@ -103,38 +109,57 @@ class TreeSitterParser:
             # Get parser and language
             parser = get_parser(lang)
             language = get_language(lang)
+            logger.debug(f"_parse_file: Retrieved parser and language for {lang}. Language object: {language}")
 
-            # Load query file
-            query_scm = self._load_query(lang)
+            # Load query file (or use initial_query_string)
+            if self.initial_query_string:
+                query_scm = self.initial_query_string
+                logger.debug(f"_parse_file: Using initial_query_string. Length: {len(query_scm)}")
+            else:
+                query_scm = self._load_query(lang)
+                logger.debug(f"_parse_file: Loaded query SCM for {lang}. Query length: {len(query_scm) if query_scm else 0}")
+
             if not query_scm:
-                logger.warning(f"No query file found for language: {lang}")
+                logger.warning(f"_parse_file: No query SCM found for language {lang} or initial_query_string is empty.")
                 return []
 
+            logger.debug(f"_parse_file: Query SCM for {lang}:\n{query_scm}")
+
+            query = tree_sitter.Query(language, query_scm)
+            logger.debug(f"_parse_file: Successfully created query for {lang}.")
+
             # Read file content
-            code = self._read_file(file_path)
-            if not code:
-                logger.warning(f"Could not read file: {file_path}")
+            code_content = self._read_file(file_path)
+            logger.debug(f"_parse_file: Read file content for {file_path}. Content length: {len(code_content) if code_content else 0}")
+            if not code_content:
+                logger.warning(f"_parse_file: Could not read file: {file_path}")
                 return []
 
             # Parse with tree-sitter
-            tree = parser.parse(bytes(code, "utf-8"))
-            query = language.query(query_scm)
-            captures = query.captures(tree.root_node)
+            tree = parser.parse(bytes(code_content, "utf-8"))
+            logger.debug(f"_parse_file: Parsed file into tree for {file_path}. Root node: {tree.root_node.type}")
 
-            # Extract ALL tags WITHOUT filtering
+            # Debugging: Print S-expression of the parsed code
+            # logger.debug(f"_parse_file: S-expression of code:\n{tree.root_node.sexp()}")
+
+            query_cursor = tree_sitter.QueryCursor(query)
+            logger.debug(f"_parse_file: Created tree_sitter.QueryCursor object.")
+            captures = query_cursor.captures(tree.root_node)
+            logger.debug(f"_parse_file: QueryCursor.captures returned {len(list(captures))} entries.") # Convert to list for accurate count, but keep original iterable for the loop
+            # print(f"DEBUG: Type of captures: {type(captures)}") # Removed debug print
+            # print(f"DEBUG: First few captures: {list(captures)[:5]}") # Removed debug print
             tags = []
 
-            # Handle different capture formats
-            if hasattr(captures, "items"):
-                # CodeTag format: {tag_name: [nodes]}
+            # Process captures dictionary
+            if isinstance(captures, dict):
                 for tag_kind, nodes in captures.items():
+                    logger.debug(f"_parse_file: Processing tag_kind: {tag_kind} with {len(nodes)} nodes.")
                     for node in nodes:
                         tags.append(
                             CodeTag(
                                 name=node.text.decode("utf-8"),
-                                kind=tag_kind,  # Keep full kind: name.definition.class, etc.
-                                line=node.start_point[0]
-                                + 1,  # Convert to 1-based line numbers
+                                kind=tag_kind,
+                                line=node.start_point[0] + 1,
                                 column=node.start_point[1],
                                 file=file_path,
                                 end_line=node.end_point[0] + 1,
@@ -142,32 +167,10 @@ class TreeSitterParser:
                             )
                         )
             else:
-                # List format: [(node, tag_kind), ...]
-                for capture in captures:
-                    if len(capture) == 2:
-                        node, tag_kind = capture
-                        tags.append(
-                            CodeTag(
-                                name=node.text.decode("utf-8"),
-                                kind=tag_kind,  # Keep full kind: name.definition.class, etc.
-                                line=node.start_point[0]
-                                + 1,  # Convert to 1-based line numbers
-                                column=node.start_point[1],
-                                file=file_path,
-                                end_line=node.end_point[0] + 1,
-                                end_column=node.end_point[1],
-                            )
-                        )
-                    else:
-                        logger.debug(f"Unexpected capture format: {capture}")
+                logger.warning(f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict.")
 
-            logger.debug(f"Parsed {len(tags)} tags from {file_path}")
-
-            # Associate comments with code elements
-            tags_with_comments = self._associate_comments_with_code(
-                tags, tree.root_node, code
-            )
-            return tags_with_comments
+            logger.debug(f"_parse_file: Extracted {len(tags)} CodeTags from {file_path}.")
+            return tags
 
         except Exception as e:
             logger.error(f"Error parsing file {file_path} with tree-sitter: {e}")
@@ -204,6 +207,49 @@ class TreeSitterParser:
             logger.debug(f"Cached {len(tags)} tags for {file_path}")
 
         return tags
+
+    def parse_file_to_sexp(self, file_path: str) -> str:
+        """Parses a file and returns its S-expression."""
+        lang = filename_to_lang(file_path)
+        parser = get_parser(lang)
+        with open(file_path, 'rb') as f:
+            tree = parser.parse(f.read())
+        if tree is None or tree.root_node is None:
+            logger.warning(f"Failed to parse file or root node is None for {file_path}")
+            return ""
+        return self._node_to_sexp(tree.root_node)
+
+    def _node_to_sexp(self, node: tree_sitter.Node, indent: int = 0) -> str:
+        """Recursively converts a tree-sitter node to an S-expression string.
+
+        Args:
+            node: The tree-sitter node to convert.
+            indent: Current indentation level.
+
+        Returns:
+            S-expression string.
+        """
+        sexp_str = "" # Initialize an empty string
+        prefix = "  " * indent
+
+        # Check if node is named or a token
+        if node.is_named:
+            sexp_str += f"({node.type}"
+        else:
+            # For unnamed nodes (tokens), just print their text
+            return f"\"{(node.text.decode('utf-8'))}\""
+
+        # Add fields for named nodes
+        for i, child in enumerate(node.children):
+            field_name = node.field_name_for_child(i)
+            child_sexp = self._node_to_sexp(child, indent + 1)
+            if field_name:
+                sexp_str += f"\n{prefix}  {field_name}: {child_sexp}"
+            else:
+                sexp_str += f"\n{prefix}  {child_sexp}"
+
+        sexp_str += ")"
+        return sexp_str
 
     def _load_query(self, lang: str) -> Optional[str]:
         """Load the .scm query file for this language.

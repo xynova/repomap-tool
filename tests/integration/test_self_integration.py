@@ -43,9 +43,28 @@ class TestSelfIntegration:
 
     def setup_method(self):
         """Set up test environment."""
-        # Get the project root (parent of src directory)
-        self.project_root = Path(__file__).parent.parent.parent
+        import logging
+
+        logger = logging.getLogger(self.__class__.__name__)
+
+        # Dynamically find the project root by looking for the 'src/repomap_tool' directory
+        current_path = Path(__file__).resolve()
+        while current_path != current_path.parent:
+            if (current_path / "src" / "repomap_tool").exists():
+                self.project_root = current_path
+                break
+            current_path = current_path.parent
+        else:
+            raise FileNotFoundError("Could not find project root containing 'src/repomap_tool'")
+
         self.src_dir = self.project_root / "src" / "repomap_tool"
+
+        # Debug logging
+        logger.debug(f"TestSelfIntegration.setup_method: Project Root: {self.project_root}")
+        logger.debug(f"TestSelfIntegration.setup_method: Source Directory: {self.src_dir}")
+        logger.debug(f"TestSelfIntegration.setup_method: Project root exists: {self.project_root.exists()}")
+        logger.debug(f"TestSelfIntegration.setup_method: src_dir exists: {self.src_dir.exists()}")
+        logger.debug(f"TestSelfIntegration.setup_method: Files in src_dir (first 5): {list(self.src_dir.iterdir())[:5]}...")
 
         # Create temporary directory for test outputs
         self.test_output_dir = tempfile.mkdtemp()
@@ -67,10 +86,14 @@ class TestSelfIntegration:
 
     def test_default_analysis_finds_classes_and_functions(self):
         """Test that default analysis finds classes, functions, and other identifiers."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         # Create default configuration
         config = RepoMapConfig(
             project_root=str(self.project_root), verbose=True, output_format="json"
         )
+        logger.debug(f"TestSelfIntegration.test_default_analysis: RepoMapConfig created with project_root: {config.project_root}")
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
@@ -127,6 +150,9 @@ class TestSelfIntegration:
 
     def test_fuzzy_search_independently(self):
         """Test fuzzy search functionality independently."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         # Create configuration with fuzzy matching (always enabled) and semantic disabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
@@ -137,6 +163,7 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_fuzzy_search_independently: RepoMapConfig created with project_root: {config.project_root}")
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
@@ -190,6 +217,9 @@ class TestSelfIntegration:
 
     def test_semantic_search_independently(self):
         """Test semantic search functionality independently."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         # Create configuration with only semantic matching enabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
@@ -199,6 +229,7 @@ class TestSelfIntegration:
             ),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_semantic_search_independently: RepoMapConfig created with project_root: {config.project_root}")
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
@@ -252,6 +283,9 @@ class TestSelfIntegration:
 
     def test_hybrid_search_combination(self):
         """Test hybrid search (fuzzy + semantic) functionality."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         # Create configuration with both fuzzy and semantic matching enabled
         config = RepoMapConfig(
             project_root=str(self.project_root),
@@ -262,6 +296,7 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(threshold=0.1, use_tfidf=True),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_hybrid_search_combination: RepoMapConfig created with project_root: {config.project_root}")
 
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
@@ -323,12 +358,16 @@ class TestSelfIntegration:
 
     def test_search_specific_identifiers(self):
         """Test searching for specific known identifiers in the codebase."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_search_specific_identifiers: RepoMapConfig created with project_root: {config.project_root}")
 
         from repomap_tool.cli.services import get_service_factory
 
@@ -382,12 +421,16 @@ class TestSelfIntegration:
 
     def test_search_with_context(self):
         """Test that search results include proper context."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_search_with_context: RepoMapConfig created with project_root: {config.project_root}")
 
         from repomap_tool.cli.services import get_service_factory
 
@@ -416,12 +459,17 @@ class TestSelfIntegration:
 
     def test_search_result_ranking(self):
         """Test that search results are properly ranked by relevance."""
+        import time
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_search_result_ranking: RepoMapConfig created with project_root: {config.project_root}")
 
         from repomap_tool.cli.services import get_service_factory
 
@@ -448,12 +496,16 @@ class TestSelfIntegration:
 
     def test_error_handling(self):
         """Test error handling for invalid queries and configurations."""
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
+
         config = RepoMapConfig(
             project_root=str(self.project_root),
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
         )
+        logger.debug(f"TestSelfIntegration.test_error_handling: RepoMapConfig created with project_root: {config.project_root}")
 
         from repomap_tool.cli.services import get_service_factory
 
@@ -484,6 +536,8 @@ class TestSelfIntegration:
     def test_performance_benchmark(self):
         """Test performance of different search modes."""
         import time
+        import logging
+        logger = logging.getLogger(self.__class__.__name__)
 
         config = RepoMapConfig(
             project_root=str(self.project_root),
@@ -491,6 +545,7 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,  # Disable verbose for performance test
         )
+        logger.debug(f"TestSelfIntegration.test_performance_benchmark: RepoMapConfig created with project_root: {config.project_root}")
 
         from repomap_tool.cli.services import get_service_factory
 
@@ -515,6 +570,8 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=False,
         )
+        logger.debug(f"TestSelfIntegration.test_performance_benchmark: Fuzzy RepoMapConfig created with project_root: {fuzzy_config.project_root}")
+
         from repomap_tool.cli.services import get_service_factory
 
         service_factory = get_service_factory()
@@ -535,6 +592,8 @@ class TestSelfIntegration:
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,
         )
+        logger.debug(f"TestSelfIntegration.test_performance_benchmark: Semantic RepoMapConfig created with project_root: {semantic_config.project_root}")
+
         semantic_repomap = service_factory.create_repomap_service(semantic_config)
 
         start_time = time.time()

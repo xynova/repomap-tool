@@ -315,7 +315,7 @@ def _initialize_default_logging() -> None:
     """Initialize default logging configuration."""
     global _logging_configured
     if not _logging_configured:
-        configure_logging(level="INFO")
+        configure_logging(level="DEBUG")
         _logging_configured = True
 
 

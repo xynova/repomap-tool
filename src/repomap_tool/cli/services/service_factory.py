@@ -13,7 +13,8 @@ from typing import Optional, Any, TYPE_CHECKING, Union, cast
 from pathlib import Path
 
 from repomap_tool.models import RepoMapConfig
-from repomap_tool.core.container import Container, create_container # Revert to direct import
+# Revert Container and create_container to TYPE_CHECKING / local import
+# from repomap_tool.core.container import Container, create_container # REMOVED
 from repomap_tool.core.repo_map import RepoMapService
 from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
 
@@ -30,7 +31,8 @@ from rich.console import Console
 if TYPE_CHECKING:
     from repomap_tool.code_exploration.tree_builder import TreeBuilder
     from repomap_tool.code_exploration.tree_manager import TreeManager
-    # from repomap_tool.core.container import Container # Remove, as it's now directly imported
+    # Use string literal for Container type hint in TYPE_CHECKING
+    from repomap_tool.core.container import Container # REMOVED, now only string literal used
 
 logger = get_logger(__name__)
 
@@ -211,7 +213,7 @@ class ServiceFactory:
         logger.debug(f"Created LLM analyzer for {config.project_root}")
         return llm_analyzer
 
-    def _get_or_create_container(self, config: RepoMapConfig) -> Container: # Revert type hint
+    def _get_or_create_container(self, config: RepoMapConfig) -> 'Container': # Use string literal for return type
         """Get or create a container for a given project root, with caching.
 
         Args:
@@ -222,17 +224,18 @@ class ServiceFactory:
         """
         container_key = f"repomap_{str(config.project_root)}"  # Explicitly cast to str
         if container_key not in self._containers:
-            # Revert to direct import of create_container
-            # import importlib # REMOVED
-            # container_module = importlib.import_module("repomap_tool.core.container") # REMOVED
-            # create_container_func = getattr(container_module, "create_container") # REMOVED
+            # Dynamically import create_container only when needed for initial creation
+            import importlib
+            container_module = importlib.import_module("repomap_tool.core.container")
+            create_container_func = getattr(container_module, "create_container")
 
-            container = create_container(config) # Revert to direct call
+            container = create_container_func(config)
             self._containers[container_key] = container
             logger.debug(f"Created and cached new container for {config.project_root}")
         else:
             logger.debug(f"Using cached container for {config.project_root}")
-        return cast(Container, self._containers[container_key]) # Revert cast
+        # No longer casting directly to Container, as it's a dynamic import
+        return self._containers[container_key] # Return type handled by string literal hint
 
     def clear_cache(self, project_root: Optional[Union[str, Path]] = None) -> None:
         """Clear cached services and containers.

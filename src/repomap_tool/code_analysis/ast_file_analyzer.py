@@ -115,6 +115,7 @@ class ASTFileAnalyzer:
             defined_functions = self._extract_functions_from_tags(tags)
             defined_classes = self._extract_classes_from_tags(tags)
             function_calls = self._extract_function_calls_from_tags(tags, full_path)
+            defined_methods = self._extract_methods_from_tags(tags)
 
             # Create result
             result = FileAnalysisResult(
@@ -127,6 +128,7 @@ class ASTFileAnalyzer:
                 used_variables=[],  # TODO: Extract from tags if needed
                 line_count=self._get_line_count(full_path),
                 analysis_errors=analysis_errors,
+                defined_methods=defined_methods, # Added defined_methods to result
             )
 
             # Cache the result
@@ -169,290 +171,66 @@ class ASTFileAnalyzer:
     def _extract_imports_from_tags(
         self, tags: List[Any], file_path: str
     ) -> List[Import]:
-        """Extract imports from file content since tree-sitter tags don't include imports."""
+        """Extract imports from tree-sitter tags."""
         imports = []
 
-        try:
-            # Read file content to extract imports
-            with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
+        for tag in tags:
+            if tag.kind in ["import", "import_from"]:
+                module = getattr(tag, "module", tag.name) # Use module if available, otherwise name
+                symbols = getattr(tag, "symbols", []) # Get symbols if available
+                is_relative = module.startswith(".") # Determine if relative based on module name
 
-            for line_num, line in enumerate(lines, 1):
-                line = line.strip()
+                # Determine import type more robustly based on tag kind and module name
+                if tag.kind == "import_from":
+                    import_type = ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                else: # tag.kind == "import"
+                    import_type = ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
 
-                # Skip empty lines and comments
-                if not line or line.startswith("#"):
-                    continue
-
-                # Handle Python imports
-                if line.startswith("import ") and " from " not in line:
-                    # Standard import: import module
-                    module = line[7:].strip()  # Remove "import "
-                    # Handle multiple imports: import os, sys
-                    for module_name in module.split(","):
-                        module_name = module_name.strip()
-                        if module_name:
-                            imports.append(
-                                Import(
-                                    module=module_name,
-                                    symbols=[],
-                                    is_relative=module_name.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module_name.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-                elif line.startswith("from "):
-                    # From import: from module import symbol
-                    if " import " in line:
-                        parts = line.split(" import ")
-                        if len(parts) == 2:
-                            from_part = parts[0].strip()  # "from module"
-                            import_part = parts[1].strip()  # "symbol"
-
-                            if from_part.startswith("from "):
-                                module = from_part[5:].strip()  # Remove "from "
-                                symbols = []
-
-                                # Handle multiple symbols: import os, sys
-                                for symbol in import_part.split(","):
-                                    symbol = symbol.strip()
-                                    if symbol:
-                                        symbols.append(symbol)
-
-                                imports.append(
-                                    Import(
-                                        module=module,
-                                        symbols=symbols,
-                                        is_relative=module.startswith("."),
-                                        import_type=(
-                                            ImportType.RELATIVE
-                                            if module.startswith(".")
-                                            else ImportType.ABSOLUTE
-                                        ),
-                                        line_number=line_num,
-                                    )
-                                )
-
-                # Handle JavaScript/TypeScript imports
-                elif line.startswith("import ") and (
-                    " from " in line or " = require(" in line
-                ):
-                    if " from " in line:
-                        # ES6 import: import { symbol } from 'module'
-                        parts = line.split(" from ")
-                        if len(parts) == 2:
-                            symbols_part = parts[0].strip()
-                            module = parts[1].strip().strip("'\"")
-
-                            symbols = []
-                            if symbols_part.startswith("import "):
-                                symbols_str = symbols_part[
-                                    7:
-                                ].strip()  # Remove "import "
-                                if symbols_str.startswith("{") and symbols_str.endswith(
-                                    "}"
-                                ):
-                                    # Named imports: { symbol1, symbol2 }
-                                    symbols_str = symbols_str[1:-1]  # Remove braces
-                                    for symbol in symbols_str.split(","):
-                                        symbol = symbol.strip()
-                                        if symbol:
-                                            symbols.append(symbol)
-                                elif symbols_str == "*":
-                                    # Namespace import: import * as name
-                                    symbols = ["*"]
-                                else:
-                                    # Default import: import name
-                                    symbols = [symbols_str]
-
-                            imports.append(
-                                Import(
-                                    module=module,
-                                    symbols=symbols,
-                                    is_relative=module.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-                    elif " = require(" in line:
-                        # CommonJS require: const module = require('module')
-                        start = line.find("require(") + 8
-                        end = line.find(")", start)
-                        if start < end:
-                            module = line[start:end].strip().strip("'\"")
-                            imports.append(
-                                Import(
-                                    module=module,
-                                    symbols=[],
-                                    is_relative=module.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-
-        except Exception as e:
-            logger.warning(f"Could not extract imports from {file_path}: {e}")
+                imports.append(
+                    Import(
+                        module=module,
+                        symbols=symbols,
+                        is_relative=is_relative,
+                        import_type=import_type,
+                        line_number=tag.line,
+                    )
+                )
 
         return imports
 
     def _extract_functions_from_tags(self, tags: List[Any]) -> List[str]:
-        """Extract function names from tree-sitter tags."""
+        """Extract function names from tree-sitter tags, filtering out methods."""
         functions = []
 
         for tag in tags:
-            if tag.kind in ["def", "function"]:
-                # Filter out false positives - tree-sitter sometimes tags variable assignments as 'def'
-                # We can identify these by checking if the name appears to be a variable assignment
-                # in the context of the file content
-                if not self._is_likely_variable_assignment(
-                    tag
-                ) and not self._is_likely_class_definition(tag):
-                    functions.append(tag.name)
+            # Only include if it's a function definition and not a method
+            if tag.kind in ["def", "function"] and "method" not in tag.kind:
+                functions.append(tag.name)
 
         return functions
 
+    def _extract_methods_from_tags(self, tags: List[Any]) -> List[str]:
+        """Extract method names from tree-sitter tags."""
+        methods = []
+        for tag in tags:
+            if "method" in tag.kind:
+                methods.append(tag.name)
+        return methods
+
     def _is_likely_variable_assignment(self, tag: Any) -> bool:
         """Check if a tag is likely a variable assignment rather than a function definition."""
-        # This is a heuristic to filter out false positives from tree-sitter parsing
-        # Variable assignments that tree-sitter incorrectly tags as 'def' often have these characteristics:
-
-        # 1. Single word names that are common variable names
-        common_variable_names = {
-            "result",
-            "obj",
-            "message",
-            "counts",
-            "data",
-            "value",
-            "item",
-            "items",
-            "response",
-            "request",
-            "config",
-            "settings",
-            "options",
-            "params",
-            "args",
-            "kwargs",
-            "self",
-            "cls",
-            "var",
-            "temp",
-            "tmp",
-            "file",
-            "path",
-            "url",
-            "name",
-            "id",
-            "key",
-            "val",
-            "content",
-            "text",
-            "string",
-            "number",
-            "list",
-            "dict",
-            "tuple",
-            "set",
-            "bool",
-        }
-
-        if tag.name.lower() in common_variable_names:
-            return True
-
-        # 2. Names that are very short (1-3 characters) and lowercase
-        if len(tag.name) <= 3 and tag.name.islower():
-            return True
-
-        # 3. Names that are common variable patterns but not function patterns
-        # Functions typically have descriptive names, variables are often short/generic
-        # But we need to be careful not to filter out legitimate short function names
-        if (
-            tag.name.islower()
-            and len(tag.name) <= 6
-            and not any(
-                word in tag.name
-                for word in [
-                    "get",
-                    "set",
-                    "is",
-                    "has",
-                    "can",
-                    "should",
-                    "will",
-                    "do",
-                    "make",
-                    "create",
-                    "build",
-                    "process",
-                    "handle",
-                    "manage",
-                    "parse",
-                    "format",
-                    "validate",
-                    "check",
-                    "find",
-                    "search",
-                    "load",
-                    "save",
-                    "delete",
-                    "update",
-                    "add",
-                    "remove",
-                    "init",
-                    "method",
-                    "test",
-                    "run",
-                    "call",
-                    "exec",
-                    "eval",
-                ]
-            )
-        ):
-            return True
-
-        return False
+        # This heuristic is no longer needed if we rely on explicit tag kinds
+        return False # Always return False as we no longer filter based on this
 
     def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
         """Extract class names from tree-sitter tags."""
         classes = []
 
         for tag in tags:
-            if tag.kind in ["class"]:
-                classes.append(tag.name)
-            elif tag.kind == "def" and self._is_likely_class_definition(tag):
-                # Tree-sitter sometimes tags class definitions as 'def'
+            if tag.kind in ["class", "interface", "enum"]:
                 classes.append(tag.name)
 
         return classes
-
-    def _is_likely_class_definition(self, tag: Any) -> bool:
-        """Check if a tag is likely a class definition rather than a function."""
-        # Class names typically follow PascalCase convention
-        if tag.name[0].isupper() and tag.name[1:].islower():
-            return True
-
-        # Class names that are all uppercase (constants/enums)
-        if tag.name.isupper():
-            return True
-
-        # Class names with multiple uppercase letters (PascalCase)
-        if any(c.isupper() for c in tag.name[1:]):
-            return True
-
-        return False
 
     def _extract_function_calls_from_tags(
         self, tags: List[Any], file_path: str
@@ -460,19 +238,27 @@ class ASTFileAnalyzer:
         """Extract function calls from tree-sitter tags."""
         calls = []
 
-        # For now, we'll create basic function calls from tag references
-        # This is a simplified approach - can be enhanced with more detailed parsing
         for tag in tags:
-            if tag.kind in ["ref"]:  # References to functions
+            if tag.kind in ["call", "method_call", "function_call"]:
+                # Determine if it's a method call or a direct function call
+                is_method_call = False
+                object_name = None
+                callee = tag.callee if hasattr(tag, "callee") else tag.name
+
+                if "." in callee:
+                    parts = callee.split(".", 1)
+                    object_name = parts[0]
+                    is_method_call = True
+
                 calls.append(
                     FunctionCall(
                         name=tag.name,
-                        caller="unknown",
-                        callee=tag.name,
+                        caller=getattr(tag, "caller", "unknown"),
+                        callee=callee,
                         file_path=file_path,
                         line_number=tag.line,
-                        is_method_call=False,
-                        object_name=None,
+                        is_method_call=is_method_call,
+                        object_name=object_name,
                     )
                 )
 

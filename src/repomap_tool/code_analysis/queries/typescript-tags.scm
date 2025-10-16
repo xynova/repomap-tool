@@ -1,261 +1,136 @@
-; TypeScript tree-sitter query for comprehensive code analysis
-; Extends JavaScript with TypeScript-specific features
+; Tree-sitter query for TypeScript to extract definitions and references
 
-; Type imports
-(import_statement
-  import_clause: (type_import
-    (named_imports
-      (import_specifier
-        name: (identifier) @import.type_name
-        alias: (identifier) @import.type_alias
-      )
-    )
-  )
-  source: (string) @import.source
-) @import.type
-
-; Type-only imports
-(import_statement
-  import_clause: (type_import
-    (named_imports
-      (import_specifier
-        name: (identifier) @import.type_only
-      )
-    )
-  )
-  source: (string) @import.source
-) @import.type_only
-
-; Interface imports
-(import_statement
-  import_clause: (named_imports
-    (import_specifier
-      name: (identifier) @import.interface
-      alias: (identifier) @import.interface_alias
-    )
-  )
-  source: (string) @import.source
-) @import.interface
-
-; Interface definitions
-(interface_declaration
-  name: (identifier) @interface.name
-) @interface.declaration
-
-; Type aliases
-(type_alias_declaration
-  name: (identifier) @type.name
-) @type.alias
-
-; Enum definitions
-(enum_declaration
-  name: (identifier) @enum.name
-) @enum.declaration
-
-; Namespace declarations
-(namespace_declaration
-  name: (identifier) @namespace.name
-) @namespace.declaration
-
-; Module declarations
-(module_declaration
-  name: (string) @module.name
-) @module.declaration
-
-; Generic function definitions
-(function_declaration
-  name: (identifier) @function.name
-  type_parameters: (type_parameters) @function.type_params
-) @function.generic
-
-; Generic class definitions
+; Class Definitions
 (class_declaration
-  name: (identifier) @class.name
-  type_parameters: (type_parameters) @class.type_params
-) @class.generic
+  name: (identifier) @name.definition.class
+) @definition.class
 
-; Method definitions with types
+; Function Definitions
+(function_declaration
+  name: (identifier) @name.definition.function
+) @definition.function
+
+; Arrow Function Expressions (when assigned to a variable)
+(variable_declarator
+  name: (identifier) @name.definition.function
+  value: (arrow_function)
+) @definition.function
+
+; Method Definitions (inside classes or object literals)
 (method_definition
-  name: (property_identifier) @method.name
-  type_parameters: (type_parameters) @method.type_params
-) @method.generic
+  name: (property_identifier) @name.definition.method
+) @definition.method
 
-; Property signatures
-(property_signature
-  name: (property_identifier) @property.name
-  type: (type_annotation) @property.type
-) @property.signature
+(pair
+  key: (property_identifier) @name.definition.method
+  value: (function)
+) @definition.method
 
-; Method signatures
-(method_signature
-  name: (property_identifier) @method.name
-  type_parameters: (type_parameters) @method.type_params
-) @method.signature
+; Interface Definitions
+(interface_declaration
+  name: (identifier) @name.definition.interface
+) @definition.interface
 
-; Call signatures
-(call_signature
-  type_parameters: (type_parameters) @call.type_params
-) @call.signature
+; Type Alias Definitions
+(type_alias_declaration
+  name: (identifier) @name.definition.type_alias
+) @definition.type_alias
 
-; Index signatures
-(index_signature
-  type: (type_annotation) @index.type
-) @index.signature
+; Enum Definitions
+(enum_declaration
+  name: (identifier) @name.definition.enum
+) @definition.enum
 
-; Type assertions
-(type_assertion
-  type: (type) @assertion.type
-  expression: (expression) @assertion.expression
-) @assertion.type
-
-; As expressions
-(as_expression
-  expression: (expression) @as.expression
-  type: (type) @as.type
-) @as.expression
-
-; Conditional types
-(conditional_type
-  left: (type) @conditional.left
-  right: (type) @conditional.right
-) @conditional.type
-
-; Mapped types
-(mapped_type_clause
-  name: (type_identifier) @mapped.name
-  type: (type) @mapped.type
-) @mapped.type
-
-; Template literal types
-(template_literal_type
-  (template_substitution
-    type: (type) @template.type
+; Imports
+(import_statement
+  (import_clause
+    (named_imports
+      (import_specifier
+        name: (identifier) @name.reference.import
+      )
+    )
   )
-) @template.literal
+) @reference.import
 
-; Union types
-(union_type
-  (type) @union.type
-) @union.type
-
-; Intersection types
-(intersection_type
-  (type) @intersection.type
-) @intersection.type
-
-; Function type definitions
-(function_type
-  type_parameters: (type_parameters) @function_type.type_params
-) @function_type.definition
-
-; Array types
-(array_type
-  element: (type) @array.element
-) @array.type
-
-; Tuple types
-(tuple_type
-  (type) @tuple.type
-) @tuple.type
-
-; Optional types
-(optional_type
-  type: (type) @optional.type
-) @optional.type
-
-; Rest types
-(rest_type
-  type: (type) @rest.type
-) @rest.type
-
-; Readonly types
-(readonly_type
-  type: (type) @readonly.type
-) @readonly.type
-
-; Keyof types
-(keyof_type
-  type: (type) @keyof.type
-) @keyof.type
-
-; Typeof types
-(typeof_type
-  expression: (expression) @typeof.expression
-) @typeof.type
-
-; Indexed access types
-(indexed_access_type
-  object: (type) @indexed.object
-  index: (type) @indexed.index
-) @indexed.access
-
-; Conditional expressions
-(conditional_expression
-  condition: (expression) @conditional.condition
-  consequence: (expression) @conditional.consequence
-  alternative: (expression) @conditional.alternative
-) @conditional.expression
-
-; Type parameters
-(type_parameters
-  (type_parameter
-    name: (type_identifier) @type_param.name
-    constraint: (type) @type_param.constraint
-    default: (type) @type_param.default
+(import_statement
+  (import_clause
+    (namespace_import
+      name: (identifier) @name.reference.import
+    )
   )
-) @type_param.definition
+) @reference.import
 
-; Type annotations
-(type_annotation
-  type: (type) @annotation.type
-) @annotation.type
-
-; Parameter types
-(formal_parameters
-  (required_parameter
-    pattern: (identifier) @param.name
-    type: (type_annotation) @param.type
+(import_statement
+  (import_clause
+    (identifier) @name.reference.import
   )
-) @param.required
+) @reference.import
 
-(formal_parameters
-  (optional_parameter
-    pattern: (identifier) @param.name
-    type: (type_annotation) @param.type
-  )
-) @param.optional
-
-; Rest parameters
-(formal_parameters
-  (rest_parameter
-    pattern: (identifier) @param.name
-    type: (type_annotation) @param.type
-  )
-) @param.rest
-
-; Decorators
-(decorator
-  expression: (call_expression) @decorator.call
-) @decorator.expression
-
-; JSDoc comments
-(comment) @jsdoc.comment
-
-; Export type statements
+; Exports
 (export_statement
-  declaration: (type_alias_declaration
-    name: (identifier) @export.type
+  declaration: (function_declaration
+    name: (identifier) @name.definition.export
   )
-) @export.type
+) @definition.export
+
+(export_statement
+  declaration: (class_declaration
+    name: (identifier) @name.definition.export
+  )
+) @definition.export
+
+(export_statement
+  declaration: (variable_declaration
+    (variable_declarator
+      name: (identifier) @name.definition.export
+    )
+  )
+) @definition.export
 
 (export_statement
   declaration: (interface_declaration
-    name: (identifier) @export.interface
+    name: (identifier) @name.definition.export
   )
-) @export.interface
+) @definition.export
+
+(export_statement
+  declaration: (type_alias_declaration
+    name: (identifier) @name.definition.export
+  )
+) @definition.export
 
 (export_statement
   declaration: (enum_declaration
-    name: (identifier) @export.enum
+    name: (identifier) @name.definition.export
   )
-) @export.enum
+) @definition.export
+
+(export_statement
+  (named_exports
+    (export_specifier
+      name: (identifier) @name.reference.export
+    )
+  )
+) @reference.export
+
+; Variable Declarations
+(variable_declarator
+  name: (identifier) @name.definition.variable
+) @definition.variable
+
+; Function Calls
+(call_expression
+  function: (identifier) @name.call
+) @call.function
+
+(call_expression
+  function: (member_expression
+    property: (property_identifier) @name.call
+  )
+) @call.function
+
+; General Identifiers (references to variables, etc.)
+(identifier) @name.reference.identifier
+
+; Comments
+(comment) @comment

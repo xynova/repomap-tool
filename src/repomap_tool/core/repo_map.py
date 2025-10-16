@@ -178,6 +178,7 @@ class RepoMapService:
             project_files = get_project_files(
                 str(self.config.project_root), self.config.verbose
             )
+            self.logger.debug(f"_populate_tree_sitter_cache: Found {len(project_files)} project files for caching.")
 
             self.logger.info(
                 f"Populating tree-sitter cache with {len(project_files)} files"
@@ -185,11 +186,13 @@ class RepoMapService:
 
             # Parse each file to populate the cache
             for file_path in project_files:
+                self.logger.debug(f"_populate_tree_sitter_cache: Processing file: {file_path}")
                 try:
                     # This will parse the file and cache the results
-                    self.tree_sitter_parser.get_tags(file_path)
+                    tags = self.tree_sitter_parser.get_tags(file_path)
+                    self.logger.debug(f"_populate_tree_sitter_cache: Retrieved {len(tags)} tags for {file_path}")
                 except Exception as e:
-                    self.logger.debug(f"Failed to parse {file_path}: {e}")
+                    self.logger.debug(f"_populate_tree_sitter_cache: Failed to parse {file_path}: {e}")
                     continue
 
             self.logger.info("Tree-sitter cache populated successfully")
@@ -770,18 +773,17 @@ class RepoMapService:
         identifiers = []
         for file_path in project_files:
             try:
-                # file_path is already relative, so we need to make it absolute for tree-sitter
-                abs_path = os.path.join(self.config.project_root, file_path)
-                self.logger.debug(f"Processing {file_path} -> {abs_path}")
-                tags = self.tree_sitter_parser.get_tags(abs_path)
-                self.logger.debug(f"Found {len(tags)} tags in {file_path}")
+                # file_path is already absolute (from get_project_files), so use directly
+                self.logger.debug(f"_extract_identifiers_sequential: Processing file (absolute path): {file_path}")
+                tags = self.tree_sitter_parser.get_tags(file_path)
+                self.logger.debug(f"_extract_identifiers_sequential: Found {len(tags)} tags in {file_path}")
                 for tag in tags:
                     # Now all tags are CodeTag objects
                     if tag.name:
                         identifiers.append(tag.name)
             except Exception as e:
-                self.logger.warning(f"Error processing {file_path}: {e}")
-                self.logger.debug(f"Traceback: {traceback.format_exc()}")
+                self.logger.warning(f"_extract_identifiers_sequential: Error processing {file_path}: {e}")
+                self.logger.debug(f"_extract_identifiers_sequential: Traceback: {traceback.format_exc()}")
                 continue
         return identifiers
 
