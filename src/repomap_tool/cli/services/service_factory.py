@@ -24,6 +24,7 @@ from repomap_tool.code_exploration.session_manager import SessionManager
 from repomap_tool.code_analysis.advanced_dependency_graph import AdvancedDependencyGraph
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from rich.console import Console
+from repomap_tool.cli.output.manager import OutputManager
 
 # from repomap_tool.core.container import Container # Removed top-level import
 
@@ -213,6 +214,19 @@ class ServiceFactory:
         self._services[cache_key] = llm_analyzer
         logger.debug(f"Created LLM analyzer for {config.project_root}")
         return llm_analyzer
+
+    def create_output_manager(self, config: RepoMapConfig) -> OutputManager:
+        """Create an OutputManager with all dependencies injected."""
+        cache_key = f"output_manager_{config.project_root}"
+
+        if cache_key in self._services:
+            return self._services[cache_key]  # type: ignore
+
+        container = self._get_or_create_container(config)
+        output_manager = container.output_manager()
+        self._services[cache_key] = output_manager
+        logger.debug(f"Created OutputManager for {config.project_root}")
+        return output_manager
 
     def _get_or_create_container(self, config: RepoMapConfig) -> 'Container': # Use string literal for return type
         """Get or create a container for a given project root, with caching.

@@ -5,11 +5,11 @@ This module tests the DI container functionality, service creation,
 and dependency resolution.
 """
 
+from __future__ import annotations
+
 import logging
 import os
 import tempfile
-
-from __future__ import annotations
 
 from pathlib import Path
 from unittest.mock import Mock, patch
@@ -76,35 +76,50 @@ class TestContainer:
 
     def test_repo_map_config_provider(self) -> None:
         """Test that RepoMapConfig is correctly provided and is a singleton."""
-        config_obj = RepoMapConfig(
-            project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
-        )
-        container = create_container(config_obj)
-        repo_map_config = container.config()
-        assert repo_map_config == config_obj
-        assert repo_map_config is container.config()
+        # Create temporary directories for the test
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir) / "test_project"
+            project_root.mkdir()
+            cache_dir = Path(temp_dir) / "cache"
+            cache_dir.mkdir()
+            
+            config_obj = RepoMapConfig(
+                project_root=project_root, cache_dir=cache_dir
+            )
+            container = create_container(config_obj)
+            repo_map_config = container.config()
+            # The container returns a dict, so we need to check the dict values
+            assert isinstance(repo_map_config, dict)
+            assert str(repo_map_config["project_root"]) == str(config_obj.project_root)
+            assert str(repo_map_config["cache_dir"]) == str(config_obj.cache_dir)
+            assert repo_map_config is container.config()
 
     def test_console_provider(self) -> None:
         """Test that ConsoleProvider and console are correctly provided."""
-        config = RepoMapConfig(
-            project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
-        )
-        container = create_container(config)
-        # Ensure the console manager is a singleton
-        assert container.console_manager() is container.console_manager()
+        # Create temporary directories for the test
+        with tempfile.TemporaryDirectory() as temp_dir:
+            project_root = Path(temp_dir) / "test_project"
+            project_root.mkdir()
+            cache_dir = Path(temp_dir) / "cache"
+            cache_dir.mkdir()
+            
+            config = self._create_test_config()
+                project_root=project_root, cache_dir=cache_dir
+            )
+            container = create_container(config)
+            # Ensure the console manager is a singleton
+            assert container.console_manager() is container.console_manager()
 
-        # Ensure get_console returns a Console instance (RichConsoleFactory always returns a new Console)
-        console1 = container.console()
-        console2 = container.console()
-        assert isinstance(console1, Console)
-        assert isinstance(console2, Console)
-        assert console1 is not console2  # Expect new console instances
+            # Ensure get_console returns a Console instance (RichConsoleFactory always returns a new Console)
+            console1 = container.console()
+            console2 = container.console()
+            assert isinstance(console1, Console)
+            assert isinstance(console2, Console)
+            assert console1 is not console2  # Expect new console instances
 
     def test_console_manager_provider(self) -> None:
         """Test that ConsoleManager is correctly provided and is a singleton."""
-        config = RepoMapConfig(
-            project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
-        )
+        config = self._create_test_config()
         container = create_container(config)
         console_manager = container.console_manager()
         assert isinstance(console_manager, DefaultConsoleManager)
@@ -112,9 +127,7 @@ class TestContainer:
 
     def test_logger_provider(self) -> None:
         """Test that a logger is correctly provided."""
-        config = RepoMapConfig(
-            project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
-        )
+        config = self._create_test_config()
         container = create_container(config)
         logger = container.logger("test_logger")
         assert logger is not None
@@ -122,9 +135,7 @@ class TestContainer:
 
     def test_cache_manager_provider(self) -> None:
         """Test that CacheManager is correctly provided and is a singleton."""
-        config = RepoMapConfig(
-            project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
-        )
+        config = self._create_test_config()
         container = create_container(config)
         cache_manager = container.cache_manager()
         assert cache_manager is not None
@@ -133,9 +144,7 @@ class TestContainer:
 
     def test_tree_sitter_tag_cache_provider(self) -> None:
         """Test that TreeSitterTagCache is correctly provided and is a singleton."""
-        config = RepoMapConfig(
-            project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
-        )
+        config = self._create_test_config()
         container = create_container(config)
         tag_cache = container.tag_cache()
         assert tag_cache is not None
@@ -144,7 +153,7 @@ class TestContainer:
 
     def test_file_query_loader_provider(self) -> None:
         """Test that FileQueryLoader is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -155,7 +164,7 @@ class TestContainer:
 
     def test_tree_sitter_parser_provider(self) -> None:
         """Test that TreeSitterParser is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -166,7 +175,7 @@ class TestContainer:
 
     def test_import_analyzer_provider(self) -> None:
         """Test that ImportAnalyzer is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -177,7 +186,7 @@ class TestContainer:
 
     def test_call_graph_builder_provider(self) -> None:
         """Test that CallGraphBuilder is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -188,7 +197,7 @@ class TestContainer:
 
     def test_default_console_manager_provider(self) -> None:
         """Test that DefaultConsoleManager is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -198,7 +207,7 @@ class TestContainer:
 
     def test_default_template_registry_provider(self) -> None:
         """Test that DefaultTemplateRegistry is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -208,7 +217,7 @@ class TestContainer:
 
     def test_template_engine_provider(self) -> None:
         """Test that TemplateEngine is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -218,7 +227,7 @@ class TestContainer:
 
     def test_formatter_registry_provider(self) -> None:
         """Test that FormatterRegistry is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -228,7 +237,7 @@ class TestContainer:
 
     def test_output_manager_provider(self) -> None:
         """Test that OutputManager is correctly provided and is a singleton."""
-        config = RepoMapConfig(
+        config = self._create_test_config()
             project_root=Path("/tmp/test_project"), cache_dir=Path("/tmp/cache")
         )
         container = create_container(config)
@@ -319,7 +328,7 @@ class TestContainer:
         # Test with invalid config
         with pytest.raises(Exception):
             # Provide a valid, but potentially problematic, config for error handling test
-            invalid_config = RepoMapConfig(project_root=Path("/nonexistent"), cache_dir=Path("/tmp/cache"))
+            invalid_config = self._create_test_config()project_root=Path("/nonexistent"), cache_dir=Path("/tmp/cache"))
             create_container(invalid_config) # This should still be a valid call
 
     def test_get_container(self) -> None:

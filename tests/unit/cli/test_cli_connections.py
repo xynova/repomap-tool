@@ -12,12 +12,12 @@ import pytest
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from src.repomap_tool.cli import (
+from repomap_tool.cli import (
     create_default_config,
     load_config_file,
 )
-from src.repomap_tool.cli.config.loader import load_or_create_config
-from src.repomap_tool.models import (
+from repomap_tool.cli.config.loader import load_or_create_config
+from repomap_tool.models import (
     RepoMapConfig,
     FuzzyMatchConfig,
     SemanticMatchConfig,

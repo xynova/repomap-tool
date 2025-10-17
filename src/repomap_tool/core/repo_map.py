@@ -234,19 +234,39 @@ class RepoMapService:
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
 
-    def analyze_project(self) -> ProjectInfo:
+    def analyze_project(self, files: Optional[List[str]] = None) -> ProjectInfo:
         """Get comprehensive project information."""
         start_time = time.time()
 
         # Get project files
-        project_files = get_project_files(
+        all_project_files = get_project_files(
             self.config.project_root, self.config.verbose # Pass Path object directly
         )
 
-        # Get project files and extract identifiers from tags
-        project_files = get_project_files(
-            self.config.project_root, self.config.verbose # Pass Path object directly
-        )
+        # Filter project files if specific files are provided
+        project_files = files if files else all_project_files
+
+        # Ensure that only files within the project root are processed
+        if self.config.project_root and project_files:
+            project_root_path = Path(self.config.project_root)
+            project_files = [
+                f for f in project_files
+                if Path(f).is_relative_to(project_root_path) or Path(f).samefile(project_root_path)
+            ]
+        
+        # If no specific input_paths, the RepoMapService will analyze the entire project_root
+        if not project_files:
+            self.logger.warning("No project files found for analysis.")
+            return ProjectInfo(
+                project_root=str(self.config.project_root),
+                total_files=0,
+                total_identifiers=0,
+                file_types={},
+                identifier_types={},
+                analysis_time_ms=0.0,
+                cache_size_bytes=get_cache_size(),
+                last_updated=datetime.now(),
+            )
 
         # Extract identifiers from all project files
         identifier_list = self._extract_identifiers_from_files(project_files)
@@ -278,6 +298,7 @@ class RepoMapService:
             ProjectInfo object with analysis results
         """
         if not self.config.performance.enable_progress:
+            # Call analyze_project without specifying files, it will use all_project_files
             return self.analyze_project()
 
         from rich.progress import (

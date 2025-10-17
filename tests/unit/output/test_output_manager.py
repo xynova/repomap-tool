@@ -12,10 +12,7 @@ from typing import Any, Dict, List, Optional, Type
 import click
 from rich.console import Console
 
-from repomap_tool.cli.output.manager import (
-    OutputManager,
-    get_output_manager,
-)
+from repomap_tool.cli.output.manager import OutputManager
 from repomap_tool.protocols import FormatterProtocol, FormatterRegistryProtocol, ConsoleManagerProtocol, TemplateEngine, TemplateRegistryProtocol # Updated imports
 from repomap_tool.cli.output.templates.engine import TemplateEngine as ConcreteTemplateEngine # Import concrete for mocks
 from repomap_tool.cli.output.templates.registry import DefaultTemplateRegistry # Import concrete for mocks
@@ -566,37 +563,36 @@ class TestOutputManager:
         assert manager._output_stats["errors"] == 1
 
 
-class TestGlobalOutputManager:
-    """Test cases for global output manager functionality."""
+# class TestGlobalOutputManager:
+#     """Test cases for global output manager functionality."""
 
-    def test_get_output_manager_creates_singleton(self):
-        """Test that get_output_manager creates a singleton instance."""
-        # Reset the global instance to ensure clean test
-        import repomap_tool.cli.output.manager as manager_module
+#     def test_get_output_manager_creates_singleton(self):
+#         """Test that get_output_manager creates a singleton instance."""
+#         # Reset the global instance to ensure clean test
+#         import repomap_tool.cli.output.manager as manager_module
 
-        manager_module._global_output_manager = None
+#         manager_module._global_output_manager = None
 
-        with patch("repomap_tool.cli.output.manager.create_container") as mock_create_container,
-             patch("repomap_tool.cli.output.manager.OutputManager") as MockOutputManagerClass:
+#         with patch("repomap_tool.cli.output.manager.create_container") as mock_create_container:
 
-            mock_container_instance = MagicMock()
-            mock_output_manager_instance = Mock(spec=OutputManager)
-            mock_create_container.return_value = mock_container_instance
-            mock_container_instance.output_manager.return_value = mock_output_manager_instance
-            MockOutputManagerClass.return_value = mock_output_manager_instance
+#             mock_container_instance = MagicMock()
+#             mock_output_manager_instance = Mock(spec=OutputManager)
+#             mock_create_container.return_value = mock_container_instance
+#             mock_container_instance.output_manager.return_value = mock_output_manager_instance
+#             MockOutputManagerClass.return_value = mock_output_manager_instance
 
-            # First call
-            manager1 = get_output_manager()
-            assert manager1 is mock_output_manager_instance
+#             # First call
+#             manager1 = get_output_manager()
+#             assert manager1 is mock_output_manager_instance
 
-            # Second call should return same instance
-            manager2 = get_output_manager()
-            assert manager2 is mock_output_manager_instance
-            assert manager1 is manager2
+#             # Second call should return same instance
+#             manager2 = get_output_manager()
+#             assert manager2 is mock_output_manager_instance
+#             assert manager1 is manager2
 
-            # create_container should be called once, and output_manager should be resolved from it.
-            mock_create_container.assert_called_once()
-            mock_container_instance.output_manager.assert_called_once()
+#             # create_container should be called once, and output_manager should be resolved from it.
+#             mock_create_container.assert_called_once()
+#             mock_container_instance.output_manager.assert_called_once()
 
 
 class TestOutputManagerIntegration:

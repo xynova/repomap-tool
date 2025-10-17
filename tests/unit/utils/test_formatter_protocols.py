@@ -9,9 +9,8 @@ from typing import Any, Dict, List, Optional, Type
 import click
 from rich.console import Console
 
+from repomap_tool.protocols import FormatterProtocol, BaseFormatter
 from repomap_tool.cli.output.protocols import (
-    FormatterProtocol,
-    BaseFormatter,
     DataFormatter,
     TemplateFormatter,
     FormatterRegistry as FormatterRegistryProtocol,

@@ -6,11 +6,11 @@ from repomap_tool.code_analysis.models import CodeTag
 from pathlib import Path
 
 @pytest.fixture(scope="module")
-def python_parser_and_query(get_tree_sitter_parser_session_fixture):
+def python_parser_and_query(session_tree_sitter_parser):
     language = get_language("python")
     parser = get_parser("python")
     # Use the injected TreeSitterParser fixture
-    ts_parser = get_tree_sitter_parser_session_fixture
+    ts_parser = session_tree_sitter_parser
     query_string = ts_parser.query_loader.load_query("python")
     query = tree_sitter.Query(language, query_string)
     return parser, query, language, ts_parser

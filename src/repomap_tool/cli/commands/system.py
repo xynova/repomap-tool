@@ -69,9 +69,9 @@ def config(
     console = get_console(ctx)
 
     try:
-        # Resolve project path from argument or discovery
+        # For system config command, use project root directly (don't try to load existing config)
         project_root = ctx.obj.get("project_root", Path.cwd())
-        project_path = resolve_project_path(None, project_root)
+        project_path = str(project_root)
         # Create default configuration
         config_obj = create_default_config(
             project_path,

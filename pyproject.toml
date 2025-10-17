@@ -89,6 +89,7 @@ warn_untyped_fields = true
 addopts = "--cov=repomap_tool --cov-report=xml --cov-report=html --cov-report=term-missing --strict-markers -n auto -p no:warnings"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
+pythonpath = ["src"]
 markers = ["slow", "integration"]
 
 [tool.coverage.run]

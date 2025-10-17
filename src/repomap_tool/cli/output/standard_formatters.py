@@ -37,6 +37,7 @@ from .templates.registry import DefaultTemplateRegistry # Import DefaultTemplate
 from .controller_formatters import (
     CentralityViewModelFormatter,
     ImpactViewModelFormatter,
+    SearchViewModelFormatter,
 )
 
 logger = get_logger(__name__)
@@ -80,7 +81,7 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFor
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
             # Use template formatter for text output
-            return self._template_formatter.format(data, output_format, config, ctx, template_name="project_info")
+            return self._template_formatter.format(data, output_format, config, ctx)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -143,7 +144,7 @@ class DictFormatter(BaseFormatter, DataFormatter):
             if "error" in data or "success" in data:
                 return self._template_formatter.format(data, output_format, config, ctx)
             else:
-                return self._template_formatter.format(data, output_format, config, ctx, template_name="dict_output") # Use a generic dict template
+                return self._template_formatter.format(data, output_format, config, ctx) # Use a generic dict template
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -202,7 +203,7 @@ class ListFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
-            return self._template_formatter.format(data, output_format, config, ctx, template_name="list_output") # Use a generic list template
+            return self._template_formatter.format(data, output_format, config, ctx) # Use a generic list template
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -309,7 +310,7 @@ class SearchResponseFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
-            return self._template_formatter.format(data, output_format, config, ctx, template_name="search_response")
+            return self._template_formatter.format(data, output_format, config, ctx)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -342,6 +343,75 @@ class FormatterRegistry:
         self._console_manager = console_manager
         self.logger = logger # Assign the module-level logger
         self.logger.debug(f"FormatterRegistry initialized (id={id(self)}). TemplateRegistry id={id(template_registry)}, ConsoleManager id={id(console_manager)}")
+        
+        # Register all default formatters
+        self._register_default_formatters()
+
+    def _register_default_formatters(self) -> None:
+        """Register all default formatters."""
+        # Register ProjectInfoFormatter
+        project_info_formatter = ProjectInfoFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(project_info_formatter)
+        
+        # Register SearchResponseFormatter
+        search_response_formatter = SearchResponseFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(search_response_formatter)
+        
+        # Register ErrorResponseFormatter
+        error_response_formatter = ErrorResponseFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(error_response_formatter)
+        
+        # Register SuccessResponseFormatter
+        success_response_formatter = SuccessResponseFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(success_response_formatter)
+        
+        # Register DictFormatter
+        dict_formatter = DictFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(dict_formatter)
+        
+        # Register ListFormatter
+        list_formatter = ListFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(list_formatter)
+        
+        # Register StringFormatter
+        string_formatter = StringFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(string_formatter)
+        
+        # Register SearchViewModelFormatter
+        search_view_model_formatter = SearchViewModelFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(search_view_model_formatter)
 
     def register_formatter(
         self,
@@ -490,7 +560,7 @@ class ErrorResponseFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
-            return self._template_formatter.format(data, output_format, config, ctx, template_name="error")
+            return self._template_formatter.format(data, output_format, config, ctx)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -543,7 +613,7 @@ class SuccessResponseFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
-            return self._template_formatter.format(data, output_format, config, ctx, template_name="success")
+            return self._template_formatter.format(data, output_format, config, ctx)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 

@@ -5,7 +5,8 @@ Tests protocols, type validation, and runtime type checking.
 """
 
 import pytest
-from repomap_tool.protocols import ProjectMap, Tag, FileData, IdentifierSet, MatchResult
+from repomap_tool.models import ProjectMap, Tag, FileData, MatchResult
+from repomap_tool.protocols import IdentifierSet
 from repomap_tool.utils.type_validator import (
     validate_project_map,
     validate_identifier_set,

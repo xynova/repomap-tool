@@ -245,15 +245,8 @@ class TestCLICore:
 
     def test_config_basic_usage(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
         """Test basic config command usage."""
-        config_content = f"""
-        {{
-            "project_root": "{temp_project}",
-            "fuzzy_match": {{"threshold": 70}},
-            "semantic_match": {{"enabled": false}}
-        }}
-        """
+        # Create a temporary config file path
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
-            f.write(config_content)
             config_file = f.name
 
         try:
@@ -269,13 +262,15 @@ class TestCLICore:
             )
 
             with session_container.repo_map_service.override(mock_repo_map_service):
+                # Test the system config command with --config option
                 result = cli_runner_with_container.invoke(
-                    cli, ["system", "config", temp_project, "--config", config_file]
+                    cli, ["system", "config", "--config", config_file]
                 )
                 assert result.exit_code == 0
                 assert os.path.exists(config_file)
         finally:
-            os.unlink(config_file)
+            if os.path.exists(config_file):
+                os.unlink(config_file)
 
     def test_version_command(self, cli_runner_with_container: CliRunner) -> None:
         """Test version command."""
