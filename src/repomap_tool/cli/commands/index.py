@@ -1,4 +1,7 @@
 from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
+from repomap_tool.core.container_config import configure_container
+from pathlib import Path
 
 """
 Index commands for RepoMap-Tool CLI.
@@ -19,15 +22,15 @@ from ..config.loader import (
     create_default_config,
     load_or_create_config,
 )
-from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat #, get_output_manager
 from ..utils.console import get_console
 
 
 # Use DI-provided console instead of direct instantiation
-def get_index_console() -> Console:
-    """Get console instance using dependency injection."""
-    ctx = click.get_current_context()
-    return get_console(ctx)
+# def get_index_console() -> Console:
+#     """Get console instance using dependency injection."""
+#     ctx = click.get_current_context()
+#     return get_console(ctx)
 
 
 @click.group()
@@ -37,11 +40,6 @@ def index() -> None:
 
 
 @index.command()
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--config",
     "-c",
@@ -101,8 +99,10 @@ def index() -> None:
     default="medium",
     help="Output compression level",
 )
+@click.pass_context # Pass context to the command
+@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
 def create(
-    project_path: Optional[str],
+    ctx: click.Context, # Add ctx parameter here
     config: Optional[str],
     fuzzy: bool,
     semantic: bool,
@@ -126,12 +126,28 @@ def create(
     max_critical_lines: int,
     max_dependencies: int,
     compression: Literal["low", "medium", "high"],
+    input_paths: tuple,
 ) -> None:
     """Create project analysis and repository map."""
 
     try:
         # Resolve project path from argument, config file, or discovery
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
+
+        if resolved_project_path is None:
+            raise click.BadParameter("Project path could not be resolved.")
+
+        # If specific input_paths are provided, ensure they are absolute
+        target_files = []
+        if input_paths:
+            for p in input_paths:
+                abs_path = Path(p).resolve()
+                if not abs_path.is_relative_to(resolved_project_path):
+                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                target_files.append(str(abs_path))
+        # If no specific input_paths, the RepoMapService will analyze the entire project_root
 
         # Load or create configuration
         config_obj, was_created = load_or_create_config(
@@ -151,14 +167,20 @@ def create(
             log_level=log_level,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Initialize RepoMap using service factory
         from repomap_tool.cli.services import get_service_factory
 
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config_obj)
 
+        # Get output manager from context (after container is configured)
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
+
         # Analyze project
-        project_info = repomap.analyze_project()
+        project_info = repomap.analyze_project(files=target_files if target_files else None)
 
         # Pre-compute embeddings during indexing
         if (
@@ -166,7 +188,8 @@ def create(
             and repomap.embedding_matcher
             and repomap.embedding_matcher.enabled
         ):
-            console = get_index_console()
+            # console = get_index_console()
+            console = get_console(ctx)
             console.print("[cyan]Computing embeddings for all identifiers...[/cyan]")
 
             # Get all identifiers from tree-sitter cache
@@ -206,12 +229,12 @@ def create(
         )
 
         # Display results using OutputManager
-        output_manager = get_output_manager()
+        # output_manager = get_output_manager()
         output_manager.display(project_info, output_config)
 
     except Exception as e:
-        # Use OutputManager for error handling
-        output_manager = get_output_manager()
+        # Get output manager from context for error handling
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error(e, output_config)
         sys.exit(1)

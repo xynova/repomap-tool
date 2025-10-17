@@ -39,18 +39,15 @@ class ImportParser:
 class PythonImportParser(ImportParser):
     """Parses Python import statements using tree-sitter."""
 
-    def __init__(self) -> None:
-        # TreeSitterParser is now injected into ImportAnalyzer
+    def __init__(self, tree_sitter_parser: Any) -> None:
         super().__init__()
-        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract Python imports using tree-sitter parsing."""
         imports = []
 
-        if not self.tree_sitter_parser:
-            logger.warning("No tree-sitter parser available - cannot extract imports")
-            return []
+        # tree_sitter_parser is now always available due to DI and validation
 
         try:
             # Get all tags from tree-sitter
@@ -114,18 +111,15 @@ class PythonImportParser(ImportParser):
 class JavaScriptImportParser(ImportParser):
     """Parses JavaScript/TypeScript import statements using tree-sitter."""
 
-    def __init__(self) -> None:
-        # TreeSitterParser is now injected into ImportAnalyzer
+    def __init__(self, tree_sitter_parser: Any) -> None:
         super().__init__()
-        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract JavaScript/TypeScript imports using tree-sitter parsing."""
         imports = []
 
-        if not self.tree_sitter_parser:
-            logger.warning("No tree-sitter parser available - cannot extract imports")
-            return []
+        # tree_sitter_parser is now always available due to DI and validation
 
         try:
             # Use tree-sitter to parse the file
@@ -213,18 +207,15 @@ class JavaScriptImportParser(ImportParser):
 class JavaImportParser(ImportParser):
     """Parses Java import statements using tree-sitter."""
 
-    def __init__(self) -> None:
-        # TreeSitterParser is now injected into ImportAnalyzer
+    def __init__(self, tree_sitter_parser: Any) -> None:
         super().__init__()
-        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract Java imports using tree-sitter parsing."""
         imports = []
 
-        if not self.tree_sitter_parser:
-            logger.warning("No tree-sitter parser available - cannot extract imports")
-            return []
+        # tree_sitter_parser is now always available due to DI and validation
 
         try:
             # Use tree-sitter to parse the file
@@ -289,18 +280,15 @@ class JavaImportParser(ImportParser):
 class GoImportParser(ImportParser):
     """Parses Go import statements using tree-sitter."""
 
-    def __init__(self) -> None:
-        # TreeSitterParser is now injected into ImportAnalyzer
+    def __init__(self, tree_sitter_parser: Any) -> None:
         super().__init__()
-        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract Go imports using tree-sitter parsing."""
         imports = []
 
-        if not self.tree_sitter_parser:
-            logger.warning("No tree-sitter parser available - cannot extract imports")
-            return []
+        # tree_sitter_parser is now always available due to DI and validation
 
         try:
             # Use tree-sitter to parse the file
@@ -358,18 +346,15 @@ class GoImportParser(ImportParser):
 class CSharpImportParser(ImportParser):
     """Parses C# import statements using tree-sitter."""
 
-    def __init__(self) -> None:
-        # TreeSitterParser is now injected into ImportAnalyzer
+    def __init__(self, tree_sitter_parser: Any) -> None:
         super().__init__()
-        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract C# using directives using tree-sitter parsing."""
         imports = []
 
-        if not self.tree_sitter_parser:
-            logger.warning("No tree-sitter parser available - cannot extract imports")
-            return []
+        # tree_sitter_parser is now always available due to DI and validation
 
         try:
             # Use tree-sitter to parse the file
@@ -448,14 +433,14 @@ class ImportAnalyzer:
 
         # All parsers use TreeSitterParser - no regex fallbacks
         self.language_parsers: Dict[str, ImportParser] = {
-            "py": PythonImportParser(), # No longer passes tree_sitter_parser
-            "js": JavaScriptImportParser(), # No longer passes tree_sitter_parser
-            "ts": JavaScriptImportParser(),  # TypeScript uses same parser
-            "jsx": JavaScriptImportParser(),
-            "tsx": JavaScriptImportParser(),
-            "java": JavaImportParser(),
-            "go": GoImportParser(),
-            "cs": CSharpImportParser(),  # NEW: C# support
+            "py": PythonImportParser(self.tree_sitter_parser), # Pass tree_sitter_parser
+            "js": JavaScriptImportParser(self.tree_sitter_parser), # Pass tree_sitter_parser
+            "ts": JavaScriptImportParser(self.tree_sitter_parser),  # TypeScript uses same parser
+            "jsx": JavaScriptImportParser(self.tree_sitter_parser),
+            "tsx": JavaScriptImportParser(self.tree_sitter_parser),
+            "java": JavaImportParser(self.tree_sitter_parser),
+            "go": GoImportParser(self.tree_sitter_parser),
+            "cs": CSharpImportParser(self.tree_sitter_parser),  # NEW: C# support
         }
 
         # File extensions that should be analyzed

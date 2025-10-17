@@ -3,63 +3,60 @@ Tests for the centralized console management system.
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch, MagicMock, ANY
 from typing import Optional, Dict, Any
 
 import click
 from rich.console import Console
 
 from repomap_tool.cli.output.console_manager import (
-    ConsoleManager,
+    ConsoleManagerProtocol,
     DefaultConsoleManager,
-    ConsoleManagerFactory,
-    get_console_manager,
-    set_console_manager,
-    get_managed_console,
-    configure_managed_console,
-    get_console_from_context,
     log_console_operation,
 )
-from repomap_tool.cli.utils.console import ConsoleProvider
+from repomap_tool.cli.utils.console import ConsoleProvider, RichConsoleFactory
 
 
 class TestDefaultConsoleManager:
     """Test the DefaultConsoleManager implementation."""
 
-    def test_init_with_default_provider(self):
+    def test_init_with_default_provider(self) -> None:
         """Test initialization with default provider."""
-        manager = ConsoleManagerFactory.create_default_manager()
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()))
         assert manager._provider is not None
-        assert manager._enable_logging is True
-        assert manager._logger is not None
+        assert isinstance(manager._provider, ConsoleProvider)
+        assert isinstance(manager._provider._factory, RichConsoleFactory)
+        assert manager.enable_logging is True
+        assert manager.logger is not None
 
-    def test_init_with_custom_provider(self):
+    def test_init_with_custom_provider(self) -> None:
         """Test initialization with custom provider."""
         mock_provider = Mock(spec=ConsoleProvider)
         manager = DefaultConsoleManager(provider=mock_provider)
         assert manager._provider == mock_provider
 
-    def test_init_with_logging_disabled(self):
+    def test_init_with_logging_disabled(self) -> None:
         """Test initialization with logging disabled."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=False)
-        assert manager._enable_logging is False
-        assert manager._logger is None
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()), enable_logging=False)
+        assert manager.enable_logging is False
+        assert manager.logger is None
 
-    def test_get_console_with_context(self):
+    def test_get_console_with_context(self) -> None:
         """Test getting console with Click context."""
         mock_provider = Mock(spec=ConsoleProvider)
         mock_console = Mock(spec=Console)
         mock_provider.get_console.return_value = mock_console
 
-        manager = DefaultConsoleManager(provider=mock_provider)
+        manager = DefaultConsoleManager(provider=mock_provider, enable_logging=False) # Disable logging for this test
         mock_ctx = Mock(spec=click.Context)
+        mock_ctx.obj = {} # Add mock obj attribute
 
         result = manager.get_console(mock_ctx)
 
         assert result == mock_console
         mock_provider.get_console.assert_called_once_with(mock_ctx)
 
-    def test_get_console_without_context(self):
+    def test_get_console_without_context(self) -> None:
         """Test getting console without context."""
         mock_provider = Mock(spec=ConsoleProvider)
         mock_console = Mock(spec=Console)
@@ -72,290 +69,143 @@ class TestDefaultConsoleManager:
         assert result == mock_console
         mock_provider.get_console.assert_called_once_with(None)
 
-    def test_get_console_provider_error(self):
+    def test_get_console_provider_error(self) -> None:
         """Test console retrieval when provider raises error."""
         mock_provider = Mock(spec=ConsoleProvider)
         mock_provider.get_console.side_effect = Exception("Provider error")
 
         manager = DefaultConsoleManager(provider=mock_provider)
 
-        # Should raise the exception
         with pytest.raises(Exception, match="Provider error"):
             manager.get_console()
 
-    def test_configure_console_with_theme(self):
-        """Test console configuration with theme."""
-        mock_provider = Mock(spec=ConsoleProvider)
-        mock_console = Mock(spec=Console)
-        mock_provider.get_console.return_value = mock_console
-
-        manager = DefaultConsoleManager(provider=mock_provider)
-        mock_theme = Mock()
-
-        result = manager.configure_console(theme=mock_theme)
-
-        # Should create new console with theme
-        assert isinstance(result, Console)
-
-    def test_configure_console_with_no_color(self):
+    def test_configure_with_no_color(self) -> None:
         """Test console configuration with no_color option."""
-        mock_provider = Mock(spec=ConsoleProvider)
-        mock_console = Mock(spec=Console)
-        mock_provider.get_console.return_value = mock_console
+        initial_provider = ConsoleProvider(factory=RichConsoleFactory(), no_color=False)
+        manager = DefaultConsoleManager(provider=initial_provider, enable_logging=True)
 
-        manager = DefaultConsoleManager(provider=mock_provider)
+        with patch.object(manager, '_log_operation') as mock_log_operation: # Patch _log_operation directly
+            manager.configure(no_color=True)
+            # Assert that the internal provider was re-created with no_color=True
+            assert manager._provider._no_color is True
+            mock_log_operation.assert_called_once_with('configure_console', context={'no_color': True})
 
-        result = manager.configure_console(no_color=True)
-
-        # Should create new console with no_color
-        assert isinstance(result, Console)
-
-    def test_configure_console_provider_error(self):
-        """Test console configuration when provider raises error."""
-        mock_provider = Mock(spec=ConsoleProvider)
-        mock_provider.get_console.side_effect = Exception("Provider error")
-
-        manager = DefaultConsoleManager(provider=mock_provider)
-
-        # Should raise the exception
-        with pytest.raises(Exception, match="Provider error"):
-            manager.configure_console(no_color=True)
-
-    def test_log_console_usage_with_logging_enabled(self):
-        """Test logging console usage when logging is enabled."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=True)
-
-        with patch.object(manager._logger, "debug") as mock_debug:
-            manager.log_console_usage("test_operation", key="value")
-
+    def test_log_console_operation_with_logging_enabled(self) -> None:
+        """Test logging console operation when logging is enabled."""
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()), enable_logging=True)
+        with patch.object(manager.logger, "debug") as mock_debug:
+            manager.log_operation("test_operation", {"key": "value"})
             mock_debug.assert_called_once()
             call_args = mock_debug.call_args
             assert "test_operation" in call_args[0][0]
             assert call_args[1]["extra"]["operation"] == "test_operation"
-            assert call_args[1]["extra"]["context"]["key"] == "value"
+            assert call_args[1]["extra"]["context"]["key"] == "value" # Changed from 'details' to 'context'
 
-    def test_log_console_usage_with_logging_disabled(self):
-        """Test logging console usage when logging is disabled."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=False)
+    def test_log_console_operation_with_logging_disabled(self) -> None:
+        """Test logging console operation when logging is disabled."""
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()), enable_logging=False)
+        manager.log_operation("test_operation", {"key": "value"})
+        # No assertion needed, just ensure it doesn't crash
 
-        # Should not raise any errors
-        manager.log_console_usage("test_operation", key="value")
-
-    def test_get_usage_stats(self):
+    def test_get_usage_stats(self) -> Dict[str, int]:
         """Test getting usage statistics."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=True)
-
-        # Log some operations
-        manager.log_console_usage("operation1")
-        manager.log_console_usage("operation2")
-        manager.log_console_usage("operation1")
-
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()), enable_logging=True)
+        manager.log_operation("operation1", {})
+        manager.log_operation("operation2", {})
+        manager.log_operation("operation1", {})
         stats = manager.get_usage_stats()
-
         assert stats["operation1"] == 2
         assert stats["operation2"] == 1
+        return stats
 
-    def test_reset_usage_stats(self):
+    def test_reset_usage_stats(self) -> None:
         """Test resetting usage statistics."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=True)
-
-        # Log some operations
-        manager.log_console_usage("operation1")
-        manager.log_console_usage("operation2")
-
-        # Reset stats
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()), enable_logging=True)
+        manager.log_operation("operation1", {})
+        manager.log_operation("operation2", {})
         manager.reset_usage_stats()
-
         stats = manager.get_usage_stats()
         assert len(stats) == 0
-
-
-class TestConsoleManagerFactory:
-    """Test the ConsoleManagerFactory."""
-
-    def test_create_default_manager(self):
-        """Test creating default manager."""
-        manager = ConsoleManagerFactory.create_default_manager()
-
-        assert isinstance(manager, DefaultConsoleManager)
-        assert manager._enable_logging is True
-
-    def test_create_default_manager_with_custom_provider(self):
-        """Test creating default manager with custom provider."""
-        mock_provider = Mock(spec=ConsoleProvider)
-        manager = ConsoleManagerFactory.create_default_manager(provider=mock_provider)
-
-        assert isinstance(manager, DefaultConsoleManager)
-        assert manager._provider == mock_provider
-
-    def test_create_default_manager_with_logging_disabled(self):
-        """Test creating default manager with logging disabled."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=False)
-
-        assert isinstance(manager, DefaultConsoleManager)
-        assert manager._enable_logging is False
-
-    def test_create_console_manager_default_type(self):
-        """Test creating console manager with default type."""
-        manager = ConsoleManagerFactory.create_console_manager()
-
-        assert isinstance(manager, DefaultConsoleManager)
-
-    def test_create_console_manager_unknown_type(self):
-        """Test creating console manager with unknown type."""
-        with pytest.raises(ValueError, match="Unknown console manager type"):
-            ConsoleManagerFactory.create_console_manager("unknown_type")
-
-
-class TestGlobalConsoleManager:
-    """Test global console manager functionality."""
-
-    def test_get_console_manager_default(self):
-        """Test getting default global console manager."""
-        # Reset global state
-        set_console_manager(None)
-
-        manager = get_console_manager()
-
-        assert isinstance(manager, DefaultConsoleManager)
-
-    def test_set_and_get_console_manager(self):
-        """Test setting and getting custom console manager."""
-        mock_manager = Mock(spec=ConsoleManager)
-
-        set_console_manager(mock_manager)
-        result = get_console_manager()
-
-        assert result == mock_manager
-
-    def test_get_managed_console(self):
-        """Test getting managed console."""
-        mock_manager = Mock(spec=ConsoleManager)
-        mock_console = Mock(spec=Console)
-        mock_manager.get_console.return_value = mock_console
-
-        set_console_manager(mock_manager)
-
-        result = get_managed_console()
-
-        assert result == mock_console
-        mock_manager.get_console.assert_called_once_with(None)
-
-    def test_get_managed_console_with_context(self):
-        """Test getting managed console with context."""
-        mock_manager = Mock(spec=ConsoleManager)
-        mock_console = Mock(spec=Console)
-        mock_manager.get_console.return_value = mock_console
-        mock_ctx = Mock(spec=click.Context)
-
-        set_console_manager(mock_manager)
-
-        result = get_managed_console(mock_ctx)
-
-        assert result == mock_console
-        mock_manager.get_console.assert_called_once_with(mock_ctx)
-
-    def test_configure_managed_console(self):
-        """Test configuring managed console."""
-        mock_manager = Mock(spec=ConsoleManager)
-        mock_console = Mock(spec=Console)
-        mock_manager.configure_console.return_value = mock_console
-
-        set_console_manager(mock_manager)
-
-        result = configure_managed_console(no_color=True)
-
-        assert result == mock_console
-        mock_manager.configure_console.assert_called_once_with(None, no_color=True)
-
-    def test_get_console_from_context(self):
-        """Test getting console from context."""
-        mock_manager = Mock(spec=ConsoleManager)
-        mock_console = Mock(spec=Console)
-        mock_manager.get_console.return_value = mock_console
-        mock_ctx = Mock(spec=click.Context)
-
-        set_console_manager(mock_manager)
-
-        result = get_console_from_context(mock_ctx)
-
-        assert result == mock_console
-        mock_manager.get_console.assert_called_once_with(mock_ctx)
-
-    def test_log_console_operation(self):
-        """Test logging console operation."""
-        mock_manager = Mock(spec=ConsoleManager)
-
-        set_console_manager(mock_manager)
-
-        log_console_operation("test_op", key="value")
-
-        mock_manager.log_console_usage.assert_called_once_with("test_op", key="value")
 
 
 class TestConsoleManagerIntegration:
     """Integration tests for console manager."""
 
-    def test_console_manager_protocol_compliance(self):
+    def test_console_manager_protocol_compliance(self) -> None:
         """Test that DefaultConsoleManager implements ConsoleManager protocol."""
-        manager = ConsoleManagerFactory.create_default_manager()
-
-        # Should have all required methods
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()))
         assert hasattr(manager, "get_console")
-        assert hasattr(manager, "configure_console")
-        assert hasattr(manager, "log_console_usage")
-
-        # Should be callable
+        assert hasattr(manager, "configure") # Updated to configure
+        assert hasattr(manager, "log_operation")
+        assert hasattr(manager, "get_usage_stats")
+        assert hasattr(manager, "reset_usage_stats")
         assert callable(manager.get_console)
-        assert callable(manager.configure_console)
-        assert callable(manager.log_console_usage)
+        assert callable(manager.configure) # Updated to configure
+        assert callable(manager.log_operation)
+        assert callable(manager.get_usage_stats)
+        assert callable(manager.reset_usage_stats)
 
-    def test_console_manager_with_real_console(self):
+    def test_console_manager_with_real_console(self) -> None:
         """Test console manager with real console instances."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=False)
-
-        # Test getting console
+        provider = ConsoleProvider(factory=RichConsoleFactory())
+        manager = DefaultConsoleManager(provider=provider, enable_logging=False)
         console1 = manager.get_console()
         assert isinstance(console1, Console)
 
-        # Test configuring console (currently returns same console)
-        console2 = manager.configure_console(no_color=True)
-        assert isinstance(console2, Console)
-        # Note: configure_console currently doesn't change console settings
-        # due to DI constraints - it returns the same console instance
+        # Configure the manager and verify new consoles reflect the setting
+        manager.configure(no_color=True)
+        console2 = manager.get_console()
+        assert console2.no_color is True
 
-    def test_usage_statistics_tracking(self):
+        manager.configure(no_color=False)
+        console3 = manager.get_console()
+        assert console3.no_color is False
+
+    def test_usage_statistics_tracking(self) -> None:
         """Test that usage statistics are properly tracked."""
-        manager = ConsoleManagerFactory.create_default_manager(enable_logging=True)
-
-        # Perform various operations
+        manager = DefaultConsoleManager(provider=ConsoleProvider(factory=RichConsoleFactory()), enable_logging=True)
         manager.get_console()
-        manager.configure_console(no_color=True)
-        manager.log_console_usage("custom_operation")
-
+        manager.configure(no_color=True) # Updated to configure
+        manager.log_operation("custom_operation", {})
         stats = manager.get_usage_stats()
-
         assert "get_console" in stats
-        assert "configure_console" in stats
+        assert "configure_console" in stats # Should be configure_console even if the method is just configure
         assert "custom_operation" in stats
         assert stats["get_console"] >= 1
         assert stats["configure_console"] >= 1
         assert stats["custom_operation"] >= 1
 
-    def test_error_handling_robustness(self):
+    def test_error_handling_robustness(self) -> None:
         """Test that console manager handles errors gracefully."""
-        # Create manager with failing provider
-        mock_provider = Mock(spec=ConsoleProvider)
-        mock_provider.get_console.side_effect = Exception("Provider failure")
+        mock_console_returned_by_provider = Mock(spec=Console)
 
-        manager = DefaultConsoleManager(provider=mock_provider, enable_logging=False)
+        # Mock the RichConsoleFactory first
+        mock_rich_factory = Mock(spec=RichConsoleFactory)
+        mock_rich_factory.create_console.return_value = mock_console_returned_by_provider
 
-        # Should raise exceptions when provider fails
-        with pytest.raises(Exception, match="Provider failure"):
-            manager.get_console()
+        # Mock the ConsoleProvider class itself
+        mock_provider_instance = Mock(spec=ConsoleProvider)
+        mock_provider_instance.get_console.side_effect = Exception("Initial provider failure")
+        mock_provider_instance._factory = mock_rich_factory # Ensure the mock provider uses our mock factory
 
-        with pytest.raises(Exception, match="Provider failure"):
-            manager.configure_console(no_color=True)
+        # Patch ConsoleProvider constructor directly. This will be used when DefaultConsoleManager.configure calls ConsoleProvider(...)
+        with patch('repomap_tool.cli.output.console_manager.ConsoleProvider', return_value=mock_provider_instance):
+            # Initial manager uses a provider that fails
+            manager = DefaultConsoleManager(provider=mock_provider_instance, enable_logging=False)
 
-        # Should not raise exceptions for logging
-        manager.log_console_usage("test_operation")
+            with pytest.raises(Exception, match="Initial provider failure"):
+                manager.get_console()
+
+            # Now, configure the manager. This will call ConsoleProvider internally, which is patched to return mock_provider_instance
+            manager.configure(no_color=True)
+
+            # The internal _provider of manager should now be our mock_provider_instance
+            assert manager._provider == mock_provider_instance
+            assert manager._provider._factory == mock_rich_factory
+
+            # After configure, the get_console should now use the mocked factory which returns mock_console_returned_by_provider
+            # Since we set the side_effect for get_console, it will still raise the Initial provider failure
+            with pytest.raises(Exception, match="Initial provider failure"):
+                manager.get_console()
+
+            manager.log_operation("test_operation", {})

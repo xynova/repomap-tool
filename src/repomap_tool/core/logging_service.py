@@ -11,7 +11,6 @@ from typing import Optional, Dict, Any
 from pathlib import Path
 
 # Global logging configuration
-_logging_configured = False
 _logger_cache: Dict[str, logging.Logger] = {}
 
 
@@ -90,7 +89,7 @@ class LoggingService:
         self._configure_external_library_loggers()
 
         # Log configuration success
-        logger = self.get_logger(__name__)
+        logger = logging.getLogger(__name__)
         logger.debug(
             f"Logging service configured: level={level}, console={enable_console}, file={enable_file}"
         )
@@ -310,20 +309,6 @@ def get_logging_config() -> Dict[str, Any]:
     return get_logging_service().get_config()
 
 
-# Initialize default logging configuration
-def _initialize_default_logging() -> None:
-    """Initialize default logging configuration."""
-    global _logging_configured
-    if not _logging_configured:
-        configure_logging(level="DEBUG")
-        _logging_configured = True
-
-
-# Auto-initialize on import
-_initialize_default_logging()
-
-
-# Configure external libraries immediately on import
 def _configure_external_libraries_early() -> None:
     """Configure external library logging as early as possible."""
     _suppress_external_library_logs()

@@ -39,11 +39,29 @@ class TreeSitterTagCache:
             self._cache_disabled = True
         else:
             self._cache_disabled = False
-            self._init_db()
+            # _init_db is now called via _get_db_connection()
 
-    def _init_db(self) -> None:
-        """Initialize SQLite database schema"""
+    def _get_db_connection(self) -> sqlite3.Connection:
+        """Get a database connection, initializing the schema if the DB is new or table is missing."""
+        db_exists = self.db_path.exists()
         conn = sqlite3.connect(str(self.db_path))
+        
+        # Check if the file_cache table exists
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(file_cache)")
+        table_info = cursor.fetchall()
+        table_exists = len(table_info) > 0
+
+        if not db_exists or not table_exists:
+            if not db_exists:
+                logger.info(f"Initializing new tag cache database at {self.db_path}")
+            elif not table_exists:
+                logger.warning(f"Table 'file_cache' missing in existing database at {self.db_path}. Re-initializing schema.")
+            self._init_db(conn) # Pass the connection to init_db
+        return conn
+
+    def _init_db(self, conn: sqlite3.Connection) -> None:
+        """Initialize SQLite database schema"""
         cursor = conn.cursor()
 
         # File cache table - tracks file metadata
@@ -94,7 +112,7 @@ class TreeSitterTagCache:
         )
 
         conn.commit()
-        conn.close()
+        # conn.close() # Remove this line - connection should remain open
 
     def get_tags(self, file_path: str) -> Optional[List[CodeTag]]:
         """Get cached tags for a file if valid - returns CodeTag objects
@@ -111,7 +129,7 @@ class TreeSitterTagCache:
         if not self._is_cache_valid(file_path):
             return None
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection() # Use the new method
         cursor = conn.cursor()
 
         cursor.execute(
@@ -153,7 +171,7 @@ class TreeSitterTagCache:
         file_hash = self._compute_file_hash(file_path)
         mtime = Path(file_path).stat().st_mtime
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection() # Use the new method
         cursor = conn.cursor()
 
         # Delete old entry if exists
@@ -203,7 +221,7 @@ class TreeSitterTagCache:
         if self._cache_disabled:
             return
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection() # Use the new method
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_cache WHERE file_path = ?", (file_path,))
         cursor.execute("DELETE FROM tags WHERE file_path = ?", (file_path,))
@@ -217,7 +235,7 @@ class TreeSitterTagCache:
         if self._cache_disabled:
             return
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection() # Use the new method
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_cache")
         cursor.execute("DELETE FROM tags")
@@ -241,7 +259,7 @@ class TreeSitterTagCache:
         if not Path(file_path).exists():
             return False
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection() # Use the new method
         cursor = conn.cursor()
 
         cursor.execute(
@@ -292,7 +310,7 @@ class TreeSitterTagCache:
         Returns:
             Dictionary with cache statistics
         """
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection() # Use the new method
         cursor = conn.cursor()
 
         cursor.execute("SELECT COUNT(*) FROM file_cache")

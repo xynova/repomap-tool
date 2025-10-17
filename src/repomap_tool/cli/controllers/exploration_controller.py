@@ -28,7 +28,7 @@ from .view_models import (
 )
 
 if TYPE_CHECKING:
-    from .view_models import SymbolViewModel
+    from repomap_tool.models import SymbolViewModel
 
 logger = get_logger(__name__)
 

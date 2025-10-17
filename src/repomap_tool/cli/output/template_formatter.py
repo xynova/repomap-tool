@@ -13,8 +13,7 @@ from typing import Any, Optional, List, Dict
 import click
 
 from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
-
-from .protocols import BaseFormatter, FormatterProtocol
+from repomap_tool.protocols import TemplateRegistryProtocol, FormatterProtocol, BaseFormatter
 from .console_manager import ConsoleManagerProtocol
 from .templates.config import TemplateConfig
 from .templates.engine import TemplateEngine
@@ -40,7 +39,10 @@ class TemplateBasedFormatter(BaseFormatter):
             console_manager: Optional console manager for output.
             enable_logging: Whether to enable logging for this formatter.
         """
-        super().__init__(console_manager, enable_logging)
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
         self._template_engine = template_engine
         self._template_registry = template_registry
         self._supported_formats = [OutputFormat.TEXT]

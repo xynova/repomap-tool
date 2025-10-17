@@ -4,24 +4,18 @@ Output formatting and display utilities for RepoMap-Tool CLI.
 This package contains the unified output format system, formatters, and display utilities.
 """
 
-from .console_manager import (
-    ConsoleManagerProtocol,
-    DefaultConsoleManager,
-    ConsoleManagerFactory,
-)
-from repomap_tool.models import OutputFormat, OutputConfig, AnalysisFormat
-from .manager import OutputManager, get_output_manager
-from repomap_tool.protocols import OutputManagerProtocol
-from .protocols import (
-    BaseFormatter,
-    DataFormatter,
-    FormatterProtocol,
-)
+from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
+from repomap_tool.protocols import ConsoleManagerProtocol, FormatterRegistryProtocol, OutputManagerProtocol, TemplateRegistryProtocol # Import protocols from centralized location
+from .console_manager import DefaultConsoleManager, get_console_manager, set_console_manager, get_managed_console, get_console_from_context, log_console_operation # Expose public console management functions
+from .manager import OutputManager
 from .standard_formatters import (
+    ProjectInfoFormatter,
     DictFormatter,
     ListFormatter,
-    ProjectInfoFormatter,
     StringFormatter,
+    ErrorResponseFormatter,
+    SuccessResponseFormatter,
+    SearchResponseFormatter,
 )
 from .controller_formatters import (
     CentralityViewModelFormatter,
@@ -39,23 +33,33 @@ from .exploration_formatters import (
     SessionStatusViewModelFormatter,
     ExplorationViewModelFormatter,
 )
+from .template_formatter import TemplateBasedFormatter
 from .templates.engine import TemplateEngine
-from .templates.registry import TemplateRegistryProtocol
-from .templates.config import TemplateConfig
+from .templates.loader import TemplateLoader, FileTemplateLoader
+from .templates.registry import DefaultTemplateRegistry # Import DefaultTemplateRegistry
+
 
 __all__ = [
+    # Manager classes and accessors
     "OutputManager",
-    "get_output_manager",
-    "OutputFormat",
+    "DefaultConsoleManager",
+    "get_console_manager",
+    "set_console_manager",
+    "get_managed_console",
+    "get_console_from_context",
+    "log_console_operation",
+    # Output formats and config
     "OutputConfig",
+    "OutputFormat",
     "AnalysisFormat",
-    "BaseFormatter",
-    "DataFormatter",
-    "FormatterProtocol",
+    # Formatters
+    "ProjectInfoFormatter",
     "DictFormatter",
     "ListFormatter",
-    "ProjectInfoFormatter",
     "StringFormatter",
+    "ErrorResponseFormatter",
+    "SuccessResponseFormatter",
+    "SearchResponseFormatter",
     "CentralityViewModelFormatter",
     "ImpactViewModelFormatter",
     "SearchViewModelFormatter",
@@ -68,11 +72,15 @@ __all__ = [
     "TreeListingViewModelFormatter",
     "SessionStatusViewModelFormatter",
     "ExplorationViewModelFormatter",
-    "ConsoleManagerProtocol",
-    "DefaultConsoleManager",
-    "ConsoleManagerFactory",
-    "OutputManagerProtocol",
+    "TemplateBasedFormatter",
+    # Templates
     "TemplateEngine",
+    "TemplateLoader",
+    "FileTemplateLoader",
+    "DefaultTemplateRegistry", # Expose DefaultTemplateRegistry
+    # Protocols
+    "ConsoleManagerProtocol",
+    "FormatterRegistryProtocol",
+    "OutputManagerProtocol",
     "TemplateRegistryProtocol",
-    "TemplateConfig",
 ]

@@ -8,16 +8,42 @@ and match results using Pydantic for validation and serialization.
 
 from __future__ import annotations
 
-from typing import List, Dict, Optional, Any, Literal, Union, Set
+from typing import List, Dict, Optional, Any, Literal, Union, Set, TypedDict
 from enum import Enum
 from pathlib import Path
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import logging
+from dataclasses import dataclass
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
 
 logger = get_logger(__name__)
+
+# TypedDict definitions for structured data
+class Tag(TypedDict):
+    """Tag structure for project identifiers."""
+
+    name: str
+    type: Optional[str]
+    file: Optional[str]
+    line: Optional[int]
+
+
+class FileData(TypedDict):
+    """File data structure in project map."""
+
+    identifiers: Optional[List[str]]
+    tags: Optional[List["Tag"]]
+    content: Optional[str]
+
+
+class ProjectMap(TypedDict):
+    """Structured project map data."""
+
+    tags: Optional[List["Tag"]]
+    identifiers: Optional[List[str]]
+    files: Optional[Dict[str, "FileData"]]
 
 
 class PerformanceConfig(BaseModel):
@@ -95,22 +121,30 @@ class SemanticMatchConfig(BaseModel):
 
 
 class EmbeddingConfig(BaseModel):
-    """Configuration for CodeRankEmbed embeddings (always enabled)."""
+    """Configuration for embedding-based search and analysis.
 
-    model_config = ConfigDict(frozen=False)
+    Attributes:
+        cache_dir: Directory to cache embedding models and data.
+        model: Name of the embedding model to use (e.g., 'nomic-ai/CodeRankEmbed').
+        enabled: Whether embedding-based features are enabled.
+    """
 
-    enabled: bool = Field(default=True, description="Always enabled")
-    model_name: str = Field(
-        default="nomic-ai/CodeRankEmbed", description="CodeRankEmbed model (fixed)"
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        validate_assignment=True,
+        extra="forbid",
     )
-    trust_remote_code: bool = Field(
-        default=True, description="Required for CodeRankEmbed"
-    )
-    threshold: float = Field(
-        default=0.3, ge=0.0, le=1.0, description="Similarity threshold"
-    )
+
     cache_dir: Optional[str] = Field(
-        default=None, description="Embedding cache directory"
+        ".repomap/cache/embeddings",
+        description="Directory to cache embedding models and data.",
+    )
+    model: str = Field(
+        "nomic-ai/CodeRankEmbed",
+        description="Name of the embedding model to use (e.g., 'nomic-ai/CodeRankEmbed').",
+    )
+    enabled: bool = Field(
+        False, description="Whether embedding-based features are enabled."
     )
 
 
@@ -179,7 +213,9 @@ class RepoMapConfig(BaseModel):
     # Matching configurations
     fuzzy_match: FuzzyMatchConfig = Field(default_factory=FuzzyMatchConfig)
     semantic_match: SemanticMatchConfig = Field(default_factory=SemanticMatchConfig)
-    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    embedding: EmbeddingConfig = Field(
+        default_factory=EmbeddingConfig, description="Embedding configuration"
+    )
 
     # Tree exploration configuration
     trees: TreeConfig = Field(default_factory=TreeConfig)
@@ -685,3 +721,20 @@ class ExplorationSession(BaseModel):
             self.last_activity = datetime.now()
             return True
         return False
+
+
+@dataclass
+class SymbolViewModel:
+    """ViewModel for code symbols."""
+
+    name: str
+    file_path: str
+    line_number: int
+    symbol_type: str  # function, class, method, etc.
+    signature: Optional[str] = None
+    critical_lines: Optional[List[str]] = None
+    dependencies: Optional[List[str]] = None
+    centrality_score: Optional[float] = None
+    impact_risk: Optional[float] = None
+    importance_score: Optional[float] = None
+    is_critical: bool = False

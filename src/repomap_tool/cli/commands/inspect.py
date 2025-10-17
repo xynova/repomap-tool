@@ -8,11 +8,13 @@ Merges functionality from the previous 'analyze' and 'search' commands.
 import os
 import sys
 from typing import Optional, Literal, List
+from pathlib import Path
 
 import click
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from repomap_tool.core.config_service import get_config
+from repomap_tool.core.container_config import configure_container
 
 from ...models import (
     SearchRequest,
@@ -25,7 +27,7 @@ from ..config.loader import (
     resolve_project_path,
     load_or_create_config,
 )
-from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat #, get_output_manager
 from ..utils.console import get_console
 
 
@@ -37,11 +39,6 @@ def inspect(ctx: click.Context) -> None:
 
 
 @inspect.command()
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--config",
     "-c",
@@ -57,7 +54,6 @@ def inspect(ctx: click.Context) -> None:
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 def cycles(
-    project_path: Optional[str],
     config: Optional[str],
     output: str,
     verbose: bool,
@@ -70,7 +66,9 @@ def cycles(
 
     try:
         # Resolve project path from argument, config file, or discovery
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
 
         # Load or create configuration (properly handles config files)
         config_obj, was_created = load_or_create_config(
@@ -80,6 +78,13 @@ def cycles(
             verbose=verbose,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
+        # Use OutputManager for progress and success messages
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        output_config = OutputConfig(format=OutputFormat(output))
+
         # Initialize RepoMap with detailed progress
         with Progress(
             SpinnerColumn(),
@@ -88,14 +93,8 @@ def cycles(
         ) as progress:
             task = progress.add_task("Loading configuration...", total=None)
 
-            from repomap_tool.cli.services import get_service_factory
-
-            progress.update(task, description="Creating service factory...")
-            service_factory = get_service_factory()
-
-            progress.update(task, description="Initializing RepoMap service...")
-            repomap = service_factory.create_repomap_service(config_obj)
-
+            # Initialize RepoMap service via DI container (no longer using service factory here)
+            repomap = ctx.obj["container"].repo_map_service()
             progress.update(task, description="Building dependency graph...")
 
             # Build dependency graph
@@ -110,24 +109,17 @@ def cycles(
             progress.update(task, description="Analysis complete!")
 
         # Display results using OutputManager (with improved formatting)
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display(cycles, output_config)
 
     except Exception as e:
         # Use OutputManager for error handling
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(e, output_config)
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(e, output_config_error)
         sys.exit(1)
 
 
 @inspect.command()
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--config",
     "-c",
@@ -162,15 +154,16 @@ def cycles(
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.pass_context
+@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
 def density(
     ctx: click.Context,
-    project_path: Optional[str],
     config: Optional[str],
     scope: str,
     limit: int,
     min_identifiers: int,
     output: str,
     verbose: bool,
+    input_paths: tuple,
 ) -> None:
     """Inspect code density - files/packages with most identifiers by type."""
 
@@ -178,9 +171,24 @@ def density(
 
     try:
         # Resolve project path and load config
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
+
         if resolved_project_path is None:
             raise click.BadParameter("Project path could not be resolved.")
+
+        # If specific input_paths are provided, ensure they are absolute
+        target_files = []
+        if input_paths:
+            for p in input_paths:
+                abs_path = Path(p).resolve()
+                if not abs_path.is_relative_to(resolved_project_path):
+                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                target_files.append(str(abs_path))
+        else:
+            # If no specific input_paths, analyze the entire project_root
+            target_files = [str(resolved_project_path)]
 
         config_obj, _ = load_or_create_config(
             project_path=resolved_project_path,
@@ -189,23 +197,24 @@ def density(
             verbose=verbose,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Use OutputManager for progress
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
 
         output_manager.display_progress(
             f"🎯 Analyzing code density: {resolved_project_path}"
         )
 
-        # Create DI container and get controller
-        from repomap_tool.core.container import create_container
-        from repomap_tool.cli.controllers import ControllerConfig
-        from repomap_tool.cli.controllers import DensityController
-
-        container = create_container(config_obj)
+        # Use DI container to get controller
+        container = ctx.obj["container"]
         density_controller = container.density_controller()
 
         # Configure controller
+        from repomap_tool.cli.controllers import ControllerConfig
+
         controller_config = ControllerConfig(
             project_root=resolved_project_path,  # Now a required argument
             verbose=verbose,
@@ -226,18 +235,13 @@ def density(
         output_manager.display_success("Density analysis completed", output_config)
 
     except Exception as e:
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(e, output_config)
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(e, output_config_error)
         sys.exit(1)
 
 
 @inspect.command()
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--files",
     "-f",
@@ -265,14 +269,15 @@ def density(
     help="Maximum tokens for LLM optimization",
 )
 @click.pass_context
+@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
 def centrality(
     ctx: click.Context,
-    project_path: Optional[str],
     files: tuple,
     output: str,
     verbose: bool,
     config: Optional[str],
     max_tokens: int,
+    input_paths: tuple,
 ) -> None:
     """Inspect centrality analysis for project files with AST-based analysis."""
 
@@ -281,7 +286,9 @@ def centrality(
 
     try:
         # Resolve project path from argument, config file, or discovery
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
 
         # Load or create configuration (properly handles config files)
         from repomap_tool.cli.config.loader import load_or_create_config
@@ -293,28 +300,45 @@ def centrality(
             verbose=verbose,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Use OutputManager for progress messages
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
 
         output_manager.display_progress(
             f"🎯 Inspecting centrality for project: {resolved_project_path}"
         )
 
-        if files:
-            output_manager.display_progress(f"📁 Files: {', '.join(files)}")
+        # Determine target files for analysis
+        target_files = []
+        if files and input_paths:
+            raise click.BadParameter("Cannot specify both --files and positional input paths.")
+        elif files:
+            target_files = [str(resolved_project_path / f) for f in files]
+        elif input_paths:
+            for p in input_paths:
+                abs_path = Path(p).resolve()
+                if not abs_path.is_relative_to(resolved_project_path):
+                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                target_files.append(str(abs_path))
+        else:
+            # If no specific files, the controller will discover them within the project_root
+            pass
+
+        if target_files:
+            output_manager.display_progress(f"📁 Files: {', '.join(target_files)}")
         else:
             output_manager.display_progress("📁 Inspecting all files")
 
         # Use DI container to get Controllers
-        from repomap_tool.core.container import create_container
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Create DI container and get Controller
-        container = create_container(config_obj)
+        container = ctx.obj["container"]
         centrality_controller = container.centrality_controller()
 
         # Configure Controller
+        from repomap_tool.cli.controllers import ControllerConfig
+
         controller_config = ControllerConfig(
             project_root=resolved_project_path,  # Add missing project_root
             verbose=verbose,
@@ -343,18 +367,13 @@ def centrality(
 
     except Exception as e:
         # Use OutputManager for error handling
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(e, output_config)
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(e, output_config_error)
         sys.exit(1)
 
 
 @inspect.command()
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--config",
     "-c",
@@ -383,32 +402,62 @@ def centrality(
     help="Maximum tokens for LLM optimization",
 )
 @click.pass_context
+@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
 def impact(
     ctx: click.Context,
-    project_path: Optional[str],
     config: Optional[str],
     files: tuple,
     output: str,
     verbose: bool,
     max_tokens: int,
+    input_paths: tuple,
 ) -> None:
     """Inspect impact of changes to specific files with AST-based analysis."""
 
     # Get console instance (automatically handles dependency injection from context)
     console = get_console(ctx)
 
-    if not files:
+    # Determine target files for analysis
+    target_files_for_impact = []
+    if files and input_paths:
+        raise click.BadParameter("Cannot specify both --files and positional input paths.")
+    elif files:
+        # Ensure files are absolute paths
+        project_root = ctx.obj.get("project_root")
+        if not project_root: # fallback for scenarios where global project_root might not be set in ctx
+            project_root = resolve_project_path(None, None)
+        
+        for f in files:
+            abs_path = Path(f).resolve()
+            if not abs_path.is_relative_to(project_root): # type: ignore
+                 raise click.BadParameter(f"File '{f}' is not within the project root '{project_root}'.")
+            target_files_for_impact.append(str(abs_path))
+
+    elif input_paths:
+        project_root = ctx.obj.get("project_root")
+        if not project_root: # fallback for scenarios where global project_root might not be set in ctx
+            project_root = resolve_project_path(None, None)
+
+        for p in input_paths:
+            abs_path = Path(p).resolve()
+            if not abs_path.is_relative_to(project_root): # type: ignore
+                raise click.BadParameter(f"Input path '{p}' is not within the project root '{project_root}'.")
+            target_files_for_impact.append(str(abs_path))
+    
+    if not target_files_for_impact:
         # Use OutputManager for error handling
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error(
-            ValueError("Must specify at least one file with --files"), output_config
+            ValueError("Must specify at least one file with --files or as a positional argument."), output_config
         )
         sys.exit(1)
 
     try:
         # Resolve project path from argument, config file, or discovery
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
 
         # Load or create configuration (properly handles config files)
         from repomap_tool.cli.config.loader import load_or_create_config
@@ -420,24 +469,25 @@ def impact(
             verbose=verbose,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Use OutputManager for progress messages
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
 
         output_manager.display_progress(
             f"🎯 Inspecting impact for project: {resolved_project_path}"
         )
-        output_manager.display_progress(f"📁 Target files: {', '.join(files)}")
+        output_manager.display_progress(f"📁 Target files: {', '.join(target_files_for_impact)}")
 
         # Use DI container to get Controllers
-        from repomap_tool.core.container import create_container
-        from repomap_tool.cli.controllers import ControllerConfig
-
-        # Create DI container and get Controller
-        container = create_container(config_obj)
+        container = ctx.obj["container"]
         impact_controller = container.impact_controller()
 
         # Configure Controller
+        from repomap_tool.cli.controllers import ControllerConfig
+
         controller_config = ControllerConfig(
             project_root=resolved_project_path,  # Add missing project_root
             verbose=verbose,
@@ -446,17 +496,13 @@ def impact(
         )
         impact_controller.config = controller_config
 
-        # Use OutputManager for progress messages
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-
         # Perform impact analysis using Controller
         try:
             # Print output format
             output_manager.display_progress(f"📊 Output format: {output}")
 
             # Execute Controller to get ViewModel
-            view_model = impact_controller.execute(list(files))
+            view_model = impact_controller.execute(list(target_files_for_impact))
 
             # Display the ViewModel using OutputManager
             output_manager.display(view_model, output_config)
@@ -474,7 +520,7 @@ def impact(
 
     except Exception as e:
         # Use OutputManager for error handling
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(e, output_config)
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(e, output_config_error)
         sys.exit(1)

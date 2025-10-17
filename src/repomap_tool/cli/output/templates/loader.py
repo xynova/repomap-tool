@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
 
 from .config import TemplateConfig
+from repomap_tool.protocols import TemplateRegistryProtocol
 
 
 class TemplateLoader(ABC):
@@ -62,6 +63,13 @@ class TemplateLoader(ABC):
         Returns:
             True if template exists
         """
+        pass
+
+    @abstractmethod
+    def load_default_templates(
+        self, template_registry: "TemplateRegistryProtocol"
+    ) -> None:
+        """Load default templates into the given registry."""
         pass
 
 
@@ -161,6 +169,31 @@ class FileTemplateLoader(TemplateLoader):
             True if template exists
         """
         return self._find_template_file(template_name) is not None
+
+    def load_default_templates(
+        self, template_registry: "TemplateRegistryProtocol"
+    ) -> None:
+        """Load default templates into the given registry."""
+        for template_dir in self._template_dirs:
+            template_path = Path(template_dir)
+            if template_path.exists() and self._logger:
+                self._logger.debug(
+                    f"Scanning for default templates in {template_path}"
+                )
+                for template_file in template_path.glob("*.jinja2"):
+                    try:
+                        template_name = template_file.stem
+                        content = self.load_template(template_name)
+                        template_registry.register_template(template_name, content)
+                        if self._logger:
+                            self._logger.debug(
+                                f"Registered default template: {template_name}"
+                            )
+                    except Exception as e:
+                        if self._logger:
+                            self._logger.error(
+                                f"Failed to load or register default template '{template_file.name}': {e}"
+                            )
 
     def _find_template_file(self, template_name: str) -> Optional[Path]:
         """Find template file by name.

@@ -39,26 +39,34 @@ from repomap_tool.cli.controllers.search_controller import SearchController
 from repomap_tool.cli.controllers.exploration_controller import ExplorationController
 from repomap_tool.cli.controllers.density_controller import DensityController
 from rich.console import Console
-from repomap_tool.protocols import QueryLoaderProtocol
+from repomap_tool.protocols import (
+    OutputManagerProtocol,
+    TemplateRegistryProtocol,
+    CacheManagerProtocol,
+    QueryLoaderProtocol,
+    TagCacheProtocol,
+    ConsoleManagerProtocol, # Import ConsoleManagerProtocol from central protocols.py
+)
 from repomap_tool.code_analysis.query_loader import FileQueryLoader
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from repomap_tool.core.repo_map import RepoMapService
 from repomap_tool.code_analysis.call_graph_builder import PythonCallAnalyzer, JavaScriptCallAnalyzer
 from repomap_tool.cli.output.manager import OutputManager
-from repomap_tool.cli.output.console_manager import ConsoleManagerProtocol, DefaultConsoleManager, ConsoleProvider # Import ConsoleProvider
+from repomap_tool.cli.output.console_manager import DefaultConsoleManager, ConsoleProvider # Import DefaultConsoleManager and ConsoleProvider
 from repomap_tool.cli.utils.console import RichConsoleFactory # Import RichConsoleFactory
 from repomap_tool.cli.output.templates.engine import TemplateEngine # Import TemplateEngine
-from repomap_tool.cli.output.templates.registry import (
-    DefaultTemplateRegistry,
-    TemplateRegistryProtocol,
-)
+from repomap_tool.cli.output.templates.registry import DefaultTemplateRegistry
 from repomap_tool.cli.output.templates.config import TemplateConfig # Import TemplateConfig
-from repomap_tool.cli.output.standard_formatters import FormatterRegistry, get_formatter_registry, ProjectInfoFormatter, DictFormatter, ListFormatter, StringFormatter # Import FormatterRegistry and get_formatter_registry
+from repomap_tool.cli.output.standard_formatters import FormatterRegistry, ProjectInfoFormatter, DictFormatter, ListFormatter, StringFormatter, ErrorResponseFormatter, SuccessResponseFormatter, SearchResponseFormatter # Import FormatterRegistry and get_formatter_registry, ErrorResponseFormatter and SuccessResponseFormatter
+from repomap_tool.cli.output.controller_formatters import CentralityViewModelFormatter, ImpactViewModelFormatter, SearchViewModelFormatter, DensityAnalysisFormatter
+from repomap_tool.cli.output.exploration_formatters import TreeClusterViewModelFormatter, TreeFocusViewModelFormatter, TreeExpansionViewModelFormatter, TreePruningViewModelFormatter, TreeMappingViewModelFormatter, TreeListingViewModelFormatter, SessionStatusViewModelFormatter, ExplorationViewModelFormatter
+from repomap_tool.cli.controllers.view_models import CentralityViewModel, ImpactViewModel, SearchViewModel, DensityAnalysisViewModel, TreeClusterViewModel, TreeFocusViewModel, TreeExpansionViewModel, TreePruningViewModel, TreeMappingViewModel, TreeListingViewModel, SessionStatusViewModel, ExplorationViewModel
+from repomap_tool.core.spellchecker_service import SpellCheckerService
 
 # Legacy factory functions removed - using DI container instead
-from ..models import RepoMapConfig
+from ..models import RepoMapConfig, SearchResponse
 from ..code_analysis.density_analyzer import DensityAnalyzer
-from repomap_tool.models import ProjectInfo
+from repomap_tool.models import ProjectInfo, ErrorResponse, SuccessResponse # Import ErrorResponse and SuccessResponse
 
 logger = get_logger(__name__)
 
@@ -91,33 +99,44 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Template Engine and Registry
-    template_config: "providers.Singleton[TemplateConfig]" = providers.Singleton(
+    template_config: providers.Singleton[TemplateConfig] = providers.Singleton(
         TemplateConfig, # Default template config
     )
 
-    template_registry: "providers.Singleton[TemplateRegistryProtocol]" = providers.Singleton(
+    template_registry: providers.Singleton[TemplateRegistryProtocol] = providers.Singleton(
         DefaultTemplateRegistry,  # Use the concrete implementation
+        template_loader=providers.Singleton("repomap_tool.cli.output.templates.loader.FileTemplateLoader"), # Pass template_loader to registry
+        default_config=template_config # Pass default config to registry
     )
 
-    template_engine: "providers.Singleton[TemplateEngine]" = providers.Singleton(
+    template_engine: providers.Singleton[TemplateEngine] = providers.Singleton(
         TemplateEngine,
-        template_registry=template_registry, # Reference the provider directly
-        template_loader=providers.Singleton("repomap_tool.cli.output.templates.loader.FileTemplateLoader"), # Add template_loader
+        template_registry=template_registry,
+        template_loader=providers.Singleton(
+            "repomap_tool.cli.output.templates.loader.FileTemplateLoader"
+        ),
+        enable_logging=config.verbose,
     )
 
     # Formatter Registry
-    formatter_registry: "providers.Singleton[FormatterRegistry]" = providers.Singleton(
-        FormatterRegistry,
+    formatter_registry: "providers.Singleton[FormatterRegistry]" = cast(
+        "providers.Singleton[FormatterRegistry]",
+        providers.Singleton(
+            FormatterRegistry,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
     )
     # Output Manager (uses the injected console manager, template engine, and formatter registry)
     output_manager: "providers.Singleton[OutputManager]" = cast(
         "providers.Singleton[OutputManager]",
         providers.Singleton(
             "repomap_tool.cli.output.manager.OutputManager",
-            console_manager=console_manager(), # Call the provider to get the instance
-            formatter_registry=formatter_registry(), # Call the provider to get the instance
-            template_engine=template_engine(), # Call the provider to get the instance
-            template_registry=template_registry(), # Call the provider to get the instance
+            console_manager=console_manager(),
+            formatter_registry=formatter_registry(),
+            template_engine=template_engine(),
+            template_registry=template_registry(),
         ),
     )
 
@@ -467,137 +486,35 @@ class Container(containers.DeclarativeContainer):
 
 
 def create_container(config: RepoMapConfig) -> Container:
-    """Create and configure the dependency injection container."""
+    """Create and configure the dependency injection container.
+
+    Args:
+        config: The initial RepoMapConfig (can be minimal for CLI startup).
+
+    Returns:
+        An unconfigured Container instance.
+    """
     container = Container()
 
-    # Configure the container with the provided config
-    try:
-        container.config.from_dict(
-            {
-                "project_root": config.project_root,
-                "cache_dir": config.cache_dir,
-                "dependencies": {
-                    "enable_impact_analysis": (
-                        config.dependencies.enable_impact_analysis
-                        if config.dependencies
-                        else False
-                    ),
-                },
-                "fuzzy_match": {
-                    "threshold": config.fuzzy_match.threshold,
-                    "strategies": config.fuzzy_match.strategies,
-                    "cache_results": config.fuzzy_match.cache_results,
-                },
-                "embedding": {
-                    "cache_dir": config.embedding.cache_dir,
-                },
-                "semantic_match": {
-                    "threshold": config.semantic_match.threshold,
-                },
-                "performance": {
-                    "max_workers": config.performance.max_workers,
-                    "enable_progress": config.performance.enable_progress,
-                },
-                "verbose": config.verbose,
-            }
-        )
-        logger.debug("Dependency injection container created and configured")
-    except Exception as e:
-        logger.error(f"Error configuring container: {e}")
-        raise
+    # The container's config will be fully loaded by configure_container in each CLI command.
+    # For initial setup, we still need to provide a minimal config so providers can be resolved.
+    # The actual configuration will be applied later using container.config.from_dict.
+    container.config.from_dict({
+        "project_root": config.project_root,
+        "cache_dir": config.cache_dir,
+        "dependencies": {"enable_impact_analysis": False},
+        "fuzzy_match": {"threshold": 0.7, "strategies": [], "cache_results": False},
+        "embedding": {"cache_dir": None},
+        "semantic_match": {"threshold": 0.2},
+        "performance": {"max_workers": 1, "enable_progress": False},
+        "verbose": False,
+    })
 
-    # Register default formatters after the container is configured
-    _register_default_formatters(container.formatter_registry,
-                                 container.console_manager,
-                                 container.template_engine,
-                                 container.template_registry)
-
+    logger.debug(f"Dependency injection container created but not fully configured (id={id(container)})")
     return container
 
 
-def _register_default_formatters(registry: FormatterRegistry,
-                                 console_manager: ConsoleManagerProtocol,
-                                 template_engine: TemplateEngine,
-                                 template_registry: TemplateRegistryProtocol) -> None:
-    """Register default formatters."""
-    # Register standard formatters
-    registry().register_formatter(ProjectInfoFormatter(template_engine=template_engine,
-                                                    template_registry=template_registry,
-                                                    console_manager=console_manager),
-                                ProjectInfo)
-    registry().register_formatter(DictFormatter(template_engine=template_engine,
-                                             template_registry=template_registry,
-                                             console_manager=console_manager),
-                                dict)
-    registry().register_formatter(ListFormatter(template_engine=template_engine,
-                                            template_registry=template_registry,
-                                            console_manager=console_manager),
-                                list)
-    registry().register_formatter(StringFormatter(template_engine=template_engine,
-                                                template_registry=template_registry,
-                                                console_manager=console_manager),
-                                str)
 
-    # Register controller ViewModel formatters
-    from repomap_tool.cli.controllers.view_models import CentralityViewModel, ImpactViewModel, SearchViewModel, DensityAnalysisViewModel, TreeClusterViewModel, TreeFocusViewModel, TreeExpansionViewModel, TreePruningViewModel, TreeMappingViewModel, TreeListingViewModel, SessionStatusViewModel, ExplorationViewModel
-    from repomap_tool.cli.output.controller_formatters import CentralityViewModelFormatter, ImpactViewModelFormatter, SearchViewModelFormatter, DensityAnalysisFormatter
-    from repomap_tool.cli.output.exploration_formatters import TreeClusterViewModelFormatter, TreeFocusViewModelFormatter, TreeExpansionViewModelFormatter, TreePruningViewModelFormatter, TreeMappingViewModelFormatter, TreeListingViewModelFormatter, SessionStatusViewModelFormatter, ExplorationViewModelFormatter
-
-
-    registry().register_formatter(CentralityViewModelFormatter(template_engine=template_engine,
-                                                            template_registry=template_registry,
-                                                            console_manager=console_manager),
-                                CentralityViewModel)
-    registry().register_formatter(ImpactViewModelFormatter(template_engine=template_engine,
-                                                        template_registry=template_registry,
-                                                        console_manager=console_manager),
-                                ImpactViewModel)
-
-    # Register SearchViewModel formatter
-    registry().register_formatter(SearchViewModelFormatter(template_engine=template_engine,
-                                                        template_registry=template_registry,
-                                                        console_manager=console_manager),
-                                SearchViewModel)
-
-    # Register DensityAnalysisViewModel formatter
-    registry().register_formatter(DensityAnalysisFormatter(template_engine=template_engine,
-                                                       template_registry=template_registry,
-                                                       console_manager=console_manager),
-                                DensityAnalysisViewModel)
-
-    # Register exploration ViewModel formatters
-    registry().register_formatter(TreeClusterViewModelFormatter(template_engine=template_engine,
-                                                            template_registry=template_registry,
-                                                            console_manager=console_manager),
-                                TreeClusterViewModel)
-    registry().register_formatter(TreeFocusViewModelFormatter(template_engine=template_engine,
-                                                          template_registry=template_registry,
-                                                          console_manager=console_manager),
-                                TreeFocusViewModel)
-    registry().register_formatter(TreeExpansionViewModelFormatter(template_engine=template_engine,
-                                                              template_registry=template_registry,
-                                                              console_manager=console_manager),
-                                TreeExpansionViewModel)
-    registry().register_formatter(TreePruningViewModelFormatter(template_engine=template_engine,
-                                                            template_registry=template_registry,
-                                                            console_manager=console_manager),
-                                TreePruningViewModel)
-    registry().register_formatter(TreeMappingViewModelFormatter(template_engine=template_engine,
-                                                            template_registry=template_registry,
-                                                            console_manager=console_manager),
-                                TreeMappingViewModel)
-    registry().register_formatter(TreeListingViewModelFormatter(template_engine=template_engine,
-                                                            template_registry=template_registry,
-                                                            console_manager=console_manager),
-                                TreeListingViewModel)
-    registry().register_formatter(SessionStatusViewModelFormatter(template_engine=template_engine,
-                                                              template_registry=template_registry,
-                                                              console_manager=console_manager),
-                                SessionStatusViewModel)
-    registry().register_formatter(ExplorationViewModelFormatter(template_engine=template_engine,
-                                                            template_registry=template_registry,
-                                                            console_manager=console_manager),
-                                ExplorationViewModel)
 
 def get_container() -> Optional[Container]:
     """Get the current container instance."""

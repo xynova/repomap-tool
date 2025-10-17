@@ -43,7 +43,7 @@ except ImportError as e:
     JINJA2_AVAILABLE = False
 
 from .config import TemplateConfig, TemplateOptions
-from .registry import TemplateRegistryProtocol
+from repomap_tool.protocols import TemplateRegistryProtocol
 from .loader import TemplateLoader, FileTemplateLoader
 
 
@@ -64,7 +64,7 @@ class TemplateEngine:
             enable_logging: Whether to enable logging
         """
         self._enable_logging = enable_logging
-        self._logger = get_logger(__name__) if enable_logging else None
+        self._logger = get_logger(__name__) # Always initialize the logger
         self.template_registry = template_registry
 
         if template_loader is None:

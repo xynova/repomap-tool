@@ -21,6 +21,9 @@ from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from tree_sitter import Language
 import grep_ast.tsl as tsl
 from grep_ast.tsl import get_language # Import get_language
+import click
+from click.testing import CliRunner
+from unittest.mock import patch
 
 # Disable cache for all tests to avoid database locks
 os.environ["REPOMAP_DISABLE_CACHE"] = "1"
@@ -61,11 +64,10 @@ def session_test_repo_path():
 
 
 @pytest.fixture(scope="session")
-def session_config():
+def session_config(session_test_repo_path):
     """Base RepoMapConfig for all tests."""
-    test_repo_path = Path(__file__).parent / "fixtures" / "test-repo"
     return RepoMapConfig(
-        project_root=str(test_repo_path),
+        project_root=str(session_test_repo_path),
         verbose=False,
         fuzzy_match=FuzzyMatchConfig(),
         semantic_match=SemanticMatchConfig(),
@@ -75,41 +77,50 @@ def session_config():
 
 
 @pytest.fixture(scope="session")
-def get_tree_sitter_parser_session_fixture() -> TreeSitterParser:
+def session_tree_sitter_parser(session_test_repo_path) -> TreeSitterParser:
     """Provides a TreeSitterParser instance for the entire test session."""
-    from unittest.mock import Mock
     from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
     from repomap_tool.code_analysis.query_loader import FileQueryLoader # Use real query loader
     from repomap_tool.core.tag_cache import TreeSitterTagCache # Use real tag cache
 
     # Setup a temporary directory for the cache
-    tmpdir = Path("/tmp/test_cache") # Use a fixed /tmp path for session scope
-    tmpdir.mkdir(parents=True, exist_ok=True)
+    # Use TemporaryDirectory for proper cleanup
+    import tempfile
+    temp_cache_dir = tempfile.TemporaryDirectory()
+    cache_path = Path(temp_cache_dir.name)
 
-    mock_cache = TreeSitterTagCache(cache_dir=tmpdir) # Use real cache
+    mock_cache = TreeSitterTagCache(cache_dir=cache_path) # Use real cache
     mock_query_loader = FileQueryLoader() # Use real query loader
 
     # Ensure project_root is a Path object for the parser
-    return TreeSitterParser(project_root=Path("/tmp"), cache=mock_cache, query_loader=mock_query_loader)
+    # Use the session_test_repo_path for the parser's project_root
+    parser = TreeSitterParser(project_root=session_test_repo_path, cache=mock_cache, query_loader=mock_query_loader)
+    yield parser
+    # Cleanup the temporary directory after the session
+    temp_cache_dir.cleanup()
 
 
 @pytest.fixture(scope="function")
-def get_tree_sitter_parser_function_fixture() -> TreeSitterParser:
+def get_tree_sitter_parser_function_fixture(session_test_repo_path) -> TreeSitterParser:
     """Provides a TreeSitterParser instance for each test function."""
-    from unittest.mock import Mock
     from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
     from repomap_tool.code_analysis.query_loader import FileQueryLoader # Use real query loader
     from repomap_tool.core.tag_cache import TreeSitterTagCache # Use real tag cache
 
     # Setup a temporary directory for the cache
-    tmpdir = Path("/tmp/test_cache_func") # Use a fixed /tmp path for function scope
-    tmpdir.mkdir(parents=True, exist_ok=True)
+    import tempfile
+    temp_cache_dir = tempfile.TemporaryDirectory()
+    cache_path = Path(temp_cache_dir.name)
 
-    mock_cache = TreeSitterTagCache(cache_dir=tmpdir) # Use real cache
+    mock_cache = TreeSitterTagCache(cache_dir=cache_path) # Use real cache
     mock_query_loader = FileQueryLoader() # Use real query loader
 
     # Ensure project_root is a Path object for the parser
-    return TreeSitterParser(project_root=Path("/tmp"), cache=mock_cache, query_loader=mock_query_loader)
+    # Use the session_test_repo_path for the parser's project_root
+    parser = TreeSitterParser(project_root=session_test_repo_path, cache=mock_cache, query_loader=mock_query_loader)
+    yield parser
+    # Cleanup the temporary directory after the function
+    temp_cache_dir.cleanup()
 
 
 @pytest.fixture(scope="session")
@@ -118,7 +129,7 @@ def session_parsed_files(session_test_repo_path, session_tree_sitter_parser):
     parsed_data = {}
 
     # Supported file extensions
-    supported_extensions = {".py", ".ts", ".js", ".java", ".go"}
+    supported_extensions = {".py", ".ts", ".js", ".java", ".go", ".cs"}
 
     for file_path in session_test_repo_path.rglob("*"):
         if file_path.is_file() and file_path.suffix in supported_extensions:
@@ -147,12 +158,12 @@ def session_identifiers(session_parsed_files):
 
 
 @pytest.fixture(scope="session")
-def session_import_data(session_container):
+def session_import_data(session_container, session_test_repo_path):
     """Pre-analyze all imports once per session."""
     analyzer = session_container.import_analyzer()
 
-    # Analyze project imports
-    project_imports = analyzer.analyze_project_imports(str(session_test_repo_path))
+    # Analyze project imports - use the resolved absolute path
+    project_imports = analyzer.analyze_project_imports(str(session_test_repo_path.resolve()))
     return project_imports
 
 
@@ -171,16 +182,45 @@ def session_container(session_config):
     """Pre-created DI container for session."""
     # Create a custom container that doesn't use cache to avoid database locks
     from repomap_tool.core.container import Container
+    from repomap_tool.core.container_config import configure_container
     from dependency_injector import providers
 
     # Create container without cache
     container = Container()
     container.config.from_dict(session_config.model_dump())
 
+    # Configure the container with formatters
+    configure_container(container, session_config)
+
     # Removed: Override tag_cache to be None
     # container.tag_cache.override(None)
 
     return container
+
+
+@pytest.fixture(scope="session")
+def cli_runner_with_container(session_container):
+    """Provides a Click CliRunner with a pre-configured session_container injected."""
+    from repomap_tool.cli.main import cli
+
+    runner = CliRunner()
+
+    # Patch the cli.__call__ method to ensure our container is always used
+    # when CliRunner.invoke calls cli.
+    def mock_cli_call(*args, **kwargs):
+        ctx = click.Context(cli, obj={})
+        ctx.obj["container"] = session_container
+        ctx.obj["no_color"] = True  # Disable color for consistent test output
+
+        # Retrieve the console manager from the injected container and configure it.
+        # This mimics the behavior in src/repomap_tool/cli/main.py
+        console_manager_instance = ctx.obj["container"].console_manager()
+        console_manager_instance.configure(no_color=ctx.obj.get("no_color", False))
+
+        return cli.invoke(ctx, args, **kwargs)
+
+    with patch("repomap_tool.cli.main.cli.__call__", new=mock_cli_call):
+        yield runner
 
 
 # Isolated fixtures for cache testing

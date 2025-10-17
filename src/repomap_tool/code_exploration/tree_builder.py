@@ -16,7 +16,7 @@ from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
 if TYPE_CHECKING:
     from repomap_tool.cli.controllers.view_models import SearchViewModel
-from repomap_tool.cli.controllers.view_models import SymbolViewModel
+from repomap_tool.models import SymbolViewModel
 
 logger = get_logger(__name__)
 

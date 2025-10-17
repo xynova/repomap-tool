@@ -8,7 +8,7 @@ to ensure type safety at runtime.
 import logging
 from ..core.logging_service import get_logger
 from typing import Any, Dict, List, Optional
-from ..protocols import ProjectMap, Tag, FileData
+from repomap_tool.models import ProjectMap, Tag, FileData # Import from models
 
 logger = get_logger(__name__)
 

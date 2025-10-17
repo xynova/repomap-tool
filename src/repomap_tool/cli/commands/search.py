@@ -11,21 +11,18 @@ from typing import Any, Optional
 
 import click
 from rich.console import Console
+from pathlib import Path
 
 from ..config.loader import load_or_create_config, resolve_project_path
 from ..utils.console import get_console
 from ...core.config_service import get_config
+from ...core.container_config import configure_container
 from ...models import create_error_response
-from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat
 
 
 @click.command()
 @click.argument("query", type=str)
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--config",
     "-c",
@@ -69,10 +66,10 @@ from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manag
     help="Maximum cache entries (100-10000)",
 )
 @click.pass_context
+@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
 def search(
     ctx: click.Context,
     query: str,
-    project_path: Optional[str],
     config: Optional[str],
     match_type: str,
     threshold: float,
@@ -82,6 +79,7 @@ def search(
     verbose: bool,
     log_level: str,
     cache_size: int,
+    input_paths: tuple,
 ) -> None:
     """Search for identifiers using intelligent matching strategies.
 
@@ -98,9 +96,21 @@ def search(
 
     try:
         # Resolve project path and load config
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
+
         if resolved_project_path is None:
             raise click.BadParameter("Project path could not be resolved.")
+
+        # If specific input_paths are provided, ensure they are absolute
+        target_files = []
+        if input_paths:
+            for p in input_paths:
+                abs_path = Path(p).resolve()
+                if not abs_path.is_relative_to(resolved_project_path):
+                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                target_files.append(str(abs_path))
 
         config_obj, was_created = load_or_create_config(
             project_root=resolved_project_path,
@@ -108,6 +118,9 @@ def search(
             create_if_missing=False,
             verbose=verbose,
         )
+
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
 
         # Override specific search settings
         config_obj.fuzzy_match.enabled = match_type in ["fuzzy", "hybrid"]
@@ -130,6 +143,7 @@ def search(
             threshold=threshold,  # Keep as float for API consistency
             max_results=max_results,
             strategies=list(strategies) if strategies else None,
+            target_files=target_files if target_files else None,
         )
 
         # Initialize services using service factory with detailed progress
@@ -159,7 +173,7 @@ def search(
             progress.update(
                 task, description="Loading dependency injection container..."
             )
-            container = create_container(config_obj)
+            container = ctx.obj["container"]
 
             progress.update(task, description="Initializing fuzzy matcher...")
             fuzzy_matcher = container.fuzzy_matcher()
@@ -203,14 +217,14 @@ def search(
 
             progress.update(task, description="Search complete!")
 
-        # Display results using OutputManager
-        output_manager = get_output_manager()
+        # Get output manager from context (after container is configured and search is complete)
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display(search_view_model, output_config)
 
     except Exception as e:
         # Use OutputManager for error handling
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error(e, output_config)
         sys.exit(1)

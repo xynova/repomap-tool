@@ -4,10 +4,20 @@ Protocols for type safety in repomap-tool.
 This module defines protocols and type-safe interfaces for the core components.
 """
 
-from typing import Protocol, List, Set, Optional, Dict, Any, TypedDict
+from typing import Protocol, List, Set, Optional, Dict, Any, TypedDict, Union, Type, TypeVar
+from abc import ABC, abstractmethod # Import ABC and abstractmethod from abc module
 from pathlib import Path
 
 from repomap_tool.code_analysis.models import CodeTag
+from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
+import click
+from rich.console import Console
+from repomap_tool.core.logging_service import get_logger # Correct import for get_logger
+
+# Removed ConsoleManagerProtocol and TemplateLoader imports to avoid circular dependencies
+
+# Type variables for generic formatters
+T = TypeVar("T")
 
 
 class RepoMapProtocol(Protocol):
@@ -94,30 +104,7 @@ class ProjectAnalyzerProtocol(Protocol):
 
 
 # TypedDict definitions for structured data
-class Tag(TypedDict):
-    """Tag structure for project identifiers."""
-
-    name: str
-    type: Optional[str]
-    file: Optional[str]
-    line: Optional[int]
-
-
-class FileData(TypedDict):
-    """File data structure in project map."""
-
-    identifiers: Optional[List[str]]
-    tags: Optional[List[Tag]]
-    content: Optional[str]
-
-
-class ProjectMap(TypedDict):
-    """Structured project map data."""
-
-    tags: Optional[List[Tag]]
-    identifiers: Optional[List[str]]
-    files: Optional[Dict[str, FileData]]
-
+# These are moved to models.py
 
 # Type aliases for better readability
 IdentifierSet = Set[str]
@@ -130,6 +117,177 @@ class QueryLoaderProtocol(Protocol):
     """Protocol for loading tree-sitter query strings."""
     def load_query(self, language: str) -> Optional[str]:
         """Loads the query string for a given language."""
+        ...
+
+
+class FormatterProtocol(Protocol):
+    """Protocol for all formatter implementations."""
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> Union[str, None]:
+        """Format data to the specified output format."""
+        ...
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if this formatter supports the specified format."""
+        ...
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported output formats."""
+        ...
+
+
+class BaseFormatter(ABC):
+    """Abstract base class for all formatters."""
+
+    def __init__(
+        self,
+        *, # Make subsequent arguments keyword-only
+        console_manager: "ConsoleManagerProtocol",
+        template_engine: "TemplateEngine",
+        template_registry: "TemplateRegistryProtocol",
+        enable_logging: bool = True,
+    ) -> None:
+        """Initialize the base formatter."""
+        if console_manager is None:
+            raise ValueError("ConsoleManagerProtocol must be injected - no fallback allowed")
+        if template_engine is None:
+            raise ValueError("TemplateEngine must be injected - no fallback allowed")
+        if template_registry is None:
+            raise ValueError("TemplateRegistryProtocol must be injected - no fallback allowed")
+        
+        self._console_manager = console_manager
+        self._template_engine = template_engine
+        self._template_registry = template_registry
+        self._enable_logging = enable_logging # Store enable_logging
+        self._logger = (
+            get_logger(self.__class__.__name__) if enable_logging else None
+        )
+        self._supported_formats: List[OutputFormat] = []
+
+    @abstractmethod
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> Union[str, None]:
+        """Format data to the specified output format."""
+        pass
+
+    @abstractmethod
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        """Check if this formatter supports the specified format."""
+        pass
+
+    @abstractmethod
+    def get_supported_formats(self) -> List[OutputFormat]:
+        """Get list of supported output formats."""
+        pass
+
+    def get_console(self, ctx: Optional[click.Context] = None) -> Console:
+        """Get console instance for output."""
+        if self._console_manager:
+            return self._console_manager.get_console(ctx)
+        else:
+            from repomap_tool.cli.utils.console import get_console
+
+            return get_console(ctx)
+
+    def log_formatting(self, operation: str, **context: Any) -> None:
+        """Log formatting operation."""
+        if self._enable_logging and self._logger:
+            self._logger.debug(
+                f"Formatter operation: {operation}",
+                extra={
+                    "operation": operation,
+                    "formatter": self.__class__.__name__,
+                    "context": context,
+                },
+            )
+
+
+class DataFormatter(FormatterProtocol):
+    """Protocol for data-specific formatters."""
+
+    def format_data(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> Union[str, None]:
+        """Format specific data type."""
+        ...
+
+    def validate_data(self, data: Any) -> bool:
+        """Validate that data is compatible with this formatter."""
+        return True
+
+    def get_data_type(self) -> Type[Any]:
+        """Get the data type this formatter handles."""
+        return Any
+
+
+class TemplateFormatter(FormatterProtocol):
+    """Protocol for template-based formatters."""
+
+    def load_template(
+        self,
+        template_name: str,
+        config: Optional[OutputConfig] = None,
+    ) -> str:
+        """Load a template for formatting."""
+        return ""
+
+    def render_template(
+        self,
+        template: str,
+        data: Any,
+        config: Optional[OutputConfig] = None,
+    ) -> str:
+        """Render template with data."""
+        return ""
+
+    def get_available_templates(self) -> List[str]:
+        """Get list of available templates."""
+        return []
+
+
+class FormatterRegistryProtocol(Protocol):
+    """Protocol for formatter registry."""
+
+    def register_formatter(
+        self,
+        formatter: FormatterProtocol,
+        data_type: Optional[Type[Any]] = None,
+    ) -> None:
+        """Register a formatter."""
+        ...
+
+    def get_formatter(
+        self,
+        data_type: Type[Any],
+        output_format: OutputFormat,
+    ) -> Optional[FormatterProtocol]:
+        """Get formatter for data type and format."""
+        ...
+
+    def get_all_formatters(self) -> List[FormatterProtocol]:
+        """Get all registered formatters."""
+        ...
+
+    def unregister_formatter(
+        self,
+        formatter: FormatterProtocol,
+    ) -> None:
+        """Unregister a formatter."""
         ...
 
 
@@ -171,18 +329,44 @@ class TagCacheProtocol(Protocol):
         ...
 
 
+class TemplateRegistryProtocol(Protocol):
+    """Protocol for template registry implementations."""
+
+    def register_template(
+        self, template_name: str, template_content: str, overwrite: bool = False
+    ) -> None:
+        """Register a template."""
+        ...
+
+    def unregister_template(self, template_name: str) -> None:
+        """Unregister a template."""
+        ...
+
+    def get_template(self, template_name: str) -> Optional[str]:
+        """Get template content."""
+        ...
+
+    def list_templates(self) -> List[str]:
+        """List all registered templates."""
+        ...
+
+    def template_exists(self, template_name: str) -> bool:
+        """Check if template exists."""
+        ...
+
+
 class OutputManagerProtocol(Protocol):
     """Protocol for output manager implementations."""
 
-    def display(self, data: Any, output_format: Any, ctx: Optional[Any] = None) -> None:
+    def display(self, data: Any, config: OutputConfig, ctx: Optional[click.Context] = None) -> None:
         """Display data to the console with proper formatting."""
         ...
 
-    def display_error(self, error: Exception, ctx: Optional[Any] = None) -> None:
+    def display_error(self, error: Union[Exception, Any], config: OutputConfig, ctx: Optional[click.Context] = None) -> None:
         """Display an error message with consistent formatting."""
         ...
 
-    def display_success(self, message: str, ctx: Optional[Any] = None) -> None:
+    def display_success(self, message: str, config: OutputConfig, ctx: Optional[click.Context] = None) -> None:
         """Display a success message with consistent formatting."""
         ...
 
@@ -199,3 +383,42 @@ class OutputManagerProtocol(Protocol):
     def set_config(self, config: Any) -> None:
         """Set the output manager's configuration."""
         ...
+
+
+class FormatterFactoryProtocol(Protocol):
+    """Protocol for formatter factory."""
+
+    def create_formatter(
+        self,
+        formatter_type: str,
+        **kwargs: Any,
+    ) -> FormatterProtocol:
+        """Create a formatter of the specified type."""
+        ...
+
+    def get_available_types(self) -> List[str]:
+        """Get list of available formatter types."""
+        ...
+
+
+class ConsoleManagerProtocol(Protocol):
+    """Protocol for console manager implementations."""
+
+    def get_console(self, ctx: Optional[click.Context] = None) -> Console:
+        """Get a console instance."""
+
+    @abstractmethod
+    def configure(self, no_color: bool = False) -> None:
+        """Configure the console settings, e.g., enable/disable color."""
+
+    @abstractmethod
+    def log_operation(self, operation: str, context: Dict[str, Any]) -> None:
+        """Log a console operation."""
+
+    def get_usage_stats(self) -> Dict[str, Any]:
+        """Get console usage statistics."""
+        ...
+
+
+# Forward reference for TemplateEngine to prevent circular imports
+TemplateEngine = TypeVar("TemplateEngine") 

@@ -14,6 +14,8 @@ from pathlib import Path
 from click.testing import CliRunner
 from repomap_tool.cli import cli
 from repomap_tool.models import RepoMapConfig
+from unittest.mock import patch, MagicMock # Import patch and MagicMock
+from typing import Generator # Import Generator
 
 
 def extract_session_id_from_output(output: str) -> str:
@@ -39,13 +41,13 @@ def extract_session_id_from_output(output: str) -> str:
 class TestTreeExplorationCLI:
     """Test tree exploration CLI commands with real component integration."""
 
-    @pytest.fixture
-    def cli_runner(self):
-        """Create a CLI runner for testing."""
-        return CliRunner()
+    # @pytest.fixture
+    # def cli_runner(self) -> CliRunner:
+    #     """Create a CLI runner for testing."""
+    #     return CliRunner()
 
     @pytest.fixture
-    def temp_project(self):
+    def temp_project(self) -> Generator[str, None, None]:
         """Create a temporary project directory with authentication-related files."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -82,17 +84,20 @@ def handle_authentication_request():
 
             shutil.rmtree(session_dir)
 
-    def test_explore_command_creates_session_and_tree(self, cli_runner, temp_project):
+    def test_explore_command_creates_session_and_tree(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test that 'explore' command creates a session and persists it correctly."""
         # Invoke 'explore' command with no-color flag for cleaner test assertions
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "explore",
                 "start",
                 "user authentication",  # More specific intent
-                temp_project,
             ],
         )
 
@@ -121,13 +126,13 @@ def handle_authentication_request():
 class TestCLIRealIntegration:
     """Test CLI commands with real component integration."""
 
-    @pytest.fixture
-    def cli_runner(self):
-        """Create a CLI runner for testing."""
-        return CliRunner()
+    # @pytest.fixture
+    # def cli_runner(self) -> CliRunner:
+    #     """Create a CLI runner for testing."""
+    #     return CliRunner()
 
     @pytest.fixture
-    def temp_project(self):
+    def temp_project(self) -> Generator[str, None, None]:
         """Create a temporary project directory with real files."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -144,15 +149,18 @@ def my_function():
             )
             yield temp_dir
 
-    def test_analyze_command_real_integration(self, cli_runner, temp_project):
+    def test_analyze_command_real_integration(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test analyze command with real RepoMapService integration."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--fuzzy",
                 "--max-results",
                 "10",
@@ -181,15 +189,18 @@ def my_function():
         assert data["total_identifiers"] > 0
         assert data["total_files"] > 0
 
-    def test_search_command_real_integration(self, cli_runner, temp_project):
+    def test_search_command_real_integration(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test search command with real fuzzy matching."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "search",
                 "main",
-                temp_project,
                 "--match-type",
                 "fuzzy",
                 "--max-results",
@@ -206,15 +217,18 @@ def my_function():
         output = result.output
         assert "Search Results" in output
 
-    def test_analyze_centrality_real_integration(self, cli_runner, temp_project):
+    def test_analyze_centrality_real_integration(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test centrality analysis with real project structure."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "inspect",
                 "centrality",
-                temp_project,
                 "--output",
                 "text",
             ],
@@ -232,27 +246,33 @@ def my_function():
             # Should show proper error message for small projects
             assert "Error:" in result.output or "Failed" in result.output
 
-    def test_cli_error_handling_real(self, cli_runner):
+    def test_cli_error_handling_real(
+        self, cli_runner_with_container: CliRunner
+    ) -> None:
         """Test CLI error handling with real validation."""
         # Test with non-existent directory
-        result = cli_runner.invoke(
-            cli, ["--no-color", "index", "create", "/non/existent/directory"]
+        result = cli_runner_with_container.invoke(
+            cli,
+            ["--no-color", "--project-root", "/non/existent/directory", "index", "create"],
         )
 
         # Should fail with proper error
         assert result.exit_code != 0
         assert "Error:" in result.output
 
-    def test_config_validation_real(self, cli_runner, temp_project):
+    def test_config_validation_real(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test that CLI properly validates configuration parameters."""
         # Test with invalid threshold
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--threshold",
                 "1.5",  # Invalid: should be 0.0-1.0
             ],
@@ -261,15 +281,18 @@ def my_function():
         # CLI accepts and converts threshold values
         assert result.exit_code == 0
 
-    def test_parallel_processing_real(self, cli_runner, temp_project):
+    def test_parallel_processing_real(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test that parallel processing actually works with real data."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--max-workers",
                 "2",
                 "--parallel-threshold",
@@ -291,16 +314,19 @@ def my_function():
             # If it fails, should show proper error message
             assert "Error:" in result.output or "Failed" in result.output
 
-    def test_cache_integration_real(self, cli_runner, temp_project):
+    def test_cache_integration_real(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test that caching works with real CLI usage."""
         # First run - should populate cache
-        result1 = cli_runner.invoke(
+        result1 = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--fuzzy",
                 "--output",
                 "json",
@@ -310,13 +336,14 @@ def my_function():
         assert result1.exit_code == 0
 
         # Second run - should use cache (faster)
-        result2 = cli_runner.invoke(
+        result2 = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--fuzzy",
                 "--output",
                 "json",
@@ -341,16 +368,19 @@ def my_function():
         assert data1["file_types"] == data2["file_types"]
         assert data1["identifier_types"] == data2["identifier_types"]
 
-    def test_llm_friendly_output_real(self, cli_runner, temp_project):
+    def test_llm_friendly_output_real(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test LLM-friendly output formats (text, json)."""
         # Test text output (rich, hierarchical format)
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--fuzzy",
                 "--output",
                 "text",
@@ -370,13 +400,14 @@ def my_function():
         assert "IDENTIFIER TYPES:" in output
 
         # Test text output
-        result_text = cli_runner.invoke(
+        result_text = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--fuzzy",
                 "--output",
                 "text",
@@ -393,15 +424,18 @@ def my_function():
         assert "Total Files:" in text_output
         assert "Total Identifiers:" in text_output
 
-    def test_config_command_real(self, cli_runner, temp_project):
+    def test_config_command_real(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test config command generation."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "system",
                 "config",
-                temp_project,
                 "--fuzzy",
                 "--semantic",
                 "--threshold",
@@ -422,13 +456,13 @@ def my_function():
 class TestAdvancedDependencyCLI:
     """Test advanced dependency analysis CLI commands."""
 
-    @pytest.fixture
-    def cli_runner(self):
-        """Create a CLI runner for testing."""
-        return CliRunner()
+    # @pytest.fixture
+    # def cli_runner(self) -> CliRunner:
+    #     """Create a CLI runner for testing."""
+    #     return CliRunner()
 
     @pytest.fixture
-    def temp_project_with_dependencies(self):
+    def temp_project_with_dependencies(self) -> Generator[str, None, None]:
         """Create a temporary project with some dependencies for testing."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -501,16 +535,17 @@ def utility_function():
             yield temp_dir
 
     def test_show_centrality_command_real(
-        self, cli_runner, temp_project_with_dependencies
-    ):
+        self, cli_runner_with_container: CliRunner, temp_project_with_dependencies: str
+    ) -> None:
         """Test show-centrality command with real dependency analysis."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project_with_dependencies,
                 "inspect",
                 "centrality",
-                temp_project_with_dependencies,
                 "--output",
                 "text",
             ],
@@ -530,13 +565,14 @@ def utility_function():
         main_file = os.path.join(temp_project_with_dependencies, "src/main.py")
 
         # Test with the file path (should work even if not found)
-        result_file = cli_runner.invoke(
+        result_file = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project_with_dependencies,
                 "inspect",
                 "centrality",
-                temp_project_with_dependencies,
                 "--files",
                 main_file,
                 "--output",
@@ -555,19 +591,20 @@ def utility_function():
         assert len(output) > 0
 
     def test_impact_analysis_command_real(
-        self, cli_runner, temp_project_with_dependencies
-    ):
+        self, cli_runner_with_container: CliRunner, temp_project_with_dependencies: str
+    ) -> None:
         """Test impact-analysis command with real dependency analysis."""
         main_file = os.path.join(temp_project_with_dependencies, "src/main.py")
         auth_file = os.path.join(temp_project_with_dependencies, "src/auth.py")
 
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project_with_dependencies,
                 "inspect",
                 "impact",
-                temp_project_with_dependencies,
                 "--files",
                 main_file,
                 "--output",
@@ -583,13 +620,14 @@ def utility_function():
         assert len(output) > 0
 
         # Test with multiple files
-        result_multi = cli_runner.invoke(
+        result_multi = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project_with_dependencies,
                 "inspect",
                 "impact",
-                temp_project_with_dependencies,
                 "--files",
                 main_file,
                 auth_file,
@@ -605,15 +643,18 @@ def utility_function():
         output = result_multi.output
         assert len(output) > 0
 
-    def test_find_cycles_command_real(self, cli_runner, temp_project_with_dependencies):
+    def test_find_cycles_command_real(
+        self, cli_runner_with_container: CliRunner, temp_project_with_dependencies: str
+    ) -> None:
         """Test find-cycles command with real dependency analysis."""
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project_with_dependencies,
                 "inspect",
                 "cycles",
-                temp_project_with_dependencies,
                 "--output",
                 "text",
             ],
@@ -630,13 +671,14 @@ def utility_function():
         )
 
         # Test with JSON output
-        result_json = cli_runner.invoke(
+        result_json = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project_with_dependencies,
                 "inspect",
                 "cycles",
-                temp_project_with_dependencies,
                 "--output",
                 "json",
             ],
@@ -649,11 +691,14 @@ def utility_function():
         output = result_json.output
         assert "[" in output and "]" in output
 
-    def test_advanced_dependency_commands_error_handling(self, cli_runner):
+    def test_advanced_dependency_commands_error_handling(
+        self, cli_runner_with_container: CliRunner
+    ) -> None:
         """Test error handling for advanced dependency commands."""
         # Test with non-existent directory
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "centrality", "/non/existent/directory"]
+        result = cli_runner_with_container.invoke(
+            cli,
+            ["--no-color", "--project-root", "/non/existent/directory", "inspect", "centrality"],
         )
 
         # Should fail with proper error
@@ -662,8 +707,15 @@ def utility_function():
 
         # Test impact-analysis without files
         with tempfile.TemporaryDirectory() as temp_dir:
-            result = cli_runner.invoke(
-                cli, ["--no-color", "inspect", "impact", temp_dir]
+            result = cli_runner_with_container.invoke(
+                cli,
+                [
+                    "--no-color",
+                    "--project-root",
+                    temp_dir,
+                    "inspect",
+                    "impact",
+                ],
             )
 
             # Should fail with proper error
@@ -672,13 +724,14 @@ def utility_function():
 
         # Test with invalid file path
         with tempfile.TemporaryDirectory() as temp_dir:
-            result = cli_runner.invoke(
+            result = cli_runner_with_container.invoke(
                 cli,
                 [
                     "--no-color",
+                    "--project-root",
+                    temp_dir,
                     "inspect",
                     "centrality",
-                    temp_dir,
                     "--file",
                     "non/existent/file.py",
                 ],
@@ -692,19 +745,19 @@ def utility_function():
 class TestCLIEdgeCasesAndNegativeTesting:
     """Test edge cases, negative scenarios, and error conditions for CLI commands."""
 
-    @pytest.fixture
-    def cli_runner(self):
-        """Create a CLI runner for testing."""
-        return CliRunner()
+    # @pytest.fixture
+    # def cli_runner(self) -> CliRunner:
+    #     """Create a CLI runner for testing."""
+    #     return CliRunner()
 
     @pytest.fixture
-    def empty_project(self):
+    def empty_project(self) -> Generator[str, None, None]:
         """Create an empty project directory."""
         with tempfile.TemporaryDirectory() as temp_dir:
             yield temp_dir
 
     @pytest.fixture
-    def large_project(self):
+    def large_project(self) -> Generator[str, None, None]:
         """Create a large project with many files for stress testing."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -740,7 +793,7 @@ if __name__ == "__main__":
             yield temp_dir
 
     @pytest.fixture
-    def malformed_project(self):
+    def malformed_project(self) -> Generator[str, None, None]:
         """Create a project with malformed Python files."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -758,7 +811,7 @@ if __name__ == "__main__":
             yield temp_dir
 
     @pytest.fixture
-    def permission_denied_project(self):
+    def permission_denied_project(self) -> Generator[str, None, None]:
         """Create a project with permission issues."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -774,7 +827,7 @@ if __name__ == "__main__":
             yield temp_dir
 
     @pytest.fixture
-    def temp_project(self):
+    def temp_project(self) -> Generator[str, None, None]:
         """Create a temporary project directory with authentication-related files."""
         with tempfile.TemporaryDirectory() as temp_dir:
             src_dir = Path(temp_dir) / "src"
@@ -798,25 +851,26 @@ def handle_authentication_request():
             yield temp_dir
 
     def test_analyze_command_edge_cases(
-        self, cli_runner, empty_project, large_project, malformed_project
-    ):
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str, malformed_project: str
+    ) -> None:
         """Test analyze command with various edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "index", "create", empty_project, "--output", "json"]
+        result = cli_runner_with_container.invoke(
+            cli,
+            ["--no-color", "--project-root", empty_project, "index", "create", "--output", "json"],
         )
         assert result.exit_code in [0, 1]  # Should handle gracefully
         assert len(result.output) > 0
 
         # Test with large project (stress test)
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                large_project,
                 "index",
                 "create",
-                large_project,
                 "--max-results",
                 "10",  # Limit results
                 "--output",
@@ -827,40 +881,41 @@ def handle_authentication_request():
         assert len(result.output) > 0
 
         # Test with malformed project
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "index", "create", malformed_project, "--output", "json"],
+            ["--no-color", "--project-root", malformed_project, "index", "create", "--output", "json"],
         )
         assert result.exit_code in [0, 1]  # Should handle syntax errors gracefully
         assert len(result.output) > 0
 
-    def test_analyze_command_invalid_parameters(self, cli_runner, temp_project):
+    def test_analyze_command_invalid_parameters(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test analyze command with invalid parameters."""
-
         # Test with invalid threshold
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--threshold",
                 "2.0",  # Invalid: should be 0.0-1.0
-                "--output",
-                "json",
             ],
         )
         assert result.exit_code == 0  # CLI accepts and converts threshold values
 
         # Test with negative max-results
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--max-results",
                 "-1",
                 "--output",
@@ -870,109 +925,100 @@ def handle_authentication_request():
         assert result.exit_code == 0  # CLI accepts negative max-results values
 
         # Test with invalid output format
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                temp_project,
                 "index",
                 "create",
-                temp_project,
                 "--output",
                 "invalid_format",
             ],
         )
         assert result.exit_code != 0  # Should fail with invalid output format
 
-    def test_search_command_edge_cases(self, cli_runner, empty_project, large_project):
+    def test_search_command_edge_cases(
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+    ) -> None:
         """Test search command with edge cases."""
-
         # Test with empty query
-        result = cli_runner.invoke(cli, ["--no-color", "search", "", empty_project])
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", empty_project, "search", ""]
+        )
         assert result.exit_code in [0, 1]
 
         # Test with very long query
         long_query = "a" * 1000
-        result = cli_runner.invoke(
-            cli, ["--no-color", "search", long_query, large_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", large_project, "search", long_query]
         )
         assert result.exit_code in [0, 1]
 
         # Test with special characters
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                large_project,
                 "search",
                 "!@#$%^&*()_+-=[]{}|;':\",./<>?",
-                large_project,
             ],
         )
         assert result.exit_code in [0, 1]
 
     def test_dependency_analysis_edge_cases(
-        self, cli_runner, empty_project, large_project
-    ):
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+    ) -> None:
         """Test centrality analysis with edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
-            [
-                "--no-color",
-                "inspect",
-                "centrality",
-                empty_project,
-            ],
+            ["--no-color", "--project-root", empty_project, "inspect", "centrality"],
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
-            [
-                "--no-color",
-                "inspect",
-                "centrality",
-                large_project,
-            ],
+            ["--no-color", "--project-root", large_project, "inspect", "centrality"],
         )
         assert result.exit_code in [0, 1]
 
         # Test with invalid project path
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
-            [
-                "--no-color",
-                "inspect",
-                "centrality",
-                "/nonexistent/path",
-            ],
+            ["--no-color", "--project-root", "/nonexistent/path", "inspect", "centrality"],
         )
         assert result.exit_code != 0
 
-    def test_show_centrality_edge_cases(self, cli_runner, empty_project, large_project):
+    def test_show_centrality_edge_cases(
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+    ) -> None:
         """Test show-centrality command with edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "centrality", empty_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", empty_project, "inspect", "centrality"]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "centrality", large_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", large_project, "inspect", "centrality"]
         )
         assert result.exit_code in [0, 1]
 
         # Test with non-existent file
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                large_project,
                 "inspect",
                 "centrality",
-                large_project,
                 "--file",
                 "nonexistent_file.py",
             ],
@@ -980,17 +1026,19 @@ def handle_authentication_request():
         assert result.exit_code != 0
         assert "not found" in result.output or "Error:" in result.output
 
-    def test_impact_analysis_edge_cases(self, cli_runner, empty_project, large_project):
+    def test_impact_analysis_edge_cases(
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+    ) -> None:
         """Test impact-analysis command with edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                empty_project,
                 "inspect",
                 "impact",
-                empty_project,
                 "--files",
                 "any_file.py",
             ],
@@ -999,19 +1047,21 @@ def handle_authentication_request():
 
         # Test with large project and many files
         files = [f"src/module_{i:02d}.py" for i in range(10)]
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "impact", large_project, "--files"] + files
+        result = cli_runner_with_container.invoke(
+            cli,
+            ["--no-color", "--project-root", large_project, "inspect", "impact", "--files"] + files,
         )
         assert result.exit_code in [0, 1, 2]  # Accept various exit codes for edge cases
 
         # Test with non-existent files
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                large_project,
                 "inspect",
                 "impact",
-                large_project,
                 "--files",
                 "nonexistent1.py",
                 "nonexistent2.py",
@@ -1019,95 +1069,102 @@ def handle_authentication_request():
         )
         assert result.exit_code in [0, 1, 2]  # May fail gracefully
 
-    def test_find_cycles_edge_cases(self, cli_runner, empty_project, large_project):
+    def test_find_cycles_edge_cases(
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+    ) -> None:
         """Test find-cycles command with edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "cycles", empty_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", empty_project, "inspect", "cycles"]
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "inspect", "cycles", large_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", large_project, "inspect", "cycles"]
         )
         assert result.exit_code in [0, 1]
 
-    def test_explore_command_edge_cases(self, cli_runner, empty_project, large_project):
+    def test_explore_command_edge_cases(
+        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+    ) -> None:
         """Test explore command with edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", "test intent", empty_project]
+        result = cli_runner_with_container.invoke(
+            cli,
+            ["--no-color", "--project-root", empty_project, "explore", "start", "test intent"],
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", "module processing", large_project]
+        result = cli_runner_with_container.invoke(
+            cli,
+            ["--no-color", "--project-root", large_project, "explore", "start", "module processing"],
         )
         assert result.exit_code in [0, 1]
 
         # Test with very long intent
         long_intent = "a" * 1000
-        result = cli_runner.invoke(
-            cli, ["--no-color", "explore", "start", long_intent, large_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", large_project, "explore", "start", long_intent]
         )
         assert result.exit_code in [0, 1]
 
-    def test_config_command_edge_cases(self, cli_runner, empty_project):
+    def test_config_command_edge_cases(
+        self, cli_runner_with_container: CliRunner, empty_project: str
+    ) -> None:
         """Test config command with edge cases."""
-
         # Test with empty project
-        result = cli_runner.invoke(
-            cli, ["--no-color", "system", "config", empty_project]
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "--project-root", empty_project, "system", "config"]
         )
         assert result.exit_code in [0, 1]
 
         # Test with invalid parameters
-        result = cli_runner.invoke(
+        result = cli_runner_with_container.invoke(
             cli,
             [
                 "--no-color",
+                "--project-root",
+                empty_project,
                 "system",
                 "config",
-                empty_project,
                 "--threshold",
                 "2.0",  # Invalid threshold
             ],
         )
         assert result.exit_code != 0
 
-    def test_version_command(self, cli_runner):
+    def test_version_command(self, cli_runner_with_container: CliRunner) -> None:
         """Test version command."""
-        result = cli_runner.invoke(cli, ["--no-color", "system", "version"])
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "system", "version"]
+        )
         assert result.exit_code == 0
         assert "0.1.0" in result.output
 
-    def test_help_command(self, cli_runner):
+    def test_help_command(self, cli_runner_with_container: CliRunner) -> None:
         """Test help command."""
-        result = cli_runner.invoke(cli, ["--no-color", "--help"])
+        result = cli_runner_with_container.invoke(cli, ["--no-color", "--help"])
         assert result.exit_code == 0
         assert "RepoMap-Tool" in result.output
 
-    def test_invalid_command(self, cli_runner):
+    def test_invalid_command(self, cli_runner_with_container: CliRunner) -> None:
         """Test invalid command."""
-        result = cli_runner.invoke(cli, ["--no-color", "invalid-command"])
+        result = cli_runner_with_container.invoke(cli, ["--no-color", "invalid-command"])
         assert result.exit_code != 0
         assert "No such command" in result.output or "Usage:" in result.output
 
-    def test_missing_required_arguments(self, cli_runner, temp_project):
+    def test_missing_required_arguments(self, cli_runner_with_container: CliRunner, temp_project: str) -> None:
         """Test commands with missing required arguments."""
-
         # Test analyze without project path (now works because project_path is optional)
-        result = cli_runner.invoke(cli, ["--no-color", "index", "create"])
+        result = cli_runner_with_container.invoke(cli, ["--no-color", "index", "create"])
         assert result.exit_code == 0
 
         # Test search without query (should fail because query is required)
-        result = cli_runner.invoke(cli, ["--no-color", "search"])
+        result = cli_runner_with_container.invoke(cli, ["--no-color", "search"])
         assert result.exit_code != 0
 
         # Test explore without intent (intent is now required as first argument)
-        result = cli_runner.invoke(cli, ["--no-color", "explore", "start"])
+        result = cli_runner_with_container.invoke(cli, ["--no-color", "explore", "start"])
         assert result.exit_code != 0

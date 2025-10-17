@@ -19,7 +19,7 @@ from .view_models import (
     ControllerConfig,
     AnalysisType,
 )
-from .view_models import SymbolViewModel
+from repomap_tool.models import SymbolViewModel
 
 
 logger = get_logger(__name__)

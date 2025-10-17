@@ -130,7 +130,7 @@ from collections import defaultdict as ddict
         assert alias_tags[0].name == "ddict"
         assert alias_tags[0].kind == "name.definition.import_alias"
         assert alias_tags[0].line == 2
-        assert alias_tags[0].column == 36
+        assert alias_tags[0].column == 39
 
     def test_function_call(self, python_parser_and_query, tmp_path):
         parser, query, language, ts_parser = python_parser_and_query

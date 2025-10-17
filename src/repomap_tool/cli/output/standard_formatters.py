@@ -15,6 +15,9 @@ import click
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
+from unittest.mock import Mock
+
+from repomap_tool.core.logging_service import get_logger
 
 from repomap_tool.models import (
     AnalysisFormat,
@@ -22,18 +25,21 @@ from repomap_tool.models import (
     SearchResponse,
     OutputFormat,
     OutputConfig, # Import OutputConfig
+    ErrorResponse, # Import ErrorResponse
+    SuccessResponse, # Import SuccessResponse
 )
 
-from .protocols import FormatterProtocol, BaseFormatter, DataFormatter # Import BaseFormatter and DataFormatter
+from repomap_tool.protocols import TemplateRegistryProtocol, FormatterProtocol, BaseFormatter, DataFormatter
 from .console_manager import ConsoleManagerProtocol
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import TemplateEngine
-from .templates.registry import TemplateRegistryProtocol # Use the protocol here
+from .templates.registry import DefaultTemplateRegistry # Import DefaultTemplateRegistry
 from .controller_formatters import (
     CentralityViewModelFormatter,
     ImpactViewModelFormatter,
 )
 
+logger = get_logger(__name__)
 
 class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFormatter and DataFormatter
     """Formatter for ProjectInfo data."""
@@ -46,7 +52,10 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFor
         enable_logging: bool = True,
     ) -> None:
         """Initialize the ProjectInfo formatter."""
-        super().__init__(console_manager, enable_logging)
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -71,64 +80,9 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFor
             return data.model_dump_json(indent=2)
         elif output_format == OutputFormat.TEXT:
             # Use template formatter for text output
-            return self._template_formatter.format(data, output_format, config, ctx)
+            return self._template_formatter.format(data, output_format, config, ctx, template_name="project_info")
         else:
             raise ValueError(f"Unsupported format: {output_format}")
-
-    def _format_to_text(
-        self,
-        project_info: ProjectInfo,
-        config: Optional[OutputConfig] = None,
-    ) -> str:
-        """Format ProjectInfo to text format."""
-        use_emojis = True
-        if config and config.template_config:
-            use_emojis = not config.template_config.get("no_emojis", False)
-
-        lines = []
-
-        # Title
-        title = (
-            "🧠 LLM-Optimized Project Analysis" if use_emojis else "Project Analysis"
-        )
-        lines.append(title)
-        lines.append("=" * 60)
-        lines.append("")
-
-        # Summary section
-        summary_icon = "📊" if use_emojis else ""
-        lines.append(f"{summary_icon} SUMMARY:")
-        lines.append(f"├── Project Root: {project_info.project_root}")
-        lines.append(f"├── Total Files: {project_info.total_files}")
-        lines.append(f"├── Total Identifiers: {project_info.total_identifiers}")
-        lines.append(f"└── Analysis Time: {project_info.analysis_time_ms:.2f}ms")
-        lines.append("")
-
-        # File types breakdown
-        if project_info.file_types:
-            files_icon = "📁" if use_emojis else ""
-            lines.append(f"{files_icon} FILE TYPES:")
-            for ext, count in project_info.file_types.items():
-                lines.append(f"├── {ext}: {count} files")
-            lines.append("")
-
-        # Identifier types breakdown
-        if project_info.identifier_types:
-            id_icon = "🏷️" if use_emojis else ""
-            lines.append(f"{id_icon} IDENTIFIER TYPES:")
-            for id_type, count in project_info.identifier_types.items():
-                lines.append(f"├── {id_type}: {count} identifiers")
-            lines.append("")
-
-        # Cache statistics
-        if project_info.cache_stats:
-            cache_icon = "💾" if use_emojis else ""
-            lines.append(f"{cache_icon} CACHE STATISTICS:")
-            for key, value in project_info.cache_stats.items():
-                lines.append(f"├── {key.replace('_', ' ').title()}: {value}")
-            lines.append("")
-
-        return "\n".join(lines)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if format is supported."""
@@ -158,7 +112,10 @@ class DictFormatter(BaseFormatter, DataFormatter):
         enable_logging: bool = True,
     ) -> None:
         """Initialize the Dict formatter."""
-        super().__init__(console_manager, enable_logging)
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -186,57 +143,9 @@ class DictFormatter(BaseFormatter, DataFormatter):
             if "error" in data or "success" in data:
                 return self._template_formatter.format(data, output_format, config, ctx)
             else:
-                return self._format_to_text(data, config)
+                return self._template_formatter.format(data, output_format, config, ctx, template_name="dict_output") # Use a generic dict template
         else:
             raise ValueError(f"Unsupported format: {output_format}")
-
-    def _format_to_text(
-        self,
-        data: Dict[str, Any],
-        config: Optional[OutputConfig] = None,
-    ) -> str:
-        """Format dictionary to text format."""
-        use_emojis = True
-        if config and config.template_config:
-            use_emojis = not config.template_config.get("no_emojis", False)
-
-        # Check if this looks like dependency results
-        if self._is_dependency_data(data):
-            return self._format_dependency_data(data, use_emojis)
-
-        # Generic dictionary formatting
-        lines = []
-        for key, value in data.items():
-            formatted_key = key.replace("_", " ").title()
-            lines.append(f"{formatted_key}: {value}")
-
-        return "\n".join(lines)
-
-    def _is_dependency_data(self, data: Dict[str, Any]) -> bool:
-        """Check if data looks like dependency analysis results."""
-        dependency_keys = {"total_files", "total_dependencies", "circular_dependencies"}
-        return any(key in data for key in dependency_keys)
-
-    def _format_dependency_data(self, data: Dict[str, Any], use_emojis: bool) -> str:
-        """Format dependency analysis data."""
-        # Placeholder for tabulate, will need to add import if actually used.
-        # from tabulate import tabulate
-        table_data = [
-            ["Total Files", str(data.get("total_files", 0))],
-            ["Total Dependencies", str(data.get("total_dependencies", 0))],
-            ["Circular Dependencies", str(data.get("circular_dependencies", 0))],
-        ]
-
-        headers = ["Metric", "Value"]
-        # table_str = tabulate(table_data, headers=headers, tablefmt="grid") # Commented out tabulate
-        table_str = "\n".join([" ".join(headers)] + [" ".join(row) for row in table_data]) # Simple text table for now
-
-        lines = []
-        deps_icon = "📊" if use_emojis else ""
-        lines.append(f"{deps_icon} Dependency Analysis Results")
-        lines.append(table_str)
-
-        return "\n".join(lines)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if format is supported."""
@@ -266,8 +175,17 @@ class ListFormatter(BaseFormatter, DataFormatter):
         enable_logging: bool = True,
     ) -> None:
         """Initialize the List formatter."""
-        super().__init__(console_manager, enable_logging)
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
 
     def format(
         self,
@@ -284,73 +202,9 @@ class ListFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
-            return self._format_to_text(data, config)
+            return self._template_formatter.format(data, output_format, config, ctx, template_name="list_output") # Use a generic list template
         else:
             raise ValueError(f"Unsupported format: {output_format}")
-
-    def _format_to_text(
-        self,
-        data: List[Any],
-        config: Optional[OutputConfig] = None,
-    ) -> str:
-        """Format list to text format."""
-        use_emojis = True
-        if config and config.template_config:
-            use_emojis = not config.template_config.get("no_emojis", False)
-
-        # Check if this looks like cycle data
-        if self._is_cycle_data(data):
-            return self._format_cycle_data(data, use_emojis)
-
-        # Generic list formatting
-        if not data:
-            empty_icon = "📋" if use_emojis else ""
-            return f"{empty_icon} Empty list"
-
-        lines = []
-        for i, item in enumerate(data, 1):
-            lines.append(f"{i}. {item}")
-
-        return "\n".join(lines)
-
-    def _is_cycle_data(self, data: List[Any]) -> bool:
-        """Check if data looks like cycle detection results."""
-        # Empty list is valid cycle data (no cycles found)
-        if not data:
-            return True
-        return all(isinstance(item, list) and len(item) > 0 for item in data)
-
-    def _format_cycle_data(self, data: List[List[str]], use_emojis: bool) -> str:
-        """Format cycle detection data."""
-        if not data:
-            no_cycles_icon = "🔄" if use_emojis else ""
-            return f"{no_cycles_icon} No circular dependencies found! 🎉"
-
-        lines = []
-        cycle_icon = "🔄" if use_emojis else ""
-        lines.append(f"{cycle_icon} Circular Dependencies ({len(data)} found)")
-        lines.append("")
-
-        for i, cycle in enumerate(data, 1):
-            lines.append(f"Cycle #{i}:")
-
-            # Format each file in the cycle with proper indentation
-            for j, file_path in enumerate(cycle):
-                if j == 0:
-                    # First file
-                    lines.append(f"  {file_path}")
-                else:
-                    # Subsequent files with arrow and indentation
-                    lines.append(f"    → {file_path}")
-
-            # Close the cycle by showing the first file again
-            lines.append(f"    → {cycle[0]}")
-
-            # Add spacing between cycles (except for the last one)
-            if i < len(data):
-                lines.append("")
-
-        return "\n".join(lines)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if format is supported."""
@@ -374,8 +228,12 @@ class StringFormatter(BaseFormatter, DataFormatter):
 
     def __init__(self, template_engine: Optional[TemplateEngine] = None,
                  template_registry: Optional[TemplateRegistryProtocol] = None,
-                 console_manager: Optional[ConsoleManagerProtocol] = None) -> None:
-        super().__init__(console_manager, enable_logging=True)
+                 console_manager: Optional[ConsoleManagerProtocol] = None,
+                 enable_logging: bool = True) -> None:
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
         # StringFormatter does not directly use template_engine or template_registry
         # but accepts them for consistency with other formatters if needed in future.
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
@@ -415,13 +273,75 @@ class StringFormatter(BaseFormatter, DataFormatter):
         return str
 
 
+class SearchResponseFormatter(BaseFormatter, DataFormatter):
+    """Formatter for SearchResponse data."""
+
+    def __init__(
+        self,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
+        enable_logging: bool = True,
+    ) -> None:
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
+        self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> Optional[str]:
+        if not isinstance(data, SearchResponse):
+            raise ValueError(f"Expected SearchResponse, got {type(data)}")
+        self.log_formatting("format_search_response", format=str(output_format))
+
+        if output_format == OutputFormat.JSON:
+            return data.model_dump_json(indent=2)
+        elif output_format == OutputFormat.TEXT:
+            return self._template_formatter.format(data, output_format, config, ctx, template_name="search_response")
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        return output_format in self._supported_formats
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        return self._supported_formats.copy()
+
+    def validate_data(self, data: Any) -> bool:
+        return isinstance(data, SearchResponse)
+
+    def get_data_type(self) -> Type[Any]:
+        return SearchResponse
+
+
 class FormatterRegistry:
     """Registry for managing formatters."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: ConsoleManagerProtocol,
+    ) -> None:
         """Initialize the formatter registry."""
         self._formatters: List[FormatterProtocol] = []
-        self._type_formatters: Dict[Type[Any], List[FormatterProtocol]] = {}
+        self._template_engine = template_engine
+        self._template_registry = template_registry
+        self._console_manager = console_manager
+        self.logger = logger # Assign the module-level logger
+        self.logger.debug(f"FormatterRegistry initialized (id={id(self)}). TemplateRegistry id={id(template_registry)}, ConsoleManager id={id(console_manager)}")
 
     def register_formatter(
         self,
@@ -429,12 +349,22 @@ class FormatterRegistry:
         data_type: Optional[Type[Any]] = None,
     ) -> None:
         """Register a formatter."""
+        self.logger.debug(f"FormatterRegistry (id={id(self)}): Attempting to register formatter: {type(formatter).__name__} (id={id(formatter)}) for data_type: {data_type}")
         self._formatters.append(formatter)
 
+        # Use formatter's own get_data_type if not explicitly provided
+        if data_type is None and hasattr(formatter, "get_data_type"):
+            data_type = formatter.get_data_type()
+            self.logger.debug(f"FormatterRegistry (id={id(self)}): Inferred data_type for registration: {data_type}")
+
         if data_type:
-            if data_type not in self._type_formatters:
-                self._type_formatters[data_type] = []
-            self._type_formatters[data_type].append(formatter)
+            # The original code had a _type_formatters dictionary, but it was not used in get_formatter.
+            # The new code removes _type_formatters and its lookup.
+            # So, we just register the formatter directly.
+            self.logger.debug(f"FormatterRegistry (id={id(self)}): Registered formatter {type(formatter).__name__} (id={id(formatter)}) for type {data_type}. Total registered: {len(self._formatters)}")
+        else:
+            self.logger.warning(f"FormatterRegistry (id={id(self)}): Formatter {type(formatter).__name__} (id={id(formatter)}) registered without a specific data_type.")
+
 
     def get_formatter(
         self,
@@ -442,48 +372,189 @@ class FormatterRegistry:
         output_format: OutputFormat,
     ) -> Optional[FormatterProtocol]:
         """Get formatter for data type and format."""
-        # Try specific type formatters first
-        if data_type in self._type_formatters:
-            for formatter in self._type_formatters[data_type]:
-                if formatter.supports_format(output_format):
-                    return formatter
-
-        # Try all formatters
+        self.logger.debug(f"FormatterRegistry (id={id(self)}): Searching for formatter for data_type: {data_type}, format: {output_format}")
+        
+        # Iterate through all registered formatters
         for formatter in self._formatters:
+            formatter_data_type = None
+            if hasattr(formatter, "get_data_type"):
+                formatter_data_type = formatter.get_data_type()
+            
+            is_sub = issubclass(data_type, formatter_data_type) if formatter_data_type else False
+            supports_fmt = formatter.supports_format(output_format)
+            self.logger.debug(
+                f"FormatterRegistry (id={id(self)}): Checking formatter {type(formatter).__name__} (id={id(formatter)}). "
+                f"Formatter's data_type: {formatter_data_type}, Target data_type: {data_type}. "
+                f"issubclass: {is_sub}, supports_format: {supports_fmt}"
+            )
+
             if (
-                hasattr(formatter, "validate_data")
-                and hasattr(formatter, "supports_format")
-                and formatter.supports_format(output_format)
+                formatter_data_type is not None
+                and is_sub
+                and supports_fmt
             ):
+                self.logger.debug(f"FormatterRegistry (id={id(self)}): Found matching formatter: {type(formatter).__name__} (id={id(formatter)})")
                 return formatter
 
+        self.logger.debug(f"FormatterRegistry (id={id(self)}): No formatter found for data type {data_type} and format {output_format}")
         return None
 
     def get_all_formatters(self) -> List[FormatterProtocol]:
         """Get all registered formatters."""
+        self.logger.debug(f"FormatterRegistry (id={id(self)}): get_all_formatters called. Total registered: {len(self._formatters)}")
         return self._formatters.copy()
-
-    def unregister_formatter(
-        self,
-        formatter: FormatterProtocol,
-    ) -> None:
-        """Unregister a formatter."""
-        if formatter in self._formatters:
-            self._formatters.remove(formatter)
-
-        # Remove from type-specific registrations
-        for formatters in self._type_formatters.values():
-            if formatter in formatters:
-                formatters.remove(formatter)
 
 
 # Global formatter registry
-_global_formatter_registry: Optional[FormatterRegistry] = None
+# _global_formatter_registry: Optional[FormatterRegistry] = None
 
 
-def get_formatter_registry() -> FormatterRegistry:
-    """Get the global formatter registry."""
-    global _global_formatter_registry
-    if _global_formatter_registry is None:
-        _global_formatter_registry = FormatterRegistry()
-    return _global_formatter_registry
+# def get_formatter_registry() -> FormatterRegistry:
+#     """Get the global formatter registry.
+#
+#     This function should only be used in scenarios where the DI container
+#     cannot be directly accessed (e.g., global Click contexts for utilities).
+#     For most services, inject FormatterRegistry via the DI container.
+#
+#     Returns:
+#         Global FormatterRegistry instance
+#
+#     Raises:
+#         RuntimeError: If the DI container is not yet initialized or
+#                       FormatterRegistry cannot be resolved.
+#     """
+#     global _global_formatter_registry
+#     if _global_formatter_registry is None:
+#         logger = get_logger(__name__)
+#         logger.debug("Initializing global FormatterRegistry instance.")
+#
+#         # Attempt to get container from click.Context if available
+#         # This ensures that if we're in a Click context that has a container, we use it.
+#         try:
+#             import click
+#             ctx = click.get_current_context(silent=True)
+#             if ctx and ctx.obj and "container" in ctx.obj:
+#                 logger.debug("Retrieving container from click.Context.")
+#                 container = ctx.obj["container"]
+#                 _global_formatter_registry = container.formatter_registry()
+#             else:
+#                 # Fallback: if no container in context, try to create a dummy one
+#                 # This path is generally for tests or very early initialization outside CLI
+#                 logger.debug("No container found in click.Context. Attempting to create a dummy container for formatter registry.")
+#                 from repomap_tool.core.container import create_container
+#                 from repomap_tool.models import RepoMapConfig
+#                 dummy_config = RepoMapConfig(project_root="/tmp", cache_dir="/tmp")
+#                 container = create_container(dummy_config)
+#                 _global_formatter_registry = container.formatter_registry()
+#
+#         except Exception as e:
+#             logger.error(f"Failed to initialize global FormatterRegistry: {e}")
+#             raise RuntimeError("Failed to initialize global FormatterRegistry.") from e
+#
+#     return _global_formatter_registry
+
+
+class ErrorResponseFormatter(BaseFormatter, DataFormatter):
+    """Formatter for ErrorResponse data."""
+
+    def __init__(
+        self,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
+        enable_logging: bool = True,
+    ) -> None:
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
+        self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> Optional[str]:
+        if not isinstance(data, ErrorResponse):
+            raise ValueError(f"Expected ErrorResponse, got {type(data)}")
+        self.log_formatting("format_error_response", format=str(output_format))
+
+        if output_format == OutputFormat.JSON:
+            return data.model_dump_json(indent=2)
+        elif output_format == OutputFormat.TEXT:
+            return self._template_formatter.format(data, output_format, config, ctx, template_name="error")
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        return output_format in self._supported_formats
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        return self._supported_formats.copy()
+
+    def validate_data(self, data: Any) -> bool:
+        return isinstance(data, ErrorResponse)
+
+    def get_data_type(self) -> Type[Any]:
+        return ErrorResponse
+
+
+class SuccessResponseFormatter(BaseFormatter, DataFormatter):
+    """Formatter for SuccessResponse data."""
+
+    def __init__(
+        self,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
+        enable_logging: bool = True,
+    ) -> None:
+        super().__init__(console_manager=console_manager,
+                         template_engine=template_engine,
+                         template_registry=template_registry,
+                         enable_logging=enable_logging)
+        self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
+        self._template_formatter = TemplateBasedFormatter(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+            enable_logging=enable_logging,
+        )
+
+    def format(
+        self,
+        data: Any,
+        output_format: OutputFormat,
+        config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> Optional[str]:
+        if not isinstance(data, SuccessResponse):
+            raise ValueError(f"Expected SuccessResponse, got {type(data)}")
+        self.log_formatting("format_success_response", format=str(output_format))
+
+        if output_format == OutputFormat.JSON:
+            return data.model_dump_json(indent=2)
+        elif output_format == OutputFormat.TEXT:
+            return self._template_formatter.format(data, output_format, config, ctx, template_name="success")
+        else:
+            raise ValueError(f"Unsupported format: {output_format}")
+
+    def supports_format(self, output_format: OutputFormat) -> bool:
+        return output_format in self._supported_formats
+
+    def get_supported_formats(self) -> List[OutputFormat]:
+        return self._supported_formats.copy()
+
+    def validate_data(self, data: Any) -> bool:
+        return isinstance(data, SuccessResponse)
+
+    def get_data_type(self) -> Type[Any]:
+        return SuccessResponse

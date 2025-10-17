@@ -17,14 +17,15 @@ from rich.console import Console
 from rich.text import Text
 
 from repomap_tool.models import OutputFormat, ErrorResponse, SuccessResponse, OutputConfig, AnalysisFormat # Import OutputConfig and AnalysisFormat
-from repomap_tool.protocols import OutputManagerProtocol # Import from central protocols
+from repomap_tool.protocols import OutputManagerProtocol, TemplateRegistryProtocol # Import TemplateRegistryProtocol
 
-from .console_manager import ConsoleManagerProtocol, ConsoleManagerFactory
-from .standard_formatters import FormatterRegistry, get_formatter_registry
+from .console_manager import ConsoleManagerProtocol
+from .standard_formatters import FormatterRegistry
 from .templates.config import TemplateConfig
 from .templates.engine import TemplateEngine
 from .templates.registry import TemplateRegistryProtocol # Use the protocol here
 
+logger = get_logger(__name__)
 
 class OutputManager(OutputManagerProtocol):
     """Central hub for all CLI output operations."""
@@ -53,6 +54,7 @@ class OutputManager(OutputManagerProtocol):
         self.template_registry = template_registry
         self.logger = get_logger(__name__)
         self.enable_logging = enable_logging
+        self.logger.debug(f"OutputManager initialized (id={id(self)}). FormatterRegistry id={id(self.formatter_registry)}, registered formatters: {len(self.formatter_registry.get_all_formatters())}")
 
         # Track output statistics
         self._output_stats: Dict[str, int] = {
@@ -79,8 +81,10 @@ class OutputManager(OutputManagerProtocol):
             # Validate the output configuration
             self._validate_config(config)
 
+            self.logger.debug(f"OutputManager (id={id(self)}): Calling FormatterRegistry.get_formatter for data type {type(data)} and format {config.format}")
             # Get the appropriate formatter
             formatter = self._get_formatter(data, config.format)
+            self.logger.debug(f"OutputManager (id={id(self)}): FormatterRegistry.get_formatter returned: {type(formatter).__name__ if formatter else 'None'} (id={id(formatter) if formatter else 'None'})")
             if formatter is None:
                 raise ValueError(
                     f"No formatter found for data type {type(data)} and format {config.format}"
@@ -115,6 +119,7 @@ class OutputManager(OutputManagerProtocol):
         error: Union[Exception, Any],
         config: OutputConfig,
         ctx: Optional[click.Context] = None,
+        details: Optional[Dict[str, Any]] = None, # Add a details parameter for structured error info
     ) -> None:
         """Display an error message using the specified output configuration.
 
@@ -124,17 +129,15 @@ class OutputManager(OutputManagerProtocol):
             ctx: Click context for console configuration
         """
         try:
-            # Create error data structure
-            error_data = {
-                "error": {
-                    "type": type(error).__name__,
-                    "message": str(error),
-                    "details": getattr(error, "details", None),
-                }
-            }
+            # Create an ErrorResponse object with explicit error and error_type
+            error_response = ErrorResponse(
+                error=str(error),
+                error_type=type(error).__name__,
+                details=details # Pass the new details parameter
+            )
 
-            # Display the error
-            self.display(error_data, config, ctx)
+            # Display the ErrorResponse object, which should be handled by ErrorResponseFormatter
+            self.display(error_response, config, ctx)
 
             # Update error statistics
             self._output_stats["errors"] += 1
@@ -171,8 +174,14 @@ class OutputManager(OutputManagerProtocol):
                 }
             }
 
-            # Display the success message
-            self.display(success_data, config, ctx)
+            # Create a SuccessResponse object
+            success_response = SuccessResponse(
+                message=message,
+                status="completed"
+            )
+
+            # Display the SuccessResponse object, which should be handled by SuccessResponseFormatter
+            self.display(success_response, config, ctx)
 
             if self.enable_logging and self.logger:
                 self.logger.debug(f"Displayed success message: {message}")
@@ -246,8 +255,9 @@ class OutputManager(OutputManagerProtocol):
         if isinstance(response, SuccessResponse):
             self.display_success(response.message, output_config, ctx)
         elif isinstance(response, ErrorResponse):
-            # For ErrorResponse, we want to display the error details in a structured way
-            self.display_error(response.message, output_config, ctx, details=response.details)
+            # Pass the full ErrorResponse object to the generic display method
+            # This allows the ErrorResponseFormatter to be correctly invoked.
+            self.display(response, output_config, ctx)
         else:
             # Fallback for unexpected response types
             self.display(response, output_config, ctx)
@@ -345,26 +355,33 @@ class OutputManager(OutputManagerProtocol):
             Formatter instance or None if not found
         """
         try:
+            self.logger.debug(f"OutputManager (id={id(self)}): Attempting to get formatter for data type {type(data)} and format {format_type}")
             # Try to get formatter by data type
-            formatter = self.formatter_registry.get_formatter(type(data), format_type)
-            if formatter is not None:
-                return formatter
+            formatter_by_type = self.formatter_registry.get_formatter(type(data), format_type)
+            self.logger.debug(f"OutputManager (id={id(self)}): Formatter by data type returned: {type(formatter_by_type).__name__ if formatter_by_type else 'None'} (id={id(formatter_by_type) if formatter_by_type else 'None'})")
+            if formatter_by_type is not None:
+                self.logger.debug(f"OutputManager (id={id(self)}): Found formatter by data type: {type(formatter_by_type).__name__} (id={id(formatter_by_type)}).")
+                return formatter_by_type
 
+            self.logger.debug(f"OutputManager (id={id(self)}): No formatter found by exact data type. Trying to get formatter by validation for {type(data)}.")
             # Try to get formatter by validation
             for registered_formatter in self.formatter_registry.get_all_formatters():
+                self.logger.debug(f"OutputManager (id={id(self)}): Checking registered formatter {type(registered_formatter).__name__} with validate_data (id={id(registered_formatter)}).")
                 if (
                     hasattr(registered_formatter, "validate_data")
                     and registered_formatter.validate_data(data)
                     and registered_formatter.supports_format(format_type)
                 ):
+                    self.logger.debug(f"OutputManager (id={id(self)}): Found formatter by validation: {type(registered_formatter).__name__} (id={id(registered_formatter)}).")
                     return registered_formatter
 
+            self.logger.warning(f"OutputManager (id={id(self)}): No formatter found for data type {type(data)} and format {format_type}")
             return None
 
         except Exception as e:
             if self.enable_logging and self.logger:
                 self.logger.error(
-                    f"Error getting formatter for {type(data)} and {format_type}: {e}"
+                    f"OutputManager (id={id(self)}): Error getting formatter for {type(data)} and {format_type}: {e}"
                 )
             return None
 
@@ -406,39 +423,3 @@ class OutputManager(OutputManagerProtocol):
         except Exception as fallback_error:
             if self.enable_logging and self.logger:
                 self.logger.error(f"Fallback display also failed: {fallback_error}")
-
-
-# Global output manager instance
-_global_output_manager: Optional[OutputManager] = None
-
-
-def get_output_manager() -> OutputManager:
-    """Get the global output manager instance.
-
-    This function should only be used in scenarios where the DI container
-    cannot be directly accessed (e.g., global Click contexts for utilities).
-    For most services, inject OutputManager via the DI container.
-
-    Returns:
-        Global OutputManager instance
-    """
-    global _global_output_manager
-    if _global_output_manager is None:
-        # Ensure we're getting dependencies from the container for this global instance
-        from repomap_tool.core.container import create_container
-        from repomap_tool.models import RepoMapConfig
-        from repomap_tool.cli.output.console_manager import DefaultConsoleManager
-
-        # Attempt to get container from click.Context if available
-        ctx = click.get_current_context(silent=True)
-        if ctx and ctx.obj and "container" in ctx.obj:
-            container = ctx.obj["container"]
-        else:
-            # Fallback: create a dummy config and container if no context container is found
-            dummy_config = RepoMapConfig(project_root="/tmp", cache_dir="/tmp") # Use dummy values for container setup
-            container = create_container(dummy_config)
-
-        # Resolve output_manager from the container ensuring dependencies are fully resolved
-        _global_output_manager = container.output_manager()
-
-    return _global_output_manager

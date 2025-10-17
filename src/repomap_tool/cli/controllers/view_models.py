@@ -24,23 +24,6 @@ class AnalysisType(str, Enum):
 
 
 @dataclass
-class SymbolViewModel:
-    """ViewModel for code symbols."""
-
-    name: str
-    file_path: str
-    line_number: int
-    symbol_type: str  # function, class, method, etc.
-    signature: Optional[str] = None
-    critical_lines: Optional[List[str]] = None
-    dependencies: Optional[List[str]] = None
-    centrality_score: Optional[float] = None
-    impact_risk: Optional[float] = None
-    importance_score: Optional[float] = None
-    is_critical: bool = False
-
-
-@dataclass
 class FileAnalysisViewModel:
     """ViewModel for file analysis results."""
 

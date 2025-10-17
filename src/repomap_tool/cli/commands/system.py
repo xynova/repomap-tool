@@ -1,5 +1,6 @@
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
+from repomap_tool.core.container_config import configure_container
 
 """
 System commands for RepoMap-Tool CLI.
@@ -12,6 +13,8 @@ import sys
 from typing import Optional
 
 import click
+from pathlib import Path
+import tempfile
 
 from ...models import (
     RepoMapConfig,
@@ -21,7 +24,7 @@ from ...models import (
     DependencyConfig,
 )
 from ..config.loader import resolve_project_path, create_default_config
-from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat
 from ..utils.console import get_console
 from ..services import get_service_factory
 
@@ -35,11 +38,6 @@ def system() -> None:
 
 
 @system.command()
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
 @click.option(
     "--config",
     "-c",
@@ -59,7 +57,6 @@ def system() -> None:
 @click.pass_context
 def config(
     ctx: click.Context,
-    project_path: Optional[str],
     config_file_path: Optional[str],  # Use the new internal parameter name
     fuzzy: bool,
     semantic: bool,
@@ -73,7 +70,8 @@ def config(
 
     try:
         # Resolve project path from argument or discovery
-        project_path = resolve_project_path(project_path, None)
+        project_root = ctx.obj.get("project_root", Path.cwd())
+        project_path = resolve_project_path(None, project_root)
         # Create default configuration
         config_obj = create_default_config(
             project_path,
@@ -86,30 +84,34 @@ def config(
             cache_size=cache_size,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Convert to dictionary with proper serialization
         config_dict = config_obj.model_dump(mode="json")
+
+        # Get output manager from context (after container is configured)
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
 
         if config_file_path:
             # Write to file
             with open(config_file_path, "w") as f:
                 json.dump(config_dict, f, indent=2)
             # Use OutputManager for success message
-            output_manager = get_output_manager()
             output_config = OutputConfig(format=OutputFormat.TEXT)
             output_manager.display_success(
                 f"Configuration saved to: {config_file_path}", output_config
             )
         else:
             # Display configuration
-            output_manager = get_output_manager()
             output_config = OutputConfig(format=OutputFormat.TEXT)
             config_text = f"Generated Configuration\n{'=' * 50}\n{json.dumps(config_dict, indent=2)}"
             output_manager.display(config_text, output_config)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ConfigError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
+        # Get output manager from context for error handling
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error(error_response, output_config)
         sys.exit(1)
@@ -122,8 +124,15 @@ def version(ctx: click.Context) -> None:
     # Get console instance (automatically handles dependency injection from context)
     console = get_console(ctx)
 
-    # Use OutputManager for version display
-    output_manager = get_output_manager()
+    # Configure the container with a minimal config for simple commands
+    container = ctx.obj["container"]
+    # Get project root from context, fallback to current directory for minimal config
+    project_root = ctx.obj.get("project_root", Path.cwd())
+    minimal_config = RepoMapConfig(project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name) # Use a temp cache dir
+    configure_container(container, minimal_config)
+
+    # Get output manager from context (after container is configured)
+    output_manager: OutputManager = ctx.obj["container"].output_manager()
     output_config = OutputConfig(format=OutputFormat.TEXT)
 
     version_info = {
@@ -141,9 +150,19 @@ def cache_info(ctx: click.Context) -> None:
     """Show tree-sitter tag cache statistics"""
     from repomap_tool.cli.services import get_service_factory
 
+    # Configure the container with a minimal config for simple commands
+    container = ctx.obj["container"]
+    # Get project root from context, fallback to current directory for minimal config
+    project_root = ctx.obj.get("project_root", Path.cwd())
+    minimal_config = RepoMapConfig(project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name) # Use a temp cache dir
+    configure_container(container, minimal_config)
+
+    # Get output manager from context (after container is configured)
+    output_manager: OutputManager = ctx.obj["container"].output_manager()
+
     # Use service factory to get cache
     config = RepoMapConfig(
-        project_root=".",  # Default project root
+        project_root=project_root,  # Use resolved project root
         performance=PerformanceConfig(),
         dependencies=DependencyConfig(),
     )
@@ -151,22 +170,20 @@ def cache_info(ctx: click.Context) -> None:
     repomap_service = service_factory.create_repomap_service(config)
     cache = repomap_service.tree_sitter_parser.tag_cache
     if cache is None:  # Add None check
-        output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error("Tag cache is not available.", output_config)
         sys.exit(1)
     stats = cache.get_cache_stats()
 
-    output_manager = get_output_manager()
     output_config = OutputConfig(format=OutputFormat.TEXT)
 
     cache_info_text = f"""Tree-Sitter Tag Cache Information
-{'=' * 50}
-Cache Location: {stats['cache_location']}
-Cached Files: {stats['cached_files']}
-Total Tags: {stats['total_tags']}
-Approx Size: {stats['approx_size_bytes'] / 1024:.2f} KB
-"""
+    {'=' * 50}
+    Cache Location: {stats['cache_location']}
+    Cached Files: {stats['cached_files']}
+    Total Tags: {stats['total_tags']}
+    Approx Size: {stats['approx_size_bytes'] / 1024:.2f} KB
+    """
     output_manager.display(cache_info_text, output_config)
 
 
@@ -177,6 +194,16 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
     """Clear the tree-sitter tag cache"""
     from repomap_tool.core.tag_cache import TreeSitterTagCache
 
+    # Configure the container with a minimal config for simple commands
+    container = ctx.obj["container"]
+    # Get project root from context, fallback to current directory for minimal config
+    project_root = ctx.obj.get("project_root", Path.cwd())
+    minimal_config = RepoMapConfig(project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name) # Use a temp cache dir
+    configure_container(container, minimal_config)
+
+    # Get output manager from context (after container is configured)
+    output_manager: OutputManager = ctx.obj["container"].output_manager()
+
     if not force:
         if not click.confirm("Clear all cached tags?"):
             return
@@ -184,7 +211,7 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
     # Use service factory to get cache
 
     config = RepoMapConfig(
-        project_root=".",  # Default project root
+        project_root=project_root,  # Use resolved project root
         performance=PerformanceConfig(),
         dependencies=DependencyConfig(),
     )
@@ -192,12 +219,10 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
     repomap_service = service_factory.create_repomap_service(config)
     cache = repomap_service.tree_sitter_parser.tag_cache
     if cache is None:  # Add None check
-        output_manager = get_output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error("Tag cache is not available.", output_config)
         sys.exit(1)
     cache.clear()
 
-    output_manager = get_output_manager()
     output_config = OutputConfig(format=OutputFormat.TEXT)
     output_manager.display_success("Tag cache cleared", output_config)

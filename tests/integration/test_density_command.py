@@ -15,8 +15,8 @@ from repomap_tool.cli.controllers.view_models import (
     FileDensityViewModel,
     PackageDensityViewModel,
 )
-from repomap_tool.models import SuccessResponse, OutputConfig # Import SuccessResponse and OutputConfig
-
+from repomap_tool.models import SuccessResponse, OutputConfig, ErrorResponse # Import ErrorResponse
+from repomap_tool.cli.output.manager import OutputManager # Import OutputManager to mock it correctly
 
 # Mock data for DensityController
 @pytest.fixture
@@ -62,10 +62,10 @@ def mock_density_controller():
     return controller
 
 
-# Fixture for CliRunner
+# Fixture for CliRunner - use the one that injects the container
 @pytest.fixture
-def runner():
-    return CliRunner()
+def runner(cli_runner_with_container: CliRunner):
+    return cli_runner_with_container
 
 
 def test_density_command_file_scope_text_output(
@@ -74,9 +74,11 @@ def test_density_command_file_scope_text_output(
     mock_file_density_view_model,
 ):
     with patch("repomap_tool.core.container.create_container") as mock_create_container:
-        mock_create_container.return_value.density_controller.return_value = (
-            mock_density_controller
-        )
+        # Mock the entire container and its density_controller provider
+        mock_container_instance = MagicMock()
+        mock_create_container.return_value = mock_container_instance
+        mock_container_instance.density_controller.return_value = mock_density_controller
+
         mock_density_controller.execute.return_value = DensityAnalysisViewModel(
             scope="file",
             results=[mock_file_density_view_model],
@@ -112,9 +114,11 @@ def test_density_command_package_scope_text_output(
     mock_package_density_view_model,
 ):
     with patch("repomap_tool.core.container.create_container") as mock_create_container:
-        mock_create_container.return_value.density_controller.return_value = (
-            mock_density_controller
-        )
+        # Mock the entire container and its density_controller provider
+        mock_container_instance = MagicMock()
+        mock_create_container.return_value = mock_container_instance
+        mock_container_instance.density_controller.return_value = mock_density_controller
+
         mock_density_controller.execute.return_value = DensityAnalysisViewModel(
             scope="package",
             results=[mock_package_density_view_model],
@@ -150,45 +154,49 @@ def test_density_command_json_output(
     runner,
     mock_density_controller,
     mock_file_density_view_model,
+    session_container,
 ):
+    # Mock the entire container and its density_controller provider
+    mock_container_instance = MagicMock()
+    mock_container_instance.density_controller.return_value = mock_density_controller
+
+    mock_density_controller.execute.return_value = DensityAnalysisViewModel(
+        scope="file",
+        results=[mock_file_density_view_model],
+        total_files_analyzed=1,
+        limit=10,
+        min_identifiers=1,
+        analysis_summary={},
+    )
+
+    # Mock the OutputManager directly via the container's provider
+    mock_output_manager = MagicMock(spec=OutputManager)
+
     with (
-        patch("repomap_tool.core.container.create_container") as mock_create_container,
-        patch("repomap_tool.cli.output.get_output_manager") as mock_get_output_manager,
+        session_container.density_controller.override(mock_density_controller),
+        session_container.output_manager.override(mock_output_manager),
     ):
-
-        mock_create_container.return_value.density_controller.return_value = (
-            mock_density_controller
-        )
-        mock_density_controller.execute.return_value = DensityAnalysisViewModel(
-            scope="file",
-            results=[mock_file_density_view_model],
-            total_files_analyzed=1,
-            limit=10,
-            min_identifiers=1,
-            analysis_summary={},
-        )
-
-        # Mock the display method of OutputManager to capture JSON output
-        mock_output_manager_instance = MagicMock()
-        mock_get_output_manager.return_value = mock_output_manager_instance
-
-        runner.invoke(
+        result = runner.invoke(
             cli, ["inspect", "density", ".", "--scope", "file", "-o", "json"]
         )
 
-        # Assert that display_response was called with the correct arguments
-        mock_output_manager_instance.display_response.assert_called_once()
-        called_args, called_kwargs = mock_output_manager_instance.display_response.call_args
+        assert result.exit_code == 0, f"CLI command failed with output: {result.output}"
+
+        # Assert that display was called once (for the ViewModel)
+        mock_output_manager.display.assert_called_once()
+        called_args, called_kwargs = mock_output_manager.display.call_args
         response = called_args[0]
         output_config = called_args[1]
 
-        # Assert on the type of response and output_config
-        assert isinstance(response, SuccessResponse)
+        assert isinstance(response, DensityAnalysisViewModel)
         assert isinstance(output_config, OutputConfig)
-
-        # Assert on the content of the response and output_config.format
-        assert "density analysis completed" in response.message.lower()
         assert output_config.format.value == "json"
+
+        # Assert that display_success was also called
+        mock_output_manager.display_success.assert_called_once()
+        success_args, success_kwargs = mock_output_manager.display_success.call_args
+        assert "density analysis completed" in success_args[0].lower()
+        assert success_args[1].format.value == "json"
 
 
 def test_density_command_error_handling(runner):

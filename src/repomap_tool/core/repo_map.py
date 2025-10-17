@@ -18,8 +18,6 @@ from typing import List, Dict, Optional, Any
 from repomap_tool.code_analysis.models import CodeTag
 import traceback
 
-from repomap_tool.core.logging_service import get_logger # Import get_logger
-
 logger = get_logger(__name__) # Initialize logger at module level
 
 from ..models import (

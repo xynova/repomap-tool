@@ -10,7 +10,6 @@ from .centrality_controller import CentralityController
 from .impact_controller import ImpactController
 from .density_controller import DensityController
 from .view_models import (
-    SymbolViewModel,
     FileAnalysisViewModel,
     CentralityViewModel,
     ImpactViewModel,
@@ -31,7 +30,6 @@ __all__ = [
     "ImpactController",
     "DensityController",
     # ViewModels
-    "SymbolViewModel",
     "FileAnalysisViewModel",
     "CentralityViewModel",
     "ImpactViewModel",

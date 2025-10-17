@@ -6,6 +6,7 @@ This module contains commands for session-based exploration.
 
 import sys
 from typing import Any, Optional
+from pathlib import Path
 
 import click
 from rich.console import Console
@@ -15,29 +16,32 @@ from rich.panel import Panel
 from ...models import create_error_response
 from ...core import RepoMapService
 from ...core.config_service import get_config
+from ...core.container_config import configure_container
 from ..config.loader import resolve_project_path
-from ..output import OutputManager, OutputConfig, OutputFormat, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat
 from ..utils.session import get_project_path_from_session, get_or_create_session
 from ..utils.console import get_console
+from dependency_injector.containers import DynamicContainer
 
 
 # Use DI-provided console instead of direct instantiation
-def get_explore_console() -> Console:
-    """Get console instance using dependency injection."""
-    ctx = click.get_current_context()
-    return get_console(ctx)
+# def get_explore_console() -> Console:
+#     """Get console instance using dependency injection."""
+#     ctx = click.get_current_context()
+#     return get_console(ctx)
 
 
 def create_exploration_controller_with_repomap(
+    container: DynamicContainer, # Accept container instance
     config_obj: Any, output_format: str = "text", verbose: bool = True
 ) -> Any:
-    """
-    Create and properly configure an ExplorationController with repomap injection.
+    """Create and properly configure an ExplorationController with repomap injection.
 
     This helper function centralizes the controller setup logic and ensures
     the critical repomap service is properly injected into all dependencies.
 
     Args:
+        container: The main DI container instance.
         config_obj: RepoMapConfig object
         output_format: Output format for the controller
         verbose: Whether to enable verbose logging
@@ -45,16 +49,11 @@ def create_exploration_controller_with_repomap(
     Returns:
         Properly configured ExplorationController instance
     """
-    from repomap_tool.core.container import create_container
     from repomap_tool.cli.controllers import ControllerConfig
-    from repomap_tool.cli.services import get_service_factory
+    # from repomap_tool.cli.services import get_service_factory # No longer directly needed here
 
-    # Create DI container
-    container = create_container(config_obj)
-
-    # Initialize RepoMap service (critical for controller dependencies)
-    service_factory = get_service_factory()
-    repomap = service_factory.create_repomap_service(config_obj)
+    # Initialize RepoMap service (critical for controller dependencies) from the provided container
+    repomap = container.repo_map_service()
 
     # Create controller configuration
     controller_config = ControllerConfig(
@@ -85,12 +84,7 @@ def explore() -> None:
 
 
 @explore.command()
-@click.argument("intent", type=str)
-@click.argument(
-    "project_path",
-    type=click.Path(exists=True, file_okay=False, dir_okay=True),
-    required=False,
-)
+@click.argument("intent")
 @click.option("--session", "-s", help="Session ID (or use REPOMAP_SESSION env var)")
 @click.option("--max-depth", default=3, help="Maximum tree depth")
 @click.option(
@@ -106,20 +100,25 @@ def explore() -> None:
     type=click.Path(exists=True),
     help="Configuration file path",
 )
+@click.pass_context
+@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
 def start(
+    ctx: click.Context,
     intent: str,
-    project_path: Optional[str],
     session: Optional[str],
     max_depth: int,
     output: str,
     config: Optional[str],
+    input_paths: tuple,
 ) -> None:
     """Discover exploration trees from intent."""
 
     try:
         ctx = click.get_current_context()
         # Resolve project path from argument, config file, or discovery
-        resolved_project_path = resolve_project_path(project_path, config)
+        # Use project_root from ctx.obj if available, otherwise resolve from current working directory
+        project_root = ctx.obj.get("project_root")
+        resolved_project_path = resolve_project_path(None, project_root)
 
         # Get or create session ID
         session_id = get_or_create_session(session)
@@ -134,17 +133,14 @@ def start(
             verbose=True,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Override tree-specific settings
         config_obj.trees.max_depth = max_depth
 
-        # Initialize RepoMap using service factory
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        repomap = service_factory.create_repomap_service(config_obj)
-
         # Use OutputManager for progress and success messages
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
 
         output_manager.display_progress(
@@ -155,6 +151,7 @@ def start(
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format=output, verbose=True
         )
 
@@ -164,18 +161,22 @@ def start(
             project_path=resolved_project_path,
             max_depth=max_depth,
             max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
+            initial_files=list(input_paths) if input_paths else None, # Pass input_paths as initial_files
         )
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat(output))
+        # output_config is already defined above, no need to redefine
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ExplorationError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case if it was not instantiated
+        # or if an error occurred during its instantiation.
+        # However, for consistency and adherence to DI principles, we assume it's always available
+        # after configure_container.
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)
 
 
@@ -200,14 +201,17 @@ def focus(tree_id: str, session: Optional[str], output: str) -> None:
         from repomap_tool.cli.config.loader import load_or_create_config
 
         config_obj, was_created = load_or_create_config(
-            project_path=None,  # Will be resolved from session
+            project_path=ctx.obj.get("project_root"),
             config_file=None,
             create_if_missing=False,
             verbose=True,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
         # Use OutputManager for progress message
-        output_manager = get_output_manager()
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display_progress(
             f"🎯 Focused on tree: {tree_id} in session {session_id}"
@@ -215,6 +219,7 @@ def focus(tree_id: str, session: Optional[str], output: str) -> None:
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format=output, verbose=True
         )
 
@@ -225,15 +230,14 @@ def focus(tree_id: str, session: Optional[str], output: str) -> None:
         )
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat(output))
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "FocusError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)
 
 
@@ -248,24 +252,29 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
-        # Use OutputManager for success message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_success(
-            f"Expanded area: {expansion_area} in tree {tree_id}", output_config
-        )
         # Load configuration
         from repomap_tool.cli.config.loader import load_or_create_config
 
         config_obj, was_created = load_or_create_config(
-            project_path=None,  # Will be resolved from session
+            project_path=ctx.obj.get("project_root"),
             config_file=None,
             create_if_missing=False,
             verbose=True,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
+        # Use OutputManager for success message
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_success(
+            f"Expanded area: {expansion_area} in tree {tree_id}", output_config
+        )
+
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format="text", verbose=True
         )
 
@@ -277,15 +286,14 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         )
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "ExpansionError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)
 
 
@@ -300,24 +308,29 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
-        # Use OutputManager for success message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_success(
-            f"Pruned area: {prune_area} from tree {tree_id}", output_config
-        )
         # Load configuration
         from repomap_tool.cli.config.loader import load_or_create_config
 
         config_obj, was_created = load_or_create_config(
-            project_path=None,  # Will be resolved from session
+            project_path=ctx.obj.get("project_root"),
             config_file=None,
             create_if_missing=False,
             verbose=True,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
+        # Use OutputManager for success message
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_success(
+            f"Pruned area: {prune_area} from tree {tree_id}", output_config
+        )
+
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format="text", verbose=True
         )
 
@@ -330,15 +343,14 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         )
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "PruningError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)
 
 
@@ -353,25 +365,30 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
         tree_id = tree or "current"
-        # Use OutputManager for success message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_success(
-            f"Generated map for tree {tree_id} (include_code: {include_code})",
-            output_config,
-        )
         # Load configuration
         from repomap_tool.cli.config.loader import load_or_create_config
 
         config_obj, was_created = load_or_create_config(
-            project_path=None,  # Will be resolved from session
+            project_path=ctx.obj.get("project_root"),
             config_file=None,
             create_if_missing=False,
             verbose=True,
         )
 
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
+        # Use OutputManager for success message
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_manager.display_success(
+            f"Generated map for tree {tree_id} (include_code: {include_code})",
+            output_config,
+        )
+
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format="text", verbose=True
         )
 
@@ -384,15 +401,14 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         )
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "MappingError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)
 
 
@@ -405,8 +421,21 @@ def trees(session: Optional[str]) -> None:
         ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
 
-        # Display placeholder trees table
-        output_manager = get_output_manager()
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=ctx.obj.get("project_root"),
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
+        # Use OutputManager for placeholder trees table
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         table = Table(title=f"🌳 Trees in Session: {session_id}")
         table.add_column("Tree ID", style="cyan", no_wrap=True)
@@ -419,18 +448,10 @@ def trees(session: Optional[str]) -> None:
         table.add_row("tree_2", "auth.py", "8", "")
 
         output_manager.display(table, output_config)
-        # Load configuration
-        from repomap_tool.cli.config.loader import load_or_create_config
-
-        config_obj, was_created = load_or_create_config(
-            project_path=None,  # Will be resolved from session
-            config_file=None,
-            create_if_missing=False,
-            verbose=True,
-        )
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format="text", verbose=True
         )
 
@@ -438,15 +459,14 @@ def trees(session: Optional[str]) -> None:
         result_view_model = exploration_controller.list_trees(session_id=session_id)
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "TreeListError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)
 
 
@@ -459,8 +479,21 @@ def status(session: Optional[str]) -> None:
         ctx = click.get_current_context()
         session_id = session or get_or_create_session(session)
 
-        # Display session info
-        output_manager = get_output_manager()
+        # Load configuration
+        from repomap_tool.cli.config.loader import load_or_create_config
+
+        config_obj, was_created = load_or_create_config(
+            project_path=ctx.obj.get("project_root"),
+            config_file=None,
+            create_if_missing=False,
+            verbose=True,
+        )
+
+        # Configure the container with the loaded config_obj
+        configure_container(ctx.obj["container"], config_obj)
+
+        # Use OutputManager for session info
+        output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         table = Table(title=f"📊 Session Status: {session_id}")
         table.add_column("Property", style="cyan", no_wrap=True)
@@ -472,18 +505,10 @@ def status(session: Optional[str]) -> None:
         table.add_row("Current Focus", "tree_1")
 
         output_manager.display(table, output_config)
-        # Load configuration
-        from repomap_tool.cli.config.loader import load_or_create_config
-
-        config_obj, was_created = load_or_create_config(
-            project_path=None,  # Will be resolved from session
-            config_file=None,
-            create_if_missing=False,
-            verbose=True,
-        )
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
+            ctx.obj["container"], # Pass the container instance
             config_obj, output_format="text", verbose=True
         )
 
@@ -493,13 +518,12 @@ def status(session: Optional[str]) -> None:
         )
 
         # Display results
-        output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display(result_view_model, output_config, ctx)
 
     except Exception as e:
         error_response = create_error_response(str(e), "StatusError")
-        # Use OutputManager for error message
-        output_manager = get_output_manager()
-        output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        # Ensure output_manager is available even in error case
+        output_manager_error: OutputManager = ctx.obj["container"].output_manager()
+        output_config_error = OutputConfig(format=OutputFormat.TEXT)
+        output_manager_error.display_error(error_response, output_config_error)
         sys.exit(1)

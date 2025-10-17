@@ -44,15 +44,17 @@ class RichConsoleFactory:
 class ConsoleProvider:
     """Dependency injection provider for console instances."""
 
-    def __init__(self, factory: Optional[ConsoleFactory] = None):
+    def __init__(self, factory: Optional[ConsoleFactory] = None, no_color: bool = False):
         """Initialize the console provider.
 
         Args:
             factory: Console factory implementation
+            no_color: Whether to disable colors by default for consoles created by this provider.
         """
         if factory is None:
             factory = RichConsoleFactory()
         self._factory = factory
+        self._no_color = no_color
 
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:
         """Get a console instance, optionally configured from context.
@@ -63,11 +65,11 @@ class ConsoleProvider:
         Returns:
             Configured Console instance
         """
-        no_color = False
-        if ctx and ctx.obj and ctx.obj.get("no_color", False):
-            no_color = True
+        # Prioritize no_color from Click context, then from provider's init
+        no_color_from_ctx = ctx.obj.get("no_color", False) if ctx and ctx.obj else False
+        effective_no_color = no_color_from_ctx or self._no_color
 
-        return self._factory.create_console(no_color=no_color)
+        return self._factory.create_console(no_color=effective_no_color)
 
 
 # Global provider instance
@@ -83,7 +85,7 @@ def get_console_provider() -> ConsoleProvider:
     global _global_provider
     if _global_provider is None:
         # Ensure factory is always set, and it's a new instance to avoid shared state issues.
-        _global_provider = ConsoleProvider(factory=RichConsoleFactory())
+        _global_provider = ConsoleProvider(factory=RichConsoleFactory(), no_color=False)
     return _global_provider
 
 

@@ -13,60 +13,7 @@ from typing import Any, Dict, List, Optional, Protocol, Union
 
 from .config import TemplateConfig
 from .loader import TemplateLoader, FileTemplateLoader
-
-
-class TemplateRegistryProtocol(Protocol):
-    """Protocol for template registry implementations."""
-
-    def register_template(
-        self, template_name: str, template_content: str, overwrite: bool = False
-    ) -> None:
-        """Register a template.
-
-        Args:
-            template_name: Name of the template
-            template_content: Template content
-            overwrite: Whether to overwrite existing template
-        """
-        ...
-
-    def unregister_template(self, template_name: str) -> None:
-        """Unregister a template.
-
-        Args:
-            template_name: Name of the template to unregister
-        """
-        ...
-
-    def get_template(self, template_name: str) -> Optional[str]:
-        """Get template content.
-
-        Args:
-            template_name: Name of the template
-
-        Returns:
-            Template content or None if not found
-        """
-        ...
-
-    def list_templates(self) -> List[str]:
-        """List all registered templates.
-
-        Returns:
-            List of template names
-        """
-        ...
-
-    def template_exists(self, template_name: str) -> bool:
-        """Check if template exists.
-
-        Args:
-            template_name: Name of the template
-
-        Returns:
-            True if template exists
-        """
-        ...
+from repomap_tool.protocols import TemplateRegistryProtocol
 
 
 class DefaultTemplateRegistry(TemplateRegistryProtocol): # Explicitly implement the protocol
@@ -76,22 +23,22 @@ class DefaultTemplateRegistry(TemplateRegistryProtocol): # Explicitly implement 
         self,
         template_loader: Optional[TemplateLoader] = None,
         enable_logging: bool = True,
+        default_config: Optional[TemplateConfig] = None, # Add default_config
     ) -> None:
-        """Initialize the template registry.
-
-        Args:
-            template_loader: Template loader to use
-            enable_logging: Whether to enable logging
-        """
-        self._enable_logging = enable_logging
+        """Initialize the template registry."""
+        self._templates: Dict[str, str] = {}
+        self._registered_templates: Dict[str, str] = {} # Initialize _registered_templates
+        self._template_loader = template_loader or FileTemplateLoader()
         self._logger = get_logger(__name__) if enable_logging else None
-        if template_loader is None:
-            self._template_loader: TemplateLoader = FileTemplateLoader(
-                enable_logging=enable_logging
-            )
-        else:
-            self._template_loader = template_loader
-        self._registered_templates: Dict[str, str] = {}
+        self._default_config = default_config
+
+        # Load default templates from the file system (if loader is present)
+        if self._template_loader:
+            try:
+                self._template_loader.load_default_templates(self)
+            except Exception as e:
+                if self._logger:
+                    self._logger.error(f"Failed to load default templates: {e}")
 
     def register_template(
         self, template_name: str, template_content: str, overwrite: bool = False
