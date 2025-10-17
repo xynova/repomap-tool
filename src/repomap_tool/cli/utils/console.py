@@ -82,7 +82,8 @@ def get_console_provider() -> ConsoleProvider:
     """
     global _global_provider
     if _global_provider is None:
-        _global_provider = ConsoleProvider()
+        # Ensure factory is always set, and it's a new instance to avoid shared state issues.
+        _global_provider = ConsoleProvider(factory=RichConsoleFactory())
     return _global_provider
 
 
@@ -105,11 +106,11 @@ def get_console(ctx: Optional[click.Context] = None) -> Console:
     Returns:
         Configured Console instance
     """
-    # If context is provided and has a console_provider, use it
-    if ctx and ctx.obj and "console_provider" in ctx.obj:
-        provider: ConsoleProvider = ctx.obj["console_provider"]
-        return provider.get_console(ctx)
+    # If context is provided and has a console_manager, use it
+    if ctx and ctx.obj and "console_manager" in ctx.obj:
+        console_manager = ctx.obj["console_manager"]
+        return console_manager.get_console(ctx)
 
-    # Fallback to global provider
-    provider = get_console_provider()
-    return provider.get_console(ctx)
+    # Fallback to the global console provider if no console_manager is found in context.
+    # This ensures consistent console behavior even outside of a fully initialized Click context.
+    return get_console_provider().get_console(ctx)

@@ -14,46 +14,45 @@ from typing import Any, Dict, List, Optional, Type, Union
 
 import click
 from rich.console import Console
+from rich.text import Text
 
-from .console_manager import ConsoleManager
-from .formats import OutputConfig, OutputFormat
-from .protocols import FormatterProtocol, FormatterRegistry
-from .standard_formatters import get_formatter_registry
+from repomap_tool.models import OutputFormat, ErrorResponse, SuccessResponse, OutputConfig, AnalysisFormat # Import OutputConfig and AnalysisFormat
+from repomap_tool.protocols import OutputManagerProtocol # Import from central protocols
+
+from .console_manager import ConsoleManagerProtocol, ConsoleManagerFactory
+from .standard_formatters import FormatterRegistry, get_formatter_registry
+from .templates.config import TemplateConfig
+from .templates.engine import TemplateEngine
+from .templates.registry import TemplateRegistryProtocol # Use the protocol here
 
 
-class OutputManager:
-    """Centralized output manager for all CLI output operations.
-
-    This class serves as the main interface for output operations, providing:
-    - Unified output formatting and display
-    - Console management integration
-    - Formatter registry coordination
-    - Error handling and validation
-    - Progress reporting integration
-    """
+class OutputManager(OutputManagerProtocol):
+    """Central hub for all CLI output operations."""
 
     def __init__(
         self,
-        console_manager: Optional[ConsoleManager] = None,
-        formatter_registry: Optional[FormatterRegistry] = None,
+        console_manager: ConsoleManagerProtocol,
+        formatter_registry: FormatterRegistry,
+        template_engine: TemplateEngine, # Add template_engine
+        template_registry: TemplateRegistryProtocol, # Add template_registry
         enable_logging: bool = True,
     ) -> None:
-        """Initialize the output manager.
-
-        Args:
-            console_manager: Console manager for output operations
-            formatter_registry: Registry for managing formatters
-            enable_logging: Whether to enable logging
-        """
+        """Initialize the OutputManager."""
         if console_manager is None:
-            raise ValueError("ConsoleManager must be injected - no fallback allowed")
+            raise ValueError("ConsoleManager must be injected")
         if formatter_registry is None:
-            raise ValueError("FormatterRegistry must be injected - no fallback allowed")
+            raise ValueError("FormatterRegistry must be injected")
+        if template_engine is None: # Validate template_engine
+            raise ValueError("TemplateEngine must be injected")
+        if template_registry is None: # Validate template_registry
+            raise ValueError("TemplateRegistry must be injected")
 
-        self._console_manager = console_manager
-        self._formatter_registry = formatter_registry
-        self._enable_logging = enable_logging
-        self._logger = get_logger(__name__) if enable_logging else None
+        self.console_manager = console_manager
+        self.formatter_registry = formatter_registry
+        self.template_engine = template_engine
+        self.template_registry = template_registry
+        self.logger = get_logger(__name__)
+        self.enable_logging = enable_logging
 
         # Track output statistics
         self._output_stats: Dict[str, int] = {
@@ -90,21 +89,21 @@ class OutputManager:
             # Format the data
             formatted_output = formatter.format(data, config.format, config, ctx)
             if formatted_output is None:
-                if self._logger:
-                    self._logger.warning(
+                if self.logger:
+                    self.logger.warning(
                         f"Formatter returned None for {type(data)} with format {config.format}"
                     )
                 return
 
             # Get console and display the output
-            console = self._console_manager.get_console(ctx)
+            console = self.console_manager.get_console(ctx)
             console.print(formatted_output)
 
             # Update statistics
             self._update_stats(config.format)
 
-            if self._enable_logging and self._logger:
-                self._logger.debug(
+            if self.enable_logging and self.logger:
+                self.logger.debug(
                     f"Displayed {type(data).__name__} in {config.format} format"
                 )
 
@@ -140,15 +139,15 @@ class OutputManager:
             # Update error statistics
             self._output_stats["errors"] += 1
 
-            if self._enable_logging and self._logger:
-                self._logger.error(f"Displayed error: {type(error).__name__}: {error}")
+            if self.enable_logging and self.logger:
+                self.logger.error(f"Displayed error: {type(error).__name__}: {error}")
 
         except Exception as display_error:
             # Fallback to basic error display
-            console = self._console_manager.get_console(ctx)
+            console = self.console_manager.get_console(ctx)
             console.print(f"[red]Error: {error}[/red]")
-            if self._enable_logging and self._logger:
-                self._logger.error(f"Failed to display error properly: {display_error}")
+            if self.enable_logging and self.logger:
+                self.logger.error(f"Failed to display error properly: {display_error}")
 
     def display_success(
         self,
@@ -175,15 +174,15 @@ class OutputManager:
             # Display the success message
             self.display(success_data, config, ctx)
 
-            if self._enable_logging and self._logger:
-                self._logger.debug(f"Displayed success message: {message}")
+            if self.enable_logging and self.logger:
+                self.logger.debug(f"Displayed success message: {message}")
 
         except Exception as e:
             # Fallback to basic success display
-            console = self._console_manager.get_console(ctx)
+            console = self.console_manager.get_console(ctx)
             console.print(f"[green]✅ {message}[/green]")
-            if self._enable_logging and self._logger:
-                self._logger.error(f"Failed to display success message properly: {e}")
+            if self.enable_logging and self.logger:
+                self.logger.error(f"Failed to display success message properly: {e}")
 
     def display_progress(
         self,
@@ -199,7 +198,7 @@ class OutputManager:
             ctx: Click context for console configuration
         """
         try:
-            console = self._console_manager.get_console(ctx)
+            console = self.console_manager.get_console(ctx)
 
             if progress is not None:
                 # Display progress with percentage
@@ -209,12 +208,49 @@ class OutputManager:
                 # Display simple progress message
                 console.print(f"[blue]🔄 {message}[/blue]")
 
-            if self._enable_logging and self._logger:
-                self._logger.debug(f"Displayed progress: {message} ({progress})")
+            if self.enable_logging and self.logger:
+                self.logger.debug(f"Displayed progress: {message} ({progress})")
 
         except Exception as e:
-            if self._enable_logging and self._logger:
-                self._logger.error(f"Failed to display progress: {e}")
+            if self.enable_logging and self.logger:
+                self.logger.error(f"Failed to display progress: {e}")
+
+    def get_console(self, ctx: Optional[click.Context] = None) -> Console:
+        """Get a configured console instance from the console manager.
+
+        Args:
+            ctx: Click context for console configuration
+
+        Returns:
+            Configured Console instance
+        """
+        return self.console_manager.get_console(ctx)
+
+    def display_response(
+        self,
+        response: Union[SuccessResponse, ErrorResponse],
+        output_config: Optional[OutputConfig] = None,
+        ctx: Optional[click.Context] = None,
+    ) -> None:
+        """Display a success or error response.
+
+        Args:
+            response: The success or error response to display
+            output_config: Optional output configuration
+            ctx: Click context
+        """
+        if output_config is None:
+            output_config = OutputConfig()
+
+        # Use the appropriate formatter based on the response type
+        if isinstance(response, SuccessResponse):
+            self.display_success(response.message, output_config, ctx)
+        elif isinstance(response, ErrorResponse):
+            # For ErrorResponse, we want to display the error details in a structured way
+            self.display_error(response.message, output_config, ctx, details=response.details)
+        else:
+            # Fallback for unexpected response types
+            self.display(response, output_config, ctx)
 
     def validate_format(
         self,
@@ -231,11 +267,11 @@ class OutputManager:
             True if the format is supported for the data type
         """
         try:
-            formatter = self._formatter_registry.get_formatter(data_type, format_type)
+            formatter = self.formatter_registry.get_formatter(data_type, format_type)
             return formatter is not None
         except Exception as e:
-            if self._enable_logging and self._logger:
-                self._logger.error(
+            if self.enable_logging and self.logger:
+                self.logger.error(
                     f"Error validating format {format_type} for {data_type}: {e}"
                 )
             return False
@@ -256,8 +292,8 @@ class OutputManager:
                     supported_formats.append(format_type)
             return supported_formats
         except Exception as e:
-            if self._enable_logging and self._logger:
-                self._logger.error(
+            if self.enable_logging and self.logger:
+                self.logger.error(
                     f"Error getting supported formats for {data_type}: {e}"
                 )
             return []
@@ -310,12 +346,12 @@ class OutputManager:
         """
         try:
             # Try to get formatter by data type
-            formatter = self._formatter_registry.get_formatter(type(data), format_type)
+            formatter = self.formatter_registry.get_formatter(type(data), format_type)
             if formatter is not None:
                 return formatter
 
             # Try to get formatter by validation
-            for registered_formatter in self._formatter_registry.get_all_formatters():
+            for registered_formatter in self.formatter_registry.get_all_formatters():
                 if (
                     hasattr(registered_formatter, "validate_data")
                     and registered_formatter.validate_data(data)
@@ -326,8 +362,8 @@ class OutputManager:
             return None
 
         except Exception as e:
-            if self._enable_logging and self._logger:
-                self._logger.error(
+            if self.enable_logging and self.logger:
+                self.logger.error(
                     f"Error getting formatter for {type(data)} and {format_type}: {e}"
                 )
             return None
@@ -360,52 +396,16 @@ class OutputManager:
         """
         self._output_stats["errors"] += 1
 
-        if self._enable_logging and self._logger:
-            self._logger.error(f"Display error: {error}")
+        if self.enable_logging and self.logger:
+            self.logger.error(f"Display error: {error}")
 
         # Fallback to basic error display
         try:
-            console = self._console_manager.get_console(ctx)
+            console = self.console_manager.get_console(ctx)
             console.print(f"[red]Error displaying output: {error}[/red]")
         except Exception as fallback_error:
-            if self._enable_logging and self._logger:
-                self._logger.error(f"Fallback display also failed: {fallback_error}")
-
-
-class OutputManagerFactory:
-    """Factory for creating OutputManager instances with proper dependency injection."""
-
-    @staticmethod
-    def create_output_manager(
-        console_manager: Optional[ConsoleManager] = None,
-        formatter_registry: Optional[FormatterRegistry] = None,
-        enable_logging: bool = True,
-    ) -> OutputManager:
-        """Create an OutputManager instance.
-
-        Args:
-            console_manager: Console manager instance
-            formatter_registry: Formatter registry instance
-            enable_logging: Whether to enable logging
-
-        Returns:
-            Configured OutputManager instance
-        """
-        if console_manager is None:
-            from .console_manager import ConsoleManagerFactory
-
-            console_manager = ConsoleManagerFactory.create_default_manager(
-                enable_logging=enable_logging
-            )
-
-        if formatter_registry is None:
-            formatter_registry = get_formatter_registry()
-
-        return OutputManager(
-            console_manager=console_manager,
-            formatter_registry=formatter_registry,
-            enable_logging=enable_logging,
-        )
+            if self.enable_logging and self.logger:
+                self.logger.error(f"Fallback display also failed: {fallback_error}")
 
 
 # Global output manager instance
@@ -415,10 +415,30 @@ _global_output_manager: Optional[OutputManager] = None
 def get_output_manager() -> OutputManager:
     """Get the global output manager instance.
 
+    This function should only be used in scenarios where the DI container
+    cannot be directly accessed (e.g., global Click contexts for utilities).
+    For most services, inject OutputManager via the DI container.
+
     Returns:
         Global OutputManager instance
     """
     global _global_output_manager
     if _global_output_manager is None:
-        _global_output_manager = OutputManagerFactory.create_output_manager()
+        # Ensure we're getting dependencies from the container for this global instance
+        from repomap_tool.core.container import create_container
+        from repomap_tool.models import RepoMapConfig
+        from repomap_tool.cli.output.console_manager import DefaultConsoleManager
+
+        # Attempt to get container from click.Context if available
+        ctx = click.get_current_context(silent=True)
+        if ctx and ctx.obj and "container" in ctx.obj:
+            container = ctx.obj["container"]
+        else:
+            # Fallback: create a dummy config and container if no context container is found
+            dummy_config = RepoMapConfig(project_root="/tmp", cache_dir="/tmp") # Use dummy values for container setup
+            container = create_container(dummy_config)
+
+        # Resolve output_manager from the container ensuring dependencies are fully resolved
+        _global_output_manager = container.output_manager()
+
     return _global_output_manager

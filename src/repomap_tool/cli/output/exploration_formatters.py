@@ -16,7 +16,6 @@ import click
 from .protocols import DataFormatter
 from .formats import OutputFormat, OutputConfig
 from .template_formatter import TemplateBasedFormatter
-from .templates.engine import get_template_engine
 from ..controllers.view_models import (
     TreeClusterViewModel,
     TreeFocusViewModel,
@@ -35,13 +34,17 @@ logger = get_logger(__name__)
 class TreeClusterViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for TreeClusterViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter.
 
         Args:
             template_engine: Template engine for rendering
+            template_registry: Template registry for rendering
+            console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
@@ -124,9 +127,11 @@ class TreeClusterViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class TreeFocusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for TreeFocusViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -189,9 +194,11 @@ class TreeFocusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class TreeExpansionViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for TreeExpansionViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -260,9 +267,11 @@ class TreeExpansionViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class TreePruningViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for TreePruningViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -322,9 +331,11 @@ class TreePruningViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class TreeMappingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for TreeMappingViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -387,9 +398,11 @@ class TreeMappingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class TreeListingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for TreeListingViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -455,9 +468,11 @@ class TreeListingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class SessionStatusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for SessionStatusViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -519,9 +534,11 @@ class SessionStatusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class ExplorationViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for ExplorationViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""

@@ -16,7 +16,6 @@ import click
 from .protocols import DataFormatter
 from .formats import OutputFormat
 from .template_formatter import TemplateBasedFormatter
-from .templates.engine import get_template_engine
 from ..controllers.view_models import (
     SearchViewModel,
     CentralityViewModel,
@@ -42,13 +41,17 @@ logger = get_logger(__name__)
 class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for CentralityViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter.
 
         Args:
             template_engine: Template engine for rendering
+            template_registry: Template registry for rendering
+            console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
@@ -247,13 +250,17 @@ Column Explanations:
 class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for ImpactViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter.
 
         Args:
             template_engine: Template engine for rendering
+            template_registry: Template registry for rendering
+            console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
@@ -393,13 +400,17 @@ class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for SearchViewModel objects."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter.
 
         Args:
             template_engine: Template engine for rendering
+            template_registry: Template registry for rendering
+            console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
@@ -554,9 +565,11 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
 class DensityAnalysisFormatter(TemplateBasedFormatter, DataFormatter):
     """Formatter for DensityAnalysisViewModel."""
 
-    def __init__(self, template_engine: Optional[Any] = None):
+    def __init__(self, template_engine: Optional[Any] = None,
+                 template_registry: Optional[Any] = None,
+                 console_manager: Optional[Any] = None):
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine)
+        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""

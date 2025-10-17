@@ -15,7 +15,7 @@ from .config import TemplateConfig
 from .loader import TemplateLoader, FileTemplateLoader
 
 
-class TemplateRegistry(Protocol):
+class TemplateRegistryProtocol(Protocol):
     """Protocol for template registry implementations."""
 
     def register_template(
@@ -69,7 +69,7 @@ class TemplateRegistry(Protocol):
         ...
 
 
-class DefaultTemplateRegistry:
+class DefaultTemplateRegistry(TemplateRegistryProtocol): # Explicitly implement the protocol
     """Default implementation of template registry."""
 
     def __init__(
@@ -192,30 +192,3 @@ class DefaultTemplateRegistry:
         except Exception as e:
             if self._logger:
                 self._logger.error(f"Failed to load default templates: {e}")
-
-
-# Global template registry instance
-_global_template_registry: Optional[DefaultTemplateRegistry] = None
-
-
-def get_template_registry() -> DefaultTemplateRegistry:
-    """Get the global template registry instance.
-
-    Returns:
-        Global template registry instance
-    """
-    global _global_template_registry
-    if _global_template_registry is None:
-        _global_template_registry = DefaultTemplateRegistry()
-        _global_template_registry.load_default_templates()
-    return _global_template_registry
-
-
-def set_template_registry(registry: DefaultTemplateRegistry) -> None:
-    """Set the global template registry instance.
-
-    Args:
-        registry: Template registry instance to set as global
-    """
-    global _global_template_registry
-    _global_template_registry = registry

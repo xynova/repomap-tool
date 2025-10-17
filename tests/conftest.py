@@ -18,9 +18,40 @@ from repomap_tool.models import (
     DependencyConfig,
 )
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+from tree_sitter import Language
+import grep_ast.tsl as tsl
+from grep_ast.tsl import get_language # Import get_language
 
 # Disable cache for all tests to avoid database locks
 os.environ["REPOMAP_DISABLE_CACHE"] = "1"
+
+# This makes tests run faster - otherwise it tries to re-parse the grammar files constantly
+# and can take 5-10 seconds for each test. With pre-compiled, it's < 1 second.
+# BUILD_DIR = Path("build")
+# BUILD_DIR.mkdir(exist_ok=True)
+# LANGUAGE_LIB_PATH = BUILD_DIR / "languages.so"
+
+# # Build the languages library once per session (NOT SUPPORTED IN THIS VERSION OF TREE-SITTER)
+# if not LANGUAGE_LIB_PATH.exists():
+#     Language.build_library(
+#         str(LANGUAGE_LIB_PATH),
+#         [
+#             "tmp/tree-sitter-python",
+#             "tmp/tree-sitter-javascript",
+#             "tmp/tree-sitter-go",
+#             "tmp/tree-sitter-java",
+#             "tmp/tree-sitter-typescript/typescript", # TypeScript has a nested grammar
+#             "tmp/tree-sitter-c-sharp",
+#         ],
+#     )
+
+# Load individual languages using grep_ast.tsl.get_language
+LANGUAGE_PYTHON = get_language("python")
+LANGUAGE_JAVASCRIPT = get_language("javascript")
+LANGUAGE_GO = get_language("go")
+LANGUAGE_JAVA = get_language("java")
+LANGUAGE_TYPESCRIPT = get_language("typescript")
+LANGUAGE_CSHARP = get_language("csharp") # C# uses 'csharp' name
 
 
 @pytest.fixture(scope="session")
@@ -44,9 +75,41 @@ def session_config():
 
 
 @pytest.fixture(scope="session")
-def session_tree_sitter_parser():
-    """Single TreeSitter parser shared across all tests."""
-    return TreeSitterParser()
+def get_tree_sitter_parser_session_fixture() -> TreeSitterParser:
+    """Provides a TreeSitterParser instance for the entire test session."""
+    from unittest.mock import Mock
+    from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
+    from repomap_tool.code_analysis.query_loader import FileQueryLoader # Use real query loader
+    from repomap_tool.core.tag_cache import TreeSitterTagCache # Use real tag cache
+
+    # Setup a temporary directory for the cache
+    tmpdir = Path("/tmp/test_cache") # Use a fixed /tmp path for session scope
+    tmpdir.mkdir(parents=True, exist_ok=True)
+
+    mock_cache = TreeSitterTagCache(cache_dir=tmpdir) # Use real cache
+    mock_query_loader = FileQueryLoader() # Use real query loader
+
+    # Ensure project_root is a Path object for the parser
+    return TreeSitterParser(project_root=Path("/tmp"), cache=mock_cache, query_loader=mock_query_loader)
+
+
+@pytest.fixture(scope="function")
+def get_tree_sitter_parser_function_fixture() -> TreeSitterParser:
+    """Provides a TreeSitterParser instance for each test function."""
+    from unittest.mock import Mock
+    from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
+    from repomap_tool.code_analysis.query_loader import FileQueryLoader # Use real query loader
+    from repomap_tool.core.tag_cache import TreeSitterTagCache # Use real tag cache
+
+    # Setup a temporary directory for the cache
+    tmpdir = Path("/tmp/test_cache_func") # Use a fixed /tmp path for function scope
+    tmpdir.mkdir(parents=True, exist_ok=True)
+
+    mock_cache = TreeSitterTagCache(cache_dir=tmpdir) # Use real cache
+    mock_query_loader = FileQueryLoader() # Use real query loader
+
+    # Ensure project_root is a Path object for the parser
+    return TreeSitterParser(project_root=Path("/tmp"), cache=mock_cache, query_loader=mock_query_loader)
 
 
 @pytest.fixture(scope="session")
@@ -84,7 +147,7 @@ def session_identifiers(session_parsed_files):
 
 
 @pytest.fixture(scope="session")
-def session_import_data(session_test_repo_path, session_container):
+def session_import_data(session_container):
     """Pre-analyze all imports once per session."""
     analyzer = session_container.import_analyzer()
 
@@ -114,8 +177,8 @@ def session_container(session_config):
     container = Container()
     container.config.from_dict(session_config.model_dump())
 
-    # Override tag_cache to be None
-    container.tag_cache.override(None)
+    # Removed: Override tag_cache to be None
+    # container.tag_cache.override(None)
 
     return container
 
@@ -169,11 +232,12 @@ def create_repomap_service_from_session_container(session_container, config):
     """
     # Get all dependencies from session container (same as service factory)
     console = session_container.console()
-    parallel_extractor = session_container.parallel_tag_extractor()
     fuzzy_matcher = session_container.fuzzy_matcher()
     dependency_graph = session_container.dependency_graph()
     centrality_calculator = session_container.centrality_calculator()
     spellchecker_service = session_container.spellchecker_service()
+    tree_sitter_parser = session_container.tree_sitter_parser()
+    tag_cache = session_container.tag_cache()
 
     # Create semantic matchers if enabled (same as service factory)
     semantic_matcher = None
@@ -193,7 +257,6 @@ def create_repomap_service_from_session_container(session_container, config):
     return RepoMapService(
         config=config,
         console=console,
-        parallel_extractor=parallel_extractor,
         fuzzy_matcher=fuzzy_matcher,
         semantic_matcher=semantic_matcher,
         embedding_matcher=None,
@@ -202,4 +265,6 @@ def create_repomap_service_from_session_container(session_container, config):
         impact_analyzer=impact_analyzer,
         centrality_calculator=centrality_calculator,
         spellchecker_service=spellchecker_service,
+        tree_sitter_parser=tree_sitter_parser,
+        tag_cache=tag_cache,
     )

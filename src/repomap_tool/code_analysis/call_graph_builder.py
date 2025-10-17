@@ -40,11 +40,9 @@ class PythonCallAnalyzer(CallAnalyzer):
     """Parser for Python function calls using tree-sitter."""
 
     def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with tree-sitter parser.
-
-        Args:
-            tree_sitter_parser: TreeSitterParser instance for parsing
-        """
+        """Initialize with tree-sitter parser."""
+        if tree_sitter_parser is None:
+            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
         self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
@@ -116,12 +114,7 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
         project_root: Optional[str] = None,
         tree_sitter_parser: Optional[Any] = None,
     ):
-        """Initialize with project root for tree-sitter RepoMap.
-
-        Args:
-            project_root: Root path of the project
-            tree_sitter_parser: TreeSitterParser instance (required dependency)
-        """
+        """Initialize with project root for tree-sitter RepoMap."""
         # Validate required dependency
         if tree_sitter_parser is None:
             raise ValueError("TreeSitterParser must be injected - no fallback allowed")
@@ -202,33 +195,24 @@ class CallGraphBuilder:
     def __init__(
         self,
         project_root: Optional[str] = None,
-        tree_sitter_parser: Optional[Any] = None,
+        python_call_analyzer: Optional[Any] = None,
+        javascript_call_analyzer: Optional[Any] = None,
     ) -> None:
         """Initialize the call graph builder with language analyzers."""
-        self.project_root = project_root
-        self.tree_sitter_parser = tree_sitter_parser
+        if python_call_analyzer is None:
+            raise ValueError("PythonCallAnalyzer must be injected - no fallback allowed")
+        if javascript_call_analyzer is None:
+            raise ValueError("JavaScriptCallAnalyzer must be injected - no fallback allowed")
 
-        # Initialize Python analyzer with tree-sitter
-        python_analyzer = PythonCallAnalyzer(tree_sitter_parser=tree_sitter_parser)
+        self.project_root = project_root
+        # self.tree_sitter_parser = tree_sitter_parser # TreeSitterParser is now injected into individual analyzers
 
         self.language_analyzers: Dict[str, CallAnalyzer] = {
-            "py": python_analyzer,
-            "js": JavaScriptCallAnalyzer(
-                project_root=project_root,
-                tree_sitter_parser=tree_sitter_parser,
-            ),
-            "ts": JavaScriptCallAnalyzer(
-                project_root=project_root,
-                tree_sitter_parser=tree_sitter_parser,
-            ),  # TypeScript uses same analyzer
-            "jsx": JavaScriptCallAnalyzer(
-                project_root=project_root,
-                tree_sitter_parser=tree_sitter_parser,
-            ),
-            "tsx": JavaScriptCallAnalyzer(
-                project_root=project_root,
-                tree_sitter_parser=tree_sitter_parser,
-            ),
+            "py": python_call_analyzer,
+            "js": javascript_call_analyzer,
+            "ts": javascript_call_analyzer,  # TypeScript uses same analyzer
+            "jsx": javascript_call_analyzer,
+            "tsx": javascript_call_analyzer,
         }
 
         # File extensions that should be analyzed

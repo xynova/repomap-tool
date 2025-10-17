@@ -4,113 +4,75 @@ Output formatting and display utilities for RepoMap-Tool CLI.
 This package contains the unified output format system, formatters, and display utilities.
 """
 
-from .formats import (
-    OutputFormat,
-    OutputConfig,
-    FormatValidationError,
-    FormatConverter,
-    FormatRegistry,
-    format_registry,
-    get_output_config,
-    validate_output_format,
-    get_supported_formats,
-    is_valid_format,
-)
-
-# Legacy formatters removed - all output now handled by OutputManager
 from .console_manager import (
-    ConsoleManager,
+    ConsoleManagerProtocol,
     DefaultConsoleManager,
     ConsoleManagerFactory,
-    get_console_manager,
-    set_console_manager,
-    get_managed_console,
-    configure_managed_console,
-    get_console_from_context,
-    log_console_operation,
 )
+from repomap_tool.models import OutputFormat, OutputConfig, AnalysisFormat
+from .manager import OutputManager, get_output_manager
+from repomap_tool.protocols import OutputManagerProtocol
 from .protocols import (
-    FormatterProtocol,
     BaseFormatter,
     DataFormatter,
-    TemplateFormatter,
-    FormatterRegistry as FormatterRegistryProtocol,
-    FormatterFactory,
-    OutputHandler,
-    validate_formatter,
-    get_formatter_info,
-    create_formatter_config,
+    FormatterProtocol,
 )
 from .standard_formatters import (
-    ProjectInfoFormatter,
     DictFormatter,
     ListFormatter,
+    ProjectInfoFormatter,
     StringFormatter,
-    FormatterRegistry,
-    get_formatter_registry,
 )
-from .template_formatter import TemplateBasedFormatter
-from .manager import OutputManager, OutputManagerFactory, get_output_manager
-from .templates import (
-    TemplateEngine,
-    TemplateEngineFactory,
-    TemplateRegistry,
-    get_template_registry,
-    TemplateConfig,
-    TemplateOptions,
+from .controller_formatters import (
+    CentralityViewModelFormatter,
+    ImpactViewModelFormatter,
+    SearchViewModelFormatter,
+    DensityAnalysisFormatter,
 )
+from .exploration_formatters import (
+    TreeClusterViewModelFormatter,
+    TreeFocusViewModelFormatter,
+    TreeExpansionViewModelFormatter,
+    TreePruningViewModelFormatter,
+    TreeMappingViewModelFormatter,
+    TreeListingViewModelFormatter,
+    SessionStatusViewModelFormatter,
+    ExplorationViewModelFormatter,
+)
+from .templates.engine import TemplateEngine
+from .templates.registry import TemplateRegistryProtocol
+from .templates.config import TemplateConfig
 
 __all__ = [
-    # Format system
+    "OutputManager",
+    "get_output_manager",
     "OutputFormat",
     "OutputConfig",
-    "FormatValidationError",
-    "FormatConverter",
-    "FormatRegistry",
-    "format_registry",
-    "get_output_config",
-    "validate_output_format",
-    "get_supported_formats",
-    "is_valid_format",
-    # Legacy formatters removed - all output now handled by OutputManager
-    # Console management
-    "ConsoleManager",
-    "DefaultConsoleManager",
-    "ConsoleManagerFactory",
-    "get_console_manager",
-    "set_console_manager",
-    "get_managed_console",
-    "configure_managed_console",
-    "get_console_from_context",
-    "log_console_operation",
-    # Formatter protocols
-    "FormatterProtocol",
+    "AnalysisFormat",
     "BaseFormatter",
     "DataFormatter",
-    "TemplateFormatter",
-    "TemplateBasedFormatter",
-    "FormatterRegistryProtocol",
-    "FormatterFactory",
-    "OutputHandler",
-    "validate_formatter",
-    "get_formatter_info",
-    "create_formatter_config",
-    # Standard formatters
-    "ProjectInfoFormatter",
+    "FormatterProtocol",
     "DictFormatter",
     "ListFormatter",
+    "ProjectInfoFormatter",
     "StringFormatter",
-    "FormatterRegistry",
-    "get_formatter_registry",
-    # Template system
+    "CentralityViewModelFormatter",
+    "ImpactViewModelFormatter",
+    "SearchViewModelFormatter",
+    "DensityAnalysisFormatter",
+    "TreeClusterViewModelFormatter",
+    "TreeFocusViewModelFormatter",
+    "TreeExpansionViewModelFormatter",
+    "TreePruningViewModelFormatter",
+    "TreeMappingViewModelFormatter",
+    "TreeListingViewModelFormatter",
+    "SessionStatusViewModelFormatter",
+    "ExplorationViewModelFormatter",
+    "ConsoleManagerProtocol",
+    "DefaultConsoleManager",
+    "ConsoleManagerFactory",
+    "OutputManagerProtocol",
     "TemplateEngine",
-    "TemplateEngineFactory",
-    "TemplateRegistry",
-    "get_template_registry",
+    "TemplateRegistryProtocol",
     "TemplateConfig",
-    "TemplateOptions",
-    # Output manager
-    "OutputManager",
-    "OutputManagerFactory",
-    "get_output_manager",
 ]

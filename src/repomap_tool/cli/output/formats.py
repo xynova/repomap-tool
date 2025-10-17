@@ -7,59 +7,16 @@ including format definitions, validation utilities, and conversion helpers.
 
 from __future__ import annotations
 
-from enum import Enum
+import json
 from typing import Any, Dict, List, Optional, Union, Type, get_args, get_origin
-from pathlib import Path
 
 from pydantic import BaseModel, Field, field_validator
 
-
-class OutputFormat(str, Enum):
-    """Unified output formats for all CLI commands."""
-
-    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
-    JSON = "json"  # Raw data for programmatic consumption
+from repomap_tool.models import OutputFormat, AnalysisFormat, OutputConfig # Imported from models
 
 
-class OutputConfig(BaseModel):
-    """Configuration for output formatting and display."""
-
-    format: OutputFormat = Field(default=OutputFormat.TEXT, description="Output format")
-    template_config: Optional[Dict[str, Any]] = Field(
-        default=None, description="Template configuration"
-    )
-    max_tokens: Optional[int] = Field(
-        default=None, ge=1, description="Maximum tokens for optimization"
-    )
-    verbose: bool = Field(default=False, description="Enable verbose output")
-    no_emojis: bool = Field(default=False, description="Disable emojis in output")
-    no_color: bool = Field(default=False, description="Disable colored output")
-    no_hierarchy: bool = Field(
-        default=False, description="Disable hierarchical structure"
-    )
-    no_line_numbers: bool = Field(default=False, description="Disable line numbers")
-    no_centrality: bool = Field(default=False, description="Disable centrality scores")
-    no_impact_risk: bool = Field(
-        default=False, description="Disable impact risk analysis"
-    )
-    max_critical_lines: int = Field(
-        default=3, ge=1, le=10, description="Max critical lines to show"
-    )
-    max_dependencies: int = Field(
-        default=3, ge=1, le=10, description="Max dependencies to show"
-    )
-    compression: str = Field(default="medium", description="Output compression level")
-
-    @field_validator("compression")
-    @classmethod
-    def validate_compression(cls, v: str) -> str:
-        """Validate compression level."""
-        valid_levels = ["low", "medium", "high"]
-        if v not in valid_levels:
-            raise ValueError(f"Compression must be one of {valid_levels}, got {v}")
-        return v
-
-
+# The OutputFormat, AnalysisFormat, and OutputConfig classes were moved to models.py
+# The FormatValidationError class remains here as it's an output-specific exception.
 class FormatValidationError(Exception):
     """Raised when format validation fails."""
 

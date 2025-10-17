@@ -10,6 +10,7 @@ from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Tuple
 from collections import Counter
+from repomap_tool.code_analysis.models import CodeTag
 
 logger = get_logger(__name__)
 
@@ -187,35 +188,37 @@ def infer_function_source(func_name: str, import_sources: Dict[str, str]) -> str
     # 4. CAPITALIZATION PATTERNS (Language-agnostic)
 
     # Constructor pattern (PascalCase)
+    # Ensure func_name is a string before calling string methods
+    func_name_str = func_name.name if isinstance(func_name, CodeTag) else str(func_name)
     if (
-        func_name
-        and len(func_name) > 0
-        and func_name[0].isupper()
-        and not func_name.isupper()
+        func_name_str
+        and len(func_name_str) > 0
+        and func_name_str[0].isupper()
+        and not func_name_str.isupper()
     ):
         return "constructor/class"
 
     # Constant pattern (UPPER_CASE)
-    if func_name and func_name.isupper() and "_" in func_name:
+    if func_name_str and func_name_str.isupper() and "_" in func_name_str:
         return "constant/enum"
 
     # Method pattern (camelCase starting with lowercase)
     if (
-        func_name
-        and len(func_name) > 0
-        and func_name[0].islower()
-        and any(c.isupper() for c in func_name)
+        func_name_str
+        and len(func_name_str) > 0
+        and func_name_str[0].islower()
+        and any(c.isupper() for c in func_name_str)
     ):
         return "method/function"
 
     # 5. STRUCTURAL PATTERNS
 
     # Compound names suggest external libraries
-    if len(func_name.split("_")) > 2 or len([c for c in func_name if c.isupper()]) > 2:
+    if len(func_name_str.split("_")) > 2 or len([c for c in func_name_str if c.isupper()]) > 2:
         return "external library"
 
     # Short names often indicate built-ins or common utilities
-    if len(func_name) <= 3:
+    if len(func_name_str) <= 3:
         return "built-in/utility"
 
     # 6. FALLBACK - Unknown but categorized
@@ -415,14 +418,18 @@ def find_most_used_class(imports: List[Any]) -> Optional[str]:
     for import_obj in imports:
         # Check if any imported symbols are classes (start with uppercase)
         if import_obj.symbols:
-            for symbol in import_obj.symbols:
-                if symbol and len(symbol) > 0 and symbol[0].isupper():
-                    class_counts[symbol] = class_counts.get(symbol, 0) + 1
+            for symbol_item in import_obj.symbols:
+                # Ensure symbol is a string before calling string methods
+                symbol_str = symbol_item.name if isinstance(symbol_item, CodeTag) else str(symbol_item)
+                if symbol_str and len(symbol_str) > 0 and symbol_str[0].isupper():
+                    class_counts[symbol_str] = class_counts.get(symbol_str, 0) + 1
         elif (
             import_obj.alias
             and len(import_obj.alias) > 0
-            and import_obj.alias[0].isupper()
+            # Ensure alias is a string before calling string methods
+            and (import_obj.alias.name if isinstance(import_obj.alias, CodeTag) else str(import_obj.alias))[0].isupper()
         ):
-            class_counts[import_obj.alias] = class_counts.get(import_obj.alias, 0) + 1
+            alias_str = import_obj.alias.name if isinstance(import_obj.alias, CodeTag) else str(import_obj.alias)
+            class_counts[alias_str] = class_counts.get(alias_str, 0) + 1
 
     return max(class_counts.items(), key=lambda x: x[1])[0] if class_counts else None

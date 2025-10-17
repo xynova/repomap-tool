@@ -20,6 +20,20 @@ class CodeTag:
     rel_fname: Optional[str] = None  # Relative file path (for compatibility)
     comment: Optional[str] = None  # Associated comment
 
+    def __hash__(self) -> int:
+        return hash((self.name, self.kind, self.file, self.line, self.column))
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, CodeTag):
+            return NotImplemented
+        return (
+            self.name == other.name
+            and self.kind == other.kind
+            and self.file == other.file
+            and self.line == other.line
+            and self.column == other.column
+        )
+
 
 class AnalysisFormat(str, Enum):
     """Format options for analysis output."""

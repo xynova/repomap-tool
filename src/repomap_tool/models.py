@@ -6,8 +6,11 @@ This module defines structured data models for configuration, API requests/respo
 and match results using Pydantic for validation and serialization.
 """
 
-from pathlib import Path
+from __future__ import annotations
+
 from typing import List, Dict, Optional, Any, Literal, Union, Set
+from enum import Enum
+from pathlib import Path
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import logging
@@ -186,10 +189,11 @@ class RepoMapConfig(BaseModel):
 
     # Advanced options
     refresh_cache: bool = Field(default=False, description="Refresh cache")
-    output_format: Literal["text", "json"] = "text"
     max_results: int = Field(
         default=50, ge=1, le=1000, description="Maximum results to return"
     )
+
+    output_format: Literal["text", "json"] = "text"
 
     @field_validator("project_root")
     @classmethod
@@ -256,6 +260,59 @@ class RepoMapConfig(BaseModel):
         """Validate matching configuration."""
         # Fuzzy matching is always enabled, so no validation needed
         return self
+
+
+class OutputFormat(str, Enum):
+    """Unified output formats for all CLI commands."""
+
+    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
+    JSON = "json"  # Raw data for programmatic consumption
+
+
+class AnalysisFormat(str, Enum):
+    """Output formats specifically for LLM analysis."""
+
+    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
+    JSON = "json"  # Raw data for programmatic consumption
+
+
+class OutputConfig(BaseModel):
+    """Configuration for output formatting and display."""
+
+    format: OutputFormat = Field(default=OutputFormat.TEXT, description="Output format")
+    template_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Template configuration"
+    )
+    max_tokens: Optional[int] = Field(
+        default=None, ge=1, description="Maximum tokens for optimization"
+    )
+    verbose: bool = Field(default=False, description="Enable verbose output")
+    no_emojis: bool = Field(default=False, description="Disable emojis in output")
+    no_color: bool = Field(default=False, description="Disable colored output")
+    no_hierarchy: bool = Field(
+        default=False, description="Disable hierarchical structure"
+    )
+    no_line_numbers: bool = Field(default=False, description="Disable line numbers")
+    no_centrality: bool = Field(default=False, description="Disable centrality scores")
+    no_impact_risk: bool = Field(
+        default=False, description="Disable impact risk analysis"
+    )
+    max_critical_lines: int = Field(
+        default=3, ge=1, le=10, description="Max critical lines to show"
+    )
+    max_dependencies: int = Field(
+        default=3, ge=1, le=10, description="Max dependencies to show"
+    )
+    compression: str = Field(default="medium", description="Output compression level")
+
+    @field_validator("compression")
+    @classmethod
+    def validate_compression(cls, v: str) -> str:
+        """Validate compression level."""
+        valid_levels = ["low", "medium", "high"]
+        if v not in valid_levels:
+            raise ValueError(f"Compression must be one of {valid_levels}, got {v}")
+        return v
 
 
 class MatchResult(BaseModel):
@@ -379,6 +436,24 @@ class HealthCheck(BaseModel):
         default_factory=dict, description="Cache status"
     )
     errors: List[str] = Field(default_factory=list, description="Recent errors")
+
+
+class SuccessResponse(BaseModel):
+    """Standard success response for API endpoints."""
+
+    message: str = Field(description="Success message")
+    status_code: int = Field(default=200, ge=200, lt=300, description="HTTP status code")
+    data: Optional[Dict[str, Any]] = Field(default=None, description="Optional response data")
+    timestamp: datetime = Field(
+        default_factory=datetime.now, description="Response timestamp"
+    )
+    request_id: Optional[str] = Field(
+        default=None, description="Request ID for tracking"
+    )
+
+    model_config = ConfigDict(
+        validate_assignment=True, extra="forbid", ser_json_timedelta="iso8601"
+    )
 
 
 class ErrorResponse(BaseModel):

@@ -37,16 +37,12 @@ class ImportParser:
 
 
 class PythonImportParser(ImportParser):
-    """Parser for Python import statements using tree-sitter."""
+    """Parses Python import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with tree-sitter parser.
-
-        Args:
-            tree_sitter_parser: TreeSitterParser instance for parsing
-        """
+    def __init__(self) -> None:
+        # TreeSitterParser is now injected into ImportAnalyzer
         super().__init__()
-        self.tree_sitter_parser = tree_sitter_parser
+        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract Python imports using tree-sitter parsing."""
@@ -116,12 +112,12 @@ class PythonImportParser(ImportParser):
 
 
 class JavaScriptImportParser(ImportParser):
-    """Parser for JavaScript/TypeScript import statements using tree-sitter."""
+    """Parses JavaScript/TypeScript import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with TreeSitterParser."""
+    def __init__(self) -> None:
+        # TreeSitterParser is now injected into ImportAnalyzer
         super().__init__()
-        self.tree_sitter_parser = tree_sitter_parser
+        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract JavaScript/TypeScript imports using tree-sitter parsing."""
@@ -215,12 +211,12 @@ class JavaScriptImportParser(ImportParser):
 
 
 class JavaImportParser(ImportParser):
-    """Parser for Java import statements using tree-sitter."""
+    """Parses Java import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with TreeSitterParser."""
+    def __init__(self) -> None:
+        # TreeSitterParser is now injected into ImportAnalyzer
         super().__init__()
-        self.tree_sitter_parser = tree_sitter_parser
+        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract Java imports using tree-sitter parsing."""
@@ -291,12 +287,12 @@ class JavaImportParser(ImportParser):
 
 
 class GoImportParser(ImportParser):
-    """Parser for Go import statements using tree-sitter."""
+    """Parses Go import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with TreeSitterParser."""
+    def __init__(self) -> None:
+        # TreeSitterParser is now injected into ImportAnalyzer
         super().__init__()
-        self.tree_sitter_parser = tree_sitter_parser
+        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract Go imports using tree-sitter parsing."""
@@ -360,12 +356,12 @@ class GoImportParser(ImportParser):
 
 
 class CSharpImportParser(ImportParser):
-    """Parser for C# using directives using tree-sitter."""
+    """Parses C# import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with TreeSitterParser."""
+    def __init__(self) -> None:
+        # TreeSitterParser is now injected into ImportAnalyzer
         super().__init__()
-        self.tree_sitter_parser = tree_sitter_parser
+        # self.tree_sitter_parser = tree_sitter_parser # Removed direct assignment
 
     def extract_imports(self, file_content: str, file_path: str) -> List[Import]:
         """Extract C# using directives using tree-sitter parsing."""
@@ -439,7 +435,7 @@ class ImportAnalyzer:
     def __init__(
         self,
         project_root: Optional[str] = None,
-        tree_sitter_parser: Optional[Any] = None,
+        tree_sitter_parser: Optional[Any] = None, # Make mandatory
     ) -> None:
         """Initialize the import analyzer with language parsers."""
         # Validate required dependency
@@ -448,22 +444,18 @@ class ImportAnalyzer:
 
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
-        self.tree_sitter_parser = tree_sitter_parser
+        self.tree_sitter_parser = tree_sitter_parser # Assign injected parser
 
         # All parsers use TreeSitterParser - no regex fallbacks
         self.language_parsers: Dict[str, ImportParser] = {
-            "py": PythonImportParser(tree_sitter_parser=tree_sitter_parser),
-            "js": JavaScriptImportParser(tree_sitter_parser=tree_sitter_parser),
-            "ts": JavaScriptImportParser(
-                tree_sitter_parser=tree_sitter_parser
-            ),  # TypeScript uses same parser
-            "jsx": JavaScriptImportParser(tree_sitter_parser=tree_sitter_parser),
-            "tsx": JavaScriptImportParser(tree_sitter_parser=tree_sitter_parser),
-            "java": JavaImportParser(tree_sitter_parser=tree_sitter_parser),
-            "go": GoImportParser(tree_sitter_parser=tree_sitter_parser),
-            "cs": CSharpImportParser(
-                tree_sitter_parser=tree_sitter_parser
-            ),  # NEW: C# support
+            "py": PythonImportParser(), # No longer passes tree_sitter_parser
+            "js": JavaScriptImportParser(), # No longer passes tree_sitter_parser
+            "ts": JavaScriptImportParser(),  # TypeScript uses same parser
+            "jsx": JavaScriptImportParser(),
+            "tsx": JavaScriptImportParser(),
+            "java": JavaImportParser(),
+            "go": GoImportParser(),
+            "cs": CSharpImportParser(),  # NEW: C# support
         }
 
         # File extensions that should be analyzed

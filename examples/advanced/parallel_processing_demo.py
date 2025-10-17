@@ -1,223 +1,154 @@
 #!/usr/bin/env python3
 """
-Parallel Processing Demo for repomap-tool.
+Advanced parallel processing demo for repomap-tool.
 
-This script demonstrates the professional parallel processing capabilities
-with progress tracking, error handling, and performance monitoring.
+This script demonstrates how to use the parallel processing capabilities
+for efficient tag extraction from a large number of files.
 """
 
-import sys
+import os
 import time
+import logging
 from pathlib import Path
+from typing import List, Tuple, Any
 
-# Add the src directory to the path
-sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
-
-from repomap_tool.core.parallel_processor import ParallelTagExtractor
-from repomap_tool.cli.services import get_service_factory
-from repomap_tool.models import RepoMapConfig
 from rich.console import Console
-from rich.panel import Panel
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TimeElapsedColumn,
+)
 
-console = Console()
+from repomap_tool.core.config_service import get_config
+from repomap_tool.core.logging_service import get_logger
+from repomap_tool.core.file_scanner import get_project_files
+from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+from repomap_tool.core.tag_cache import TreeSitterTagCache
+from repomap_tool.models import RepoMapConfig
+
+# Removed ParallelTagExtractor import
 
 
-def demo_parallel_processing():
-    """Demonstrate parallel processing capabilities."""
+logger = get_logger(__name__)
 
-    console.print(
-        Panel.fit(
-            "[bold blue]Parallel Processing Demo[/bold blue]\n"
-            "Professional tag extraction with progress tracking and monitoring",
-            border_style="blue",
-        )
-    )
 
-    # Initialize configuration
-    config = RepoMapConfig(
-        project_root=".",
-        verbose=True,
-        fuzzy_match={"enabled": True, "threshold": 70},
-        semantic_match={"enabled": True, "threshold": 50},
-    )
+def process_file_and_extract_tags(
+    file_path: str, project_root: str, tree_sitter_parser: TreeSitterParser
+) -> List[str]:
+    """Process a single file and extract tags using the provided parser."""
+    try:
+        tags = tree_sitter_parser.get_tags(file_path)
+        return [tag.name for tag in tags if tag.name]
+    except Exception as e:
+        logger.warning(f"Error processing {file_path}: {e}")
+        return []
 
-    # Initialize RepoMap using service factory
-    console.print("🔧 [yellow]Initializing RepoMap...[/yellow]")
-    service_factory = get_service_factory()
-    repomap = service_factory.create_repomap_service(config)
 
-    # Get project files
-    console.print("📁 [yellow]Scanning project files...[/yellow]")
-    project_files = repomap._get_project_files()
-    console.print(f"Found [green]{len(project_files)}[/green] files to process")
+def main():
+    console = Console()
+    console.print("[bold green]🚀 Starting Parallel Processing Demo[/bold green]")
 
-    # Initialize parallel processor
-    console.print("⚡ [yellow]Setting up parallel processor...[/yellow]")
-    parallel_processor = ParallelTagExtractor(
-        max_workers=4, enable_progress=True, console=console
-    )
+    # Setup a dummy project directory
+    temp_dir = Path("./temp_demo_project")
+    temp_dir.mkdir(exist_ok=True, parents=True)
+    console.print(f"Created temporary project directory: {temp_dir}")
 
-    # Process files in parallel
-    console.print("\n🚀 [bold green]Starting parallel processing...[/bold green]")
+    # Create a large number of dummy Python files
+    num_files = 100
+    for i in range(num_files):
+        file_content = f"""
+# This is a dummy Python file number {i}
+
+def func_{i}(arg1, arg2):
+    # Some comment
+    variable_{i} = arg1 + arg2
+    return variable_{i}
+
+class Class_{i}:
+    def method_{i}(self):
+        pass
+"""
+        (temp_dir / f"file_{i}.py").write_text(file_content)
+    console.print(f"Created {num_files} dummy Python files.")
+
+    # Configure RepoMapConfig for the demo
+    config = RepoMapConfig(project_root=str(temp_dir), verbose=False)
+
+    # Initialize TreeSitterParser and TagCache
+    cache_dir = Path.home() / ".repomap-tool" / "cache_demo"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    tag_cache = TreeSitterTagCache(cache_dir=cache_dir)
+    tree_sitter_parser = TreeSitterParser(project_root=str(temp_dir), cache=tag_cache)
+
+    # Get all project files
+    console.print("[bold yellow]Scanning project files...[/bold yellow]")
+    project_files = get_project_files(str(temp_dir), config.verbose)
+    console.print(f"Found {len(project_files)} files.")
+
+    # Start parallel processing
+    console.print("[bold yellow]Starting parallel tag extraction...[/bold yellow]")
     start_time = time.time()
 
-    identifiers, stats = parallel_processor.extract_tags_parallel(
-        files=project_files,
-        project_root=str(config.project_root),
-        repo_map=repomap.repo_map,
-        progress_callback=lambda file_path, count: console.print(
-            f"  ✅ {file_path}: {count} identifiers", style="dim"
-        ),
-    )
+    all_extracted_tags: List[str] = []
+    successful_files = 0
+    failed_files = 0
+    total_identifiers = 0
 
-    total_time = time.time() - start_time
-
-    # Display results
-    console.print("\n" + "=" * 60)
-    console.print("[bold green]🎉 Processing Complete![/bold green]")
-    console.print("=" * 60)
-
-    # Performance summary
-    console.print(
-        Panel(
-            f"[bold]Performance Summary[/bold]\n\n"
-            f"📊 Files Processed: [green]{stats.processed_files}/{stats.total_files}[/green]\n"
-            f"✅ Success Rate: [green]{stats.success_rate:.1f}%[/green]\n"
-            f"🔍 Identifiers Found: [green]{stats.total_identifiers}[/green]\n"
-            f"⏱️  Total Time: [green]{total_time:.2f}s[/green]\n"
-            f"🚀 Files/Second: [green]{stats.files_per_second:.1f}[/green]\n"
-            f"👥 Workers Used: [green]{parallel_processor.max_workers}[/green]",
-            title="📈 Results",
-            border_style="green",
-        )
-    )
-
-    # Detailed metrics
-    metrics = parallel_processor.get_performance_metrics()
-
-    console.print(
-        Panel(
-            f"[bold]Detailed Metrics[/bold]\n\n"
-            f"📁 File Size Stats:\n"
-            f"  • Total Size: {metrics['file_size_stats'].get('total_size_mb', 0):.1f} MB\n"
-            f"  • Average Size: {metrics['file_size_stats'].get('avg_size_kb', 0):.1f} KB\n"
-            f"  • Largest File: {metrics['file_size_stats'].get('largest_file_kb', 0):.1f} KB\n\n"
-            f"👥 Worker Performance:\n",
-            title="🔍 Detailed Analysis",
-            border_style="blue",
-        )
-    )
-
-    # Show worker performance
-    for worker_id, worker_stats in metrics["worker_performance"].items():
-        console.print(
-            f"  • {worker_id}: {worker_stats['files_processed']} files "
-            f"({worker_stats['avg_time']:.3f}s avg)",
-            style="dim",
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+        TimeElapsedColumn(),
+        console=console,
+        transient=False,
+    ) as progress:
+        task_id = progress.add_task(
+            f"Processing {len(project_files)} files...", total=len(project_files)
         )
 
-    # Show sample identifiers
-    if identifiers:
-        console.print(
-            Panel(
-                f"[bold]Sample Identifiers Found[/bold]\n\n"
-                f"{chr(10).join('• ' + ident for ident in sorted(identifiers)[:20])}\n"
-                f"{'...' if len(identifiers) > 20 else ''}",
-                title="🏷️  Identifiers",
-                border_style="yellow",
-            )
-        )
+        from concurrent.futures import ThreadPoolExecutor, as_completed
 
-    # Error summary if any
-    if stats.errors:
-        console.print(
-            Panel(
-                f"[bold red]Errors Encountered[/bold red]\n\n"
-                f"{chr(10).join(f'• {file}: {error}' for file, error in stats.errors[:5])}\n"
-                f"{'...' if len(stats.errors) > 5 else ''}",
-                title="⚠️  Errors",
-                border_style="red",
-            )
-        )
+        max_workers = get_config("MAX_WORKERS", 4)
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_file = {
+                executor.submit(
+                    process_file_and_extract_tags, file_path, str(temp_dir), tree_sitter_parser
+                ): file_path
+                for file_path in project_files
+            }
 
-    console.print("\n[bold green]✨ Demo complete![/bold green]")
+            for future in as_completed(future_to_file):
+                file_path = future_to_file[future]
+                try:
+                    identifiers = future.result()
+                    all_extracted_tags.extend(identifiers)
+                    successful_files += 1
+                    total_identifiers += len(identifiers)
+                except Exception as e:
+                    failed_files += 1
+                    logger.error(f"Failed to process {file_path}: {e}")
+                finally:
+                    progress.update(task_id, advance=1)
 
+    end_time = time.time()
+    duration = end_time - start_time
+    console.print("[bold green]✅ Parallel Processing Complete[/bold green]")
+    console.print(f"Total files processed: {num_files}")
+    console.print(f"Successful files: {successful_files}")
+    console.print(f"Failed files: {failed_files}")
+    console.print(f"Total identifiers extracted: {total_identifiers}")
+    console.print(f"Time taken: {duration:.2f} seconds")
 
-def compare_sequential_vs_parallel():
-    """Compare sequential vs parallel processing performance."""
+    # Cleanup
+    console.print("[bold yellow]Cleaning up temporary project directory...[/bold yellow]")
+    import shutil
 
-    console.print(
-        Panel.fit(
-            "[bold blue]Performance Comparison[/bold blue]\n"
-            "Sequential vs Parallel Processing",
-            border_style="blue",
-        )
-    )
-
-    # Initialize using service factory
-    config = RepoMapConfig(project_root=".", verbose=False)
-    service_factory = get_service_factory()
-    repomap = service_factory.create_repomap_service(config)
-    project_files = repomap._get_project_files()
-
-    # Sequential processing
-    console.print("🐌 [yellow]Running sequential processing...[/yellow]")
-    start_time = time.time()
-
-    identifiers_seq = []
-    for file_path in project_files:
-        try:
-            abs_path = str(Path(config.project_root) / file_path)
-            tags = repomap.repo_map.get_tags(abs_path, file_path)
-            for tag in tags:
-                if hasattr(tag, "name") and tag.name:
-                    identifiers_seq.append(tag.name)
-        except Exception as e:
-            console.print(f"  ❌ Error processing {file_path}: {e}", style="red")
-
-    sequential_time = time.time() - start_time
-
-    # Parallel processing
-    console.print("⚡ [yellow]Running parallel processing...[/yellow]")
-    parallel_processor = ParallelTagExtractor(max_workers=4, enable_progress=False)
-
-    start_time = time.time()
-    identifiers_par, stats = parallel_processor.extract_tags_parallel(
-        files=project_files,
-        project_root=str(config.project_root),
-        repo_map=repomap.repo_map,
-    )
-    parallel_time = time.time() - start_time
-
-    # Comparison
-    speedup = sequential_time / parallel_time if parallel_time > 0 else 0
-
-    console.print(
-        Panel(
-            f"[bold]Performance Comparison[/bold]\n\n"
-            f"🐌 Sequential: [red]{sequential_time:.2f}s[/red]\n"
-            f"⚡ Parallel: [green]{parallel_time:.2f}s[/green]\n"
-            f"🚀 Speedup: [bold green]{speedup:.1f}x[/bold green]\n\n"
-            f"📊 Identifiers Found:\n"
-            f"  • Sequential: {len(identifiers_seq)}\n"
-            f"  • Parallel: {len(identifiers_par)}\n"
-            f"  • Match: {'✅' if len(identifiers_seq) == len(identifiers_par) else '❌'}",
-            title="📈 Comparison Results",
-            border_style="green",
-        )
-    )
+    shutil.rmtree(temp_dir)
+    console.print("[bold green]Cleanup complete.[/bold green]")
 
 
 if __name__ == "__main__":
-    try:
-        # Run the main demo
-        demo_parallel_processing()
-
-        console.print("\n" + "=" * 60)
-
-        # Run performance comparison
-        compare_sequential_vs_parallel()
-
-    except Exception as e:
-        console.print(f"[bold red]Error: {e}[/bold red]")
-        sys.exit(1)
+    main()

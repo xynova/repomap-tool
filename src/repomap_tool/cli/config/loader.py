@@ -96,18 +96,7 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
 def resolve_project_path(
     provided_path: Optional[str], config_file: Optional[str]
 ) -> str:
-    """Resolve project path from provided path, config file, or discovered config.
-
-    Args:
-        provided_path: Explicitly provided project path
-        config_file: Explicitly provided config file path
-
-    Returns:
-        Resolved project path
-
-    Raises:
-        SystemExit: If no project path can be resolved
-    """
+    """Resolve project path from provided path, config file, or discovered config."""
     if provided_path:
         return provided_path
 
@@ -122,19 +111,11 @@ def resolve_project_path(
     if config_obj is None:
         # Use current directory as fallback when no project path or config is provided
         current_dir = str(Path.cwd())
-        # Get console from Click context
-        ctx = click.get_current_context(silent=True)
-        console = get_console(ctx)
-        console.print(
-            f"[blue]No project path provided, using current directory: {current_dir}[/blue]"
-        )
+        # Removed premature console access
         return current_dir
 
     project_path = str(config_obj.project_root)
-    # Get console from Click context
-    ctx = click.get_current_context(silent=True)
-    console = get_console(ctx)
-    console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+    # Removed premature console access
     return project_path
 
 

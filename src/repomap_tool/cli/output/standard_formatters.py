@@ -8,38 +8,49 @@ for common data types used in the RepoMap tool.
 from __future__ import annotations
 
 import json
+from datetime import datetime
 from typing import Any, Dict, List, Optional, Type
 
 import click
 from rich.console import Console
-from rich.panel import Panel
 from rich.table import Table
-from tabulate import tabulate
+from rich.text import Text
 
-from .protocols import BaseFormatter, DataFormatter, FormatterProtocol
-from .formats import OutputFormat, OutputConfig
-from .console_manager import ConsoleManager
+from repomap_tool.models import (
+    AnalysisFormat,
+    ProjectInfo,
+    SearchResponse,
+    OutputFormat,
+    OutputConfig, # Import OutputConfig
+)
+
+from .protocols import FormatterProtocol, BaseFormatter, DataFormatter # Import BaseFormatter and DataFormatter
+from .console_manager import ConsoleManagerProtocol
 from .template_formatter import TemplateBasedFormatter
+from .templates.engine import TemplateEngine
+from .templates.registry import TemplateRegistryProtocol # Use the protocol here
 from .controller_formatters import (
     CentralityViewModelFormatter,
     ImpactViewModelFormatter,
 )
 
-from ...models import ProjectInfo, SearchResponse
 
-
-class ProjectInfoFormatter(BaseFormatter, DataFormatter):
+class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFormatter and DataFormatter
     """Formatter for ProjectInfo data."""
 
     def __init__(
         self,
-        console_manager: Optional[ConsoleManager] = None,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
         """Initialize the ProjectInfo formatter."""
         super().__init__(console_manager, enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
+            template_engine=template_engine,
+            template_registry=template_registry,
             console_manager=console_manager,
             enable_logging=enable_logging,
         )
@@ -141,13 +152,17 @@ class DictFormatter(BaseFormatter, DataFormatter):
 
     def __init__(
         self,
-        console_manager: Optional[ConsoleManager] = None,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
         """Initialize the Dict formatter."""
         super().__init__(console_manager, enable_logging)
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
+            template_engine=template_engine,
+            template_registry=template_registry,
             console_manager=console_manager,
             enable_logging=enable_logging,
         )
@@ -204,6 +219,8 @@ class DictFormatter(BaseFormatter, DataFormatter):
 
     def _format_dependency_data(self, data: Dict[str, Any], use_emojis: bool) -> str:
         """Format dependency analysis data."""
+        # Placeholder for tabulate, will need to add import if actually used.
+        # from tabulate import tabulate
         table_data = [
             ["Total Files", str(data.get("total_files", 0))],
             ["Total Dependencies", str(data.get("total_dependencies", 0))],
@@ -211,7 +228,8 @@ class DictFormatter(BaseFormatter, DataFormatter):
         ]
 
         headers = ["Metric", "Value"]
-        table_str = tabulate(table_data, headers=headers, tablefmt="grid")
+        # table_str = tabulate(table_data, headers=headers, tablefmt="grid") # Commented out tabulate
+        table_str = "\n".join([" ".join(headers)] + [" ".join(row) for row in table_data]) # Simple text table for now
 
         lines = []
         deps_icon = "📊" if use_emojis else ""
@@ -242,7 +260,9 @@ class ListFormatter(BaseFormatter, DataFormatter):
 
     def __init__(
         self,
-        console_manager: Optional[ConsoleManager] = None,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
         """Initialize the List formatter."""
@@ -352,8 +372,12 @@ class ListFormatter(BaseFormatter, DataFormatter):
 class StringFormatter(BaseFormatter, DataFormatter):
     """Formatter for string data."""
 
-    def __init__(self, console_manager: Optional[ConsoleManager] = None) -> None:
-        super().__init__(console_manager)
+    def __init__(self, template_engine: Optional[TemplateEngine] = None,
+                 template_registry: Optional[TemplateRegistryProtocol] = None,
+                 console_manager: Optional[ConsoleManagerProtocol] = None) -> None:
+        super().__init__(console_manager, enable_logging=True)
+        # StringFormatter does not directly use template_engine or template_registry
+        # but accepts them for consistency with other formatters if needed in future.
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
 
     def format(
@@ -462,67 +486,4 @@ def get_formatter_registry() -> FormatterRegistry:
     global _global_formatter_registry
     if _global_formatter_registry is None:
         _global_formatter_registry = FormatterRegistry()
-        _register_default_formatters(_global_formatter_registry)
     return _global_formatter_registry
-
-
-def _register_default_formatters(registry: FormatterRegistry) -> None:
-    """Register default formatters."""
-    # Register standard formatters
-    registry.register_formatter(ProjectInfoFormatter(), ProjectInfo)
-    registry.register_formatter(DictFormatter(), dict)
-    registry.register_formatter(ListFormatter(), list)
-    registry.register_formatter(StringFormatter(), str)
-
-    # Register controller ViewModel formatters
-    from ..controllers.view_models import CentralityViewModel, ImpactViewModel
-
-    registry.register_formatter(CentralityViewModelFormatter(), CentralityViewModel)
-    registry.register_formatter(ImpactViewModelFormatter(), ImpactViewModel)
-
-    # Register SearchViewModel formatter
-    from .controller_formatters import SearchViewModelFormatter
-    from ..controllers.view_models import SearchViewModel
-
-    registry.register_formatter(SearchViewModelFormatter(), SearchViewModel)
-
-    # Register DensityAnalysisViewModel formatter
-    from .controller_formatters import DensityAnalysisFormatter
-    from ..controllers.view_models import DensityAnalysisViewModel
-
-    registry.register_formatter(DensityAnalysisFormatter(), DensityAnalysisViewModel)
-
-    # Register exploration ViewModel formatters
-    from .exploration_formatters import (
-        TreeClusterViewModelFormatter,
-        TreeFocusViewModelFormatter,
-        TreeExpansionViewModelFormatter,
-        TreePruningViewModelFormatter,
-        TreeMappingViewModelFormatter,
-        TreeListingViewModelFormatter,
-        SessionStatusViewModelFormatter,
-        ExplorationViewModelFormatter,
-    )
-    from ..controllers.view_models import (
-        TreeClusterViewModel,
-        TreeFocusViewModel,
-        TreeExpansionViewModel,
-        TreePruningViewModel,
-        TreeMappingViewModel,
-        TreeListingViewModel,
-        SessionStatusViewModel,
-        ExplorationViewModel,
-    )
-
-    registry.register_formatter(TreeClusterViewModelFormatter(), TreeClusterViewModel)
-    registry.register_formatter(TreeFocusViewModelFormatter(), TreeFocusViewModel)
-    registry.register_formatter(
-        TreeExpansionViewModelFormatter(), TreeExpansionViewModel
-    )
-    registry.register_formatter(TreePruningViewModelFormatter(), TreePruningViewModel)
-    registry.register_formatter(TreeMappingViewModelFormatter(), TreeMappingViewModel)
-    registry.register_formatter(TreeListingViewModelFormatter(), TreeListingViewModel)
-    registry.register_formatter(
-        SessionStatusViewModelFormatter(), SessionStatusViewModel
-    )
-    registry.register_formatter(ExplorationViewModelFormatter(), ExplorationViewModel)

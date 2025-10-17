@@ -8,51 +8,43 @@ to render output using Jinja2 templates.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict, List, Optional, Type
+from typing import Any, Optional, List, Dict
 
 import click
 
-from .protocols import BaseFormatter, TemplateFormatter
+from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
+
+from .protocols import BaseFormatter, FormatterProtocol
+from .console_manager import ConsoleManagerProtocol
 from .templates.config import TemplateConfig
-from .formats import OutputFormat, OutputConfig
-from .console_manager import ConsoleManager
-from .templates import (
-    TemplateEngine,
-    TemplateEngineFactory,
-    TemplateRegistry,
-    get_template_registry,
-)
+from .templates.engine import TemplateEngine
+from .templates.registry import TemplateRegistryProtocol
+from repomap_tool.core.logging_service import get_logger
 
 
-class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
-    """Template-based formatter using Jinja2 templates."""
+class TemplateBasedFormatter(BaseFormatter):
+    """Base formatter that uses Jinja2 templates for rendering output."""
 
     def __init__(
         self,
-        template_engine: Optional[TemplateEngine] = None,
-        template_registry: Optional[TemplateRegistry] = None,
-        console_manager: Optional[ConsoleManager] = None,
+        template_engine: TemplateEngine,
+        template_registry: TemplateRegistryProtocol,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
         """Initialize the template-based formatter.
 
         Args:
-            template_engine: Template engine to use
-            template_registry: Template registry to use
-            console_manager: Console manager for output
-            enable_logging: Whether to enable logging
+            template_engine: The Jinja2 template engine instance.
+            template_registry: The template registry for lookup.
+            console_manager: Optional console manager for output.
+            enable_logging: Whether to enable logging for this formatter.
         """
         super().__init__(console_manager, enable_logging)
-        if template_engine is None:
-            if template_registry is None:
-                template_registry = get_template_registry()
-            self._template_engine = TemplateEngineFactory.create_template_engine(
-                template_registry=template_registry,
-                enable_logging=enable_logging,
-            )
-        else:
-            self._template_engine = template_engine
+        self._template_engine = template_engine
+        self._template_registry = template_registry
         self._supported_formats = [OutputFormat.TEXT]
+        self._template_config_class = TemplateConfig  # Default template config class
 
     def format(
         self,
@@ -100,10 +92,10 @@ class TemplateBasedFormatter(BaseFormatter, TemplateFormatter):
         """Check if this formatter supports the specified format.
 
         Args:
-            output_format: The format to check
+            output_format: The format to check.
 
         Returns:
-            True if the format is supported
+            True if the format is supported (only TEXT for templates).
         """
         return output_format in self._supported_formats
 

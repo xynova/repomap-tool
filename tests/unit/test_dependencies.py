@@ -126,12 +126,12 @@ class TestCallGraphBuilder:
 
     def test_initialization(self, session_container):
         """Test CallGraphBuilder initialization."""
-        builder = session_container.call_analyzer()
+        builder = session_container.call_graph_builder()
         assert builder is not None
 
     def test_analyze_file_calls_python(self, session_test_repo_path, session_container):
         """Test Python function call analysis using test fixture."""
-        builder = session_container.call_analyzer()
+        builder = session_container.call_graph_builder()
 
         # Use a file from our test fixture that has function calls
         test_file = session_test_repo_path / "dependency_chain_a.py"

@@ -76,3 +76,6 @@ logs/
 tmp/ 
 
 .repomap/
+
+# Temporary test fixtures
+tests/fixtures/temp_large_repo/

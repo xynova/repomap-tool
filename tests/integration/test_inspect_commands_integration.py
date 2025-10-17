@@ -42,6 +42,35 @@ class TestInspectCommandsIntegration:
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
+    def _invoke_inspect_command(self, command_type, files=None, output_format="text", **kwargs):
+        """Helper method to invoke inspect commands with common parameters."""
+        cmd_args = [
+            "inspect",
+            command_type,
+            str(self.project_root),
+            "--output",
+            output_format,
+        ]
+        
+        if files:
+            for file_path in files:
+                cmd_args.extend(["--files", file_path])
+        
+        # Add any additional kwargs as CLI arguments
+        for key, value in kwargs.items():
+            if key == "max_tokens":
+                cmd_args.extend(["--max-tokens", str(value)])
+            elif key == "verbose" and value:
+                cmd_args.append("--verbose")
+        
+        return self.runner.invoke(cli, cmd_args)
+
+    def _assert_inspect_success(self, result, command_type):
+        """Helper method to assert common inspect command success patterns."""
+        assert result.exit_code == 0
+        assert f"Inspecting {command_type} for project" in result.output
+        assert f"{command_type.title()} inspection completed" in result.output
+
     def _create_test_project(self):
         """Create a realistic test project structure."""
         # Create main package structure
@@ -307,23 +336,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "impact",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting impact for project" in result.output
+        result = self._invoke_inspect_command("impact", files=[user_service_path])
+        self._assert_inspect_success(result, "impact")
         assert "Target files" in result.output
-        assert "Impact inspection completed" in result.output
 
     def test_inspect_impact_multiple_files(self):
         """Test inspect impact command with multiple files."""
@@ -332,25 +347,9 @@ class TestUserService:
         )
         auth_path = str(self.project_root / "src" / "test_project" / "auth.py")
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "impact",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--files",
-                auth_path,
-                "--output",
-                "text",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting impact for project" in result.output
+        result = self._invoke_inspect_command("impact", files=[user_service_path, auth_path])
+        self._assert_inspect_success(result, "impact")
         assert "Target files" in result.output
-        assert "Impact inspection completed" in result.output
 
     def test_inspect_centrality_single_file(self):
         """Test inspect centrality command with a single file."""
@@ -358,23 +357,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "centrality",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting centrality for project" in result.output
+        result = self._invoke_inspect_command("centrality", files=[user_service_path])
+        self._assert_inspect_success(result, "centrality")
         assert "Files" in result.output
-        assert "Centrality inspection completed" in result.output
 
     def test_inspect_centrality_multiple_files(self):
         """Test inspect centrality command with multiple files."""
@@ -383,25 +368,9 @@ class TestUserService:
         )
         auth_path = str(self.project_root / "src" / "test_project" / "auth.py")
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "centrality",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--files",
-                auth_path,
-                "--output",
-                "text",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting centrality for project" in result.output
+        result = self._invoke_inspect_command("centrality", files=[user_service_path, auth_path])
+        self._assert_inspect_success(result, "centrality")
         assert "Files" in result.output
-        assert "Centrality inspection completed" in result.output
 
     def test_inspect_impact_json_output(self):
         """Test inspect impact command with JSON output."""
@@ -409,23 +378,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "impact",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "json",
-            ],
-        )
-
-        assert result.exit_code == 0
-        # Inspect commands show status messages and perform analysis
-        assert "Inspecting impact for project" in result.output
-        assert "Impact inspection completed" in result.output
+        result = self._invoke_inspect_command("impact", files=[user_service_path], output_format="json")
+        self._assert_inspect_success(result, "impact")
         assert "Output format: json" in result.output
 
     def test_inspect_centrality_json_output(self):
@@ -434,23 +388,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "centrality",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "json",
-            ],
-        )
-
-        assert result.exit_code == 0
-        # Inspect commands show status messages and perform analysis
-        assert "Inspecting centrality for project" in result.output
-        assert "Centrality inspection completed" in result.output
+        result = self._invoke_inspect_command("centrality", files=[user_service_path], output_format="json")
+        self._assert_inspect_success(result, "centrality")
         assert "Output format: json" in result.output
 
     def test_inspect_impact_with_token_budget(self):
@@ -459,24 +398,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "impact",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-                "--max-tokens",
-                "2000",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting impact for project" in result.output
-        assert "Impact inspection completed" in result.output
+        result = self._invoke_inspect_command("impact", files=[user_service_path], max_tokens=2000)
+        self._assert_inspect_success(result, "impact")
 
     def test_inspect_centrality_with_token_budget(self):
         """Test inspect centrality command with custom token budget."""
@@ -484,24 +407,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "centrality",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-                "--max-tokens",
-                "2000",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting centrality for project" in result.output
-        assert "Centrality inspection completed" in result.output
+        result = self._invoke_inspect_command("centrality", files=[user_service_path], max_tokens=2000)
+        self._assert_inspect_success(result, "centrality")
 
     def test_inspect_impact_no_files_specified(self):
         """Test inspect impact command without specifying files."""
@@ -575,23 +482,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "impact",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-                "--verbose",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting impact for project" in result.output
-        assert "Impact inspection completed" in result.output
+        result = self._invoke_inspect_command("impact", files=[user_service_path], verbose=True)
+        self._assert_inspect_success(result, "impact")
 
     def test_inspect_centrality_verbose_output(self):
         """Test inspect centrality command with verbose output."""
@@ -599,23 +491,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "centrality",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-                "--verbose",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting centrality for project" in result.output
-        assert "Centrality inspection completed" in result.output
+        result = self._invoke_inspect_command("centrality", files=[user_service_path], verbose=True)
+        self._assert_inspect_success(result, "centrality")
 
 
 class TestASTFileAnalyzerIntegration:
@@ -632,6 +509,30 @@ class TestASTFileAnalyzerIntegration:
         import shutil
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
+
+    def _create_mock_tree_sitter_parser(self, mock_tags):
+        """Helper method to create a mock TreeSitterParser with given tags."""
+        tree_sitter_parser_instance = MagicMock(spec=TreeSitterParser)
+        tree_sitter_parser_instance.get_tags.return_value = mock_tags
+        return tree_sitter_parser_instance
+
+    def _get_standard_mock_tags(self):
+        """Helper method to get standard mock tags for test files."""
+        return [
+            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
+            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
+            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
+            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
+            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="method", name="__init__", line=13, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="method", name="method1", line=16, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="method", name="method2", line=19, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="call", name="test_function", callee="test_function", line=23, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="call", name="TestClass", callee="TestClass", line=24, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="call", name="method1", callee="obj.method1", line=25, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(kind="call", name="method2", callee="obj.method2", line=26, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+        ]
 
     def _create_simple_test_file(self):
         """Create a simple test file for AST analysis."""
@@ -670,65 +571,25 @@ counts = obj.method2(["a", "bb", "ccc"])
 
     def test_ast_analyzer_basic_functionality(self):
         """Test basic AST analyzer functionality."""
-        # Create a mock cache manager
-        mock_cache_manager = MagicMock(spec=CacheManager)
-        # Create a TreeSitterParser with the project root and mock cache
-        tree_sitter_parser_instance = MagicMock(spec=TreeSitterParser)
-        # Inlined mock tags for this test
-        mock_tags = [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
-            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
-            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="__init__", line=13, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method1", line=16, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method2", line=19, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="test_function", callee="test_function", line=23, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=24, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=25, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method2", callee="obj.method2", line=26, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-        ]
-        tree_sitter_parser_instance.get_tags.return_value = mock_tags # Configure mock get_tags
+        mock_tags = self._get_standard_mock_tags()
+        tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
         analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(self.test_file_path)
 
         assert result.file_path == self.test_file_path
         assert len(result.imports) >= 4  # os, sys, pathlib, typing
-        assert (
-            len(result.function_calls) >= 4
-        )  # test_function, TestClass, method1, method2
-        assert (
-            len(result.defined_functions) == 1
-        )  # test_function (only function from mock tags)
+        assert len(result.function_calls) >= 4  # test_function, TestClass, method1, method2
+        assert len(result.defined_functions) == 1  # test_function (only function from mock tags)
         assert len(result.defined_classes) == 1  # TestClass
-        assert len(result.defined_methods) == 3 # __init__, method1, method2
+        assert len(result.defined_methods) == 3  # __init__, method1, method2
         assert result.line_count > 0
         assert len(result.analysis_errors) == 0
 
     def test_ast_analyzer_import_analysis(self):
         """Test AST analyzer import analysis."""
-        mock_cache_manager = MagicMock(spec=CacheManager)
-        tree_sitter_parser_instance = MagicMock(spec=TreeSitterParser)
-        # Inlined mock tags for this test
-        mock_tags = [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
-            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
-            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="__init__", line=13, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method1", line=16, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method2", line=19, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="test_function", callee="test_function", line=23, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=24, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=25, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method2", callee="obj.method2", line=26, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-        ]
-        tree_sitter_parser_instance.get_tags.return_value = mock_tags # Configure mock get_tags
+        mock_tags = self._get_standard_mock_tags()
+        tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
         analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(self.test_file_path)
@@ -741,37 +602,16 @@ counts = obj.method2(["a", "bb", "ccc"])
         assert "typing" in import_modules
 
         # Check import types
-        from_imports = [
-            imp for imp in result.imports if imp.symbols
-        ]  # from imports have symbols
-        standard_imports = [
-            imp for imp in result.imports if not imp.symbols
-        ]  # standard imports have no symbols
+        from_imports = [imp for imp in result.imports if imp.symbols]  # from imports have symbols
+        standard_imports = [imp for imp in result.imports if not imp.symbols]  # standard imports have no symbols
 
         assert len(from_imports) == 2  # pathlib.Path, typing.List
         assert len(standard_imports) == 2  # os, sys
 
     def test_ast_analyzer_function_call_analysis(self):
         """Test AST analyzer function call analysis."""
-        mock_cache_manager = MagicMock(spec=CacheManager)
-        tree_sitter_parser_instance = MagicMock(spec=TreeSitterParser)
-        # Inlined mock tags for this test
-        mock_tags = [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
-            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
-            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="__init__", line=13, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method1", line=16, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method2", line=19, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="test_function", callee="test_function", line=23, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=24, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=25, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method2", callee="obj.method2", line=26, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-        ]
-        tree_sitter_parser_instance.get_tags.return_value = mock_tags # Configure mock get_tags
+        mock_tags = self._get_standard_mock_tags()
+        tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
         analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
         result = analyzer.analyze_file(self.test_file_path)
@@ -780,9 +620,9 @@ counts = obj.method2(["a", "bb", "ccc"])
         function_names = [call.callee for call in result.function_calls]
         assert "test_function" in function_names
         assert "TestClass" in function_names
-        assert "obj.method1" in function_names # Updated assertion
-        assert "obj.method2" in function_names # Updated assertion
-        assert len(function_names) == 4 # Ensure all 4 calls are captured
+        assert "obj.method1" in function_names
+        assert "obj.method2" in function_names
+        assert len(function_names) == 4  # Ensure all 4 calls are captured
 
     def test_ast_analyzer_multiple_files(self):
         """Test AST analyzer with multiple files."""

@@ -20,7 +20,7 @@ from rich.theme import Theme
 from ..utils.console import ConsoleProvider
 
 
-class ConsoleManager(Protocol):
+class ConsoleManagerProtocol(Protocol):
     """Protocol for console manager implementations."""
 
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:
@@ -182,7 +182,7 @@ class ConsoleManagerFactory:
     @staticmethod
     def create_console_manager(
         manager_type: str = "default", **kwargs: Any
-    ) -> ConsoleManager:
+    ) -> ConsoleManagerProtocol:
         """Create a console manager of the specified type.
 
         Args:
@@ -199,10 +199,10 @@ class ConsoleManagerFactory:
 
 
 # Global console manager instance
-_global_console_manager: Optional[ConsoleManager] = None
+_global_console_manager: Optional[ConsoleManagerProtocol] = None
 
 
-def get_console_manager() -> ConsoleManager:
+def get_console_manager() -> ConsoleManagerProtocol:
     """Get the global console manager instance.
 
     Returns:
@@ -214,7 +214,7 @@ def get_console_manager() -> ConsoleManager:
     return _global_console_manager
 
 
-def set_console_manager(manager: ConsoleManager) -> None:
+def set_console_manager(manager: ConsoleManagerProtocol) -> None:
     """Set the global console manager instance.
 
     Args:

@@ -43,7 +43,7 @@ except ImportError as e:
     JINJA2_AVAILABLE = False
 
 from .config import TemplateConfig, TemplateOptions
-from .registry import TemplateRegistry, get_template_registry
+from .registry import TemplateRegistryProtocol
 from .loader import TemplateLoader, FileTemplateLoader
 
 
@@ -52,7 +52,7 @@ class TemplateEngine:
 
     def __init__(
         self,
-        template_registry: Optional[TemplateRegistry] = None,
+        template_registry: TemplateRegistryProtocol,
         template_loader: Optional[TemplateLoader] = None,
         enable_logging: bool = True,
     ) -> None:
@@ -65,10 +65,7 @@ class TemplateEngine:
         """
         self._enable_logging = enable_logging
         self._logger = get_logger(__name__) if enable_logging else None
-        if template_registry is None:
-            self._template_registry: TemplateRegistry = get_template_registry()
-        else:
-            self._template_registry = template_registry
+        self.template_registry = template_registry
 
         if template_loader is None:
             self._template_loader: TemplateLoader = FileTemplateLoader(
@@ -148,7 +145,7 @@ class TemplateEngine:
         """
         try:
             # Get template content
-            template_content = self._template_registry.get_template(template_name)
+            template_content = self.template_registry.get_template(template_name)
             if not template_content:
                 raise TemplateNotFoundError(f"Template '{template_name}' not found")
 
@@ -340,20 +337,11 @@ class TemplateEngineFactory:
 
     @staticmethod
     def create_template_engine(
-        template_registry: Optional[TemplateRegistry] = None,
+        template_registry: TemplateRegistryProtocol, # Make it a required argument
         template_loader: Optional[TemplateLoader] = None,
         enable_logging: bool = True,
     ) -> TemplateEngine:
-        """Create a template engine instance.
-
-        Args:
-            template_registry: Template registry to use
-            template_loader: Template loader to use
-            enable_logging: Whether to enable logging
-
-        Returns:
-            Template engine instance
-        """
+        """Create a TemplateEngine instance with optional template loader."""
         return TemplateEngine(
             template_registry=template_registry,
             template_loader=template_loader,

@@ -23,6 +23,7 @@ from repomap_tool.models import (
     PerformanceConfig,
     DependencyConfig,
 )
+from repomap_tool.core.repo_map import RepoMapService
 
 
 class TestServiceFactory:
@@ -65,13 +66,15 @@ class TestServiceFactory:
                 # Mock the container and its providers
                 mock_container = Mock()
                 mock_container.console.return_value = Mock()
-                mock_container.parallel_tag_extractor.return_value = Mock()
                 mock_container.fuzzy_matcher.return_value = Mock()
                 mock_container.adaptive_semantic_matcher.return_value = Mock()
                 mock_container.hybrid_matcher.return_value = Mock()
                 mock_container.dependency_graph.return_value = Mock()
                 mock_container.impact_analyzer.return_value = Mock()
                 mock_container.centrality_calculator.return_value = Mock()
+                mock_container.spellchecker_service.return_value = Mock()
+                mock_container.tree_sitter_parser.return_value = Mock()
+                mock_container.tag_cache.return_value = Mock()
 
                 mock_create_container.return_value = mock_container
 
@@ -99,13 +102,15 @@ class TestServiceFactory:
             ) as mock_create_container:
                 mock_container = Mock()
                 mock_container.console.return_value = Mock()
-                mock_container.parallel_tag_extractor.return_value = Mock()
                 mock_container.fuzzy_matcher.return_value = Mock()
                 mock_container.adaptive_semantic_matcher.return_value = Mock()
                 mock_container.hybrid_matcher.return_value = Mock()
                 mock_container.dependency_graph.return_value = Mock()
                 mock_container.impact_analyzer.return_value = Mock()
                 mock_container.centrality_calculator.return_value = Mock()
+                mock_container.spellchecker_service.return_value = Mock()
+                mock_container.tree_sitter_parser.return_value = Mock()
+                mock_container.tag_cache.return_value = Mock()
 
                 mock_create_container.return_value = mock_container
 
@@ -283,13 +288,15 @@ class TestServiceFactory:
             ) as mock_create_container:
                 mock_container = Mock()
                 mock_container.console.return_value = Mock()
-                mock_container.parallel_tag_extractor.return_value = Mock()
                 mock_container.fuzzy_matcher.return_value = Mock()
                 mock_container.adaptive_semantic_matcher.return_value = Mock()
                 mock_container.hybrid_matcher.return_value = Mock()
                 mock_container.dependency_graph.return_value = Mock()
                 mock_container.impact_analyzer.return_value = Mock()
                 mock_container.centrality_calculator.return_value = Mock()
+                mock_container.spellchecker_service.return_value = Mock()
+                mock_container.tree_sitter_parser.return_value = Mock()
+                mock_container.tag_cache.return_value = Mock()
 
                 mock_create_container.return_value = mock_container
 
@@ -328,13 +335,15 @@ class TestServiceFactory:
             ) as mock_create_container:
                 mock_container = Mock()
                 mock_container.console.return_value = Mock()
-                mock_container.parallel_tag_extractor.return_value = Mock()
                 mock_container.fuzzy_matcher.return_value = Mock()
                 mock_container.adaptive_semantic_matcher.return_value = Mock()
                 mock_container.hybrid_matcher.return_value = Mock()
                 mock_container.dependency_graph.return_value = Mock()
                 mock_container.impact_analyzer.return_value = Mock()
                 mock_container.centrality_calculator.return_value = Mock()
+                mock_container.spellchecker_service.return_value = Mock()
+                mock_container.tree_sitter_parser.return_value = Mock()
+                mock_container.tag_cache.return_value = Mock()
 
                 mock_create_container.return_value = mock_container
 

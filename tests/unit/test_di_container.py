@@ -138,16 +138,6 @@ class TestContainer:
         impact_analyzer2 = container.impact_analyzer()
         assert impact_analyzer is impact_analyzer2
 
-    def test_parallel_tag_extractor_provider(self):
-        """Test parallel tag extractor provider."""
-        config = self._create_test_config()
-        config.performance.max_workers = 4
-
-        container = create_container(config)
-        parallel_extractor = container.parallel_tag_extractor()
-
-        assert parallel_extractor is not None
-
     def test_container_error_handling(self):
         """Test container error handling."""
         # Test with invalid config

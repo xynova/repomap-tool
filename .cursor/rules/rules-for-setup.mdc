@@ -32,6 +32,11 @@ keywords: [setup, venv, virtual environment, makefile, make install, make test-u
 - **ALWAYS** use `make test-unit` to run tests
 - **ALWAYS** work with the current setup
 
+### **Dependency Management Workflow:**
+1.  **Modify `pyproject.toml`**: Add new runtime dependencies under `[project].dependencies` or development dependencies under `[project.optional-dependencies].dev`.
+2.  **Activate Virtual Environment**: Run `source .venv/bin/activate`.
+3.  **Install Dependencies**: Run `make install` (this will automatically use `uv` if available).
+
 ## 🔧 EXISTING TOOLS:
 - **Makefile**: Contains all setup commands
 - **venv/**: Existing virtual environment

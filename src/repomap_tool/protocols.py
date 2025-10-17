@@ -169,3 +169,33 @@ class TagCacheProtocol(Protocol):
             A dictionary containing cache statistics.
         """
         ...
+
+
+class OutputManagerProtocol(Protocol):
+    """Protocol for output manager implementations."""
+
+    def display(self, data: Any, output_format: Any, ctx: Optional[Any] = None) -> None:
+        """Display data to the console with proper formatting."""
+        ...
+
+    def display_error(self, error: Exception, ctx: Optional[Any] = None) -> None:
+        """Display an error message with consistent formatting."""
+        ...
+
+    def display_success(self, message: str, ctx: Optional[Any] = None) -> None:
+        """Display a success message with consistent formatting."""
+        ...
+
+    def display_progress(
+        self, message: str, progress: Optional[float] = None, ctx: Optional[Any] = None
+    ) -> None:
+        """Display progress of a long-running operation."""
+        ...
+
+    def get_formatter(self, data: Any, output_format: Any) -> Optional[Any]:
+        """Get an appropriate formatter for the given data and format."""
+        ...
+
+    def set_config(self, config: Any) -> None:
+        """Set the output manager's configuration."""
+        ...

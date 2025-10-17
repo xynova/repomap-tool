@@ -7,56 +7,58 @@ and ensuring proper lifecycle management of services.
 
 import logging
 from .logging_service import get_logger
-from typing import TYPE_CHECKING, Any, Optional, cast
+from typing import Any, Optional, cast
 
 from dependency_injector import containers, providers
 from dependency_injector.wiring import Provide, inject
 
-if TYPE_CHECKING:
-    from repomap_tool.code_analysis.advanced_dependency_graph import (
-        AdvancedDependencyGraph,
-    )
-    from repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
-    from repomap_tool.code_analysis.centrality_analysis_engine import (
-        CentralityAnalysisEngine,
-    )
-    from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
-    from repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
-    from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
-    from repomap_tool.code_analysis.path_resolver import PathResolver
-    from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
-    from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
-    from repomap_tool.utils.path_normalizer import PathNormalizer
-    from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
-    from repomap_tool.code_search.adaptive_semantic_matcher import (
-        AdaptiveSemanticMatcher,
-    )
-    from repomap_tool.code_search.hybrid_matcher import HybridMatcher
-    from repomap_tool.core.cache_manager import CacheManager
-    from repomap_tool.core.parallel_processor import ParallelTagExtractor
-    from repomap_tool.code_exploration.session_manager import (
-        SessionManager,
-        SessionStore,
-    )
-    from repomap_tool.code_exploration.tree_mapper import TreeMapper
-    from repomap_tool.code_exploration.tree_clusters import TreeClusterer
-    from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
-    from repomap_tool.code_exploration.tree_builder import TreeBuilder
-    from repomap_tool.core.tag_cache import TreeSitterTagCache
-    from repomap_tool.cli.controllers.centrality_controller import CentralityController
-    from repomap_tool.cli.controllers.impact_controller import ImpactController
-    from repomap_tool.cli.controllers.search_controller import SearchController
-    from repomap_tool.cli.controllers.exploration_controller import (
-        ExplorationController,
-    )
-    from repomap_tool.cli.controllers.density_controller import DensityController
-    from rich.console import Console
-    from repomap_tool.protocols import QueryLoaderProtocol
-    from repomap_tool.code_analysis.query_loader import FileQueryLoader
+# All imports that were previously inside if TYPE_CHECKING:
+from repomap_tool.code_analysis.advanced_dependency_graph import AdvancedDependencyGraph
+from repomap_tool.code_analysis.ast_file_analyzer import ASTFileAnalyzer
+from repomap_tool.code_analysis.centrality_analysis_engine import CentralityAnalysisEngine
+from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from repomap_tool.code_analysis.impact_analysis_engine import ImpactAnalysisEngine
+from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
+from repomap_tool.code_analysis.path_resolver import PathResolver
+from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
+from repomap_tool.utils.path_normalizer import PathNormalizer
+from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_search.adaptive_semantic_matcher import AdaptiveSemanticMatcher
+from repomap_tool.code_search.hybrid_matcher import HybridMatcher
+from repomap_tool.core.cache_manager import CacheManager
+from repomap_tool.code_exploration.session_manager import SessionManager, SessionStore
+from repomap_tool.code_exploration.tree_mapper import TreeMapper
+from repomap_tool.code_exploration.tree_clusters import TreeClusterer
+from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
+from repomap_tool.code_exploration.tree_builder import TreeBuilder
+from repomap_tool.core.tag_cache import TreeSitterTagCache
+from repomap_tool.cli.controllers.centrality_controller import CentralityController
+from repomap_tool.cli.controllers.impact_controller import ImpactController
+from repomap_tool.cli.controllers.search_controller import SearchController
+from repomap_tool.cli.controllers.exploration_controller import ExplorationController
+from repomap_tool.cli.controllers.density_controller import DensityController
+from rich.console import Console
+from repomap_tool.protocols import QueryLoaderProtocol
+from repomap_tool.code_analysis.query_loader import FileQueryLoader
+from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+from repomap_tool.core.repo_map import RepoMapService
+from repomap_tool.code_analysis.call_graph_builder import PythonCallAnalyzer, JavaScriptCallAnalyzer
+from repomap_tool.cli.output.manager import OutputManager
+from repomap_tool.cli.output.console_manager import ConsoleManagerProtocol, DefaultConsoleManager, ConsoleProvider # Import ConsoleProvider
+from repomap_tool.cli.utils.console import RichConsoleFactory # Import RichConsoleFactory
+from repomap_tool.cli.output.templates.engine import TemplateEngine # Import TemplateEngine
+from repomap_tool.cli.output.templates.registry import (
+    DefaultTemplateRegistry,
+    TemplateRegistryProtocol,
+)
+from repomap_tool.cli.output.templates.config import TemplateConfig # Import TemplateConfig
+from repomap_tool.cli.output.standard_formatters import FormatterRegistry, get_formatter_registry, ProjectInfoFormatter, DictFormatter, ListFormatter, StringFormatter # Import FormatterRegistry and get_formatter_registry
 
 # Legacy factory functions removed - using DI container instead
 from ..models import RepoMapConfig
 from ..code_analysis.density_analyzer import DensityAnalyzer
+from repomap_tool.models import ProjectInfo
 
 logger = get_logger(__name__)
 
@@ -67,18 +69,81 @@ class Container(containers.DeclarativeContainer):
     # Configuration
     config = providers.Configuration()
 
+    # Console Provider
+    console_provider: "providers.Singleton[ConsoleProvider]" = providers.Singleton(
+        ConsoleProvider,
+        factory=providers.Singleton(RichConsoleFactory),
+    )
+
+    # Console Manager
+    console_manager: "providers.Singleton[ConsoleManagerProtocol]" = cast(
+        "providers.Singleton[ConsoleManagerProtocol]",
+        providers.Singleton(
+            "repomap_tool.cli.output.console_manager.DefaultConsoleManager", # Use concrete class
+            provider=console_provider(), # Pass the resolved ConsoleProvider instance
+        ),
+    )
+
+    # Console (callable to get console instance)
+    console: "providers.Callable[Console]" = cast(
+        "providers.Callable[Console]",
+        providers.Callable(console_manager().get_console),
+    )
+
+    # Template Engine and Registry
+    template_config: "providers.Singleton[TemplateConfig]" = providers.Singleton(
+        TemplateConfig, # Default template config
+    )
+
+    template_registry: "providers.Singleton[TemplateRegistryProtocol]" = providers.Singleton(
+        DefaultTemplateRegistry,  # Use the concrete implementation
+    )
+
+    template_engine: "providers.Singleton[TemplateEngine]" = providers.Singleton(
+        TemplateEngine,
+        template_registry=template_registry, # Reference the provider directly
+        template_loader=providers.Singleton("repomap_tool.cli.output.templates.loader.FileTemplateLoader"), # Add template_loader
+    )
+
+    # Formatter Registry
+    formatter_registry: "providers.Singleton[FormatterRegistry]" = providers.Singleton(
+        FormatterRegistry,
+    )
+    # Output Manager (uses the injected console manager, template engine, and formatter registry)
+    output_manager: "providers.Singleton[OutputManager]" = cast(
+        "providers.Singleton[OutputManager]",
+        providers.Singleton(
+            "repomap_tool.cli.output.manager.OutputManager",
+            console_manager=console_manager(), # Call the provider to get the instance
+            formatter_registry=formatter_registry(), # Call the provider to get the instance
+            template_engine=template_engine(), # Call the provider to get the instance
+            template_registry=template_registry(), # Call the provider to get the instance
+        ),
+    )
+
     # Query loader for tree-sitter queries
     query_loader: "providers.Singleton[QueryLoaderProtocol]" = cast(
         "providers.Singleton[QueryLoaderProtocol]",
-        providers.Singleton("repomap_tool.code_analysis.query_loader.FileQueryLoader"),
+        providers.Singleton("repomap_tool.code_analysis.query_loader.FileQueryLoader"), # Corrected from FileTemplateLoader
     )
 
     # Tag Cache
-    tag_cache: "providers.Singleton[TagCacheProtocol]" = cast(
-        "providers.Singleton[TagCacheProtocol]",
+    tag_cache: "providers.Singleton[TreeSitterTagCache]" = cast(
+        "providers.Singleton[TreeSitterTagCache]",
         providers.Singleton(
             "repomap_tool.core.tag_cache.TreeSitterTagCache",
             cache_dir=config.cache_dir,
+        ),
+    )
+
+    # Tree-sitter Parser (centralized for all dependent services)
+    tree_sitter_parser: "providers.Singleton[TreeSitterParser]" = cast(
+        "providers.Singleton[TreeSitterParser]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
+            project_root=config.project_root,
+            cache=tag_cache(), # Ensure cache is passed correctly as a resolved instance
+            query_loader=query_loader(), # Ensure query_loader is passed correctly as a resolved instance
         ),
     )
 
@@ -91,33 +156,53 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    # Import analyzer
+    # Python Call Analyzer
+    python_call_analyzer: "providers.Singleton[PythonCallAnalyzer]" = cast(
+        "providers.Singleton[PythonCallAnalyzer]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.call_graph_builder.PythonCallAnalyzer",
+            tree_sitter_parser=tree_sitter_parser,
+        ),
+    )
+
+    # JavaScript Call Analyzer
+    javascript_call_analyzer: "providers.Singleton[JavaScriptCallAnalyzer]" = cast(
+        "providers.Singleton[JavaScriptCallAnalyzer]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.call_graph_builder.JavaScriptCallAnalyzer",
+            project_root=config.project_root,
+            tree_sitter_parser=tree_sitter_parser,
+        ),
+    )
+
+    # Call Graph Builder (uses the injected analyzers)
+    call_graph_builder: "providers.Singleton[CallGraphBuilder]" = cast(
+        "providers.Singleton[CallGraphBuilder]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
+            project_root=config.project_root,
+            python_call_analyzer=python_call_analyzer,
+            javascript_call_analyzer=javascript_call_analyzer,
+        ),
+    )
+
+    # Import Analyzer
     import_analyzer: "providers.Singleton[ImportAnalyzer]" = cast(
         "providers.Singleton[ImportAnalyzer]",
         providers.Singleton(
             "repomap_tool.code_analysis.import_analyzer.ImportAnalyzer",
             project_root=config.project_root,
-            tree_sitter_parser=providers.Singleton(
-                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
-                project_root=config.project_root,
-                cache=tag_cache,
-                query_loader=query_loader, # Inject query_loader here
-            ),
+            tree_sitter_parser=tree_sitter_parser,
         ),
     )
 
-    # Call graph builder
-    call_analyzer: "providers.Singleton[CallGraphBuilder]" = cast(
-        "providers.Singleton[CallGraphBuilder]",
+    # AST File Analyzer
+    ast_file_analyzer: "providers.Singleton[ASTFileAnalyzer]" = cast(
+        "providers.Singleton[ASTFileAnalyzer]",
         providers.Singleton(
-            "repomap_tool.code_analysis.call_graph_builder.CallGraphBuilder",
+            "repomap_tool.code_analysis.ast_file_analyzer.ASTFileAnalyzer",
             project_root=config.project_root,
-            tree_sitter_parser=providers.Singleton(
-                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
-                project_root=config.project_root,
-                cache=tag_cache,
-                query_loader=query_loader, # Inject query_loader here
-            ),
+            tree_sitter_parser=tree_sitter_parser,
         ),
     )
 
@@ -127,22 +212,7 @@ class Container(containers.DeclarativeContainer):
         providers.Singleton(
             "repomap_tool.code_analysis.advanced_dependency_graph.AdvancedDependencyGraph",
             import_analyzer=import_analyzer,
-            call_graph_builder=call_analyzer,
-        ),
-    )
-
-    # AST analyzer (needed by centrality engine)
-    ast_analyzer: "providers.Singleton[ASTFileAnalyzer]" = cast(
-        "providers.Singleton[ASTFileAnalyzer]",
-        providers.Singleton(
-            "repomap_tool.code_analysis.ast_file_analyzer.ASTFileAnalyzer",
-            project_root=config.project_root,
-            tree_sitter_parser=providers.Singleton(
-                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
-                project_root=config.project_root,
-                cache=tag_cache,
-                query_loader=query_loader, # Inject query_loader here
-            ),
+            call_graph_builder=call_graph_builder,
         ),
     )
 
@@ -159,7 +229,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[CentralityAnalysisEngine]",
         providers.Factory(
             "repomap_tool.code_analysis.centrality_analysis_engine.CentralityAnalysisEngine",
-            ast_analyzer=ast_analyzer,
+            ast_analyzer=ast_file_analyzer, # Corrected: ast_analyzer to ast_file_analyzer
             centrality_calculator=centrality_calculator,
             dependency_graph=dependency_graph,
             path_normalizer=path_normalizer,
@@ -179,7 +249,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[ImpactAnalysisEngine]",
         providers.Factory(
             "repomap_tool.code_analysis.impact_analysis_engine.ImpactAnalysisEngine",
-            ast_analyzer=ast_analyzer,
+            ast_analyzer=ast_file_analyzer, # Corrected: ast_analyzer to ast_file_analyzer
             dependency_graph=dependency_graph,
             path_normalizer=path_normalizer,
         ),
@@ -198,12 +268,7 @@ class Container(containers.DeclarativeContainer):
         "providers.Factory[DensityAnalyzer]",
         providers.Factory(
             "repomap_tool.code_analysis.density_analyzer.DensityAnalyzer",
-            tree_sitter_parser=providers.Singleton(
-                "repomap_tool.code_analysis.tree_sitter_parser.TreeSitterParser",
-                project_root=config.project_root,
-                cache=tag_cache,
-                query_loader=query_loader, # Inject query_loader here
-            ),
+            tree_sitter_parser=tree_sitter_parser, # Use the registered tree_sitter_parser provider
         ),
     )
 
@@ -216,11 +281,6 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Core services
-    console: "providers.Singleton[Console]" = cast(
-        "providers.Singleton[Console]",
-        providers.Singleton("rich.console.Console"),
-    )
-
     cache_manager: "providers.Singleton[CacheManager]" = cast(
         "providers.Singleton[CacheManager]",
         providers.Singleton(
@@ -232,16 +292,6 @@ class Container(containers.DeclarativeContainer):
     spellchecker_service: "providers.Singleton[Any]" = providers.Singleton(
         "repomap_tool.core.spellchecker_service.SpellCheckerService",
         custom_dictionary=set(),
-    )
-
-    parallel_tag_extractor: "providers.Factory[ParallelTagExtractor]" = cast(
-        "providers.Factory[ParallelTagExtractor]",
-        providers.Factory(
-            "repomap_tool.core.parallel_processor.ParallelTagExtractor",
-            max_workers=config.performance.max_workers,
-            enable_progress=config.performance.enable_progress,
-            console=console,
-        ),
     )
 
     # Matchers with proper dependency injection
@@ -317,7 +367,7 @@ class Container(containers.DeclarativeContainer):
             dependency_graph=dependency_graph,
             centrality_calculator=centrality_calculator,
             centrality_engine=centrality_analysis_engine,
-            ast_analyzer=ast_analyzer,
+            ast_analyzer=ast_file_analyzer, # Corrected: ast_analyzer to ast_file_analyzer
             path_resolver=path_resolver,
         ),
     )
@@ -329,7 +379,7 @@ class Container(containers.DeclarativeContainer):
             dependency_graph=dependency_graph,
             impact_analyzer=impact_analyzer,
             impact_engine=impact_analysis_engine,
-            ast_analyzer=ast_analyzer,
+            ast_analyzer=ast_file_analyzer, # Corrected: ast_analyzer to ast_file_analyzer
             path_resolver=path_resolver,
         ),
     )
@@ -395,6 +445,26 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # RepoMap Service
+    repo_map_service: "providers.Singleton[RepoMapService]" = cast(
+        "providers.Singleton[RepoMapService]",
+        providers.Singleton(
+            "repomap_tool.core.repo_map.RepoMapService",
+            config=config,
+            console=console_manager(), # Pass the resolved console_manager instance
+            fuzzy_matcher=fuzzy_matcher,
+            semantic_matcher=adaptive_semantic_matcher,
+            embedding_matcher=embedding_matcher,
+            hybrid_matcher=hybrid_matcher,
+            dependency_graph=dependency_graph,
+            impact_analyzer=impact_analyzer,
+            centrality_calculator=centrality_calculator,
+            spellchecker_service=spellchecker_service,
+            tree_sitter_parser=tree_sitter_parser,
+            tag_cache=tag_cache,
+        ),
+    )
+
 
 def create_container(config: RepoMapConfig) -> Container:
     """Create and configure the dependency injection container."""
@@ -404,7 +474,8 @@ def create_container(config: RepoMapConfig) -> Container:
     try:
         container.config.from_dict(
             {
-                "project_root": str(config.project_root),
+                "project_root": config.project_root,
+                "cache_dir": config.cache_dir,
                 "dependencies": {
                     "enable_impact_analysis": (
                         config.dependencies.enable_impact_analysis
@@ -416,6 +487,9 @@ def create_container(config: RepoMapConfig) -> Container:
                     "threshold": config.fuzzy_match.threshold,
                     "strategies": config.fuzzy_match.strategies,
                     "cache_results": config.fuzzy_match.cache_results,
+                },
+                "embedding": {
+                    "cache_dir": config.embedding.cache_dir,
                 },
                 "semantic_match": {
                     "threshold": config.semantic_match.threshold,
@@ -432,8 +506,98 @@ def create_container(config: RepoMapConfig) -> Container:
         logger.error(f"Error configuring container: {e}")
         raise
 
+    # Register default formatters after the container is configured
+    _register_default_formatters(container.formatter_registry,
+                                 container.console_manager,
+                                 container.template_engine,
+                                 container.template_registry)
+
     return container
 
+
+def _register_default_formatters(registry: FormatterRegistry,
+                                 console_manager: ConsoleManagerProtocol,
+                                 template_engine: TemplateEngine,
+                                 template_registry: TemplateRegistryProtocol) -> None:
+    """Register default formatters."""
+    # Register standard formatters
+    registry().register_formatter(ProjectInfoFormatter(template_engine=template_engine,
+                                                    template_registry=template_registry,
+                                                    console_manager=console_manager),
+                                ProjectInfo)
+    registry().register_formatter(DictFormatter(template_engine=template_engine,
+                                             template_registry=template_registry,
+                                             console_manager=console_manager),
+                                dict)
+    registry().register_formatter(ListFormatter(template_engine=template_engine,
+                                            template_registry=template_registry,
+                                            console_manager=console_manager),
+                                list)
+    registry().register_formatter(StringFormatter(template_engine=template_engine,
+                                                template_registry=template_registry,
+                                                console_manager=console_manager),
+                                str)
+
+    # Register controller ViewModel formatters
+    from repomap_tool.cli.controllers.view_models import CentralityViewModel, ImpactViewModel, SearchViewModel, DensityAnalysisViewModel, TreeClusterViewModel, TreeFocusViewModel, TreeExpansionViewModel, TreePruningViewModel, TreeMappingViewModel, TreeListingViewModel, SessionStatusViewModel, ExplorationViewModel
+    from repomap_tool.cli.output.controller_formatters import CentralityViewModelFormatter, ImpactViewModelFormatter, SearchViewModelFormatter, DensityAnalysisFormatter
+    from repomap_tool.cli.output.exploration_formatters import TreeClusterViewModelFormatter, TreeFocusViewModelFormatter, TreeExpansionViewModelFormatter, TreePruningViewModelFormatter, TreeMappingViewModelFormatter, TreeListingViewModelFormatter, SessionStatusViewModelFormatter, ExplorationViewModelFormatter
+
+
+    registry().register_formatter(CentralityViewModelFormatter(template_engine=template_engine,
+                                                            template_registry=template_registry,
+                                                            console_manager=console_manager),
+                                CentralityViewModel)
+    registry().register_formatter(ImpactViewModelFormatter(template_engine=template_engine,
+                                                        template_registry=template_registry,
+                                                        console_manager=console_manager),
+                                ImpactViewModel)
+
+    # Register SearchViewModel formatter
+    registry().register_formatter(SearchViewModelFormatter(template_engine=template_engine,
+                                                        template_registry=template_registry,
+                                                        console_manager=console_manager),
+                                SearchViewModel)
+
+    # Register DensityAnalysisViewModel formatter
+    registry().register_formatter(DensityAnalysisFormatter(template_engine=template_engine,
+                                                       template_registry=template_registry,
+                                                       console_manager=console_manager),
+                                DensityAnalysisViewModel)
+
+    # Register exploration ViewModel formatters
+    registry().register_formatter(TreeClusterViewModelFormatter(template_engine=template_engine,
+                                                            template_registry=template_registry,
+                                                            console_manager=console_manager),
+                                TreeClusterViewModel)
+    registry().register_formatter(TreeFocusViewModelFormatter(template_engine=template_engine,
+                                                          template_registry=template_registry,
+                                                          console_manager=console_manager),
+                                TreeFocusViewModel)
+    registry().register_formatter(TreeExpansionViewModelFormatter(template_engine=template_engine,
+                                                              template_registry=template_registry,
+                                                              console_manager=console_manager),
+                                TreeExpansionViewModel)
+    registry().register_formatter(TreePruningViewModelFormatter(template_engine=template_engine,
+                                                            template_registry=template_registry,
+                                                            console_manager=console_manager),
+                                TreePruningViewModel)
+    registry().register_formatter(TreeMappingViewModelFormatter(template_engine=template_engine,
+                                                            template_registry=template_registry,
+                                                            console_manager=console_manager),
+                                TreeMappingViewModel)
+    registry().register_formatter(TreeListingViewModelFormatter(template_engine=template_engine,
+                                                            template_registry=template_registry,
+                                                            console_manager=console_manager),
+                                TreeListingViewModel)
+    registry().register_formatter(SessionStatusViewModelFormatter(template_engine=template_engine,
+                                                              template_registry=template_registry,
+                                                              console_manager=console_manager),
+                                SessionStatusViewModel)
+    registry().register_formatter(ExplorationViewModelFormatter(template_engine=template_engine,
+                                                            template_registry=template_registry,
+                                                            console_manager=console_manager),
+                                ExplorationViewModel)
 
 def get_container() -> Optional[Container]:
     """Get the current container instance."""

@@ -10,14 +10,14 @@ from __future__ import annotations
 import logging
 from repomap_tool.core.logging_service import get_logger
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Protocol, Type, TypeVar, Union
+from typing import Any, List, Optional, Protocol, Type, TypeVar, Union
 from pathlib import Path
 
 import click
 from rich.console import Console
 
-from .formats import OutputFormat, OutputConfig
-from .console_manager import ConsoleManager
+from repomap_tool.models import AnalysisFormat, OutputConfig, OutputFormat
+from .console_manager import ConsoleManagerProtocol
 
 # Type variables for generic formatters
 T = TypeVar("T")
@@ -72,7 +72,7 @@ class BaseFormatter(ABC):
 
     def __init__(
         self,
-        console_manager: Optional[ConsoleManager] = None,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
         """Initialize the formatter.
@@ -327,43 +327,6 @@ class FormatterFactory(Protocol):
 
         Returns:
             List of formatter type names
-        """
-        ...
-
-
-class OutputHandler(Protocol):
-    """Protocol for output handlers that manage the complete output process."""
-
-    def handle_output(
-        self,
-        data: Any,
-        output_format: OutputFormat,
-        config: Optional[OutputConfig] = None,
-        ctx: Optional[click.Context] = None,
-    ) -> None:
-        """Handle complete output process.
-
-        Args:
-            data: The data to output
-            output_format: The output format
-            config: Optional output configuration
-            ctx: Optional Click context
-        """
-        ...
-
-    def get_formatter(
-        self,
-        data: Any,
-        output_format: OutputFormat,
-    ) -> Optional[FormatterProtocol]:
-        """Get appropriate formatter for data and format.
-
-        Args:
-            data: The data to format
-            output_format: The output format
-
-        Returns:
-            Appropriate formatter or None
         """
         ...
 

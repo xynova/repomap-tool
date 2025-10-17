@@ -163,12 +163,21 @@ class ComplexProcessor:
     def test_import_analyzer_real(self, temp_project_with_dependencies):
         """Test import analysis with real Python files."""
         from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
-        from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+        # from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser # Removed direct import
+        from tests.conftest import create_repomap_service_from_session_container
+        from repomap_tool.models import RepoMapConfig
+        from repomap_tool.cli.services import get_service_factory
 
-        # Create TreeSitterParser for the test
-        tree_sitter_parser = TreeSitterParser(
-            project_root=temp_project_with_dependencies
+        # Create configuration
+        config = RepoMapConfig(
+            project_root=temp_project_with_dependencies,
         )
+
+        # Initialize RepoMap to get configured tree_sitter_parser
+        service_factory = get_service_factory()
+        repomap = service_factory.create_repomap_service(config)
+        tree_sitter_parser = repomap.tree_sitter_parser # Get from service
+
         analyzer = ImportAnalyzer(
             project_root=temp_project_with_dependencies,
             tree_sitter_parser=tree_sitter_parser,

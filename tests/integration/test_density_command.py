@@ -15,6 +15,7 @@ from repomap_tool.cli.controllers.view_models import (
     FileDensityViewModel,
     PackageDensityViewModel,
 )
+from repomap_tool.models import SuccessResponse, OutputConfig # Import SuccessResponse and OutputConfig
 
 
 # Mock data for DensityController
@@ -175,13 +176,18 @@ def test_density_command_json_output(
             cli, ["inspect", "density", ".", "--scope", "file", "-o", "json"]
         )
 
-        # Assert that display was called with the correct ViewModel and format
-        mock_output_manager_instance.display.assert_called_once()
-        called_args, called_kwargs = mock_output_manager_instance.display.call_args
-        displayed_view_model = called_args[0]
+        # Assert that display_response was called with the correct arguments
+        mock_output_manager_instance.display_response.assert_called_once()
+        called_args, called_kwargs = mock_output_manager_instance.display_response.call_args
+        response = called_args[0]
         output_config = called_args[1]
 
-        assert isinstance(displayed_view_model, DensityAnalysisViewModel)
+        # Assert on the type of response and output_config
+        assert isinstance(response, SuccessResponse)
+        assert isinstance(output_config, OutputConfig)
+
+        # Assert on the content of the response and output_config.format
+        assert "density analysis completed" in response.message.lower()
         assert output_config.format.value == "json"
 
 

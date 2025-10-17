@@ -22,7 +22,6 @@ from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
 # from repomap_tool.code_exploration.tree_manager import TreeManager # Moved import
 from repomap_tool.code_exploration.session_manager import SessionManager
 from repomap_tool.code_analysis.advanced_dependency_graph import AdvancedDependencyGraph
-from repomap_tool.core.parallel_processor import ParallelTagExtractor
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from rich.console import Console
 
@@ -56,7 +55,6 @@ class ServiceFactory:
 
         # Get all dependencies from container
         console: Console = container.console()
-        parallel_extractor: ParallelTagExtractor = container.parallel_tag_extractor()
         fuzzy_matcher: FuzzyMatcher = container.fuzzy_matcher()
         embedding_matcher = container.embedding_matcher()
         semantic_matcher = None
@@ -71,12 +69,13 @@ class ServiceFactory:
             impact_analyzer = container.impact_analyzer()
         centrality_calculator = container.centrality_calculator()
         spellchecker_service = container.spellchecker_service()
+        tree_sitter_parser = container.tree_sitter_parser() # Get tree_sitter_parser from container
+        tag_cache = container.tag_cache() # Get tag_cache from container
 
         # Create RepoMapService with injected dependencies
         service = RepoMapService(
             config=config,
             console=console,
-            parallel_extractor=parallel_extractor,
             fuzzy_matcher=fuzzy_matcher,
             semantic_matcher=semantic_matcher,
             embedding_matcher=embedding_matcher,
@@ -85,6 +84,8 @@ class ServiceFactory:
             impact_analyzer=impact_analyzer,
             centrality_calculator=centrality_calculator,
             spellchecker_service=spellchecker_service,
+            tree_sitter_parser=tree_sitter_parser, # Pass injected parser
+            tag_cache=tag_cache, # Pass injected cache
         )
 
         self._services[cache_key] = service
