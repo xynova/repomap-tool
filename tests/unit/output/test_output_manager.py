@@ -16,7 +16,7 @@ from repomap_tool.cli.output.manager import OutputManager
 from repomap_tool.protocols import FormatterProtocol, FormatterRegistryProtocol, ConsoleManagerProtocol, TemplateEngine, TemplateRegistryProtocol # Updated imports
 from repomap_tool.cli.output.templates.engine import TemplateEngine as ConcreteTemplateEngine # Import concrete for mocks
 from repomap_tool.cli.output.templates.registry import DefaultTemplateRegistry # Import concrete for mocks
-from repomap_tool.models import ProjectInfo, SearchResponse, OutputConfig, OutputFormat # Ensure OutputConfig and OutputFormat are imported from models
+from repomap_tool.models import ProjectInfo, SearchResponse, OutputConfig, OutputFormat, ErrorResponse, SuccessResponse # Ensure OutputConfig and OutputFormat are imported from models
 
 
 class MockFormatter(FormatterProtocol):
@@ -323,8 +323,8 @@ class TestOutputManager:
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=dict) # ErrorResponseFormatter is typically used for this
-        formatter_registry.register_formatter(formatter, dict)
+        formatter = MockFormatter(data_type=ErrorResponse) # ErrorResponseFormatter is typically used for this
+        formatter_registry.register_formatter(formatter, ErrorResponse)
 
         manager = OutputManager(
             console_manager=console_manager,
@@ -351,8 +351,8 @@ class TestOutputManager:
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=dict) # SuccessResponseFormatter is typically used for this
-        formatter_registry.register_formatter(formatter, dict)
+        formatter = MockFormatter(data_type=SuccessResponse) # SuccessResponseFormatter is typically used for this
+        formatter_registry.register_formatter(formatter, SuccessResponse)
 
         manager = OutputManager(
             console_manager=console_manager,
@@ -369,10 +369,11 @@ class TestOutputManager:
             manager.display_success(message, config)
 
         assert formatter.format_called
-        # Check that success data structure was passed
-        success_data = formatter.format_args[0]
-        assert "success" in success_data
-        assert success_data["success"]["message"] == message
+        # Check that SuccessResponse object was passed
+        success_response = formatter.format_args[0]
+        assert isinstance(success_response, SuccessResponse)
+        assert success_response.message == message
+        assert success_response.status_code == 200
 
     def test_display_progress(self):
         """Test display_progress method."""

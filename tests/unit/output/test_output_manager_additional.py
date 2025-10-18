@@ -8,13 +8,17 @@ all functionality is properly tested with real scenarios.
 import pytest
 from unittest.mock import Mock, patch
 from datetime import datetime
+from pathlib import Path
 
 from repomap_tool.cli.output.manager import OutputManager
 from repomap_tool.cli.services.service_factory import ServiceFactory, get_service_factory
 from repomap_tool.cli.output.formats import OutputFormat, OutputConfig
-from repomap_tool.cli.output.console_manager import ConsoleManager
+from repomap_tool.cli.output.console_manager import DefaultConsoleManager
 from repomap_tool.cli.output.standard_formatters import FormatterRegistry
-from repomap_tool.models import ProjectInfo, SearchResponse, MatchResult
+from repomap_tool.cli.output.templates.engine import TemplateEngine as ConcreteTemplateEngine
+from repomap_tool.cli.output.templates.registry import DefaultTemplateRegistry
+from repomap_tool.cli.output.templates.registry import TemplateRegistryProtocol
+from repomap_tool.models import ProjectInfo, SearchResponse, MatchResult, RepoMapConfig
 
 
 class TestOutputManagerAdditional:
@@ -22,7 +26,7 @@ class TestOutputManagerAdditional:
 
     def test_display_with_real_project_info(self):
         """Test displaying real ProjectInfo data."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -32,6 +36,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         project_info = ProjectInfo(
@@ -54,7 +61,7 @@ class TestOutputManagerAdditional:
 
     def test_display_with_real_search_response(self):
         """Test displaying real SearchResponse data."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -64,6 +71,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         match_result = MatchResult(
@@ -94,7 +104,7 @@ class TestOutputManagerAdditional:
 
     def test_display_with_different_formats(self):
         """Test displaying data in different output formats."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -104,6 +114,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         data = {"test": "data"}
@@ -122,13 +135,16 @@ class TestOutputManagerAdditional:
 
     def test_display_error_with_different_exceptions(self):
         """Test displaying different types of exceptions."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_console = Mock()
         mock_console_manager.get_console.return_value = mock_console
 
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=Mock(spec=FormatterRegistry),
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -150,13 +166,16 @@ class TestOutputManagerAdditional:
 
     def test_display_success_with_different_messages(self):
         """Test displaying different types of success messages."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_console = Mock()
         mock_console_manager.get_console.return_value = mock_console
 
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=Mock(spec=FormatterRegistry),
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -175,13 +194,16 @@ class TestOutputManagerAdditional:
 
     def test_display_progress_with_different_stages(self):
         """Test displaying progress messages for different stages."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_console = Mock()
         mock_console_manager.get_console.return_value = mock_console
 
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=Mock(spec=FormatterRegistry),
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -203,7 +225,7 @@ class TestOutputManagerAdditional:
 
     def test_validate_format_with_different_data_types(self):
         """Test format validation with different data types."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -213,6 +235,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         # Test with different data types
@@ -233,7 +258,7 @@ class TestOutputManagerAdditional:
 
     def test_validate_format_with_unsupported_format(self):
         """Test format validation with unsupported format."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
 
         # Simulate no formatter found
@@ -242,6 +267,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         result = manager.validate_format(OutputFormat.TEXT, str)
@@ -249,7 +277,7 @@ class TestOutputManagerAdditional:
 
     def test_get_supported_formats_with_data_type(self):
         """Test getting supported formats for a specific data type."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -262,6 +290,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         supported_formats = manager.get_supported_formats(str)
@@ -272,7 +303,7 @@ class TestOutputManagerAdditional:
 
     def test_get_output_stats(self):
         """Test getting output statistics."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -282,6 +313,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -303,7 +337,7 @@ class TestOutputManagerAdditional:
 
     def test_reset_stats(self):
         """Test resetting output statistics."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -313,6 +347,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -335,7 +372,7 @@ class TestOutputManagerAdditional:
 
     def test_display_with_click_context(self):
         """Test display with Click context provided."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
         mock_formatter = Mock()
 
@@ -345,6 +382,9 @@ class TestOutputManagerAdditional:
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=mock_formatter_registry,
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         data = {"test": "data"}
@@ -360,13 +400,16 @@ class TestOutputManagerAdditional:
 
     def test_display_error_with_click_context(self):
         """Test error display with Click context provided."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_console = Mock()
         mock_console_manager.get_console.return_value = mock_console
 
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=Mock(spec=FormatterRegistry),
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -380,13 +423,16 @@ class TestOutputManagerAdditional:
 
     def test_display_success_with_click_context(self):
         """Test success display with Click context provided."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_console = Mock()
         mock_console_manager.get_console.return_value = mock_console
 
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=Mock(spec=FormatterRegistry),
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -399,13 +445,16 @@ class TestOutputManagerAdditional:
 
     def test_display_progress_with_click_context(self):
         """Test progress display with Click context provided."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_console = Mock()
         mock_console_manager.get_console.return_value = mock_console
 
         manager = OutputManager(
             console_manager=mock_console_manager,
             formatter_registry=Mock(spec=FormatterRegistry),
+            template_engine=Mock(spec=ConcreteTemplateEngine),
+            template_registry=Mock(spec=TemplateRegistryProtocol),
+            enable_logging=False,
         )
 
         config = OutputConfig(format=OutputFormat.TEXT)
@@ -422,9 +471,19 @@ class TestOutputManagerFactoryAdditional:
 
     def test_create_output_manager_with_all_parameters(self):
         """Test creating output manager with all parameters provided."""
-        mock_console_manager = Mock(spec=ConsoleManager)
+        mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
-        mock_config = Mock(spec=OutputConfig) # Mock a config object
+        mock_config = Mock(spec=RepoMapConfig) # Mock a config object
+        mock_config.project_root = Path("/tmp/test")
+        mock_config.cache_dir = Path("/tmp/cache")
+        mock_config.verbose = True
+        mock_config.log_level = "INFO"
+        mock_config.performance = Mock()
+        mock_config.fuzzy_match = Mock()
+        mock_config.semantic_match = Mock()
+        mock_config.embedding = Mock()
+        mock_config.trees = Mock()
+        mock_config.dependencies = Mock()
 
         service_factory = get_service_factory() # Get the global service factory
         manager = service_factory.create_output_manager(
@@ -439,7 +498,17 @@ class TestOutputManagerFactoryAdditional:
 
     def test_create_output_manager_with_partial_parameters(self):
         """Test creating output manager with partial parameters."""
-        mock_config = Mock(spec=OutputConfig)
+        mock_config = Mock(spec=RepoMapConfig)
+        mock_config.project_root = Path("/tmp/test")
+        mock_config.cache_dir = Path("/tmp/cache")
+        mock_config.verbose = True
+        mock_config.log_level = "INFO"
+        mock_config.performance = Mock()
+        mock_config.fuzzy_match = Mock()
+        mock_config.semantic_match = Mock()
+        mock_config.embedding = Mock()
+        mock_config.trees = Mock()
+        mock_config.dependencies = Mock()
         service_factory = get_service_factory()
         manager = service_factory.create_output_manager(
             config=mock_config,
@@ -449,7 +518,17 @@ class TestOutputManagerFactoryAdditional:
 
     def test_create_output_manager_with_no_parameters(self):
         """Test creating output manager with no parameters."""
-        mock_config = Mock(spec=OutputConfig)
+        mock_config = Mock(spec=RepoMapConfig)
+        mock_config.project_root = Path("/tmp/test")
+        mock_config.cache_dir = Path("/tmp/cache")
+        mock_config.verbose = True
+        mock_config.log_level = "INFO"
+        mock_config.performance = Mock()
+        mock_config.fuzzy_match = Mock()
+        mock_config.semantic_match = Mock()
+        mock_config.embedding = Mock()
+        mock_config.trees = Mock()
+        mock_config.dependencies = Mock()
         service_factory = get_service_factory()
         manager = service_factory.create_output_manager(
             config=mock_config,

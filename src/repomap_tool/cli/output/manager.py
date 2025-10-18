@@ -54,7 +54,8 @@ class OutputManager(OutputManagerProtocol):
         self.template_registry = template_registry
         self.logger = get_logger(__name__)
         self.enable_logging = enable_logging
-        self.logger.debug(f"OutputManager initialized (id={id(self)}). FormatterRegistry id={id(self.formatter_registry)}, registered formatters: {len(self.formatter_registry.get_all_formatters())}")
+        if self.enable_logging:
+            self.logger.debug(f"OutputManager initialized (id={id(self)}). FormatterRegistry id={id(self.formatter_registry)}, registered formatters: {len(self.formatter_registry.get_all_formatters())}")
 
         # Track output statistics
         self._output_stats: Dict[str, int] = {
@@ -177,7 +178,7 @@ class OutputManager(OutputManagerProtocol):
             # Create a SuccessResponse object
             success_response = SuccessResponse(
                 message=message,
-                status="completed"
+                status_code=200
             )
 
             # Display the SuccessResponse object, which should be handled by SuccessResponseFormatter

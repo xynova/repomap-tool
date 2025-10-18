@@ -39,7 +39,9 @@ class TreeSitterTagCache:
             self._cache_disabled = True
         else:
             self._cache_disabled = False
-            # _init_db is now called via _get_db_connection()
+            # Initialize database file if it doesn't exist
+            if not self.db_path.exists():
+                self._get_db_connection().close()
 
     def _get_db_connection(self) -> sqlite3.Connection:
         """Get a database connection, initializing the schema if the DB is new or table is missing."""
