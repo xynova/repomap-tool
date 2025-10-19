@@ -140,27 +140,86 @@ class TestCLICore:
             analysis_time_ms=100.0,
             last_updated=datetime.now(),
         )
-
-        # Patch the repo_map_service provider in the container
-        with session_container.repo_map_service.override(mock_repo_map_service):
-            result = cli_runner_with_container.invoke(
-                cli,
-                [
-                    "index",
-                    "create",
-                    temp_project,
-                    "--fuzzy",
-                    "--no-progress",
-                    "--output",
-                    "json",
-                ],
+        
+        # Debug: Check if the mock is being called
+        def mock_analyze_project(*args, **kwargs):
+            print(f"Mock analyze_project called with args: {args}, kwargs: {kwargs}")
+            return ProjectInfo(
+                project_root=temp_project,
+                total_files=1,
+                total_identifiers=1,
+                file_types={"py": 1},
+                identifier_types={"function": 1},
+                analysis_time_ms=100.0,
+                last_updated=datetime.now(),
             )
-            assert result.exit_code == 0
-            # Verify that JSON output contains expected fields
-            import json
-            output_data = json.loads(result.output)
-            assert "project_root" in output_data
-            assert output_data["project_root"] == temp_project
+        
+        mock_repo_map_service.analyze_project.side_effect = mock_analyze_project
+
+        # Mock the service factory to return our mock service
+        with patch('repomap_tool.cli.services.service_factory.get_service_factory') as mock_factory:
+            mock_factory.return_value.create_repomap_service.return_value = mock_repo_map_service
+            print(f"Mock factory set up: {mock_factory.return_value}")
+            
+            # Also mock the analyze_project method directly on the mock service
+            mock_repo_map_service.analyze_project.return_value = ProjectInfo(
+                project_root=temp_project,
+                total_files=1,
+                total_identifiers=1,
+                file_types={"py": 1},
+                identifier_types={"function": 1},
+                analysis_time_ms=100.0,
+                last_updated=datetime.now(),
+            )
+            
+            # Also patch the RepoMapService.analyze_project method directly
+            with patch('repomap_tool.core.repo_map.RepoMapService.analyze_project') as mock_analyze:
+                mock_analyze.return_value = ProjectInfo(
+                    project_root=temp_project,
+                    total_files=1,
+                    total_identifiers=1,
+                    file_types={"py": 1},
+                    identifier_types={"function": 1},
+                    analysis_time_ms=100.0,
+                    last_updated=datetime.now(),
+                )
+                
+                result = cli_runner_with_container.invoke(
+                    cli,
+                    [
+                        "index",
+                        "create",
+                        temp_project,
+                        "--fuzzy",
+                        "--no-progress",
+                        "--output",
+                        "json",
+                    ],
+                )
+                print(f"Exit code: {result.exit_code}")
+                print(f"Output: {result.output}")
+                print(f"Mock factory called: {mock_factory.called}")
+                print(f"Mock factory return value called: {mock_factory.return_value.create_repomap_service.called}")
+                print(f"Mock service analyze_project called: {mock_repo_map_service.analyze_project.called}")
+                print(f"Mock analyze called: {mock_analyze.called}")
+                
+                # Check if the command succeeded
+                if result.exit_code != 0:
+                    print(f"Command failed with exit code {result.exit_code}")
+                    print(f"Error output: {result.output}")
+                    assert False, f"Command failed with exit code {result.exit_code}: {result.output}"
+                
+                # Verify that JSON output contains expected fields
+                import json
+                try:
+                    output_data = json.loads(result.output)
+                    print(f"Parsed JSON: {output_data}")
+                    assert "project_root" in output_data
+                    assert output_data["project_root"] == temp_project
+                except json.JSONDecodeError as e:
+                    print(f"Failed to parse JSON: {e}")
+                    print(f"Raw output: {result.output}")
+                    assert False, f"Failed to parse JSON: {e}"
 
     def test_search_command_exists(self, cli_runner_with_container: CliRunner) -> None:
         """Test that search command exists and shows help."""
@@ -189,7 +248,26 @@ class TestCLICore:
             search_time_ms=50.0,
         )
 
-        with session_container.repo_map_service.override(mock_repo_map_service):
+        # Mock the RepoMapService.search_identifiers method directly
+        with patch('repomap_tool.core.repo_map.RepoMapService.search_identifiers') as mock_search:
+            mock_search.return_value = SearchResponse(
+                query="test",
+                match_type="fuzzy",
+                threshold=0.7,
+                total_results=1,
+                results=[
+                    MatchResult(
+                        identifier="test_function",
+                        score=0.9,
+                        strategy="prefix",
+                        match_type="fuzzy",
+                        file_path="src/main.py",
+                        line_number=1,
+                    )
+                ],
+                search_time_ms=50.0,
+            )
+            
             # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner_with_container.invoke(
                 cli,
@@ -201,6 +279,7 @@ class TestCLICore:
                     "fuzzy",
                 ],
             )
+            
             if result.exit_code != 0:
                 print(f"CLI Output: {result.output}")
                 print(f"CLI Exception: {result.exception}")

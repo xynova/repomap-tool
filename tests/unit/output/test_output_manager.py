@@ -603,6 +603,7 @@ class TestOutputManagerIntegration:
         """Test display with real ProjectInfo data."""
         console_manager = MockConsoleManager()
         template_engine = Mock(spec=ConcreteTemplateEngine)
+        template_engine.render_template.return_value = "Project Analysis\nTotal Files: 10\nTotal Identifiers: 50"
         template_registry = Mock(spec=TemplateRegistryProtocol)
         formatter_registry = MockFormatterRegistry(
             console_manager=console_manager,
