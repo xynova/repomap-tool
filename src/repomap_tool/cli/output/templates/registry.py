@@ -139,3 +139,7 @@ class DefaultTemplateRegistry(TemplateRegistryProtocol): # Explicitly implement 
         except Exception as e:
             if self._logger:
                 self._logger.error(f"Failed to load default templates: {e}")
+
+
+# Alias for backward compatibility
+TemplateRegistry = DefaultTemplateRegistry

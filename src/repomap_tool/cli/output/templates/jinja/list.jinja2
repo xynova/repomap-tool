@@ -1,0 +1,26 @@
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{# Header with conditional emoji #}
+{% if emoji %}📋{% else %}List{% endif %} {{ data.title or "Items" }}
+{{ "=" * 60 }}
+
+{# Summary section #}
+{% if emoji %}📊{% endif %} SUMMARY:
+{% if hierarchical %}├──{% else %}•{% endif %} Total Items: {{ data.items|length }}
+{% if data.description %}
+{% if hierarchical %}└──{% else %}•{% endif %} Description: {{ data.description }}
+{% endif %}
+
+{# Items section with conditional display #}
+{% if data.items %}
+{% if emoji %}🎯{% endif %} ITEMS:
+{% for item in data.items %}
+{% if hierarchical %}├──{% else %}•{% endif %} {{ item }}
+{% if not loop.last %}
+{% if hierarchical %}│{% endif %}
+{% endif %}
+{% endfor %}
+{% else %}
+{% if emoji %}❌{% endif %} No items found
+{% endif %}

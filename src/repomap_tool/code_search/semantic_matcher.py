@@ -560,3 +560,7 @@ class DomainSemanticMatcher:
             logger.info(
                 f"Added custom mapping for category '{category}' with {len(terms)} terms"
             )
+
+
+# Alias for backward compatibility
+SemanticMatcher = DomainSemanticMatcher

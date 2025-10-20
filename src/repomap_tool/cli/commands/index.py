@@ -134,7 +134,7 @@ def create(
         # Resolve project path from argument, config file, or discovery
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         if resolved_project_path is None:
             raise click.BadParameter("Project path could not be resolved.")
@@ -166,6 +166,11 @@ def create(
             no_monitoring=no_monitoring,
             log_level=log_level,
         )
+        
+        # Suppress logging for JSON output to avoid mixing with output
+        if output == "json":
+            import logging
+            logging.getLogger().setLevel(logging.CRITICAL)
 
         # Configure the container with the loaded config_obj
         configure_container(ctx.obj["container"], config_obj)
@@ -190,7 +195,9 @@ def create(
         ):
             # console = get_index_console()
             console = get_console(ctx)
-            console.print("[cyan]Computing embeddings for all identifiers...[/cyan]")
+            # Only print progress messages if not using JSON output
+            if output != "json":
+                console.print("[cyan]Computing embeddings for all identifiers...[/cyan]")
 
             # Get all identifiers from tree-sitter cache
             identifiers_with_files = {}
@@ -205,13 +212,17 @@ def create(
                 repomap.embedding_matcher.batch_compute_embeddings(
                     identifiers_with_files
                 )
-                console.print(
-                    f"[green]✓ Cached embeddings for {len(identifiers_with_files)} identifiers[/green]"
-                )
+                # Only print progress messages if not using JSON output
+                if output != "json":
+                    console.print(
+                        f"[green]✓ Cached embeddings for {len(identifiers_with_files)} identifiers[/green]"
+                    )
             else:
-                console.print(
-                    "[yellow]No identifiers found for embedding computation[/yellow]"
-                )
+                # Only print progress messages if not using JSON output
+                if output != "json":
+                    console.print(
+                        "[yellow]No identifiers found for embedding computation[/yellow]"
+                    )
 
         # Create output configuration
         output_config = OutputConfig(

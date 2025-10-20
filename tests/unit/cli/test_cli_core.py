@@ -211,8 +211,32 @@ class TestCLICore:
                 
                 # Verify that JSON output contains expected fields
                 import json
+                import re
                 try:
-                    output_data = json.loads(result.output)
+                    # Extract JSON from output (skip logging messages and errors)
+                    output_lines = result.output.strip().split('\n')
+                    json_lines = []
+                    in_json = False
+                    for line in output_lines:
+                        # Skip logging messages, errors, and empty lines
+                        if (line.startswith('--- Logging error ---') or 
+                            line.startswith('Traceback') or 
+                            line.startswith('  File ') or
+                            line.startswith('INFO') or
+                            line.startswith('ERROR') or
+                            line.startswith('WARNING') or
+                            line.startswith('DEBUG') or
+                            not line.strip()):
+                            continue
+                        if line.strip().startswith('{'):
+                            in_json = True
+                        if in_json:
+                            json_lines.append(line)
+                    
+                    json_output = '\n'.join(json_lines)
+                    print(f"Extracted JSON: {json_output}")
+                    
+                    output_data = json.loads(json_output)
                     print(f"Parsed JSON: {output_data}")
                     assert "project_root" in output_data
                     assert output_data["project_root"] == temp_project

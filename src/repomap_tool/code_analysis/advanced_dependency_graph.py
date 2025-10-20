@@ -12,6 +12,7 @@ from typing import List, Dict, Set, Optional, Any, Tuple
 from collections import defaultdict, deque
 
 from .dependency_graph import DependencyGraph
+from .import_analyzer import ImportAnalyzer
 from .call_graph_builder import CallGraphBuilder
 from .models import CallGraph, FunctionCall
 

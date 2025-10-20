@@ -119,7 +119,7 @@ def start(
         # Resolve project path from argument, config file, or discovery
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         # Get or create session ID
         session_id = get_or_create_session(session)
@@ -130,7 +130,7 @@ def start(
         config_obj, was_created = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 
@@ -162,7 +162,6 @@ def start(
             project_path=resolved_project_path,
             max_depth=max_depth,
             max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
-            initial_files=list(input_paths) if input_paths else None, # Pass input_paths as initial_files
         )
 
         # Display results
@@ -204,7 +203,7 @@ def focus(tree_id: str, session: Optional[str], output: str) -> None:
         config_obj, was_created = load_or_create_config(
             project_path=ctx.obj.get("project_root"),
             config_file=None,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 
@@ -259,7 +258,7 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
         config_obj, was_created = load_or_create_config(
             project_path=ctx.obj.get("project_root"),
             config_file=None,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 
@@ -315,7 +314,7 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
         config_obj, was_created = load_or_create_config(
             project_path=ctx.obj.get("project_root"),
             config_file=None,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 
@@ -372,7 +371,7 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
         config_obj, was_created = load_or_create_config(
             project_path=ctx.obj.get("project_root"),
             config_file=None,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 
@@ -428,7 +427,7 @@ def trees(session: Optional[str]) -> None:
         config_obj, was_created = load_or_create_config(
             project_path=ctx.obj.get("project_root"),
             config_file=None,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 
@@ -486,7 +485,7 @@ def status(session: Optional[str]) -> None:
         config_obj, was_created = load_or_create_config(
             project_path=ctx.obj.get("project_root"),
             config_file=None,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=True,
         )
 

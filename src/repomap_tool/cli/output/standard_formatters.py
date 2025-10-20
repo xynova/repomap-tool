@@ -439,6 +439,15 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(search_view_model_formatter)
+        
+        # Register ExplorationViewModelFormatter
+        from .exploration_formatters import ExplorationViewModelFormatter
+        exploration_view_model_formatter = ExplorationViewModelFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(exploration_view_model_formatter)
 
     def register_formatter(
         self,

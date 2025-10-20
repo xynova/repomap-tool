@@ -13,6 +13,62 @@ from ..models import MatchResult
 # Exception imports removed since we're using graceful degradation instead of raising exceptions
 
 
+class SearchEngine:
+    """Search engine service for handling different types of search operations."""
+    
+    def __init__(
+        self,
+        fuzzy_matcher: Optional[MatcherProtocol] = None,
+        semantic_matcher: Optional[MatcherProtocol] = None,
+        hybrid_matcher: Optional[MatcherProtocol] = None,
+    ):
+        """Initialize the search engine.
+        
+        Args:
+            fuzzy_matcher: Fuzzy matching service
+            semantic_matcher: Semantic matching service  
+            hybrid_matcher: Hybrid matching service
+        """
+        self.fuzzy_matcher = fuzzy_matcher
+        self.semantic_matcher = semantic_matcher
+        self.hybrid_matcher = hybrid_matcher
+    
+    def search(
+        self,
+        query: str,
+        identifiers: List[str],
+        search_type: str = "fuzzy",
+        limit: int = None,
+        threshold: float = None,
+    ) -> List[MatchResult]:
+        """Perform search based on the specified type.
+        
+        Args:
+            query: Search query
+            identifiers: List of identifiers to search in
+            search_type: Type of search (fuzzy, semantic, hybrid)
+            limit: Maximum number of results
+            threshold: Threshold for hybrid search
+            
+        Returns:
+            List of match results
+        """
+        if limit is None:
+            limit = get_config("MAX_LIMIT", 10)
+        if threshold is None:
+            threshold = get_config("HYBRID_THRESHOLD", 0.3)
+            
+        if search_type == "fuzzy":
+            return fuzzy_search(query, identifiers, self.fuzzy_matcher, limit)
+        elif search_type == "semantic":
+            return semantic_search(query, identifiers, self.semantic_matcher, limit)
+        elif search_type == "hybrid":
+            return hybrid_search(query, identifiers, self.hybrid_matcher, limit, threshold)
+        else:
+            # Default to basic search
+            return basic_search(query, identifiers, limit)
+
+
 def fuzzy_search(
     query: str,
     identifiers: List[str],

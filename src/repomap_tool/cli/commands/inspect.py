@@ -15,6 +15,7 @@ from rich.progress import Progress, SpinnerColumn, TextColumn
 
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.container_config import configure_container
+from repomap_tool.cli.config.loader import load_or_create_config
 
 from ...models import (
     SearchRequest,
@@ -68,13 +69,13 @@ def cycles(
         # Resolve project path from argument, config file, or discovery
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         # Load or create configuration (properly handles config files)
         config_obj, was_created = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=verbose,
         )
 
@@ -173,7 +174,7 @@ def density(
         # Resolve project path and load config
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         if resolved_project_path is None:
             raise click.BadParameter("Project path could not be resolved.")
@@ -193,7 +194,7 @@ def density(
         config_obj, _ = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=verbose,
         )
 
@@ -288,7 +289,7 @@ def centrality(
         # Resolve project path from argument, config file, or discovery
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         # Load or create configuration (properly handles config files)
         from repomap_tool.cli.config.loader import load_or_create_config
@@ -296,7 +297,7 @@ def centrality(
         config_obj, was_created = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=verbose,
         )
 
@@ -434,11 +435,8 @@ def impact(
     if files and input_paths:
         raise click.BadParameter("Cannot specify both --files and positional input paths.")
     elif files:
-        # Ensure files are absolute paths
-        project_root = ctx.obj.get("project_root")
-        if not project_root: # fallback for scenarios where global project_root might not be set in ctx
-            project_root = resolve_project_path(None, None)
-        
+        # Ensure files are absolute paths - use the project root from context
+        project_root = Path(ctx.obj.get("project_root", ".")).resolve()
         for f in files:
             abs_path = Path(f).resolve()
             if not abs_path.is_relative_to(project_root): # type: ignore
@@ -446,10 +444,7 @@ def impact(
             target_files_for_impact.append(str(abs_path))
 
     elif input_paths:
-        project_root = ctx.obj.get("project_root")
-        if not project_root: # fallback for scenarios where global project_root might not be set in ctx
-            project_root = resolve_project_path(None, None)
-
+        project_root = Path(ctx.obj.get("project_root", ".")).resolve()
         for p in input_paths:
             abs_path = Path(p).resolve()
             if not abs_path.is_relative_to(project_root): # type: ignore
@@ -469,7 +464,7 @@ def impact(
         # Resolve project path from argument, config file, or discovery
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         # Load or create configuration (properly handles config files)
         from repomap_tool.cli.config.loader import load_or_create_config
@@ -477,7 +472,7 @@ def impact(
         config_obj, was_created = load_or_create_config(
             project_path=resolved_project_path,
             config_file=config,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=verbose,
         )
 

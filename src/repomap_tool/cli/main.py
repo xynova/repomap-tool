@@ -42,6 +42,7 @@ def cli(ctx: click.Context, project_root: Optional[Path], no_color: bool) -> Non
 
     # Use the provided project_root or fallback to current working directory
     effective_project_root = project_root if project_root else Path.cwd()
+    ctx.obj["project_root"] = str(effective_project_root)
 
     # Initialize console provider with dependency injection
     from repomap_tool.core.container import create_container

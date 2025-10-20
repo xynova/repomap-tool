@@ -470,3 +470,7 @@ class ExplorationViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             return self.render_template("exploration", data, config)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
+    
+    def get_data_type(self) -> Type[Any]:
+        """Get the data type this formatter handles."""
+        return ExplorationViewModel

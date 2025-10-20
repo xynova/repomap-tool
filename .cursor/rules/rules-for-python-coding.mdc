@@ -1,8 +1,7 @@
 ---
-description: Python coding standards for DRY, mypy-compatible, Pydantic-based code with proper formatting
-globs:
-  - "**/*.py"
-alwaysApply: true
+description: Python Coding Rules and Best Practices
+alwaysApply: false
+keywords: [python, coding, rules, best-practices, black, flake8, mypy, pydantic, type-safety, data-validation, error-handling, testing, dependency-injection, solid-principles, interface-design, logging, resource-management, utility-functions, import-organization, testing-integration, performance-considerations, documentation-standards, code-review, anti-patterns, tools-and-automation, summary, solid-principles-anti-patterns, dry-principles, modern-python, python-3.11, formatting, linting, type-checking, pydantic-models, architecture-patterns, class-design, error-handling-standards, utility-functions-helpers, import-organization, dependency-injection-patterns, testing-integration, mandatory-completion-checklist, verification-protocol, anti-cheating-protocols, success-criteria, interface-design-principles]
 ---
 
 # 🐍 **PYTHON CODING STANDARDS**

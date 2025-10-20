@@ -14,7 +14,7 @@ from typing import List, Dict, Any, Optional
 
 from ...models import SearchRequest, SearchResponse, MatchResult
 from ...core.repo_map import RepoMapService
-from ...code_search.search_engine import SearchEngine
+from ...core.search_engine import SearchEngine
 from ...code_search.fuzzy_matcher import FuzzyMatcher
 from ...code_search.semantic_matcher import SemanticMatcher
 from .base_controller import BaseController

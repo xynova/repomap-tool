@@ -14,7 +14,7 @@ from pathlib import Path
 
 from .ast_file_analyzer import ASTFileAnalyzer, FileAnalysisResult
 from .dependency_graph import DependencyGraph
-from .path_normalizer import PathNormalizer
+from .path_resolver import PathResolver
 from .file_utils import suggest_test_files
 from .models import FileImpactAnalysis
 
@@ -28,7 +28,7 @@ class ImpactAnalysisEngine:
         self,
         ast_analyzer: ASTFileAnalyzer,
         dependency_graph: Optional[DependencyGraph] = None,
-        path_normalizer: Optional[PathNormalizer] = None,
+        path_normalizer: Optional[PathResolver] = None,
     ):
         """Initialize the impact analysis engine.
 

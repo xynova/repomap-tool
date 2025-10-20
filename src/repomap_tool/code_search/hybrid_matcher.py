@@ -18,7 +18,7 @@ from typing import Dict, List, Set, Tuple, Any, Optional
 from collections import Counter
 import math
 from .embedding_matcher import EmbeddingMatcher
-from .semantic_matcher import SemanticMatcher
+from .semantic_matcher import DomainSemanticMatcher
 
 # Import our existing fuzzy matcher
 from .fuzzy_matcher import FuzzyMatcher
@@ -41,7 +41,7 @@ class HybridMatcher:
         self,
         fuzzy_matcher: FuzzyMatcher,
         embedding_matcher: Optional[EmbeddingMatcher] = None,
-        domain_semantic_matcher: Optional[SemanticMatcher] = None,
+        domain_semantic_matcher: Optional[DomainSemanticMatcher] = None,
         semantic_threshold: float = get_config("SEMANTIC_THRESHOLD", 0.3),
         use_word_embeddings: bool = False,
         verbose: bool = True,

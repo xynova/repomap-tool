@@ -20,11 +20,11 @@ from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from repomap_tool.code_analysis.dependency_graph import DependencyGraph
 from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
-from repomap_tool.code_search.semantic_matcher import SemanticMatcher
+from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.code_search.embedding_matcher import EmbeddingMatcher
 from repomap_tool.code_search.hybrid_matcher import HybridMatcher
 from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
-from repomap_tool.core.spellchecker_service import SpellcheckerService
+from repomap_tool.core.spellchecker_service import SpellCheckerService
 from repomap_tool.core.tag_cache import TreeSitterTagCache
 from rich.console import Console
 import traceback
@@ -49,7 +49,7 @@ try:
         AdaptiveSemanticMatcher,
     )
     from repomap_tool.code_search.hybrid_matcher import HybridMatcher
-    from repomap_tool.code_search.semantic_matcher import SemanticMatcher
+    from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
     from repomap_tool.code_search.embedding_matcher import EmbeddingMatcher
 
     MATCHERS_AVAILABLE = True
@@ -75,11 +75,11 @@ class RepoMapService:
         centrality_calculator: CentralityCalculator,
         tree_sitter_parser: TreeSitterParser,
         tag_cache: TreeSitterTagCache,
-        semantic_matcher: Optional[SemanticMatcher] = None,
+        semantic_matcher: Optional[DomainSemanticMatcher] = None,
         embedding_matcher: Optional[EmbeddingMatcher] = None,
         hybrid_matcher: Optional[HybridMatcher] = None,
         impact_analyzer: Optional[ImpactAnalyzer] = None,
-        spellchecker_service: Optional[SpellcheckerService] = None,
+        spellchecker_service: Optional[SpellCheckerService] = None,
     ):
         """
         Initialize RepoMapService with validated configuration and injected dependencies.

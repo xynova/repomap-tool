@@ -116,3 +116,7 @@ def log_console_operation(operation: str, **context: Any) -> None:
     manager = get_console_manager()
     manager.log_operation(operation, context=context)
 
+
+# Alias for backward compatibility
+ConsoleManager = DefaultConsoleManager
+

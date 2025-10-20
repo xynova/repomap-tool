@@ -98,7 +98,7 @@ def search(
         # Resolve project path and load config
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
         project_root = ctx.obj.get("project_root")
-        resolved_project_path = resolve_project_path(None, project_root)
+        resolved_project_path = resolve_project_path(project_root, None)
 
         if resolved_project_path is None:
             raise click.BadParameter("Project path could not be resolved.")
@@ -115,7 +115,7 @@ def search(
         config_obj, was_created = load_or_create_config(
             project_root=resolved_project_path,
             config_file=config,
-            create_if_missing=False,
+            create_if_missing=True,
             verbose=verbose,
         )
 

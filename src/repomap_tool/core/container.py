@@ -437,33 +437,7 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
-    # Search controller for exploration
-    search_controller: "providers.Factory[SearchController]" = cast(
-        "providers.Factory[SearchController]",
-        providers.Factory(
-            "repomap_tool.cli.controllers.search_controller.SearchController",
-            repomap_service=None,  # Will be injected from context
-            search_engine=None,  # Optional
-            fuzzy_matcher=fuzzy_matcher,
-            # Dynamically select semantic_matcher based on config
-            semantic_matcher=providers.Selector(
-                config.semantic_match.enabled,
-                true=adaptive_semantic_matcher, # Use adaptive if enabled
-                false=domain_semantic_matcher, # Fallback to domain if disabled
-            ),
-        ),
-    )
 
-    # Exploration controller
-    exploration_controller: "providers.Factory[ExplorationController]" = cast(
-        "providers.Factory[ExplorationController]",
-        providers.Factory(
-            "repomap_tool.cli.controllers.exploration_controller.ExplorationController",
-            search_controller=search_controller,
-            session_manager=session_manager,
-            tree_builder=tree_builder,
-        ),
-    )
 
     # RepoMapConfig provider that converts dictionary to RepoMapConfig object
     repo_map_config: "providers.Singleton[RepoMapConfig]" = cast(
@@ -484,6 +458,17 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # Search Engine
+    search_engine: "providers.Singleton[SearchEngine]" = cast(
+        "providers.Singleton[SearchEngine]",
+        providers.Singleton(
+            "repomap_tool.core.search_engine.SearchEngine",
+            fuzzy_matcher=fuzzy_matcher,
+            semantic_matcher=adaptive_semantic_matcher,
+            hybrid_matcher=hybrid_matcher,
+        ),
+    )
+
     # RepoMap Service
     repo_map_service: "providers.Singleton[RepoMapService]" = cast(
         "providers.Singleton[RepoMapService]",
@@ -501,6 +486,30 @@ class Container(containers.DeclarativeContainer):
             spellchecker_service=spellchecker_service,
             tree_sitter_parser=tree_sitter_parser,
             tag_cache=tag_cache,
+        ),
+    )
+
+    # Search controller for exploration
+    search_controller: "providers.Factory[SearchController]" = cast(
+        "providers.Factory[SearchController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.search_controller.SearchController",
+            repomap_service=repo_map_service,
+            search_engine=search_engine,
+            fuzzy_matcher=fuzzy_matcher,
+            # Use adaptive semantic matcher by default
+            semantic_matcher=adaptive_semantic_matcher,
+        ),
+    )
+
+    # Exploration controller
+    exploration_controller: "providers.Factory[ExplorationController]" = cast(
+        "providers.Factory[ExplorationController]",
+        providers.Factory(
+            "repomap_tool.cli.controllers.exploration_controller.ExplorationController",
+            search_controller=search_controller,
+            session_manager=session_manager,
+            tree_builder=tree_builder,
         ),
     )
 

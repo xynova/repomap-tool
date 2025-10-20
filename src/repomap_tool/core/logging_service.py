@@ -61,7 +61,7 @@ class LoggingService:
 
         # Add console handler
         if enable_console:
-            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler = logging.StreamHandler(sys.stderr)
             console_handler.setLevel(numeric_level)
             console_formatter = logging.Formatter(self._log_format)
             console_handler.setFormatter(console_formatter)

@@ -1,22 +1,8 @@
 ---
-description: Setup rules for RepoMap-Tool with reasoning protocols
-globs:
 alwaysApply: true
-keywords: [setup, venv, virtual environment, makefile, make install, make test-unit, make clean, existing setup, current setup, working software, dependencies, environment, activation, source venv, python path, test logic, infrastructure, rebuild, scratch, forbidden actions, required actions, existing tools, workflow, goal, remember, testing, correct command, wrong command]
 ---
 
-# 🤖 **AI REASONING PROTOCOL**
-
-## **Before Taking Any Setup Action:**
-**ALWAYS provide step-by-step reasoning that:**
-1. States what setup action you're about to take
-2. Explains which rules from this document apply
-3. Shows how you've considered those rules in your approach
-4. Outlines your specific plan and next steps
-
----
-
-# AI Instructions: Use Existing Setup - NO NEW VENVS
+# Use Existing Setup - NO NEW VENVS
 
 ## 🚫 FORBIDDEN ACTIONS:
 - **DO NOT** create new virtual environments

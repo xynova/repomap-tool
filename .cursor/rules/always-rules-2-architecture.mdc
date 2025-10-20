@@ -1,8 +1,5 @@
 ---
-description: Architecture rules for AI (Cursor) to follow when developing RepoMap-Tool
-globs:
 alwaysApply: true
-keywords: [architecture, tree-sitter, dependency injection, di, output manager, template system, caching, mvc controller, viewmodel, configuration, logging, service factory, cli commands, formatters, templates, jinja2, tree-sitter parser, get_tags, centralized config, centralized logging, absolute paths, constructor injection, service factory pattern, output management, template-based rendering, dependency validation, error handling, test coverage, ci pipeline, quality gates, architectural patterns, implementation patterns, anti-patterns, code quality, performance, extensibility, migration guidelines, development workflow, ai development, cursor development, repomap-tool development, architectural consistency, code quality gates, development checklist, ai success criteria, architectural integrity]
 ---
 
 # 🤖 **AI REASONING PROTOCOL**
