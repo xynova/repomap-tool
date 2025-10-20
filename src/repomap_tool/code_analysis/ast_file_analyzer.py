@@ -14,6 +14,7 @@ from typing import List, Dict, Set, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 from enum import Enum
 
+from .tree_sitter_parser import TreeSitterParser
 from .models import (
     Import,
     ImportType,
@@ -40,8 +41,8 @@ class ASTFileAnalyzer:
 
     def __init__(
         self,
+        tree_sitter_parser: TreeSitterParser,
         project_root: Optional[str] = None,
-        tree_sitter_parser: Optional[Any] = None,
     ):
         """Initialize the tree-sitter file analyzer.
 
@@ -49,9 +50,7 @@ class ASTFileAnalyzer:
             project_root: Root path of the project for resolving relative imports
             tree_sitter_parser: TreeSitterParser instance (required dependency)
         """
-        # Validate required dependency
-        if tree_sitter_parser is None:
-            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None

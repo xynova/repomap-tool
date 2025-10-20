@@ -15,6 +15,7 @@ from typing import Any, List, Set, TYPE_CHECKING, Union, Protocol
 # Import models from llm_file_analyzer to avoid circular imports
 # These will be imported at runtime when needed
 from .function_utils import get_functions_called_from_file
+from .ast_file_analyzer import ASTFileAnalyzer
 
 if TYPE_CHECKING:
     from ..llm.token_optimizer import TokenOptimizer
@@ -183,7 +184,7 @@ def format_llm_optimized_centrality(
     token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
     project_root: str,
-    ast_analyzer: Any,
+    ast_analyzer: ASTFileAnalyzer,
 ) -> str:
     """Format centrality analysis for LLM consumption."""
     if len(analyses) == 1:
@@ -201,7 +202,7 @@ def format_single_file_centrality_llm(
     token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
     project_root: str,
-    ast_analyzer: Any,
+    ast_analyzer: ASTFileAnalyzer,
 ) -> str:
     """Format single file centrality analysis for LLM."""
     output = []
@@ -713,7 +714,7 @@ def format_text_centrality(
     token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
     project_root: str,
-    ast_analyzer: Any,
+    ast_analyzer: ASTFileAnalyzer,
 ) -> str:
     """Format centrality analysis as plain text."""
     return format_llm_optimized_centrality(

@@ -16,6 +16,10 @@ from repomap_tool.models import Entrypoint, RepoMapConfig
 from repomap_tool.core import RepoMapService
 from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+from repomap_tool.code_analysis.dependency_graph import DependencyGraph
+from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
 
 # Phase 2: Dependency analysis integration
 from repomap_tool.code_analysis import (
@@ -31,11 +35,11 @@ class EntrypointDiscoverer:
 
     def __init__(
         self,
+        import_analyzer: ImportAnalyzer,
+        dependency_graph: DependencyGraph,
+        centrality_calculator: CentralityCalculator,
         repo_map: Optional[RepoMapService] = None,
-        import_analyzer: Optional[Any] = None,
-        dependency_graph: Optional[Any] = None,
-        centrality_calculator: Optional[Any] = None,
-        impact_analyzer: Optional[Any] = None,
+        impact_analyzer: Optional[ImpactAnalyzer] = None,
     ):
         """Initialize entrypoint discoverer with injected dependencies.
 
@@ -63,15 +67,7 @@ class EntrypointDiscoverer:
         # Fuzzy matching threshold (70% similarity)
         self.fuzzy_threshold = get_config("FUZZY_THRESHOLD", 0.7)
 
-        # All dependencies must be injected - no fallback allowed
-        if import_analyzer is None:
-            raise ValueError("ImportAnalyzer must be injected - no fallback allowed")
-        if dependency_graph is None:
-            raise ValueError("DependencyGraph must be injected - no fallback allowed")
-        if centrality_calculator is None:
-            raise ValueError(
-                "CentralityCalculator must be injected - no fallback allowed"
-            )
+        # All core dependencies are required and injected via DI container
 
         self.import_analyzer = import_analyzer
         self.dependency_graph = dependency_graph

@@ -397,6 +397,33 @@ class FormatterRegistry:
         )
         self.register_formatter(list_formatter)
         
+        # Register DensityAnalysisFormatter
+        from repomap_tool.cli.output.controller_formatters import DensityAnalysisFormatter
+        density_analysis_formatter = DensityAnalysisFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(density_analysis_formatter)
+        
+        # Register ImpactViewModelFormatter
+        from repomap_tool.cli.output.controller_formatters import ImpactViewModelFormatter
+        impact_view_model_formatter = ImpactViewModelFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(impact_view_model_formatter)
+        
+        # Register CentralityViewModelFormatter
+        from repomap_tool.cli.output.controller_formatters import CentralityViewModelFormatter
+        centrality_view_model_formatter = CentralityViewModelFormatter(
+            template_engine=self._template_engine,
+            template_registry=self._template_registry,
+            console_manager=self._console_manager,
+        )
+        self.register_formatter(centrality_view_model_formatter)
+        
         # Register StringFormatter
         string_formatter = StringFormatter(
             template_engine=self._template_engine,

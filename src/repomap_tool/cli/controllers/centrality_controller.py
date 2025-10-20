@@ -13,6 +13,12 @@ from repomap_tool.core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 
 from ...code_analysis.models import AnalysisFormat, FileCentralityAnalysis
+from ...code_analysis.dependency_graph import DependencyGraph
+from ...code_analysis.centrality_calculator import CentralityCalculator
+from ...code_analysis.centrality_analysis_engine import CentralityAnalysisEngine
+from ...code_analysis.ast_file_analyzer import ASTFileAnalyzer
+from ...code_analysis.path_resolver import PathResolver
+from ...code_analysis.import_analyzer import ImportAnalyzer
 from .base_controller import BaseController
 from .view_models import (
     CentralityViewModel,
@@ -36,11 +42,12 @@ class CentralityController(BaseController):
 
     def __init__(
         self,
-        dependency_graph: Optional[Any] = None,
-        centrality_calculator: Optional[Any] = None,
-        centrality_engine: Optional[Any] = None,
-        ast_analyzer: Optional[Any] = None,
-        path_resolver: Optional[Any] = None,
+        dependency_graph: DependencyGraph,
+        centrality_calculator: CentralityCalculator,
+        centrality_engine: CentralityAnalysisEngine,
+        ast_analyzer: ASTFileAnalyzer,
+        path_resolver: PathResolver,
+        import_analyzer: ImportAnalyzer,
         config: Optional[ControllerConfig] = None,
     ):
         """Initialize the CentralityController.
@@ -55,25 +62,14 @@ class CentralityController(BaseController):
         """
         super().__init__(config)
 
-        # Validate dependencies
-        if dependency_graph is None:
-            raise ValueError("dependency_graph must be injected - no fallback allowed")
-        if centrality_calculator is None:
-            raise ValueError(
-                "centrality_calculator must be injected - no fallback allowed"
-            )
-        if centrality_engine is None:
-            raise ValueError("centrality_engine must be injected - no fallback allowed")
-        if ast_analyzer is None:
-            raise ValueError("ast_analyzer must be injected - no fallback allowed")
-        if path_resolver is None:
-            raise ValueError("path_resolver must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.dependency_graph = dependency_graph
         self.centrality_calculator = centrality_calculator
         self.centrality_engine = centrality_engine
         self.ast_analyzer = ast_analyzer
         self.path_resolver = path_resolver
+        self.import_analyzer = import_analyzer
 
     def execute(self, file_paths: Optional[List[str]] = None) -> CentralityViewModel:
         """Execute centrality analysis for the specified files.
@@ -486,13 +482,9 @@ class CentralityController(BaseController):
             # Get project root from path resolver
             project_root = self.path_resolver.project_root
 
-            # Use import analyzer to get project imports
-            from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
-
-            import_analyzer = ImportAnalyzer(project_root=project_root)
-
-            # Analyze project imports
-            project_imports = import_analyzer.analyze_project_imports(project_root)
+            # Use the injected import analyzer instead of creating a new one
+            # This ensures proper dependency injection with tree_sitter_parser
+            project_imports = self.import_analyzer.analyze_project_imports(project_root)
 
             # Use all files for dependency analysis (no artificial limits)
 

@@ -23,8 +23,8 @@ class AdvancedDependencyGraph(DependencyGraph):
 
     def __init__(
         self,
-        import_analyzer: Optional[Any] = None,
-        call_graph_builder: Optional[Any] = None,
+        import_analyzer: ImportAnalyzer,
+        call_graph_builder: CallGraphBuilder,
     ) -> None:
         """Initialize the advanced dependency graph.
 
@@ -32,9 +32,7 @@ class AdvancedDependencyGraph(DependencyGraph):
             import_analyzer: ImportAnalyzer instance (required dependency)
             call_graph_builder: CallGraphBuilder instance (required dependency)
         """
-        # Validate required dependencies
-        if call_graph_builder is None:
-            raise ValueError("CallGraphBuilder must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         super().__init__(import_analyzer=import_analyzer)
         self.call_graph: Optional[CallGraph] = None

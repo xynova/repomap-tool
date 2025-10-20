@@ -8,6 +8,10 @@ without creating circular imports.
 from typing import Any
 from repomap_tool.core.logging_service import get_logger
 from repomap_tool.models import RepoMapConfig
+from repomap_tool.cli.output.standard_formatters import FormatterRegistry
+from repomap_tool.cli.output.templates.engine import TemplateEngine
+from repomap_tool.cli.output.templates.registry import TemplateRegistry
+from repomap_tool.cli.output.console_manager import ConsoleManager
 
 logger = get_logger(__name__)
 
@@ -36,10 +40,10 @@ def configure_container(container: Any, config_obj: RepoMapConfig) -> None:
 
 
 def _register_default_formatters(
-    formatter_registry: Any,
-    template_engine: Any,
-    template_registry: Any,
-    console_manager: Any,
+    formatter_registry: FormatterRegistry,
+    template_engine: TemplateEngine,
+    template_registry: TemplateRegistry,
+    console_manager: ConsoleManager,
     config: RepoMapConfig
 ) -> None:
     """Registers the default formatters with the FormatterRegistry."""

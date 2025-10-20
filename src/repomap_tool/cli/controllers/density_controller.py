@@ -37,10 +37,7 @@ class DensityController(BaseController):
         """Initialize with injected dependencies."""
         super().__init__(config)
 
-        if density_analyzer is None:
-            raise ValueError("DensityAnalyzer must be injected - no fallback allowed")
-        if path_resolver is None:
-            raise ValueError("PathResolver must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.density_analyzer = density_analyzer
         self.path_resolver = path_resolver

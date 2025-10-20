@@ -316,11 +316,23 @@ def centrality(
         if files and input_paths:
             raise click.BadParameter("Cannot specify both --files and positional input paths.")
         elif files:
-            target_files = [str(resolved_project_path / f) for f in files]
+            target_files = []
+            project_path = Path(resolved_project_path)
+            for f in files:
+                file_path = Path(f)
+                if file_path.is_absolute():
+                    # Absolute path - validate it's within project root
+                    if not file_path.is_relative_to(project_path):
+                        raise click.BadParameter(f"File '{f}' is not within the project root '{resolved_project_path}'.")
+                    target_files.append(str(file_path))
+                else:
+                    # Relative path - join with project root
+                    target_files.append(str(project_path / f))
         elif input_paths:
+            project_path = Path(resolved_project_path)
             for p in input_paths:
                 abs_path = Path(p).resolve()
-                if not abs_path.is_relative_to(resolved_project_path):
+                if not abs_path.is_relative_to(project_path):
                     raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
                 target_files.append(str(abs_path))
         else:

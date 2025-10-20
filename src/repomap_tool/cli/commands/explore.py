@@ -13,10 +13,11 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 
-from ...models import create_error_response
+from ...models import create_error_response, RepoMapConfig
 from ...core import RepoMapService
 from ...core.config_service import get_config
 from ...core.container_config import configure_container
+from ..controllers.exploration_controller import ExplorationController
 from ..config.loader import resolve_project_path
 from ..output import OutputManager, OutputConfig, OutputFormat
 from ..utils.session import get_project_path_from_session, get_or_create_session
@@ -33,8 +34,8 @@ from dependency_injector.containers import DynamicContainer
 
 def create_exploration_controller_with_repomap(
     container: DynamicContainer, # Accept container instance
-    config_obj: Any, output_format: str = "text", verbose: bool = True
-) -> Any:
+    config_obj: RepoMapConfig, output_format: str = "text", verbose: bool = True
+) -> ExplorationController:
     """Create and properly configure an ExplorationController with repomap injection.
 
     This helper function centralizes the controller setup logic and ensures

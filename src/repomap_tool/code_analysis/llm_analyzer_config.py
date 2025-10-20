@@ -74,19 +74,19 @@ class LLMAnalyzerDependencies(BaseModel):
     """Dependency injection container for LLM analyzer components."""
 
     # Core dependencies
-    dependency_graph: Any = Field(..., description="Advanced dependency graph")
+    dependency_graph: DependencyGraph = Field(..., description="Advanced dependency graph")
     project_root: str = Field(..., description="Project root path")
 
     # Analysis engines
-    ast_analyzer: Any = Field(..., description="AST file analyzer")
-    token_optimizer: Any = Field(..., description="Token optimizer")
-    context_selector: Any = Field(..., description="Context selector")
-    hierarchical_formatter: Any = Field(..., description="Hierarchical formatter")
-    path_resolver: Any = Field(..., description="Path resolver")
-    impact_analyzer: Any = Field(..., description="Impact analyzer")
-    impact_engine: Any = Field(..., description="Impact analysis engine")
-    centrality_engine: Any = Field(..., description="Centrality analysis engine")
-    centrality_calculator: Any = Field(..., description="Centrality calculator")
+    ast_analyzer: ASTFileAnalyzer = Field(..., description="AST file analyzer")
+    token_optimizer: TokenOptimizer = Field(..., description="Token optimizer")
+    context_selector: ContextSelector = Field(..., description="Context selector")
+    hierarchical_formatter: HierarchicalFormatter = Field(..., description="Hierarchical formatter")
+    path_resolver: PathResolver = Field(..., description="Path resolver")
+    impact_analyzer: ImpactAnalyzer = Field(..., description="Impact analyzer")
+    impact_engine: ImpactAnalysisEngine = Field(..., description="Impact analysis engine")
+    centrality_engine: CentralityAnalysisEngine = Field(..., description="Centrality analysis engine")
+    centrality_calculator: CentralityCalculator = Field(..., description="Centrality calculator")
 
     @field_validator(
         "dependency_graph",

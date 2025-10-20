@@ -388,6 +388,7 @@ class Container(containers.DeclarativeContainer):
             centrality_engine=centrality_analysis_engine,
             ast_analyzer=ast_file_analyzer, # Corrected: ast_analyzer to ast_file_analyzer
             path_resolver=path_resolver,
+            import_analyzer=import_analyzer,
         ),
     )
 
@@ -464,12 +465,31 @@ class Container(containers.DeclarativeContainer):
         ),
     )
 
+    # RepoMapConfig provider that converts dictionary to RepoMapConfig object
+    repo_map_config: "providers.Singleton[RepoMapConfig]" = cast(
+        "providers.Singleton[RepoMapConfig]",
+        providers.Singleton(
+            "repomap_tool.models.RepoMapConfig",
+            project_root=config.project_root,
+            cache_dir=config.cache_dir,
+            dependencies=config.dependencies,
+            fuzzy_match=config.fuzzy_match,
+            embedding=config.embedding,
+            semantic_match=config.semantic_match,
+            performance=config.performance,
+            trees=config.trees,
+            output=config.output,
+            log_level=config.log_level,
+            verbose=config.verbose,
+        ),
+    )
+
     # RepoMap Service
     repo_map_service: "providers.Singleton[RepoMapService]" = cast(
         "providers.Singleton[RepoMapService]",
         providers.Singleton(
             "repomap_tool.core.repo_map.RepoMapService",
-            config=config,
+            config=repo_map_config,
             console=console_manager(), # Pass the resolved console_manager instance
             fuzzy_matcher=fuzzy_matcher,
             semantic_matcher=adaptive_semantic_matcher,

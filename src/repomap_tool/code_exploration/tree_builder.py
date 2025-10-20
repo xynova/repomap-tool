@@ -14,6 +14,7 @@ from pathlib import Path
 
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
+from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
 if TYPE_CHECKING:
     from repomap_tool.cli.controllers.view_models import SearchViewModel
 from repomap_tool.models import SymbolViewModel
@@ -26,8 +27,8 @@ class TreeBuilder:
 
     def __init__(
         self,
+        entrypoint_discoverer: EntrypointDiscoverer,
         repo_map: Optional[RepoMapService] = None,
-        entrypoint_discoverer: Optional[Any] = None,
     ):
         """Initialize tree builder with injected dependencies.
 
@@ -39,11 +40,7 @@ class TreeBuilder:
         self.entrypoint_cache: Dict[str, Any] = {}  # Cache discovered entrypoints
         self.tree_cache: Dict[str, Any] = {}  # Cache built trees
 
-        # Use injected entrypoint discoverer - no fallback
-        if entrypoint_discoverer is None:
-            raise ValueError(
-                "EntrypointDiscoverer must be injected - no fallback allowed"
-            )
+        # All dependencies are required and injected via DI container
         self.entrypoint_discoverer = entrypoint_discoverer
 
         logger.debug("TreeBuilder initialized")

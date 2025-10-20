@@ -16,6 +16,17 @@ from datetime import datetime # Import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from repomap_tool.code_analysis.models import CodeTag
+from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+from repomap_tool.code_analysis.dependency_graph import DependencyGraph
+from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_search.semantic_matcher import SemanticMatcher
+from repomap_tool.code_search.embedding_matcher import EmbeddingMatcher
+from repomap_tool.code_search.hybrid_matcher import HybridMatcher
+from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
+from repomap_tool.core.spellchecker_service import SpellcheckerService
+from repomap_tool.core.tag_cache import TreeSitterTagCache
+from rich.console import Console
 import traceback
 
 logger = get_logger(__name__) # Initialize logger at module level
@@ -58,17 +69,17 @@ class RepoMapService:
     def __init__(
         self,
         config: RepoMapConfig,
-        console: Optional[Any] = None,
-        fuzzy_matcher: Optional[Any] = None,
-        semantic_matcher: Optional[Any] = None,
-        embedding_matcher: Optional[Any] = None,
-        hybrid_matcher: Optional[Any] = None,
-        dependency_graph: Optional[Any] = None,
-        impact_analyzer: Optional[Any] = None,
-        centrality_calculator: Optional[Any] = None,
-        spellchecker_service: Optional[Any] = None,
-        tree_sitter_parser: Optional[Any] = None, # Add tree_sitter_parser as injected dependency
-        tag_cache: Optional[Any] = None, # Add tag_cache as injected dependency
+        console: Console,
+        fuzzy_matcher: FuzzyMatcher,
+        dependency_graph: DependencyGraph,
+        centrality_calculator: CentralityCalculator,
+        tree_sitter_parser: TreeSitterParser,
+        tag_cache: TreeSitterTagCache,
+        semantic_matcher: Optional[SemanticMatcher] = None,
+        embedding_matcher: Optional[EmbeddingMatcher] = None,
+        hybrid_matcher: Optional[HybridMatcher] = None,
+        impact_analyzer: Optional[ImpactAnalyzer] = None,
+        spellchecker_service: Optional[SpellcheckerService] = None,
     ):
         """
         Initialize RepoMapService with validated configuration and injected dependencies.
@@ -86,21 +97,8 @@ class RepoMapService:
         self.config = config
         self.logger = self._setup_logging()
 
-        # All dependencies must be injected - no fallback allowed
-        if console is None:
-            raise ValueError("Console must be injected - no fallback allowed")
-        if fuzzy_matcher is None:
-            raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
-        if dependency_graph is None:
-            raise ValueError("DependencyGraph must be injected - no fallback allowed")
-        if centrality_calculator is None:
-            raise ValueError(
-                "CentralityCalculator must be injected - no fallback allowed"
-            )
-        if tree_sitter_parser is None:
-            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
-        if tag_cache is None:
-            raise ValueError("TagCache must be injected - no fallback allowed")
+        # All core dependencies are required and injected via DI container
+        # Optional dependencies (semantic_matcher, embedding_matcher, etc.) are truly optional
 
         self.console = console
         self.fuzzy_matcher = fuzzy_matcher
@@ -408,10 +406,12 @@ class RepoMapService:
             )
 
             # Force tree-sitter to extract tags
-            if self.repo_map:
-                # This populates tree-sitter cache
+            if self.tree_sitter_parser:
+                # This populates tree-sitter cache by parsing files
                 try:
-                    self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
+                    # Parse files to populate cache
+                    for file_path in project_files:
+                        self.tree_sitter_parser.get_tags(file_path, use_cache=True)
                 except ZeroDivisionError:
                     # Handle case where tree-sitter library encounters division by zero
                     self.logger.warning(

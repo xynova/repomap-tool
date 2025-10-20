@@ -14,6 +14,7 @@ from typing import List, Dict, Optional, Set, Any
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import Import, FileImports, ProjectImports, ImportType
+from .tree_sitter_parser import TreeSitterParser
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 
@@ -39,7 +40,7 @@ class ImportParser:
 class PythonImportParser(ImportParser):
     """Parses Python import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Any) -> None:
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
         super().__init__()
         self.tree_sitter_parser = tree_sitter_parser
 
@@ -111,7 +112,7 @@ class PythonImportParser(ImportParser):
 class JavaScriptImportParser(ImportParser):
     """Parses JavaScript/TypeScript import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Any) -> None:
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
         super().__init__()
         self.tree_sitter_parser = tree_sitter_parser
 
@@ -207,7 +208,7 @@ class JavaScriptImportParser(ImportParser):
 class JavaImportParser(ImportParser):
     """Parses Java import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Any) -> None:
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
         super().__init__()
         self.tree_sitter_parser = tree_sitter_parser
 
@@ -280,7 +281,7 @@ class JavaImportParser(ImportParser):
 class GoImportParser(ImportParser):
     """Parses Go import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Any) -> None:
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
         super().__init__()
         self.tree_sitter_parser = tree_sitter_parser
 
@@ -346,7 +347,7 @@ class GoImportParser(ImportParser):
 class CSharpImportParser(ImportParser):
     """Parses C# import statements using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Any) -> None:
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
         super().__init__()
         self.tree_sitter_parser = tree_sitter_parser
 
@@ -419,13 +420,11 @@ class ImportAnalyzer:
 
     def __init__(
         self,
+        tree_sitter_parser: TreeSitterParser,
         project_root: Optional[str] = None,
-        tree_sitter_parser: Optional[Any] = None, # Make mandatory
     ) -> None:
         """Initialize the import analyzer with language parsers."""
-        # Validate required dependency
-        if tree_sitter_parser is None:
-            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None

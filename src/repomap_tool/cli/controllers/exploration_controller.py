@@ -14,6 +14,9 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from repomap_tool.core.logging_service import get_logger
 from repomap_tool.core.config_service import get_config
 
+from .search_controller import SearchController
+from ...code_exploration.session_manager import SessionManager
+from ...code_exploration.tree_builder import TreeBuilder
 from .base_controller import BaseController
 from .view_models import (
     ControllerConfig,
@@ -38,9 +41,9 @@ class ExplorationController(BaseController):
 
     def __init__(
         self,
-        search_controller: Any,  # SearchController
-        session_manager: Any,  # SessionManager
-        tree_builder: Any,  # TreeBuilder
+        search_controller: SearchController,
+        session_manager: SessionManager,
+        tree_builder: TreeBuilder,
         config: Optional[ControllerConfig] = None,
     ) -> None:
         """Initialize the ExplorationController.
@@ -53,13 +56,7 @@ class ExplorationController(BaseController):
         """
         super().__init__(config)
 
-        # Validate dependencies
-        if search_controller is None:
-            raise ValueError("SearchController must be injected - no fallback allowed")
-        if session_manager is None:
-            raise ValueError("SessionManager must be injected - no fallback allowed")
-        if tree_builder is None:
-            raise ValueError("TreeBuilder must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.search_controller = search_controller
         self.session_manager = session_manager

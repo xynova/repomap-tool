@@ -9,6 +9,7 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 
 from ..core.logging_service import get_logger
+from ..core.cache_manager import CacheManager
 
 logger = get_logger(__name__)
 
@@ -19,7 +20,7 @@ class EmbeddingMatcher:
     def __init__(
         self,
         model_name: str = "nomic-ai/CodeRankEmbed",
-        cache_manager: Optional[Any] = None,
+        cache_manager: Optional[CacheManager] = None,
         cache_dir: Optional[str] = None,
     ):
         """

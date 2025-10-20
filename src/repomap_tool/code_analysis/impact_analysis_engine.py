@@ -13,6 +13,8 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from .ast_file_analyzer import ASTFileAnalyzer, FileAnalysisResult
+from .dependency_graph import DependencyGraph
+from .path_normalizer import PathNormalizer
 from .file_utils import suggest_test_files
 from .models import FileImpactAnalysis
 
@@ -25,8 +27,8 @@ class ImpactAnalysisEngine:
     def __init__(
         self,
         ast_analyzer: ASTFileAnalyzer,
-        dependency_graph: Optional[Any] = None,
-        path_normalizer: Optional[Any] = None,
+        dependency_graph: Optional[DependencyGraph] = None,
+        path_normalizer: Optional[PathNormalizer] = None,
     ):
         """Initialize the impact analysis engine.
 
@@ -44,7 +46,7 @@ class ImpactAnalysisEngine:
         file_path: str,
         ast_result: FileAnalysisResult,
         all_files: List[str],
-        dependency_graph: Optional[Any] = None,
+        dependency_graph: Optional[DependencyGraph] = None,
     ) -> FileImpactAnalysis:
         """Analyze impact for a single file.
 
@@ -157,7 +159,7 @@ class ImpactAnalysisEngine:
         self,
         file_path: str,
         all_files: List[str],
-        dependency_graph: Optional[Any] = None,
+        dependency_graph: Optional[DependencyGraph] = None,
     ) -> List[Dict[str, Any]]:
         """Analyze reverse dependencies (what imports this file).
 

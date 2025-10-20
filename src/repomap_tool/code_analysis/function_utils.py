@@ -11,6 +11,7 @@ from ..core.logging_service import get_logger
 from typing import Any, Dict, List, Optional, Tuple
 from collections import Counter
 from repomap_tool.code_analysis.models import CodeTag
+from .ast_file_analyzer import ASTFileAnalyzer
 
 logger = get_logger(__name__)
 
@@ -374,7 +375,7 @@ def filter_business_relevant_calls(
 
 
 def get_functions_called_from_file(
-    ast_analyzer: Any, calling_file: str, target_file: str
+    ast_analyzer: ASTFileAnalyzer, calling_file: str, target_file: str
 ) -> List[str]:
     """Get list of functions that calling_file calls from target_file."""
     try:

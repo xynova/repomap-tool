@@ -16,6 +16,7 @@ from .models import CodeTag
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import FunctionCall, CallGraph
+from .tree_sitter_parser import TreeSitterParser
 
 logger = get_logger(__name__)
 
@@ -39,10 +40,9 @@ class CallAnalyzer:
 class PythonCallAnalyzer(CallAnalyzer):
     """Parser for Python function calls using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
         """Initialize with tree-sitter parser."""
-        if tree_sitter_parser is None:
-            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
         self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
@@ -111,13 +111,11 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
 
     def __init__(
         self,
+        tree_sitter_parser: TreeSitterParser,
         project_root: Optional[str] = None,
-        tree_sitter_parser: Optional[Any] = None,
     ):
         """Initialize with project root for tree-sitter RepoMap."""
-        # Validate required dependency
-        if tree_sitter_parser is None:
-            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         super().__init__()
         self.project_root = project_root
@@ -195,8 +193,8 @@ class CallGraphBuilder:
     def __init__(
         self,
         project_root: Optional[str] = None,
-        python_call_analyzer: Optional[Any] = None,
-        javascript_call_analyzer: Optional[Any] = None,
+        python_call_analyzer: Optional[PythonCallAnalyzer] = None,
+        javascript_call_analyzer: Optional[JavaScriptCallAnalyzer] = None,
     ) -> None:
         """Initialize the call graph builder with language analyzers."""
         if python_call_analyzer is None:

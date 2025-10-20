@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional
 
 from .ast_file_analyzer import ASTFileAnalyzer, FileAnalysisResult
 from .centrality_calculator import CentralityCalculator
+from .dependency_graph import DependencyGraph
 from .function_utils import (
     smart_categorize_function_calls,
     find_most_called_function,
@@ -32,7 +33,7 @@ class CentralityAnalysisEngine:
         self,
         ast_analyzer: ASTFileAnalyzer,
         centrality_calculator: CentralityCalculator,
-        dependency_graph: Any,
+        dependency_graph: DependencyGraph,
         path_normalizer: PathNormalizer,
     ):
         """Initialize the centrality analysis engine.

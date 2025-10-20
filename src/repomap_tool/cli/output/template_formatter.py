@@ -180,6 +180,8 @@ class TemplateBasedFormatter(BaseFormatter):
         # Map data types to template names
         template_mapping = {
             "ProjectInfo": "project_info",
+            "SuccessResponse": "success",
+            "ErrorResponse": "error",
             "dict": self._get_dict_template_name(data),
             "list": "list",
         }

@@ -52,8 +52,7 @@ class DensityAnalyzer:
 
     def __init__(self, tree_sitter_parser: TreeSitterParser):
         """Initialize with injected TreeSitterParser."""
-        if tree_sitter_parser is None:
-            raise ValueError("TreeSitterParser must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
         self.parser = tree_sitter_parser
 
     def analyze_file(self, file_path: str, project_root: str) -> FileDensity:

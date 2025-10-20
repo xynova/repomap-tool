@@ -47,14 +47,26 @@ class TestInspectCommandsIntegration:
         cmd_args = [
             "inspect",
             command_type,
-            str(self.project_root),
             "--output",
             output_format,
         ]
         
         if files:
+            # When using --files, don't pass project root as positional argument
+            # The project root will be resolved from current working directory
+            # But we need to set the working directory to the test project root
+            # Convert absolute paths to relative paths
             for file_path in files:
-                cmd_args.extend(["--files", file_path])
+                file_path_obj = Path(file_path)
+                if file_path_obj.is_absolute():
+                    # Convert to relative path from project root
+                    relative_path = file_path_obj.relative_to(self.project_root)
+                    cmd_args.extend(["--files", str(relative_path)])
+                else:
+                    cmd_args.extend(["--files", file_path])
+        else:
+            # When not using --files, pass project root as positional argument
+            cmd_args.append(str(self.project_root))
         
         # Add any additional kwargs as CLI arguments
         for key, value in kwargs.items():
@@ -63,7 +75,14 @@ class TestInspectCommandsIntegration:
             elif key == "verbose" and value:
                 cmd_args.append("--verbose")
         
-        return self.runner.invoke(cli, cmd_args)
+        # Set working directory to test project root for all cases
+        import os
+        original_cwd = os.getcwd()
+        try:
+            os.chdir(str(self.project_root))
+            return self.runner.invoke(cli, cmd_args)
+        finally:
+            os.chdir(original_cwd)
 
     def _assert_inspect_success(self, result, command_type):
         """Helper method to assert common inspect command success patterns."""
@@ -422,13 +441,8 @@ class TestUserService:
 
     def test_inspect_centrality_no_files_fallback(self):
         """Test inspect centrality command without files falls back to top files."""
-        result = self.runner.invoke(
-            cli, ["inspect", "centrality", str(self.project_root), "--output", "text"]
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting centrality for project" in result.output
-        assert "Centrality inspection completed" in result.output
+        result = self._invoke_inspect_command("centrality", output_format="text")
+        self._assert_inspect_success(result, "centrality")
 
     def test_inspect_impact_table_output(self):
         """Test inspect impact command with table output."""
@@ -459,22 +473,8 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "centrality",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-            ],
-        )
-
-        assert result.exit_code == 0
-        assert "Inspecting centrality for project" in result.output
-        assert "Centrality inspection completed" in result.output
+        result = self._invoke_inspect_command("centrality", files=[user_service_path], output_format="text")
+        self._assert_inspect_success(result, "centrality")
 
     def test_inspect_impact_verbose_output(self):
         """Test inspect impact command with verbose output."""

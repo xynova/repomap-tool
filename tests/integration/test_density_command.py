@@ -1,5 +1,6 @@
 import pytest
 from click.testing import CliRunner
+import click
 from unittest.mock import patch, MagicMock
 import json
 import os
@@ -78,34 +79,42 @@ def test_density_command_file_scope_text_output(
         mock_container_instance = MagicMock()
         mock_create_container.return_value = mock_container_instance
         mock_container_instance.density_controller.return_value = mock_density_controller
+        
+        # Also mock the container in the Click context
+        def mock_cli_call(*args, **kwargs):
+            ctx = click.Context(cli, obj={})
+            ctx.obj["container"] = mock_container_instance
+            ctx.obj["no_color"] = True
+            return cli.invoke(ctx, args, **kwargs)
+        
+        with patch("repomap_tool.cli.main.cli.__call__", new=mock_cli_call):
+            mock_density_controller.execute.return_value = DensityAnalysisViewModel(
+                scope="file",
+                results=[mock_file_density_view_model],
+                total_files_analyzed=1,
+                limit=10,
+                min_identifiers=1,
+                analysis_summary={
+                    "total_files": 1,
+                    "files_with_identifiers": 1,
+                    "avg_identifiers_per_file": 10.0,
+                },
+            )
 
-        mock_density_controller.execute.return_value = DensityAnalysisViewModel(
-            scope="file",
-            results=[mock_file_density_view_model],
-            total_files_analyzed=1,
-            limit=10,
-            min_identifiers=1,
-            analysis_summary={
-                "total_files": 1,
-                "files_with_identifiers": 1,
-                "avg_identifiers_per_file": 10.0,
-            },
-        )
+            result = runner.invoke(
+                cli, ["inspect", "density", ".", "--scope", "file", "-o", "text"]
+            )
 
-        result = runner.invoke(
-            cli, ["inspect", "density", ".", "--scope", "file", "-o", "text"]
-        )
-
-        assert result.exit_code == 0
-        assert "CODE DENSITY ANALYSIS" in result.output
-        assert "FILE DENSITY (by identifier count)" in result.output
-        assert "src/main.py" in result.output
-        assert "Total: 10 identifiers" in result.output
-        assert "Classes: 1" in result.output
-        assert "Functions: 3" in result.output
-        assert "Methods: 3" in result.output
-        assert "Variables: 2" in result.output
-        assert "Imports: 1" in result.output
+            assert result.exit_code == 0
+            assert "CODE DENSITY ANALYSIS" in result.output
+            assert "FILE DENSITY (by identifier count)" in result.output
+            assert "src/main.py" in result.output
+            assert "Total: 10 identifiers" in result.output
+            assert "Classes: 1" in result.output
+            assert "Functions: 3" in result.output
+            assert "Methods: 3" in result.output
+            assert "Variables: 2" in result.output
+            assert "Imports: 1" in result.output
 
 
 def test_density_command_package_scope_text_output(

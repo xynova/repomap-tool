@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from repomap_tool.core.logging_service import get_logger
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Type
 
 import click
 
@@ -55,6 +55,10 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             console_manager: Console manager for rendering
         """
         super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+
+    def get_data_type(self) -> Type[Any]:
+        """Get the data type this formatter handles."""
+        return CentralityViewModel
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
@@ -118,6 +122,10 @@ class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
         """
         super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
+    def get_data_type(self) -> Type[Any]:
+        """Get the data type this formatter handles."""
+        return ImpactViewModel
+
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
 
@@ -180,6 +188,10 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
         """
         super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
 
+    def get_data_type(self) -> Type[Any]:
+        """Get the data type this formatter handles."""
+        return SearchViewModel
+
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format.
 
@@ -235,6 +247,10 @@ class DensityAnalysisFormatter(TemplateBasedFormatter, DataFormatter):
     ) -> None:
         """Initialize the formatter."""
         super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+
+    def get_data_type(self) -> Type[Any]:
+        """Get the data type this formatter handles."""
+        return DensityAnalysisViewModel
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
