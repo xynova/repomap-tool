@@ -213,36 +213,60 @@ class TestCLICore:
                 import json
                 import re
                 try:
-                    # Extract JSON from output (skip logging messages and errors)
-                    output_lines = result.output.strip().split('\n')
-                    json_lines = []
-                    in_json = False
-                    for line in output_lines:
-                        # Skip logging messages, errors, and empty lines
-                        if (line.startswith('--- Logging error ---') or 
-                            line.startswith('Traceback') or 
-                            line.startswith('  File ') or
-                            line.startswith('INFO') or
-                            line.startswith('ERROR') or
-                            line.startswith('WARNING') or
-                            line.startswith('DEBUG') or
-                            not line.strip()):
-                            continue
-                        if line.strip().startswith('{'):
-                            in_json = True
-                        if in_json:
-                            json_lines.append(line)
+                    # Extract JSON from captured console buffer if present; fallback to stdout
+                    raw_output = getattr(result, "captured_output", None) or result.output
                     
-                    json_output = '\n'.join(json_lines)
-                    print(f"Extracted JSON: {json_output}")
+                    # More robust JSON extraction - handle mixed logging and JSON output
+                    # Try to find JSON object in the output using regex - look for proper JSON format
+                    # Look for JSON that starts with a quoted key (not Python dict format)
+                    json_match = re.search(r'\{\s*"[^"]+"\s*:', raw_output, re.DOTALL)
+                    if json_match:
+                        # Find the complete JSON object from this point
+                        start_pos = json_match.start()
+                        # Find the matching closing brace
+                        brace_count = 0
+                        json_end = start_pos
+                        for i, char in enumerate(raw_output[start_pos:], start_pos):
+                            if char == '{':
+                                brace_count += 1
+                            elif char == '}':
+                                brace_count -= 1
+                                if brace_count == 0:
+                                    json_end = i + 1
+                                    break
+                        json_output = raw_output[start_pos:json_end]
+                    else:
+                        # Fallback: extract JSON lines (skip logging messages and errors)
+                        output_lines = raw_output.strip().split('\n')
+                        json_lines = []
+                        in_json = False
+                        for line in output_lines:
+                            # Skip logging messages, errors, and empty lines
+                            if (line.startswith('--- Logging error ---') or 
+                                line.startswith('Traceback') or 
+                                line.startswith('  File ') or
+                                line.startswith('INFO') or
+                                line.startswith('ERROR') or
+                                line.startswith('WARNING') or
+                                line.startswith('DEBUG') or
+                                not line.strip()):
+                                continue
+                            if line.strip().startswith('{'):
+                                in_json = True
+                            if in_json:
+                                json_lines.append(line)
+                        
+                        if not json_lines:
+                            assert False, f"No JSON found in output: {raw_output[:500]}"
+                        
+                        json_output = '\n'.join(json_lines)
                     
                     output_data = json.loads(json_output)
-                    print(f"Parsed JSON: {output_data}")
                     assert "project_root" in output_data
                     assert output_data["project_root"] == temp_project
                 except json.JSONDecodeError as e:
                     print(f"Failed to parse JSON: {e}")
-                    print(f"Raw output: {result.output}")
+                    print(f"Raw output: {raw_output[:500]}")
                     assert False, f"Failed to parse JSON: {e}"
 
     def test_search_command_exists(self, cli_runner_with_container: CliRunner) -> None:

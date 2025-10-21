@@ -129,7 +129,7 @@ class TreeSitterParser:
             else:
                 logger.warning(f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict.")
 
-            logger.debug(f"_parse_file: Extracted {len(tags)} CodeTags from {file_path}.")
+            logger.debug(f"_parse_file: Extracted {len(tags)} CodeTags from {file_path}")
             return tags
 
         except Exception as e:
@@ -266,4 +266,9 @@ class TreeSitterParser:
             True if language is supported
         """
         lang = filename_to_lang(file_path)
-        return lang is not None and self.query_loader.load_query(lang) is not None
+        if lang is None:
+            return False
+        
+        # Check if query file exists without loading it to avoid warnings
+        query_path = self.query_loader.custom_queries_dir / f"{lang}-tags.scm"
+        return query_path.exists()

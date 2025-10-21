@@ -22,6 +22,7 @@ from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
 from repomap_tool.code_analysis.path_resolver import PathResolver
 from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
 from repomap_tool.code_analysis.call_graph_builder import CallGraphBuilder
+from repomap_tool.code_analysis.file_discovery_service import FileDiscoveryService
 from repomap_tool.utils.path_normalizer import PathNormalizer
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.code_search.adaptive_semantic_matcher import AdaptiveSemanticMatcher
@@ -152,6 +153,15 @@ class Container(containers.DeclarativeContainer):
         providers.Singleton(
             "repomap_tool.core.tag_cache.TreeSitterTagCache",
             cache_dir=config.cache_dir,
+        ),
+    )
+
+    # File discovery service provider
+    file_discovery_service: "providers.Singleton[FileDiscoveryService]" = cast(
+        "providers.Singleton[FileDiscoveryService]",
+        providers.Singleton(
+            "repomap_tool.code_analysis.file_discovery_service.FileDiscoveryService",
+            project_root=config.project_root,
         ),
     )
 
@@ -486,6 +496,7 @@ class Container(containers.DeclarativeContainer):
             spellchecker_service=spellchecker_service,
             tree_sitter_parser=tree_sitter_parser,
             tag_cache=tag_cache,
+            file_discovery_service=file_discovery_service,
         ),
     )
 

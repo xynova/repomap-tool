@@ -142,8 +142,17 @@ class TreeSitterTagCache:
             (file_path,),
         )
 
+        rows = cursor.fetchall()
+        conn.close()
+
+        # If cache is valid for the file but there are no tag rows, return an empty list
+        # This distinguishes between "no cached entry" (handled by _is_cache_valid -> None)
+        # and "cached entry with zero tags" (valid empty result for empty files)
+        if not rows:
+            return []
+        
         tags = []
-        for row in cursor.fetchall():
+        for row in rows:
             name, kind, file, line, column, end_line, end_column, rel_fname = row
             tag = CodeTag(
                 name=name,
@@ -157,7 +166,6 @@ class TreeSitterTagCache:
             )
             tags.append(tag)
 
-        conn.close()
         return tags
 
     def set_tags(self, file_path: str, tags: List[CodeTag]) -> None:

@@ -24,9 +24,10 @@ from grep_ast.tsl import get_language # Import get_language
 import click
 from click.testing import CliRunner
 from unittest.mock import patch
+import io
 
-# Disable cache for all tests to avoid database locks
-os.environ["REPOMAP_DISABLE_CACHE"] = "1"
+# Cache is now enabled for tests - database locking issues have been resolved
+# os.environ["REPOMAP_DISABLE_CACHE"] = "1"
 
 # This makes tests run faster - otherwise it tries to re-parse the grammar files constantly
 # and can take 5-10 seconds for each test. With pre-compiled, it's < 1 second.
@@ -202,8 +203,44 @@ def session_container(session_config):
 def cli_runner_with_container(session_container):
     """Provides a Click CliRunner with a pre-configured session_container injected."""
     from repomap_tool.cli.main import cli
+    from repomap_tool.cli.output.console_manager import DefaultConsoleManager
+    from repomap_tool.cli.utils.console import ConsoleProvider
+    from repomap_tool.cli.utils.console import RichConsoleFactory as _RichConsoleFactory
+    from rich.console import Console
+    import logging
 
     runner = CliRunner()
+
+    # Create an isolated console stream for tests to avoid interleaving with logging
+    buffer = io.StringIO()
+
+    class BufferConsoleFactory(_RichConsoleFactory):
+        def create_console(self, no_color: bool = False) -> Console:  # type: ignore[override]
+            return Console(
+                file=buffer,  # isolate stdout output to in-memory buffer
+                stderr=False,
+                force_terminal=False,
+                color_system=None,
+                no_color=no_color,
+                soft_wrap=False,
+            )
+
+    # Override console_manager in the DI container to use the isolated buffer
+    provider = ConsoleProvider(factory=BufferConsoleFactory(), no_color=True)
+    isolated_manager = DefaultConsoleManager(provider=provider, enable_logging=False)
+    session_container.console_manager.override(lambda: isolated_manager)
+    
+    # Also redirect logging to the isolated buffer to prevent logging from corrupting JSON output
+    # This prevents "I/O operation on closed file" errors when pytest tears down logging handlers
+    logging_handler = logging.StreamHandler(buffer)
+    logging_handler.setLevel(logging.DEBUG)
+    
+    # Store original handlers to restore later
+    original_handlers = logging.getLogger().handlers[:]
+    
+    # Clear existing handlers and add our isolated handler
+    logging.getLogger().handlers.clear()
+    logging.getLogger().addHandler(logging_handler)
 
     # Patch the cli.__call__ method to ensure our container is always used
     # when CliRunner.invoke calls cli.
@@ -217,10 +254,30 @@ def cli_runner_with_container(session_container):
         console_manager_instance = ctx.obj["container"].console_manager()
         console_manager_instance.configure(no_color=ctx.obj.get("no_color", False))
 
-        return cli.invoke(ctx, args, **kwargs)
+        result = cli.invoke(ctx, args, **kwargs)
+        # Attach captured console output to result for tests that need to parse it
+        try:
+            result.captured_output = buffer.getvalue()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+        return result
 
     with patch("repomap_tool.cli.main.cli.__call__", new=mock_cli_call):
-        yield runner
+        try:
+            yield runner
+        finally:
+            # Reset override to avoid leaking across sessions
+            try:
+                session_container.console_manager.reset_override()
+            except Exception:
+                pass
+            
+            # Restore original logging handlers
+            try:
+                logging.getLogger().handlers.clear()
+                logging.getLogger().handlers.extend(original_handlers)
+            except Exception:
+                pass
 
 
 # Isolated fixtures for cache testing
@@ -278,6 +335,7 @@ def create_repomap_service_from_session_container(session_container, config):
     spellchecker_service = session_container.spellchecker_service()
     tree_sitter_parser = session_container.tree_sitter_parser()
     tag_cache = session_container.tag_cache()
+    file_discovery_service = session_container.file_discovery_service()
 
     # Create semantic matchers if enabled (same as service factory)
     semantic_matcher = None
@@ -307,4 +365,5 @@ def create_repomap_service_from_session_container(session_container, config):
         spellchecker_service=spellchecker_service,
         tree_sitter_parser=tree_sitter_parser,
         tag_cache=tag_cache,
+        file_discovery_service=file_discovery_service,
     )

@@ -19,6 +19,7 @@ from repomap_tool.code_analysis.models import CodeTag
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from repomap_tool.code_analysis.dependency_graph import DependencyGraph
 from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from repomap_tool.code_analysis.file_discovery_service import FileDiscoveryService
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
 from repomap_tool.code_search.embedding_matcher import EmbeddingMatcher
@@ -75,6 +76,7 @@ class RepoMapService:
         centrality_calculator: CentralityCalculator,
         tree_sitter_parser: TreeSitterParser,
         tag_cache: TreeSitterTagCache,
+        file_discovery_service: FileDiscoveryService,
         semantic_matcher: Optional[DomainSemanticMatcher] = None,
         embedding_matcher: Optional[EmbeddingMatcher] = None,
         hybrid_matcher: Optional[HybridMatcher] = None,
@@ -88,11 +90,16 @@ class RepoMapService:
             config: Validated RepoMapConfig instance
             console: Rich console instance (injected)
             fuzzy_matcher: Fuzzy matcher instance (injected)
-            semantic_matcher: Semantic matcher instance (injected)
-            hybrid_matcher: Hybrid matcher instance (injected)
             dependency_graph: Dependency graph instance (injected)
-            impact_analyzer: Impact analyzer instance (injected)
             centrality_calculator: Centrality calculator instance (injected)
+            tree_sitter_parser: Tree-sitter parser instance (injected)
+            tag_cache: Tag cache instance (injected)
+            file_discovery_service: File discovery service instance (injected)
+            semantic_matcher: Semantic matcher instance (injected)
+            embedding_matcher: Embedding matcher instance (injected)
+            hybrid_matcher: Hybrid matcher instance (injected)
+            impact_analyzer: Impact analyzer instance (injected)
+            spellchecker_service: Spell checker service instance (injected)
         """
         self.config = config
         self.logger = self._setup_logging()
@@ -111,6 +118,7 @@ class RepoMapService:
         self.spellchecker_service = spellchecker_service
         self.tree_sitter_parser = tree_sitter_parser # Assign injected parser
         self.tag_cache = tag_cache # Assign injected cache
+        self.file_discovery_service = file_discovery_service # Assign injected file discovery service
 
         # Initialize components
         self.repo_map: Optional[RepoMapProtocol] = None
@@ -377,8 +385,8 @@ class RepoMapService:
         # Force cache refresh if empty
         if not self.tree_sitter_parser or not self.tag_cache: # Check injected tag_cache
             self.logger.debug("Tree-sitter cache is empty or missing, forcing refresh")
-            project_files = get_project_files(
-                self.config.project_root, self.config.verbose # Pass Path object directly
+            project_files = self.file_discovery_service.get_tree_sitter_supported_files(
+                self.tree_sitter_parser, exclude_tests=True
             )
             if self.repo_map and project_files:
                 try:
@@ -400,9 +408,9 @@ class RepoMapService:
             # Force tree-sitter to scan files and populate cache
             self.logger.debug("Cache empty, forcing tree-sitter tag extraction")
 
-            # Get project files
-            project_files = get_project_files(
-                self.config.project_root, self.config.verbose # Pass Path object directly
+            # Get project files that are supported by tree-sitter
+            project_files = self.file_discovery_service.get_tree_sitter_supported_files(
+                self.tree_sitter_parser, exclude_tests=True
             )
 
             # Force tree-sitter to extract tags
@@ -565,9 +573,9 @@ class RepoMapService:
                 self.logger.info("Tree-sitter cache is empty")
                 return []
 
-            # Get all project files and retrieve their cached tags
-            project_files = get_project_files(
-                self.config.project_root, self.config.verbose # Pass Path object directly
+            # Get tree-sitter supported files and retrieve their cached tags
+            project_files = self.file_discovery_service.get_tree_sitter_supported_files(
+                self.tree_sitter_parser, exclude_tests=True
             )
 
             all_tags = []

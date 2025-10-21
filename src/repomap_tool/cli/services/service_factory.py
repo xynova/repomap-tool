@@ -72,6 +72,7 @@ class ServiceFactory:
         spellchecker_service = container.spellchecker_service()
         tree_sitter_parser = container.tree_sitter_parser() # Get tree_sitter_parser from container
         tag_cache = container.tag_cache() # Get tag_cache from container
+        file_discovery_service = container.file_discovery_service() # Get file_discovery_service from container
 
         # Create RepoMapService with injected dependencies
         service = RepoMapService(
@@ -87,6 +88,7 @@ class ServiceFactory:
             spellchecker_service=spellchecker_service,
             tree_sitter_parser=tree_sitter_parser, # Pass injected parser
             tag_cache=tag_cache, # Pass injected cache
+            file_discovery_service=file_discovery_service, # Pass injected file discovery service
         )
 
         self._services[cache_key] = service

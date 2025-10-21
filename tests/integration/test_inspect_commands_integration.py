@@ -450,17 +450,10 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self.runner.invoke(
-            cli,
-            [
-                "inspect",
-                "impact",
-                str(self.project_root),
-                "--files",
-                user_service_path,
-                "--output",
-                "text",
-            ],
+        result = self._invoke_inspect_command(
+            "impact", 
+            files=[user_service_path], 
+            output_format="text"
         )
 
         assert result.exit_code == 0
@@ -574,7 +567,7 @@ counts = obj.method2(["a", "bb", "ccc"])
         mock_tags = self._get_standard_mock_tags()
         tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         result = analyzer.analyze_file(self.test_file_path)
 
         assert result.file_path == self.test_file_path
@@ -591,7 +584,7 @@ counts = obj.method2(["a", "bb", "ccc"])
         mock_tags = self._get_standard_mock_tags()
         tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         result = analyzer.analyze_file(self.test_file_path)
 
         # Check specific imports
@@ -613,7 +606,7 @@ counts = obj.method2(["a", "bb", "ccc"])
         mock_tags = self._get_standard_mock_tags()
         tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         result = analyzer.analyze_file(self.test_file_path)
 
         # Check function calls
@@ -678,7 +671,7 @@ def another_function():
 
         tree_sitter_parser_instance.get_tags.side_effect = get_tags_side_effect
 
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         results = analyzer.analyze_multiple_files(
             [self.test_file_path, str(test_file2)]
         )
@@ -743,7 +736,7 @@ def use_test_file():
 
         tree_sitter_parser_instance.get_tags.side_effect = get_tags_side_effect_deps
 
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         all_files = [self.test_file_path, str(dependent_file)]
 
         reverse_deps = analyzer.find_reverse_dependencies(
@@ -775,7 +768,7 @@ def broken_function(
         # For simplicity, we'll assume a parsing error from TreeSitterParser results in an empty tags list and the analyzer adding an error.
         # The analyzer's internal error handling is what we're truly testing.
 
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         result = analyzer.analyze_file(str(invalid_file))
 
         assert result.file_path == str(invalid_file)
@@ -795,7 +788,7 @@ def broken_function(
         tree_sitter_parser_instance.get_tags.return_value = mock_tags
 
         # Instantiate ASTFileAnalyzer - its internal cache is an empty dict by default
-        analyzer = ASTFileAnalyzer(str(self.project_root), tree_sitter_parser=tree_sitter_parser_instance)
+        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
         analyzer.cache_enabled = True # Ensure caching is enabled
 
         # First analysis - should populate analyzer's internal cache
