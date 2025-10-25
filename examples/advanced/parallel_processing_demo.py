@@ -115,7 +115,10 @@ class Class_{i}:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_file = {
                 executor.submit(
-                    process_file_and_extract_tags, file_path, str(temp_dir), tree_sitter_parser
+                    process_file_and_extract_tags,
+                    file_path,
+                    str(temp_dir),
+                    tree_sitter_parser,
                 ): file_path
                 for file_path in project_files
             }
@@ -143,7 +146,9 @@ class Class_{i}:
     console.print(f"Time taken: {duration:.2f} seconds")
 
     # Cleanup
-    console.print("[bold yellow]Cleaning up temporary project directory...[/bold yellow]")
+    console.print(
+        "[bold yellow]Cleaning up temporary project directory...[/bold yellow]"
+    )
     import shutil
 
     shutil.rmtree(temp_dir)

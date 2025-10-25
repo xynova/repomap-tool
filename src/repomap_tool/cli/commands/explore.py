@@ -33,8 +33,10 @@ from dependency_injector.containers import DynamicContainer
 
 
 def create_exploration_controller_with_repomap(
-    container: DynamicContainer, # Accept container instance
-    config_obj: RepoMapConfig, output_format: str = "text", verbose: bool = True
+    container: DynamicContainer,  # Accept container instance
+    config_obj: RepoMapConfig,
+    output_format: str = "text",
+    verbose: bool = True,
 ) -> ExplorationController:
     """Create and properly configure an ExplorationController with repomap injection.
 
@@ -51,6 +53,7 @@ def create_exploration_controller_with_repomap(
         Properly configured ExplorationController instance
     """
     from repomap_tool.cli.controllers import ControllerConfig
+
     # from repomap_tool.cli.services import get_service_factory # No longer directly needed here
 
     # Initialize RepoMap service (critical for controller dependencies) from the provided container
@@ -102,7 +105,14 @@ def explore() -> None:
     help="Configuration file path",
 )
 @click.pass_context
-@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
 def start(
     ctx: click.Context,
     intent: str,
@@ -152,8 +162,10 @@ def start(
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format=output, verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format=output,
+            verbose=True,
         )
 
         # Execute exploration
@@ -219,8 +231,10 @@ def focus(tree_id: str, session: Optional[str], output: str) -> None:
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format=output, verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format=output,
+            verbose=True,
         )
 
         # Execute focus operation
@@ -274,8 +288,10 @@ def expand(expansion_area: str, session: Optional[str], tree: Optional[str]) -> 
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format="text", verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format="text",
+            verbose=True,
         )
 
         # Execute expansion operation
@@ -330,8 +346,10 @@ def prune(prune_area: str, session: Optional[str], tree: Optional[str]) -> None:
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format="text", verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format="text",
+            verbose=True,
         )
 
         # Execute pruning operation
@@ -388,8 +406,10 @@ def map(session: Optional[str], tree: Optional[str], include_code: bool) -> None
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format="text", verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format="text",
+            verbose=True,
         )
 
         # Execute mapping operation
@@ -451,8 +471,10 @@ def trees(session: Optional[str]) -> None:
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format="text", verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format="text",
+            verbose=True,
         )
 
         # Execute tree listing operation
@@ -508,8 +530,10 @@ def status(session: Optional[str]) -> None:
 
         # Create properly configured exploration controller with repomap injection
         exploration_controller = create_exploration_controller_with_repomap(
-            ctx.obj["container"], # Pass the container instance
-            config_obj, output_format="text", verbose=True
+            ctx.obj["container"],  # Pass the container instance
+            config_obj,
+            output_format="text",
+            verbose=True,
         )
 
         # Execute status operation

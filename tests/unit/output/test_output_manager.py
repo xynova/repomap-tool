@@ -13,10 +13,27 @@ import click
 from rich.console import Console
 
 from repomap_tool.cli.output.manager import OutputManager
-from repomap_tool.protocols import FormatterProtocol, FormatterRegistryProtocol, ConsoleManagerProtocol, TemplateEngine, TemplateRegistryProtocol # Updated imports
-from repomap_tool.cli.output.templates.engine import TemplateEngine as ConcreteTemplateEngine # Import concrete for mocks
-from repomap_tool.cli.output.templates.registry import DefaultTemplateRegistry # Import concrete for mocks
-from repomap_tool.models import ProjectInfo, SearchResponse, OutputConfig, OutputFormat, ErrorResponse, SuccessResponse # Ensure OutputConfig and OutputFormat are imported from models
+from repomap_tool.protocols import (
+    FormatterProtocol,
+    FormatterRegistryProtocol,
+    ConsoleManagerProtocol,
+    TemplateEngine,
+    TemplateRegistryProtocol,
+)  # Updated imports
+from repomap_tool.cli.output.templates.engine import (
+    TemplateEngine as ConcreteTemplateEngine,
+)  # Import concrete for mocks
+from repomap_tool.cli.output.templates.registry import (
+    DefaultTemplateRegistry,
+)  # Import concrete for mocks
+from repomap_tool.models import (
+    ProjectInfo,
+    SearchResponse,
+    OutputConfig,
+    OutputFormat,
+    ErrorResponse,
+    SuccessResponse,
+)  # Ensure OutputConfig and OutputFormat are imported from models
 
 
 class MockFormatter(FormatterProtocol):
@@ -74,7 +91,9 @@ class MockFormatterRegistry(FormatterRegistryProtocol):
     def __init__(
         self,
         template_engine: TemplateEngine = Mock(spec=ConcreteTemplateEngine),
-        template_registry: TemplateRegistryProtocol = Mock(spec=DefaultTemplateRegistry),
+        template_registry: TemplateRegistryProtocol = Mock(
+            spec=DefaultTemplateRegistry
+        ),
         console_manager: ConsoleManagerProtocol = Mock(spec=ConsoleManagerProtocol),
     ):
         self._formatters: List[FormatterProtocol] = []
@@ -109,8 +128,10 @@ class MockFormatterRegistry(FormatterRegistryProtocol):
 
         # Try all formatters for validation-based matching
         for formatter in self._formatters:
-            if hasattr(formatter, "validate_data") and formatter.validate_data(data_type) and formatter.supports_format(
-                output_format
+            if (
+                hasattr(formatter, "validate_data")
+                and formatter.validate_data(data_type)
+                and formatter.supports_format(output_format)
             ):
                 return formatter
 
@@ -198,7 +219,12 @@ class TestOutputManager:
         template_registry = Mock(spec=TemplateRegistryProtocol)
 
         with pytest.raises(ValueError, match="ConsoleManager must be injected"):
-            OutputManager(console_manager=None, formatter_registry=formatter_registry, template_engine=template_engine, template_registry=template_registry)
+            OutputManager(
+                console_manager=None,
+                formatter_registry=formatter_registry,
+                template_engine=template_engine,
+                template_registry=template_registry,
+            )
 
     def test_init_without_formatter_registry_raises_error(self):
         """Test that initialization without formatter registry raises error."""
@@ -207,7 +233,12 @@ class TestOutputManager:
         template_registry = Mock(spec=TemplateRegistryProtocol)
 
         with pytest.raises(ValueError, match="FormatterRegistry must be injected"):
-            OutputManager(console_manager=console_manager, formatter_registry=None, template_engine=template_engine, template_registry=template_registry)
+            OutputManager(
+                console_manager=console_manager,
+                formatter_registry=None,
+                template_engine=template_engine,
+                template_registry=template_registry,
+            )
 
     def test_init_without_template_engine_raises_error(self):
         """Test that initialization without template engine raises error."""
@@ -216,7 +247,12 @@ class TestOutputManager:
         template_registry = Mock(spec=TemplateRegistryProtocol)
 
         with pytest.raises(ValueError, match="TemplateEngine must be injected"):
-            OutputManager(console_manager=console_manager, formatter_registry=formatter_registry, template_engine=None, template_registry=template_registry)
+            OutputManager(
+                console_manager=console_manager,
+                formatter_registry=formatter_registry,
+                template_engine=None,
+                template_registry=template_registry,
+            )
 
     def test_init_without_template_registry_raises_error(self):
         """Test that initialization without template registry raises error."""
@@ -225,17 +261,22 @@ class TestOutputManager:
         template_engine = Mock(spec=ConcreteTemplateEngine)
 
         with pytest.raises(ValueError, match="TemplateRegistry must be injected"):
-            OutputManager(console_manager=console_manager, formatter_registry=formatter_registry, template_engine=template_engine, template_registry=None)
+            OutputManager(
+                console_manager=console_manager,
+                formatter_registry=formatter_registry,
+                template_engine=template_engine,
+                template_registry=None,
+            )
 
     def test_display_success(self):
         """Test successful data display."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=dict) # Specify data_type for formatter
+        formatter = MockFormatter(data_type=dict)  # Specify data_type for formatter
         formatter_registry.register_formatter(formatter, dict)
 
         manager = OutputManager(
@@ -268,7 +309,7 @@ class TestOutputManager:
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=dict) # Specify data_type for formatter
+        formatter = MockFormatter(data_type=dict)  # Specify data_type for formatter
         formatter_registry.register_formatter(formatter, dict)
 
         manager = OutputManager(
@@ -292,7 +333,7 @@ class TestOutputManager:
         """Test display when no formatter is found."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -319,11 +360,13 @@ class TestOutputManager:
         """Test display_error method."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=ErrorResponse) # ErrorResponseFormatter is typically used for this
+        formatter = MockFormatter(
+            data_type=ErrorResponse
+        )  # ErrorResponseFormatter is typically used for this
         formatter_registry.register_formatter(formatter, ErrorResponse)
 
         manager = OutputManager(
@@ -340,18 +383,20 @@ class TestOutputManager:
         with patch.object(console_manager.console, "print") as mock_print:
             manager.display_error(error, config)
 
-        assert formatter.format_called # The generic dict formatter will be called
+        assert formatter.format_called  # The generic dict formatter will be called
         assert manager._output_stats["errors"] == 1
 
     def test_display_success_message(self):
         """Test display_success method."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=SuccessResponse) # SuccessResponseFormatter is typically used for this
+        formatter = MockFormatter(
+            data_type=SuccessResponse
+        )  # SuccessResponseFormatter is typically used for this
         formatter_registry.register_formatter(formatter, SuccessResponse)
 
         manager = OutputManager(
@@ -379,7 +424,7 @@ class TestOutputManager:
         """Test display_progress method."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -406,11 +451,11 @@ class TestOutputManager:
         """Test validate_format with supported format."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
-        formatter = MockFormatter(data_type=dict) # Specify data_type for formatter
+        formatter = MockFormatter(data_type=dict)  # Specify data_type for formatter
         formatter_registry.register_formatter(formatter, dict)
 
         manager = OutputManager(
@@ -428,7 +473,7 @@ class TestOutputManager:
         """Test validate_format with unsupported format."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -450,7 +495,7 @@ class TestOutputManager:
         """Test get_supported_formats method."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -473,7 +518,7 @@ class TestOutputManager:
         """Test get_output_stats method."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -505,7 +550,7 @@ class TestOutputManager:
         """Test reset_stats method."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -540,7 +585,7 @@ class TestOutputManager:
         """Test that invalid config raises error."""
         console_manager = MockConsoleManager()
         formatter_registry = MockFormatterRegistry(
-            console_manager=console_manager, 
+            console_manager=console_manager,
             template_engine=Mock(spec=ConcreteTemplateEngine),
             template_registry=Mock(spec=TemplateRegistryProtocol),
         )
@@ -603,7 +648,9 @@ class TestOutputManagerIntegration:
         """Test display with real ProjectInfo data."""
         console_manager = MockConsoleManager()
         template_engine = Mock(spec=ConcreteTemplateEngine)
-        template_engine.render_template.return_value = "Project Analysis\nTotal Files: 10\nTotal Identifiers: 50"
+        template_engine.render_template.return_value = (
+            "Project Analysis\nTotal Files: 10\nTotal Identifiers: 50"
+        )
         template_registry = Mock(spec=TemplateRegistryProtocol)
         formatter_registry = MockFormatterRegistry(
             console_manager=console_manager,
@@ -614,7 +661,12 @@ class TestOutputManagerIntegration:
         # Register a real formatter
         from repomap_tool.cli.output.standard_formatters import ProjectInfoFormatter
 
-        formatter = ProjectInfoFormatter(console_manager=console_manager, template_engine=template_engine, template_registry=template_registry, enable_logging=False)
+        formatter = ProjectInfoFormatter(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=False,
+        )
         formatter_registry.register_formatter(formatter, ProjectInfo)
 
         manager = OutputManager(

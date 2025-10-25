@@ -54,7 +54,11 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def get_data_type(self) -> Type[Any]:
         """Get the data type this formatter handles."""
@@ -120,7 +124,11 @@ class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def get_data_type(self) -> Type[Any]:
         """Get the data type this formatter handles."""
@@ -186,7 +194,11 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def get_data_type(self) -> Type[Any]:
         """Get the data type this formatter handles."""
@@ -246,7 +258,11 @@ class DensityAnalysisFormatter(TemplateBasedFormatter, DataFormatter):
         console_manager: ConsoleManagerProtocol,
     ) -> None:
         """Initialize the formatter."""
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def get_data_type(self) -> Type[Any]:
         """Get the data type this formatter handles."""
@@ -274,7 +290,8 @@ class DensityAnalysisFormatter(TemplateBasedFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             import json
             from dataclasses import asdict
-            return json.dumps(asdict(data), indent=2) # Use asdict for dataclass
+
+            return json.dumps(asdict(data), indent=2)  # Use asdict for dataclass
         elif output_format == OutputFormat.TEXT:
             return self.render_template("density_analysis", data, config)
         else:

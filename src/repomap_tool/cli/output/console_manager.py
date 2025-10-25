@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import logging
@@ -15,22 +14,17 @@ from ..utils.console import ConsoleProvider, RichConsoleFactory
 
 
 class ConsoleManagerProtocol(Protocol):
-    def get_console(self, ctx: Optional[click.Context] = None) -> Console:
-        ...
+    def get_console(self, ctx: Optional[click.Context] = None) -> Console: ...
 
     @abstractmethod
-    def configure(self, no_color: bool = False) -> None:
-        ...
+    def configure(self, no_color: bool = False) -> None: ...
 
     @abstractmethod
-    def log_operation(self, operation: str, context: Dict[str, Any]) -> None:
-        ...
+    def log_operation(self, operation: str, context: Dict[str, Any]) -> None: ...
 
-    def get_usage_stats(self) -> Dict[str, Any]:
-        ...
+    def get_usage_stats(self) -> Dict[str, Any]: ...
 
-    def reset_usage_stats(self) -> None:
-        ...
+    def reset_usage_stats(self) -> None: ...
 
 
 class DefaultConsoleManager(ConsoleManagerProtocol):
@@ -44,7 +38,9 @@ class DefaultConsoleManager(ConsoleManagerProtocol):
         if provider is None:
             raise ValueError("ConsoleProvider must be injected - no fallback allowed")
 
-        self.logger = get_logger(self.__class__.__name__) if enable_logging else None # Conditionally initialize logger
+        self.logger = (
+            get_logger(self.__class__.__name__) if enable_logging else None
+        )  # Conditionally initialize logger
         self.enable_logging = enable_logging
         self._provider = provider
         self._log_level = log_level
@@ -53,25 +49,33 @@ class DefaultConsoleManager(ConsoleManagerProtocol):
 
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:
         if self.enable_logging and self.logger:
-            self._log_operation("get_console", context={"ctx_obj": str(ctx.obj) if ctx else "None"}) # Changed to _log_operation
+            self._log_operation(
+                "get_console", context={"ctx_obj": str(ctx.obj) if ctx else "None"}
+            )  # Changed to _log_operation
         return self._provider.get_console(ctx)
 
     def configure(self, no_color: bool = False) -> None:
-        self._provider = ConsoleProvider(factory=RichConsoleFactory(), no_color=no_color)
+        self._provider = ConsoleProvider(
+            factory=RichConsoleFactory(), no_color=no_color
+        )
         if self.enable_logging and self.logger:
-            self._log_operation("configure_console", context={"no_color": no_color}) # Changed to _log_operation
+            self._log_operation(
+                "configure_console", context={"no_color": no_color}
+            )  # Changed to _log_operation
 
     def log_operation(self, operation: str, context: Dict[str, Any]) -> None:
         self._log_operation(operation, context)
 
-    def _log_operation(self, operation: str, context: Dict[str, Any] = {}) -> None: # Renamed 'details' to 'context'
+    def _log_operation(
+        self, operation: str, context: Dict[str, Any] = {}
+    ) -> None:  # Renamed 'details' to 'context'
         if self.enable_logging and self.logger:
             self.logger.debug(
                 f"Console operation: {operation}",
                 extra={
                     "operation": operation,
                     "console_manager": self.__class__.__name__,
-                    "context": context, # Changed 'details' to 'context'
+                    "context": context,  # Changed 'details' to 'context'
                 },
             )
         self._usage_stats[operation] = self._usage_stats.get(operation, 0) + 1
@@ -82,7 +86,9 @@ class DefaultConsoleManager(ConsoleManagerProtocol):
 
     def reset_usage_stats(self) -> None:
         if self.enable_logging and self.logger:
-            self._log_operation("reset_usage_stats", context={}) # Changed to _log_operation
+            self._log_operation(
+                "reset_usage_stats", context={}
+            )  # Changed to _log_operation
         self._usage_stats = {}
 
 
@@ -119,4 +125,3 @@ def log_console_operation(operation: str, **context: Any) -> None:
 
 # Alias for backward compatibility
 ConsoleManager = DefaultConsoleManager
-

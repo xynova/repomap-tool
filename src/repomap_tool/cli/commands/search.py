@@ -66,7 +66,14 @@ from ..output import OutputManager, OutputConfig, OutputFormat
     help="Maximum cache entries (100-10000)",
 )
 @click.pass_context
-@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
 def search(
     ctx: click.Context,
     query: str,
@@ -109,7 +116,9 @@ def search(
             for p in input_paths:
                 abs_path = Path(p).resolve()
                 if not abs_path.is_relative_to(resolved_project_path):
-                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                    raise click.BadParameter(
+                        f"Input path '{p}' is not within the project root '{resolved_project_path}'."
+                    )
                 target_files.append(str(abs_path))
 
         config_obj, was_created = load_or_create_config(

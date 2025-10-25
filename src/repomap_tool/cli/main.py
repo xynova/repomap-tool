@@ -32,7 +32,14 @@ from .utils.console import ConsoleProvider, RichConsoleFactory
 
 
 @click.group()
-@click.option("--project-root", type=click.Path(exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path), default=None, help="Specify the project root directory.")
+@click.option(
+    "--project-root",
+    type=click.Path(
+        exists=True, file_okay=False, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    default=None,
+    help="Specify the project root directory.",
+)
 @click.option("--no-color", is_flag=True, help="Disable colored output")
 @click.pass_context
 def cli(ctx: click.Context, project_root: Optional[Path], no_color: bool) -> None:
@@ -47,25 +54,37 @@ def cli(ctx: click.Context, project_root: Optional[Path], no_color: bool) -> Non
     # Initialize console provider with dependency injection
     from repomap_tool.core.container import create_container
     from repomap_tool.models import RepoMapConfig
-    from repomap_tool.cli.output.console_manager import DefaultConsoleManager # Import DefaultConsoleManager
+    from repomap_tool.cli.output.console_manager import (
+        DefaultConsoleManager,
+    )  # Import DefaultConsoleManager
+
     # Removed: from repomap_tool.core.logging_service import logger # Import logger
     # Removed: from repomap_tool.cli.output.console_manager import configure_console # Import configure_console
 
     # Initialize an empty container and attach it to the context
     # The container will be configured with the actual RepoMapConfig in each command
     if "container" not in ctx.obj:
-        container = create_container(RepoMapConfig(project_root=effective_project_root, cache_dir=tempfile.TemporaryDirectory().name))
+        container = create_container(
+            RepoMapConfig(
+                project_root=effective_project_root,
+                cache_dir=tempfile.TemporaryDirectory().name,
+            )
+        )
         ctx.obj["container"] = container
 
     # If console_manager is not already set in ctx.obj, retrieve it from the container.
     if "console_manager" not in ctx.obj:
         ctx.obj["console_manager"] = ctx.obj["container"].console_manager()
 
-    logger.debug(f"Type of ctx.obj['console_manager'] after setting: {type(ctx.obj['console_manager'])}")
+    logger.debug(
+        f"Type of ctx.obj['console_manager'] after setting: {type(ctx.obj['console_manager'])}"
+    )
 
     # Retrieve the console manager from the container and configure it.
     console_manager_instance = ctx.obj["console_manager"]
-    console_manager_instance.configure(no_color=ctx.obj.get("no_color", False)) # Directly call configure on the instance
+    console_manager_instance.configure(
+        no_color=ctx.obj.get("no_color", False)
+    )  # Directly call configure on the instance
 
     # Pass the container to the context object
 

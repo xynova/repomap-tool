@@ -15,6 +15,7 @@ from pathlib import Path
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
 from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
+
 if TYPE_CHECKING:
     from repomap_tool.cli.controllers.view_models import SearchViewModel
 from repomap_tool.models import SymbolViewModel
@@ -681,7 +682,7 @@ class TreeBuilder:
 
     def build_tree_from_search_results(
         self,
-        search_results: 'SearchViewModel', # Type hint for SearchViewModel
+        search_results: "SearchViewModel",  # Type hint for SearchViewModel
         intent: str,
         max_depth: int,
         project_path: str,

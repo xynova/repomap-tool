@@ -16,18 +16,22 @@ from .loader import TemplateLoader, FileTemplateLoader
 from repomap_tool.protocols import TemplateRegistryProtocol
 
 
-class DefaultTemplateRegistry(TemplateRegistryProtocol): # Explicitly implement the protocol
+class DefaultTemplateRegistry(
+    TemplateRegistryProtocol
+):  # Explicitly implement the protocol
     """Default implementation of template registry."""
 
     def __init__(
         self,
         template_loader: Optional[TemplateLoader] = None,
         enable_logging: bool = True,
-        default_config: Optional[TemplateConfig] = None, # Add default_config
+        default_config: Optional[TemplateConfig] = None,  # Add default_config
     ) -> None:
         """Initialize the template registry."""
         self._templates: Dict[str, str] = {}
-        self._registered_templates: Dict[str, str] = {} # Initialize _registered_templates
+        self._registered_templates: Dict[str, str] = (
+            {}
+        )  # Initialize _registered_templates
         self._template_loader = template_loader or FileTemplateLoader()
         self._logger = get_logger(__name__) if enable_logging else None
         self._default_config = default_config

@@ -20,6 +20,7 @@ from repomap_tool.core.logging_service import get_logger
 
 logger = get_logger(__name__)
 
+
 # TypedDict definitions for structured data
 class Tag(TypedDict):
     """Tag structure for project identifiers."""
@@ -478,8 +479,12 @@ class SuccessResponse(BaseModel):
     """Standard success response for API endpoints."""
 
     message: str = Field(description="Success message")
-    status_code: int = Field(default=200, ge=200, lt=300, description="HTTP status code")
-    data: Optional[Dict[str, Any]] = Field(default=None, description="Optional response data")
+    status_code: int = Field(
+        default=200, ge=200, lt=300, description="HTTP status code"
+    )
+    data: Optional[Dict[str, Any]] = Field(
+        default=None, description="Optional response data"
+    )
     timestamp: datetime = Field(
         default_factory=datetime.now, description="Response timestamp"
     )

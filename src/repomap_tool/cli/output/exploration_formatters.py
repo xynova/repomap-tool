@@ -13,9 +13,15 @@ from typing import Any, List, Optional
 
 import click
 
-from repomap_tool.protocols import DataFormatter, TemplateRegistryProtocol, ConsoleManagerProtocol, TemplateEngine
+from repomap_tool.protocols import (
+    DataFormatter,
+    TemplateRegistryProtocol,
+    ConsoleManagerProtocol,
+    TemplateEngine,
+)
 from .formats import OutputFormat, OutputConfig
 from .template_formatter import TemplateBasedFormatter
+
 # Removed local import of TemplateEngine - relying on TypeVar in protocols.py
 # from .templates.engine import TemplateEngine
 from ..controllers.view_models import (
@@ -49,7 +55,11 @@ class TreeClusterViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -103,7 +113,11 @@ class TreeFocusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -158,7 +172,11 @@ class TreeExpansionViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -213,7 +231,11 @@ class TreePruningViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -268,7 +290,11 @@ class TreeMappingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -323,7 +349,11 @@ class TreeListingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -378,7 +408,11 @@ class SessionStatusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -433,7 +467,11 @@ class ExplorationViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             template_registry: Template registry for rendering
             console_manager: Console manager for rendering
         """
-        super().__init__(template_engine=template_engine, template_registry=template_registry, console_manager=console_manager)
+        super().__init__(
+            template_engine=template_engine,
+            template_registry=template_registry,
+            console_manager=console_manager,
+        )
 
     def supports_format(self, output_format: OutputFormat) -> bool:
         """Check if this formatter supports the given output format."""
@@ -470,7 +508,7 @@ class ExplorationViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             return self.render_template("exploration", data, config)
         else:
             raise ValueError(f"Unsupported format: {output_format}")
-    
+
     def get_data_type(self) -> Type[Any]:
         """Get the data type this formatter handles."""
         return ExplorationViewModel

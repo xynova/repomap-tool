@@ -261,7 +261,8 @@ class AdvancedDependencyGraph(DependencyGraph):
                 try:
                     depth = self._calculate_path_depth(root, file_path)
                     depths.append(depth)
-                except Exception:
+                except Exception as e:
+                    logger.debug(f"Error calculating dependency depth from {root} to {file_path}: {e}")
                     continue
 
             return max(depths) if depths else 0

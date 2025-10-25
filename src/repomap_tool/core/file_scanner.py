@@ -172,15 +172,21 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
 
     project_root_path = Path(project_root)
     if verbose:
-        logging.debug(f"get_project_files: Starting file discovery for project root: {project_root_path}")
-        logging.debug(f"get_project_files: Project root exists: {project_root_path.exists()}")
+        logging.debug(
+            f"get_project_files: Starting file discovery for project root: {project_root_path}"
+        )
+        logging.debug(
+            f"get_project_files: Project root exists: {project_root_path.exists()}"
+        )
         logging.debug(f"get_project_files: Is directory: {project_root_path.is_dir()}")
 
     # Parse .gitignore file
     gitignore_path = project_root_path / ".gitignore"
     gitignore_patterns = parse_gitignore(gitignore_path)
     if verbose:
-        logging.debug(f"get_project_files: Loaded {len(gitignore_patterns)} .gitignore patterns.")
+        logging.debug(
+            f"get_project_files: Loaded {len(gitignore_patterns)} .gitignore patterns."
+        )
 
     # Add comprehensive default exclusions for all common languages and tools
     default_exclusions = [
@@ -447,7 +453,9 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
     # Combine gitignore patterns with default exclusions
     all_patterns = default_exclusions + gitignore_patterns
     if verbose:
-        logging.debug(f"get_project_files: Combined {len(gitignore_patterns)} gitignore patterns and {len(default_exclusions)} default exclusions.")
+        logging.debug(
+            f"get_project_files: Combined {len(gitignore_patterns)} gitignore patterns and {len(default_exclusions)} default exclusions."
+        )
 
     files = []
     for root, dirs, filenames in os.walk(project_root):
@@ -469,13 +477,17 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
             # Always ignore .gitignore file itself
             if filename == ".gitignore":
                 if verbose:
-                    logging.debug(f"get_project_files: Ignoring .gitignore file: {rel_file_path}")
+                    logging.debug(
+                        f"get_project_files: Ignoring .gitignore file: {rel_file_path}"
+                    )
                 continue
 
             # Check if file should be ignored
             if should_ignore_file(file_path, all_patterns, project_root_path):
                 if verbose:
-                    logging.debug(f"get_project_files: Ignoring file (gitignore): {rel_file_path}")
+                    logging.debug(
+                        f"get_project_files: Ignoring file (gitignore): {rel_file_path}"
+                    )
                 continue
 
             # Return absolute path for consistent path handling

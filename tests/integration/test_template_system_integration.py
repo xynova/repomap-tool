@@ -47,7 +47,9 @@ class TestTemplateEngineIntegration:
 
     def test_render_template_fallback_behavior(self):
         """Test template rendering fallback when Jinja2 is not available."""
-        with patch("tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False):
+        with patch(
+            "tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False
+        ):
             engine = self._get_template_engine()
 
             # Should raise an exception when template is not found
@@ -56,7 +58,9 @@ class TestTemplateEngineIntegration:
 
     def test_validate_template_fallback(self):
         """Test template validation fallback behavior."""
-        with patch("tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False):
+        with patch(
+            "tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False
+        ):
             engine = self._get_template_engine()
 
             # validate_template method doesn't exist, so this should raise AttributeError
@@ -74,7 +78,9 @@ class TestTemplateEngineIntegration:
 
     def test_get_template_info_fallback(self):
         """Test getting template information in fallback mode."""
-        with patch("tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False):
+        with patch(
+            "tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False
+        ):
             engine = self._get_template_engine()
 
             # get_template_info method doesn't exist, so this should raise AttributeError
@@ -93,7 +99,7 @@ class TestTemplateBasedFormatterIntegration:
         return TemplateBasedFormatter(
             template_engine=container.template_engine(),
             template_registry=container.template_registry(),
-            console_manager=container.console_manager()
+            console_manager=container.console_manager(),
         )
 
     def test_template_based_formatter_initialization(self):
@@ -207,7 +213,7 @@ class TestTemplateSystemEndToEnd:
         return TemplateBasedFormatter(
             template_engine=container.template_engine(),
             template_registry=container.template_registry(),
-            console_manager=container.console_manager()
+            console_manager=container.console_manager(),
         )
 
     def test_template_system_with_real_data(self):
@@ -258,14 +264,24 @@ class TestTemplateSystemEndToEnd:
 
     def test_template_system_fallback_behavior(self):
         """Test template system fallback behavior when Jinja2 is not available."""
-        with patch("tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False):
+        with patch(
+            "tests.integration.test_template_system_integration.JINJA2_AVAILABLE", False
+        ):
             # For testing fallback, we need to manually create the formatter with a mock template engine
             # that simulates Jinja2 being unavailable.
             mock_template_engine = Mock(spec=TemplateEngine)
-            mock_template_engine.render_template.side_effect = Exception("Jinja2 not available")
+            mock_template_engine.render_template.side_effect = Exception(
+                "Jinja2 not available"
+            )
             registry = DefaultTemplateRegistry()
-            mock_console_manager = Mock(spec=DefaultConsoleManager) # Add a mock console_manager
-            formatter = TemplateBasedFormatter(template_engine=mock_template_engine, template_registry=registry, console_manager=mock_console_manager)
+            mock_console_manager = Mock(
+                spec=DefaultConsoleManager
+            )  # Add a mock console_manager
+            formatter = TemplateBasedFormatter(
+                template_engine=mock_template_engine,
+                template_registry=registry,
+                console_manager=mock_console_manager,
+            )
 
             data = {"test": "data"}
             config = OutputConfig(format=OutputFormat.TEXT)

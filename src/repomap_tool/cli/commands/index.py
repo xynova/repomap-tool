@@ -22,7 +22,7 @@ from ..config.loader import (
     create_default_config,
     load_or_create_config,
 )
-from ..output import OutputManager, OutputConfig, OutputFormat #, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat  # , get_output_manager
 from ..utils.console import get_console
 
 
@@ -99,10 +99,17 @@ def index() -> None:
     default="medium",
     help="Output compression level",
 )
-@click.pass_context # Pass context to the command
-@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
+@click.pass_context  # Pass context to the command
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
 def create(
-    ctx: click.Context, # Add ctx parameter here
+    ctx: click.Context,  # Add ctx parameter here
     config: Optional[str],
     fuzzy: bool,
     semantic: bool,
@@ -145,7 +152,9 @@ def create(
             for p in input_paths:
                 abs_path = Path(p).resolve()
                 if not abs_path.is_relative_to(resolved_project_path):
-                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                    raise click.BadParameter(
+                        f"Input path '{p}' is not within the project root '{resolved_project_path}'."
+                    )
                 target_files.append(str(abs_path))
         # If no specific input_paths, the RepoMapService will analyze the entire project_root
 
@@ -166,10 +175,11 @@ def create(
             no_monitoring=no_monitoring,
             log_level=log_level,
         )
-        
+
         # Suppress logging for JSON output to avoid mixing with output
         if output == "json":
             import logging
+
             logging.getLogger().setLevel(logging.CRITICAL)
 
         # Configure the container with the loaded config_obj
@@ -185,7 +195,9 @@ def create(
         output_manager: OutputManager = ctx.obj["container"].output_manager()
 
         # Analyze project
-        project_info = repomap.analyze_project(files=target_files if target_files else None)
+        project_info = repomap.analyze_project(
+            files=target_files if target_files else None
+        )
 
         # Pre-compute embeddings during indexing
         if (
@@ -197,7 +209,9 @@ def create(
             console = get_console(ctx)
             # Only print progress messages if not using JSON output
             if output != "json":
-                console.print("[cyan]Computing embeddings for all identifiers...[/cyan]")
+                console.print(
+                    "[cyan]Computing embeddings for all identifiers...[/cyan]"
+                )
 
             # Get all identifiers from tree-sitter cache
             identifiers_with_files = {}

@@ -428,13 +428,19 @@ class ImportAnalyzer:
 
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
-        self.tree_sitter_parser = tree_sitter_parser # Assign injected parser
+        self.tree_sitter_parser = tree_sitter_parser  # Assign injected parser
 
         # All parsers use TreeSitterParser - no regex fallbacks
         self.language_parsers: Dict[str, ImportParser] = {
-            "py": PythonImportParser(self.tree_sitter_parser), # Pass tree_sitter_parser
-            "js": JavaScriptImportParser(self.tree_sitter_parser), # Pass tree_sitter_parser
-            "ts": JavaScriptImportParser(self.tree_sitter_parser),  # TypeScript uses same parser
+            "py": PythonImportParser(
+                self.tree_sitter_parser
+            ),  # Pass tree_sitter_parser
+            "js": JavaScriptImportParser(
+                self.tree_sitter_parser
+            ),  # Pass tree_sitter_parser
+            "ts": JavaScriptImportParser(
+                self.tree_sitter_parser
+            ),  # TypeScript uses same parser
             "jsx": JavaScriptImportParser(self.tree_sitter_parser),
             "tsx": JavaScriptImportParser(self.tree_sitter_parser),
             "java": JavaImportParser(self.tree_sitter_parser),

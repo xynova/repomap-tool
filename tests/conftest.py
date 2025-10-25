@@ -20,7 +20,7 @@ from repomap_tool.models import (
 from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from tree_sitter import Language
 import grep_ast.tsl as tsl
-from grep_ast.tsl import get_language # Import get_language
+from grep_ast.tsl import get_language  # Import get_language
 import click
 from click.testing import CliRunner
 from unittest.mock import patch
@@ -55,7 +55,7 @@ LANGUAGE_JAVASCRIPT = get_language("javascript")
 LANGUAGE_GO = get_language("go")
 LANGUAGE_JAVA = get_language("java")
 LANGUAGE_TYPESCRIPT = get_language("typescript")
-LANGUAGE_CSHARP = get_language("csharp") # C# uses 'csharp' name
+LANGUAGE_CSHARP = get_language("csharp")  # C# uses 'csharp' name
 
 
 @pytest.fixture(scope="session")
@@ -81,21 +81,28 @@ def session_config(session_test_repo_path):
 def session_tree_sitter_parser(session_test_repo_path) -> TreeSitterParser:
     """Provides a TreeSitterParser instance for the entire test session."""
     from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
-    from repomap_tool.code_analysis.query_loader import FileQueryLoader # Use real query loader
-    from repomap_tool.core.tag_cache import TreeSitterTagCache # Use real tag cache
+    from repomap_tool.code_analysis.query_loader import (
+        FileQueryLoader,
+    )  # Use real query loader
+    from repomap_tool.core.tag_cache import TreeSitterTagCache  # Use real tag cache
 
     # Setup a temporary directory for the cache
     # Use TemporaryDirectory for proper cleanup
     import tempfile
+
     temp_cache_dir = tempfile.TemporaryDirectory()
     cache_path = Path(temp_cache_dir.name)
 
-    mock_cache = TreeSitterTagCache(cache_dir=cache_path) # Use real cache
-    mock_query_loader = FileQueryLoader() # Use real query loader
+    mock_cache = TreeSitterTagCache(cache_dir=cache_path)  # Use real cache
+    mock_query_loader = FileQueryLoader()  # Use real query loader
 
     # Ensure project_root is a Path object for the parser
     # Use the session_test_repo_path for the parser's project_root
-    parser = TreeSitterParser(project_root=session_test_repo_path, cache=mock_cache, query_loader=mock_query_loader)
+    parser = TreeSitterParser(
+        project_root=session_test_repo_path,
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     yield parser
     # Cleanup the temporary directory after the session
     temp_cache_dir.cleanup()
@@ -105,20 +112,27 @@ def session_tree_sitter_parser(session_test_repo_path) -> TreeSitterParser:
 def get_tree_sitter_parser_function_fixture(session_test_repo_path) -> TreeSitterParser:
     """Provides a TreeSitterParser instance for each test function."""
     from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
-    from repomap_tool.code_analysis.query_loader import FileQueryLoader # Use real query loader
-    from repomap_tool.core.tag_cache import TreeSitterTagCache # Use real tag cache
+    from repomap_tool.code_analysis.query_loader import (
+        FileQueryLoader,
+    )  # Use real query loader
+    from repomap_tool.core.tag_cache import TreeSitterTagCache  # Use real tag cache
 
     # Setup a temporary directory for the cache
     import tempfile
+
     temp_cache_dir = tempfile.TemporaryDirectory()
     cache_path = Path(temp_cache_dir.name)
 
-    mock_cache = TreeSitterTagCache(cache_dir=cache_path) # Use real cache
-    mock_query_loader = FileQueryLoader() # Use real query loader
+    mock_cache = TreeSitterTagCache(cache_dir=cache_path)  # Use real cache
+    mock_query_loader = FileQueryLoader()  # Use real query loader
 
     # Ensure project_root is a Path object for the parser
     # Use the session_test_repo_path for the parser's project_root
-    parser = TreeSitterParser(project_root=session_test_repo_path, cache=mock_cache, query_loader=mock_query_loader)
+    parser = TreeSitterParser(
+        project_root=session_test_repo_path,
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     yield parser
     # Cleanup the temporary directory after the function
     temp_cache_dir.cleanup()
@@ -164,7 +178,9 @@ def session_import_data(session_container, session_test_repo_path):
     analyzer = session_container.import_analyzer()
 
     # Analyze project imports - use the resolved absolute path
-    project_imports = analyzer.analyze_project_imports(str(session_test_repo_path.resolve()))
+    project_imports = analyzer.analyze_project_imports(
+        str(session_test_repo_path.resolve())
+    )
     return project_imports
 
 
@@ -229,15 +245,15 @@ def cli_runner_with_container(session_container):
     provider = ConsoleProvider(factory=BufferConsoleFactory(), no_color=True)
     isolated_manager = DefaultConsoleManager(provider=provider, enable_logging=False)
     session_container.console_manager.override(lambda: isolated_manager)
-    
+
     # Also redirect logging to the isolated buffer to prevent logging from corrupting JSON output
     # This prevents "I/O operation on closed file" errors when pytest tears down logging handlers
     logging_handler = logging.StreamHandler(buffer)
     logging_handler.setLevel(logging.DEBUG)
-    
+
     # Store original handlers to restore later
     original_handlers = logging.getLogger().handlers[:]
-    
+
     # Clear existing handlers and add our isolated handler
     logging.getLogger().handlers.clear()
     logging.getLogger().addHandler(logging_handler)
@@ -271,7 +287,7 @@ def cli_runner_with_container(session_container):
                 session_container.console_manager.reset_override()
             except Exception:
                 pass
-            
+
             # Restore original logging handlers
             try:
                 logging.getLogger().handlers.clear()

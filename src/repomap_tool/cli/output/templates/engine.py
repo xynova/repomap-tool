@@ -64,7 +64,7 @@ class TemplateEngine:
             enable_logging: Whether to enable logging
         """
         self._enable_logging = enable_logging
-        self._logger = get_logger(__name__) # Always initialize the logger
+        self._logger = get_logger(__name__)  # Always initialize the logger
         self.template_registry = template_registry
 
         if template_loader is None:
@@ -91,7 +91,7 @@ class TemplateEngine:
         if Environment is not None and FileSystemLoader is not None:
             self._jinja_env = Environment(
                 loader=FileSystemLoader([]),  # We'll load templates manually
-                autoescape=False,  # We're not dealing with HTML
+                autoescape=True,  # Enable autoescaping for security
                 trim_blocks=True,
                 lstrip_blocks=True,
             )
@@ -337,7 +337,7 @@ class TemplateEngineFactory:
 
     @staticmethod
     def create_template_engine(
-        template_registry: TemplateRegistryProtocol, # Make it a required argument
+        template_registry: TemplateRegistryProtocol,  # Make it a required argument
         template_loader: Optional[TemplateLoader] = None,
         enable_logging: bool = True,
     ) -> TemplateEngine:

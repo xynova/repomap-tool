@@ -13,6 +13,7 @@ from typing import Optional, Any, TYPE_CHECKING, Union, cast
 from pathlib import Path
 
 from repomap_tool.models import RepoMapConfig
+
 # Revert Container and create_container to TYPE_CHECKING / local import
 # from repomap_tool.core.container import Container, create_container # REMOVED
 from repomap_tool.core.repo_map import RepoMapService
@@ -31,8 +32,11 @@ from repomap_tool.cli.output.manager import OutputManager
 if TYPE_CHECKING:
     from repomap_tool.code_exploration.tree_builder import TreeBuilder
     from repomap_tool.code_exploration.tree_manager import TreeManager
+
     # Use string literal for Container type hint in TYPE_CHECKING
-    from repomap_tool.core.container import Container # REMOVED, now only string literal used
+    from repomap_tool.core.container import (
+        Container,
+    )  # REMOVED, now only string literal used
 
 logger = get_logger(__name__)
 
@@ -70,9 +74,13 @@ class ServiceFactory:
             impact_analyzer = container.impact_analyzer()
         centrality_calculator = container.centrality_calculator()
         spellchecker_service = container.spellchecker_service()
-        tree_sitter_parser = container.tree_sitter_parser() # Get tree_sitter_parser from container
-        tag_cache = container.tag_cache() # Get tag_cache from container
-        file_discovery_service = container.file_discovery_service() # Get file_discovery_service from container
+        tree_sitter_parser = (
+            container.tree_sitter_parser()
+        )  # Get tree_sitter_parser from container
+        tag_cache = container.tag_cache()  # Get tag_cache from container
+        file_discovery_service = (
+            container.file_discovery_service()
+        )  # Get file_discovery_service from container
 
         # Create RepoMapService with injected dependencies
         service = RepoMapService(
@@ -86,9 +94,9 @@ class ServiceFactory:
             impact_analyzer=impact_analyzer,
             centrality_calculator=centrality_calculator,
             spellchecker_service=spellchecker_service,
-            tree_sitter_parser=tree_sitter_parser, # Pass injected parser
-            tag_cache=tag_cache, # Pass injected cache
-            file_discovery_service=file_discovery_service, # Pass injected file discovery service
+            tree_sitter_parser=tree_sitter_parser,  # Pass injected parser
+            tag_cache=tag_cache,  # Pass injected cache
+            file_discovery_service=file_discovery_service,  # Pass injected file discovery service
         )
 
         self._services[cache_key] = service
@@ -230,7 +238,9 @@ class ServiceFactory:
         logger.debug(f"Created OutputManager for {config.project_root}")
         return output_manager
 
-    def _get_or_create_container(self, config: RepoMapConfig) -> 'Container': # Use string literal for return type
+    def _get_or_create_container(
+        self, config: RepoMapConfig
+    ) -> "Container":  # Use string literal for return type
         """Get or create a container for a given project root, with caching.
 
         Args:
@@ -243,6 +253,7 @@ class ServiceFactory:
         if container_key not in self._containers:
             # Dynamically import create_container only when needed for initial creation
             import importlib
+
             container_module = importlib.import_module("repomap_tool.core.container")
             create_container_func = getattr(container_module, "create_container")
 
@@ -252,7 +263,9 @@ class ServiceFactory:
         else:
             logger.debug(f"Using cached container for {config.project_root}")
         # No longer casting directly to Container, as it's a dynamic import
-        return self._containers[container_key] # Return type handled by string literal hint
+        return self._containers[
+            container_key
+        ]  # Return type handled by string literal hint
 
     def clear_cache(self, project_root: Optional[Union[str, Path]] = None) -> None:
         """Clear cached services and containers.

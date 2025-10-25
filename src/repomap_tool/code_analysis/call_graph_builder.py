@@ -198,9 +198,13 @@ class CallGraphBuilder:
     ) -> None:
         """Initialize the call graph builder with language analyzers."""
         if python_call_analyzer is None:
-            raise ValueError("PythonCallAnalyzer must be injected - no fallback allowed")
+            raise ValueError(
+                "PythonCallAnalyzer must be injected - no fallback allowed"
+            )
         if javascript_call_analyzer is None:
-            raise ValueError("JavaScriptCallAnalyzer must be injected - no fallback allowed")
+            raise ValueError(
+                "JavaScriptCallAnalyzer must be injected - no fallback allowed"
+            )
 
         self.project_root = project_root
         # self.tree_sitter_parser = tree_sitter_parser # TreeSitterParser is now injected into individual analyzers

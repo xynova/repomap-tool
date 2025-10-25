@@ -5,8 +5,20 @@ This package contains the unified output format system, formatters, and display 
 """
 
 from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
-from repomap_tool.protocols import ConsoleManagerProtocol, FormatterRegistryProtocol, OutputManagerProtocol, TemplateRegistryProtocol # Import protocols from centralized location
-from .console_manager import DefaultConsoleManager, get_console_manager, set_console_manager, get_managed_console, get_console_from_context, log_console_operation # Expose public console management functions
+from repomap_tool.protocols import (
+    ConsoleManagerProtocol,
+    FormatterRegistryProtocol,
+    OutputManagerProtocol,
+    TemplateRegistryProtocol,
+)  # Import protocols from centralized location
+from .console_manager import (
+    DefaultConsoleManager,
+    get_console_manager,
+    set_console_manager,
+    get_managed_console,
+    get_console_from_context,
+    log_console_operation,
+)  # Expose public console management functions
 from .manager import OutputManager
 from .standard_formatters import (
     ProjectInfoFormatter,
@@ -36,7 +48,9 @@ from .exploration_formatters import (
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import TemplateEngine
 from .templates.loader import TemplateLoader, FileTemplateLoader
-from .templates.registry import DefaultTemplateRegistry # Import DefaultTemplateRegistry
+from .templates.registry import (
+    DefaultTemplateRegistry,
+)  # Import DefaultTemplateRegistry
 
 
 __all__ = [
@@ -77,7 +91,7 @@ __all__ = [
     "TemplateEngine",
     "TemplateLoader",
     "FileTemplateLoader",
-    "DefaultTemplateRegistry", # Expose DefaultTemplateRegistry
+    "DefaultTemplateRegistry",  # Expose DefaultTemplateRegistry
     # Protocols
     "ConsoleManagerProtocol",
     "FormatterRegistryProtocol",

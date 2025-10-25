@@ -128,7 +128,9 @@ def version(ctx: click.Context) -> None:
     container = ctx.obj["container"]
     # Get project root from context, fallback to current directory for minimal config
     project_root = ctx.obj.get("project_root", Path.cwd())
-    minimal_config = RepoMapConfig(project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name) # Use a temp cache dir
+    minimal_config = RepoMapConfig(
+        project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name
+    )  # Use a temp cache dir
     configure_container(container, minimal_config)
 
     # Get output manager from context (after container is configured)
@@ -154,7 +156,9 @@ def cache_info(ctx: click.Context) -> None:
     container = ctx.obj["container"]
     # Get project root from context, fallback to current directory for minimal config
     project_root = ctx.obj.get("project_root", Path.cwd())
-    minimal_config = RepoMapConfig(project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name) # Use a temp cache dir
+    minimal_config = RepoMapConfig(
+        project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name
+    )  # Use a temp cache dir
     configure_container(container, minimal_config)
 
     # Get output manager from context (after container is configured)
@@ -198,7 +202,9 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
     container = ctx.obj["container"]
     # Get project root from context, fallback to current directory for minimal config
     project_root = ctx.obj.get("project_root", Path.cwd())
-    minimal_config = RepoMapConfig(project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name) # Use a temp cache dir
+    minimal_config = RepoMapConfig(
+        project_root=project_root, cache_dir=tempfile.TemporaryDirectory().name
+    )  # Use a temp cache dir
     configure_container(container, minimal_config)
 
     # Get output manager from context (after container is configured)

@@ -14,8 +14,8 @@ from pathlib import Path
 from click.testing import CliRunner
 from repomap_tool.cli import cli
 from repomap_tool.models import RepoMapConfig
-from unittest.mock import patch, MagicMock # Import patch and MagicMock
-from typing import Generator # Import Generator
+from unittest.mock import patch, MagicMock  # Import patch and MagicMock
+from typing import Generator  # Import Generator
 
 
 def extract_session_id_from_output(output: str) -> str:
@@ -246,7 +246,13 @@ def my_function():
         # Test with non-existent directory
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", "/non/existent/directory", "index", "create"],
+            [
+                "--no-color",
+                "--project-root",
+                "/non/existent/directory",
+                "index",
+                "create",
+            ],
         )
 
         # Should fail with proper error
@@ -348,12 +354,18 @@ def my_function():
         # Both commands should succeed and produce output
         assert result1.output, "First run should produce output"
         assert result2.output, "Second run should produce output"
-        
+
         # Both outputs should contain JSON-like content
-        assert '"project_root"' in result1.output, "First run should contain project_root"
-        assert '"project_root"' in result2.output, "Second run should contain project_root"
+        assert (
+            '"project_root"' in result1.output
+        ), "First run should contain project_root"
+        assert (
+            '"project_root"' in result2.output
+        ), "Second run should contain project_root"
         assert '"total_files"' in result1.output, "First run should contain total_files"
-        assert '"total_files"' in result2.output, "Second run should contain total_files"
+        assert (
+            '"total_files"' in result2.output
+        ), "Second run should contain total_files"
 
     def test_llm_friendly_output_real(
         self, cli_runner_with_container: CliRunner, temp_project: str
@@ -686,7 +698,13 @@ def utility_function():
         # Test with non-existent directory
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", "/non/existent/directory", "inspect", "centrality"],
+            [
+                "--no-color",
+                "--project-root",
+                "/non/existent/directory",
+                "inspect",
+                "centrality",
+            ],
         )
 
         # Should fail with proper error
@@ -839,13 +857,25 @@ def handle_authentication_request():
             yield temp_dir
 
     def test_analyze_command_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str, malformed_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
+        malformed_project: str,
     ) -> None:
         """Test analyze command with various edge cases."""
         # Test with empty project
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", empty_project, "index", "create", "--output", "json"],
+            [
+                "--no-color",
+                "--project-root",
+                empty_project,
+                "index",
+                "create",
+                "--output",
+                "json",
+            ],
         )
         assert result.exit_code in [0, 1]  # Should handle gracefully
         assert len(result.output) > 0
@@ -871,7 +901,15 @@ def handle_authentication_request():
         # Test with malformed project
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", malformed_project, "index", "create", "--output", "json"],
+            [
+                "--no-color",
+                "--project-root",
+                malformed_project,
+                "index",
+                "create",
+                "--output",
+                "json",
+            ],
         )
         assert result.exit_code in [0, 1]  # Should handle syntax errors gracefully
         assert len(result.output) > 0
@@ -928,7 +966,10 @@ def handle_authentication_request():
         assert result.exit_code != 0  # Should fail with invalid output format
 
     def test_search_command_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
     ) -> None:
         """Test search command with edge cases."""
         # Test with empty query
@@ -958,7 +999,10 @@ def handle_authentication_request():
         assert result.exit_code in [0, 1]
 
     def test_dependency_analysis_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
     ) -> None:
         """Test centrality analysis with edge cases."""
         # Test with empty project
@@ -978,23 +1022,34 @@ def handle_authentication_request():
         # Test with invalid project path
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", "/nonexistent/path", "inspect", "centrality"],
+            [
+                "--no-color",
+                "--project-root",
+                "/nonexistent/path",
+                "inspect",
+                "centrality",
+            ],
         )
         assert result.exit_code != 0
 
     def test_show_centrality_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
     ) -> None:
         """Test show-centrality command with edge cases."""
         # Test with empty project
         result = cli_runner_with_container.invoke(
-            cli, ["--no-color", "--project-root", empty_project, "inspect", "centrality"]
+            cli,
+            ["--no-color", "--project-root", empty_project, "inspect", "centrality"],
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner_with_container.invoke(
-            cli, ["--no-color", "--project-root", large_project, "inspect", "centrality"]
+            cli,
+            ["--no-color", "--project-root", large_project, "inspect", "centrality"],
         )
         assert result.exit_code in [0, 1]
 
@@ -1015,7 +1070,10 @@ def handle_authentication_request():
         assert "not found" in result.output or "Error:" in result.output
 
     def test_impact_analysis_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
     ) -> None:
         """Test impact-analysis command with edge cases."""
         # Test with empty project
@@ -1037,7 +1095,15 @@ def handle_authentication_request():
         files = [f"src/module_{i:02d}.py" for i in range(10)]
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", large_project, "inspect", "impact", "--files"] + files,
+            [
+                "--no-color",
+                "--project-root",
+                large_project,
+                "inspect",
+                "impact",
+                "--files",
+            ]
+            + files,
         )
         assert result.exit_code in [0, 1, 2]  # Accept various exit codes for edge cases
 
@@ -1058,7 +1124,10 @@ def handle_authentication_request():
         assert result.exit_code in [0, 1, 2]  # May fail gracefully
 
     def test_find_cycles_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
     ) -> None:
         """Test find-cycles command with edge cases."""
         # Test with empty project
@@ -1074,27 +1143,52 @@ def handle_authentication_request():
         assert result.exit_code in [0, 1]
 
     def test_explore_command_edge_cases(
-        self, cli_runner_with_container: CliRunner, empty_project: str, large_project: str
+        self,
+        cli_runner_with_container: CliRunner,
+        empty_project: str,
+        large_project: str,
     ) -> None:
         """Test explore command with edge cases."""
         # Test with empty project
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", empty_project, "explore", "start", "test intent"],
+            [
+                "--no-color",
+                "--project-root",
+                empty_project,
+                "explore",
+                "start",
+                "test intent",
+            ],
         )
         assert result.exit_code in [0, 1]
 
         # Test with large project
         result = cli_runner_with_container.invoke(
             cli,
-            ["--no-color", "--project-root", large_project, "explore", "start", "module processing"],
+            [
+                "--no-color",
+                "--project-root",
+                large_project,
+                "explore",
+                "start",
+                "module processing",
+            ],
         )
         assert result.exit_code in [0, 1]
 
         # Test with very long intent
         long_intent = "a" * 1000
         result = cli_runner_with_container.invoke(
-            cli, ["--no-color", "--project-root", large_project, "explore", "start", long_intent]
+            cli,
+            [
+                "--no-color",
+                "--project-root",
+                large_project,
+                "explore",
+                "start",
+                long_intent,
+            ],
         )
         assert result.exit_code in [0, 1]
 
@@ -1139,14 +1233,20 @@ def handle_authentication_request():
 
     def test_invalid_command(self, cli_runner_with_container: CliRunner) -> None:
         """Test invalid command."""
-        result = cli_runner_with_container.invoke(cli, ["--no-color", "invalid-command"])
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "invalid-command"]
+        )
         assert result.exit_code != 0
         assert "No such command" in result.output or "Usage:" in result.output
 
-    def test_missing_required_arguments(self, cli_runner_with_container: CliRunner, temp_project: str) -> None:
+    def test_missing_required_arguments(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test commands with missing required arguments."""
         # Test analyze without project path (now works because project_path is optional)
-        result = cli_runner_with_container.invoke(cli, ["--no-color", "index", "create"])
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "index", "create"]
+        )
         assert result.exit_code == 0
 
         # Test search without query (should fail because query is required)
@@ -1154,5 +1254,7 @@ def handle_authentication_request():
         assert result.exit_code != 0
 
         # Test explore without intent (intent is now required as first argument)
-        result = cli_runner_with_container.invoke(cli, ["--no-color", "explore", "start"])
+        result = cli_runner_with_container.invoke(
+            cli, ["--no-color", "explore", "start"]
+        )
         assert result.exit_code != 0

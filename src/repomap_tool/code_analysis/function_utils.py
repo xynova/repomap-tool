@@ -215,7 +215,10 @@ def infer_function_source(func_name: str, import_sources: Dict[str, str]) -> str
     # 5. STRUCTURAL PATTERNS
 
     # Compound names suggest external libraries
-    if len(func_name_str.split("_")) > 2 or len([c for c in func_name_str if c.isupper()]) > 2:
+    if (
+        len(func_name_str.split("_")) > 2
+        or len([c for c in func_name_str if c.isupper()]) > 2
+    ):
         return "external library"
 
     # Short names often indicate built-ins or common utilities
@@ -421,16 +424,28 @@ def find_most_used_class(imports: List[Any]) -> Optional[str]:
         if import_obj.symbols:
             for symbol_item in import_obj.symbols:
                 # Ensure symbol is a string before calling string methods
-                symbol_str = symbol_item.name if isinstance(symbol_item, CodeTag) else str(symbol_item)
+                symbol_str = (
+                    symbol_item.name
+                    if isinstance(symbol_item, CodeTag)
+                    else str(symbol_item)
+                )
                 if symbol_str and len(symbol_str) > 0 and symbol_str[0].isupper():
                     class_counts[symbol_str] = class_counts.get(symbol_str, 0) + 1
         elif (
             import_obj.alias
             and len(import_obj.alias) > 0
             # Ensure alias is a string before calling string methods
-            and (import_obj.alias.name if isinstance(import_obj.alias, CodeTag) else str(import_obj.alias))[0].isupper()
+            and (
+                import_obj.alias.name
+                if isinstance(import_obj.alias, CodeTag)
+                else str(import_obj.alias)
+            )[0].isupper()
         ):
-            alias_str = import_obj.alias.name if isinstance(import_obj.alias, CodeTag) else str(import_obj.alias)
+            alias_str = (
+                import_obj.alias.name
+                if isinstance(import_obj.alias, CodeTag)
+                else str(import_obj.alias)
+            )
             class_counts[alias_str] = class_counts.get(alias_str, 0) + 1
 
     return max(class_counts.items(), key=lambda x: x[1])[0] if class_counts else None

@@ -98,8 +98,12 @@ mypy: install
 
 # Run security checks
 security: install
-	$(VENV_PYTHON) -m bandit -r src/ -f json -o bandit-report.json || true
-	@echo "Safety check temporarily disabled due to compatibility issues"
+	@if ! $(VENV_PYTHON) -c "import bandit" 2>/dev/null; then \
+		echo "❌ Bandit not installed. Run 'make install' first to install dev dependencies."; \
+		exit 1; \
+	fi
+	$(VENV_PYTHON) -m bandit -r src/ -f json -o bandit-report.json
+	
 
 # Build package
 build: install

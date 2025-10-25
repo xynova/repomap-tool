@@ -4,10 +4,16 @@ RepoMap-Tool Tool - A comprehensive tool for analyzing Docker repositories
 and finding similar identifiers across different codebases.
 """
 
-# Compatibility shim for tests that reference 'src.repomap_tool...'
-# We expose a virtual top-level 'src' package whose __path__ points to the
-# actual src directory so that imports like 'src.repomap_tool.cli.config.loader'
-# resolve correctly in test patches.
+import sys
+import types
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+this_file = Path(__file__).resolve()
+src_dir = str(this_file.parent.parent)  # points to .../src
+
 try:
     import sys
     import types
@@ -15,14 +21,14 @@ try:
 
     this_file = Path(__file__).resolve()
     src_dir = str(this_file.parent.parent)  # points to .../src
-    if 'src' not in sys.modules:
-        src_pkg = types.ModuleType('src')
+    if "src" not in sys.modules:
+        src_pkg = types.ModuleType("src")
         # Mark as package by providing __path__ where Python can find subpackages
         src_pkg.__path__ = [src_dir]  # type: ignore[attr-defined]
-        sys.modules['src'] = src_pkg
-except Exception:
-    # Do not fail package import if shim cannot be set up
-    pass
+        sys.modules["src"] = src_pkg
+except Exception as e:
+    # Log package setup failure for debugging, but don't fail import
+    logger.debug(f"Package shim setup failed: {e}")
 
 __version__ = "0.1.0"
 __author__ = "Your Name"

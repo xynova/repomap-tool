@@ -5,6 +5,7 @@ from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
 from repomap_tool.code_analysis.models import CodeTag
 from pathlib import Path
 
+
 @pytest.fixture(scope="module")
 def python_parser_and_query(session_tree_sitter_parser):
     language = get_language("python")
@@ -14,6 +15,7 @@ def python_parser_and_query(session_tree_sitter_parser):
     query_string = ts_parser.query_loader.load_query("python")
     query = tree_sitter.Query(language, query_string)
     return parser, query, language, ts_parser
+
 
 class TestPythonQueries:
     def test_class_definition(self, python_parser_and_query, tmp_path):
@@ -29,12 +31,24 @@ class MyClass:
         tags = ts_parser.get_tags(str(temp_file))
 
         expected_tags = [
-            CodeTag(name="MyClass", kind="name.definition.class", line=2, column=6, file=str(temp_file), end_line=2, end_column=13)
+            CodeTag(
+                name="MyClass",
+                kind="name.definition.class",
+                line=2,
+                column=6,
+                file=str(temp_file),
+                end_line=2,
+                end_column=13,
+            )
         ]
 
         # Filter out other tags if present (e.g., block.function)
-        actual_class_tags = [tag for tag in tags if tag.kind == "name.definition.class" and tag.name == "MyClass"]
-        
+        actual_class_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.definition.class" and tag.name == "MyClass"
+        ]
+
         assert len(actual_class_tags) == 1
         assert actual_class_tags[0].name == "MyClass"
         assert actual_class_tags[0].kind == "name.definition.class"
@@ -54,7 +68,11 @@ def my_function(arg):
 
         tags = ts_parser.get_tags(str(temp_file))
 
-        actual_function_tags = [tag for tag in tags if tag.kind == "name.definition.function" and tag.name == "my_function"]
+        actual_function_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.definition.function" and tag.name == "my_function"
+        ]
 
         assert len(actual_function_tags) == 1
         assert actual_function_tags[0].name == "my_function"
@@ -74,11 +92,18 @@ class AnotherClass:
 
         tags = ts_parser.get_tags(str(temp_file))
 
-        actual_method_tags = [tag for tag in tags if tag.kind == "name.definition.method" and tag.name == "a_method"]
+        actual_method_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.definition.method" and tag.name == "a_method"
+        ]
 
         assert len(actual_method_tags) == 1
         assert actual_method_tags[0].name == "a_method"
-        assert actual_method_tags[0].kind in ["name.definition.method", "name.definition.function"]
+        assert actual_method_tags[0].kind in [
+            "name.definition.method",
+            "name.definition.function",
+        ]
         assert actual_method_tags[0].line == 3
         assert actual_method_tags[0].column == 8
 
@@ -92,7 +117,11 @@ import os
 
         tags = ts_parser.get_tags(str(temp_file))
 
-        actual_import_tags = [tag for tag in tags if tag.kind == "name.reference.import" and tag.name == "os"]
+        actual_import_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.reference.import" and tag.name == "os"
+        ]
 
         assert len(actual_import_tags) == 1
         assert actual_import_tags[0].name == "os"
@@ -110,9 +139,21 @@ from collections import defaultdict as ddict
 
         tags = ts_parser.get_tags(str(temp_file))
 
-        module_tags = [tag for tag in tags if tag.kind == "name.reference.import.module" and tag.name == "collections"]
-        name_tags = [tag for tag in tags if tag.kind == "name.reference.import" and tag.name == "defaultdict"]
-        alias_tags = [tag for tag in tags if tag.kind == "name.definition.import_alias" and tag.name == "ddict"]
+        module_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.reference.import.module" and tag.name == "collections"
+        ]
+        name_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.reference.import" and tag.name == "defaultdict"
+        ]
+        alias_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.definition.import_alias" and tag.name == "ddict"
+        ]
 
         assert len(module_tags) == 1
         assert module_tags[0].name == "collections"
@@ -124,8 +165,8 @@ from collections import defaultdict as ddict
         assert name_tags[0].name == "defaultdict"
         assert name_tags[0].kind == "name.reference.import"
         assert name_tags[0].line == 2
-        assert name_tags[0].column == 24 # Corrected column
-        
+        assert name_tags[0].column == 24  # Corrected column
+
         assert len(alias_tags) == 1
         assert alias_tags[0].name == "ddict"
         assert alias_tags[0].kind == "name.definition.import_alias"
@@ -214,7 +255,11 @@ for i in range(10):
 
         tags = ts_parser.get_tags(str(temp_file))
 
-        variable_tags = [tag for tag in tags if tag.kind == "name.definition.variable" and tag.name == "i"]
+        variable_tags = [
+            tag
+            for tag in tags
+            if tag.kind == "name.definition.variable" and tag.name == "i"
+        ]
 
         assert len(variable_tags) == 1
         assert variable_tags[0].name == "i"

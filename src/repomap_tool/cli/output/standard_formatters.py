@@ -24,16 +24,23 @@ from repomap_tool.models import (
     ProjectInfo,
     SearchResponse,
     OutputFormat,
-    OutputConfig, # Import OutputConfig
-    ErrorResponse, # Import ErrorResponse
-    SuccessResponse, # Import SuccessResponse
+    OutputConfig,  # Import OutputConfig
+    ErrorResponse,  # Import ErrorResponse
+    SuccessResponse,  # Import SuccessResponse
 )
 
-from repomap_tool.protocols import TemplateRegistryProtocol, FormatterProtocol, BaseFormatter, DataFormatter
+from repomap_tool.protocols import (
+    TemplateRegistryProtocol,
+    FormatterProtocol,
+    BaseFormatter,
+    DataFormatter,
+)
 from .console_manager import ConsoleManagerProtocol
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import TemplateEngine
-from .templates.registry import DefaultTemplateRegistry # Import DefaultTemplateRegistry
+from .templates.registry import (
+    DefaultTemplateRegistry,
+)  # Import DefaultTemplateRegistry
 from .controller_formatters import (
     CentralityViewModelFormatter,
     ImpactViewModelFormatter,
@@ -42,7 +49,10 @@ from .controller_formatters import (
 
 logger = get_logger(__name__)
 
-class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFormatter and DataFormatter
+
+class ProjectInfoFormatter(
+    BaseFormatter, DataFormatter
+):  # Inherit from BaseFormatter and DataFormatter
     """Formatter for ProjectInfo data."""
 
     def __init__(
@@ -53,10 +63,12 @@ class ProjectInfoFormatter(BaseFormatter, DataFormatter): # Inherit from BaseFor
         enable_logging: bool = True,
     ) -> None:
         """Initialize the ProjectInfo formatter."""
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -113,10 +125,12 @@ class DictFormatter(BaseFormatter, DataFormatter):
         enable_logging: bool = True,
     ) -> None:
         """Initialize the Dict formatter."""
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -144,7 +158,9 @@ class DictFormatter(BaseFormatter, DataFormatter):
             if "error" in data or "success" in data:
                 return self._template_formatter.format(data, output_format, config, ctx)
             else:
-                return self._template_formatter.format(data, output_format, config, ctx) # Use a generic dict template
+                return self._template_formatter.format(
+                    data, output_format, config, ctx
+                )  # Use a generic dict template
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -176,10 +192,12 @@ class ListFormatter(BaseFormatter, DataFormatter):
         enable_logging: bool = True,
     ) -> None:
         """Initialize the List formatter."""
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -203,7 +221,9 @@ class ListFormatter(BaseFormatter, DataFormatter):
         if output_format == OutputFormat.JSON:
             return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
-            return self._template_formatter.format(data, output_format, config, ctx) # Use a generic list template
+            return self._template_formatter.format(
+                data, output_format, config, ctx
+            )  # Use a generic list template
         else:
             raise ValueError(f"Unsupported format: {output_format}")
 
@@ -227,14 +247,19 @@ class ListFormatter(BaseFormatter, DataFormatter):
 class StringFormatter(BaseFormatter, DataFormatter):
     """Formatter for string data."""
 
-    def __init__(self, template_engine: Optional[TemplateEngine] = None,
-                 template_registry: Optional[TemplateRegistryProtocol] = None,
-                 console_manager: Optional[ConsoleManagerProtocol] = None,
-                 enable_logging: bool = True) -> None:
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+    def __init__(
+        self,
+        template_engine: Optional[TemplateEngine] = None,
+        template_registry: Optional[TemplateRegistryProtocol] = None,
+        console_manager: Optional[ConsoleManagerProtocol] = None,
+        enable_logging: bool = True,
+    ) -> None:
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         # StringFormatter does not directly use template_engine or template_registry
         # but accepts them for consistency with other formatters if needed in future.
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
@@ -284,10 +309,12 @@ class SearchResponseFormatter(BaseFormatter, DataFormatter):
         console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -341,9 +368,11 @@ class FormatterRegistry:
         self._template_engine = template_engine
         self._template_registry = template_registry
         self._console_manager = console_manager
-        self.logger = logger # Assign the module-level logger
-        self.logger.debug(f"FormatterRegistry initialized (id={id(self)}). TemplateRegistry id={id(template_registry)}, ConsoleManager id={id(console_manager)}")
-        
+        self.logger = logger  # Assign the module-level logger
+        self.logger.debug(
+            f"FormatterRegistry initialized (id={id(self)}). TemplateRegistry id={id(template_registry)}, ConsoleManager id={id(console_manager)}"
+        )
+
         # Register all default formatters
         self._register_default_formatters()
 
@@ -356,7 +385,7 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(project_info_formatter)
-        
+
         # Register SearchResponseFormatter
         search_response_formatter = SearchResponseFormatter(
             template_engine=self._template_engine,
@@ -364,7 +393,7 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(search_response_formatter)
-        
+
         # Register ErrorResponseFormatter
         error_response_formatter = ErrorResponseFormatter(
             template_engine=self._template_engine,
@@ -372,7 +401,7 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(error_response_formatter)
-        
+
         # Register SuccessResponseFormatter
         success_response_formatter = SuccessResponseFormatter(
             template_engine=self._template_engine,
@@ -380,7 +409,7 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(success_response_formatter)
-        
+
         # Register DictFormatter
         dict_formatter = DictFormatter(
             template_engine=self._template_engine,
@@ -388,7 +417,7 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(dict_formatter)
-        
+
         # Register ListFormatter
         list_formatter = ListFormatter(
             template_engine=self._template_engine,
@@ -396,34 +425,43 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(list_formatter)
-        
+
         # Register DensityAnalysisFormatter
-        from repomap_tool.cli.output.controller_formatters import DensityAnalysisFormatter
+        from repomap_tool.cli.output.controller_formatters import (
+            DensityAnalysisFormatter,
+        )
+
         density_analysis_formatter = DensityAnalysisFormatter(
             template_engine=self._template_engine,
             template_registry=self._template_registry,
             console_manager=self._console_manager,
         )
         self.register_formatter(density_analysis_formatter)
-        
+
         # Register ImpactViewModelFormatter
-        from repomap_tool.cli.output.controller_formatters import ImpactViewModelFormatter
+        from repomap_tool.cli.output.controller_formatters import (
+            ImpactViewModelFormatter,
+        )
+
         impact_view_model_formatter = ImpactViewModelFormatter(
             template_engine=self._template_engine,
             template_registry=self._template_registry,
             console_manager=self._console_manager,
         )
         self.register_formatter(impact_view_model_formatter)
-        
+
         # Register CentralityViewModelFormatter
-        from repomap_tool.cli.output.controller_formatters import CentralityViewModelFormatter
+        from repomap_tool.cli.output.controller_formatters import (
+            CentralityViewModelFormatter,
+        )
+
         centrality_view_model_formatter = CentralityViewModelFormatter(
             template_engine=self._template_engine,
             template_registry=self._template_registry,
             console_manager=self._console_manager,
         )
         self.register_formatter(centrality_view_model_formatter)
-        
+
         # Register StringFormatter
         string_formatter = StringFormatter(
             template_engine=self._template_engine,
@@ -431,7 +469,7 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(string_formatter)
-        
+
         # Register SearchViewModelFormatter
         search_view_model_formatter = SearchViewModelFormatter(
             template_engine=self._template_engine,
@@ -439,9 +477,10 @@ class FormatterRegistry:
             console_manager=self._console_manager,
         )
         self.register_formatter(search_view_model_formatter)
-        
+
         # Register ExplorationViewModelFormatter
         from .exploration_formatters import ExplorationViewModelFormatter
+
         exploration_view_model_formatter = ExplorationViewModelFormatter(
             template_engine=self._template_engine,
             template_registry=self._template_registry,
@@ -455,22 +494,29 @@ class FormatterRegistry:
         data_type: Optional[Type[Any]] = None,
     ) -> None:
         """Register a formatter."""
-        self.logger.debug(f"FormatterRegistry (id={id(self)}): Attempting to register formatter: {type(formatter).__name__} (id={id(formatter)}) for data_type: {data_type}")
+        self.logger.debug(
+            f"FormatterRegistry (id={id(self)}): Attempting to register formatter: {type(formatter).__name__} (id={id(formatter)}) for data_type: {data_type}"
+        )
         self._formatters.append(formatter)
 
         # Use formatter's own get_data_type if not explicitly provided
         if data_type is None and hasattr(formatter, "get_data_type"):
             data_type = formatter.get_data_type()
-            self.logger.debug(f"FormatterRegistry (id={id(self)}): Inferred data_type for registration: {data_type}")
+            self.logger.debug(
+                f"FormatterRegistry (id={id(self)}): Inferred data_type for registration: {data_type}"
+            )
 
         if data_type:
             # The original code had a _type_formatters dictionary, but it was not used in get_formatter.
             # The new code removes _type_formatters and its lookup.
             # So, we just register the formatter directly.
-            self.logger.debug(f"FormatterRegistry (id={id(self)}): Registered formatter {type(formatter).__name__} (id={id(formatter)}) for type {data_type}. Total registered: {len(self._formatters)}")
+            self.logger.debug(
+                f"FormatterRegistry (id={id(self)}): Registered formatter {type(formatter).__name__} (id={id(formatter)}) for type {data_type}. Total registered: {len(self._formatters)}"
+            )
         else:
-            self.logger.warning(f"FormatterRegistry (id={id(self)}): Formatter {type(formatter).__name__} (id={id(formatter)}) registered without a specific data_type.")
-
+            self.logger.warning(
+                f"FormatterRegistry (id={id(self)}): Formatter {type(formatter).__name__} (id={id(formatter)}) registered without a specific data_type."
+            )
 
     def get_formatter(
         self,
@@ -478,15 +524,21 @@ class FormatterRegistry:
         output_format: OutputFormat,
     ) -> Optional[FormatterProtocol]:
         """Get formatter for data type and format."""
-        self.logger.debug(f"FormatterRegistry (id={id(self)}): Searching for formatter for data_type: {data_type}, format: {output_format}")
-        
+        self.logger.debug(
+            f"FormatterRegistry (id={id(self)}): Searching for formatter for data_type: {data_type}, format: {output_format}"
+        )
+
         # Iterate through all registered formatters
         for formatter in self._formatters:
             formatter_data_type = None
             if hasattr(formatter, "get_data_type"):
                 formatter_data_type = formatter.get_data_type()
-            
-            is_sub = issubclass(data_type, formatter_data_type) if formatter_data_type else False
+
+            is_sub = (
+                issubclass(data_type, formatter_data_type)
+                if formatter_data_type
+                else False
+            )
             supports_fmt = formatter.supports_format(output_format)
             self.logger.debug(
                 f"FormatterRegistry (id={id(self)}): Checking formatter {type(formatter).__name__} (id={id(formatter)}). "
@@ -494,20 +546,22 @@ class FormatterRegistry:
                 f"issubclass: {is_sub}, supports_format: {supports_fmt}"
             )
 
-            if (
-                formatter_data_type is not None
-                and is_sub
-                and supports_fmt
-            ):
-                self.logger.debug(f"FormatterRegistry (id={id(self)}): Found matching formatter: {type(formatter).__name__} (id={id(formatter)})")
+            if formatter_data_type is not None and is_sub and supports_fmt:
+                self.logger.debug(
+                    f"FormatterRegistry (id={id(self)}): Found matching formatter: {type(formatter).__name__} (id={id(formatter)})"
+                )
                 return formatter
 
-        self.logger.debug(f"FormatterRegistry (id={id(self)}): No formatter found for data type {data_type} and format {output_format}")
+        self.logger.debug(
+            f"FormatterRegistry (id={id(self)}): No formatter found for data type {data_type} and format {output_format}"
+        )
         return None
 
     def get_all_formatters(self) -> List[FormatterProtocol]:
         """Get all registered formatters."""
-        self.logger.debug(f"FormatterRegistry (id={id(self)}): get_all_formatters called. Total registered: {len(self._formatters)}")
+        self.logger.debug(
+            f"FormatterRegistry (id={id(self)}): get_all_formatters called. Total registered: {len(self._formatters)}"
+        )
         return self._formatters.copy()
 
 
@@ -570,10 +624,12 @@ class ErrorResponseFormatter(BaseFormatter, DataFormatter):
         console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,
@@ -623,10 +679,12 @@ class SuccessResponseFormatter(BaseFormatter, DataFormatter):
         console_manager: Optional[ConsoleManagerProtocol] = None,
         enable_logging: bool = True,
     ) -> None:
-        super().__init__(console_manager=console_manager,
-                         template_engine=template_engine,
-                         template_registry=template_registry,
-                         enable_logging=enable_logging)
+        super().__init__(
+            console_manager=console_manager,
+            template_engine=template_engine,
+            template_registry=template_registry,
+            enable_logging=enable_logging,
+        )
         self._supported_formats = [OutputFormat.TEXT, OutputFormat.JSON]
         self._template_formatter = TemplateBasedFormatter(
             template_engine=template_engine,

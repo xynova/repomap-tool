@@ -22,7 +22,8 @@ from .console_manager import ConsoleManagerProtocol
 T = TypeVar("T")
 FormatterResult = Union[str, None]
 
-class FormatterFactoryProtocol(Protocol): # Renamed for clarity
+
+class FormatterFactoryProtocol(Protocol):  # Renamed for clarity
     """Protocol for formatter factory."""
 
     def create_formatter(

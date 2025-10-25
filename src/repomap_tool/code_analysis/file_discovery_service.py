@@ -141,17 +141,19 @@ class FileDiscoveryService:
             List of files that can be parsed by tree-sitter
         """
         all_files = self.get_all_files(use_cache=True)
-        
+
         # Filter files based on tree-sitter language support
         supported_files = []
         for file_path in all_files:
             if tree_sitter_parser.is_language_supported(file_path):
                 supported_files.append(file_path)
-        
+
         # Apply additional filtering if needed
         if exclude_tests:
-            supported_files = FileFilter.filter_code_files(supported_files, exclude_tests=True)
-        
+            supported_files = FileFilter.filter_code_files(
+                supported_files, exclude_tests=True
+            )
+
         return supported_files
 
     def clear_cache(self) -> None:

@@ -12,7 +12,11 @@ from typing import Any, Dict, List, Optional, Union, Type, get_args, get_origin
 
 from pydantic import BaseModel, Field, field_validator
 
-from repomap_tool.models import OutputFormat, AnalysisFormat, OutputConfig # Imported from models
+from repomap_tool.models import (
+    OutputFormat,
+    AnalysisFormat,
+    OutputConfig,
+)  # Imported from models
 
 
 # The OutputFormat, AnalysisFormat, and OutputConfig classes were moved to models.py

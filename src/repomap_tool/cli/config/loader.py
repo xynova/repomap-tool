@@ -13,6 +13,7 @@ from typing import Optional, Literal, Union, Dict, Any, Tuple
 
 from pydantic import ValidationError
 from rich.console import Console
+import logging
 
 from ...models import (
     RepoMapConfig,
@@ -26,6 +27,8 @@ from ...utils.file_validator import FileValidator, safe_read_text, safe_write_te
 # Note: console should be obtained via get_console(ctx) in functions that need it
 from ..utils.console import get_console
 import click
+
+logger = logging.getLogger(__name__)
 
 
 def load_config_file(config_path: str) -> RepoMapConfig:
@@ -74,8 +77,9 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
         if config_path.exists():
             try:
                 return load_config_file(str(config_path))
-            except Exception:
-                # If we can't load this config file, continue searching
+            except Exception as e:
+                # Log config loading failure for debugging
+                logger.debug(f"Failed to load config file {config_path}: {e}")
                 continue
 
     # Also check Docker workspace directory (configurable via env var)
@@ -87,8 +91,9 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
             if config_path.exists():
                 try:
                     return load_config_file(str(config_path))
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Log config loading failure for debugging
+                    logger.debug(f"Failed to load workspace config {config_path}: {e}")
 
     return None
 

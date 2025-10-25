@@ -177,9 +177,7 @@ class FileTemplateLoader(TemplateLoader):
         for template_dir in self._template_dirs:
             template_path = Path(template_dir)
             if template_path.exists() and self._logger:
-                self._logger.debug(
-                    f"Scanning for default templates in {template_path}"
-                )
+                self._logger.debug(f"Scanning for default templates in {template_path}")
                 for template_file in template_path.glob("*.jinja2"):
                     try:
                         template_name = template_file.stem

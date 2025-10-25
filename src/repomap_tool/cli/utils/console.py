@@ -44,7 +44,9 @@ class RichConsoleFactory:
 class ConsoleProvider:
     """Dependency injection provider for console instances."""
 
-    def __init__(self, factory: Optional[ConsoleFactory] = None, no_color: bool = False):
+    def __init__(
+        self, factory: Optional[ConsoleFactory] = None, no_color: bool = False
+    ):
         """Initialize the console provider.
 
         Args:

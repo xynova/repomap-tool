@@ -11,11 +11,16 @@ from datetime import datetime
 from pathlib import Path
 
 from repomap_tool.cli.output.manager import OutputManager
-from repomap_tool.cli.services.service_factory import ServiceFactory, get_service_factory
+from repomap_tool.cli.services.service_factory import (
+    ServiceFactory,
+    get_service_factory,
+)
 from repomap_tool.cli.output.formats import OutputFormat, OutputConfig
 from repomap_tool.cli.output.console_manager import DefaultConsoleManager
 from repomap_tool.cli.output.standard_formatters import FormatterRegistry
-from repomap_tool.cli.output.templates.engine import TemplateEngine as ConcreteTemplateEngine
+from repomap_tool.cli.output.templates.engine import (
+    TemplateEngine as ConcreteTemplateEngine,
+)
 from repomap_tool.cli.output.templates.registry import DefaultTemplateRegistry
 from repomap_tool.cli.output.templates.registry import TemplateRegistryProtocol
 from repomap_tool.models import ProjectInfo, SearchResponse, MatchResult, RepoMapConfig
@@ -473,7 +478,7 @@ class TestOutputManagerFactoryAdditional:
         """Test creating output manager with all parameters provided."""
         mock_console_manager = Mock(spec=DefaultConsoleManager)
         mock_formatter_registry = Mock(spec=FormatterRegistry)
-        mock_config = Mock(spec=RepoMapConfig) # Mock a config object
+        mock_config = Mock(spec=RepoMapConfig)  # Mock a config object
         mock_config.project_root = Path("/tmp/test")
         mock_config.cache_dir = Path("/tmp/cache")
         mock_config.verbose = True
@@ -485,7 +490,7 @@ class TestOutputManagerFactoryAdditional:
         mock_config.trees = Mock()
         mock_config.dependencies = Mock()
 
-        service_factory = get_service_factory() # Get the global service factory
+        service_factory = get_service_factory()  # Get the global service factory
         manager = service_factory.create_output_manager(
             config=mock_config,
         )

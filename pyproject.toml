@@ -61,6 +61,7 @@ dev = [
     "mkdocs-material>=9.5.3",
     "mkdocstrings[python]>=0.24.0",
     "semgrep>=1.67.0",
+    "bandit>=1.7.5",
     "bump-pydantic>=0.8.0",
     "pre-commit>=3.6.0",
     "build>=1.0.3",

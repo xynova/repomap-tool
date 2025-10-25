@@ -64,7 +64,11 @@ def test_import_statements(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
   alias: (identifier) @name.definition.import_alias)
 """
     mock_query_loader.load_query.return_value = import_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     # query = tree_sitter.Query(language, import_query_string)
 
     code = """
@@ -99,11 +103,15 @@ from ..another_module import some_func
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_class_and_function_definitions(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
+def test_class_and_function_definitions(
+    tmp_path, mock_cache: Mock, mock_query_loader: Mock
+):
     # ts_parser = TreeSitterParser()
     language = get_language("python")
     class_func_query_string = """
@@ -143,7 +151,11 @@ def test_class_and_function_definitions(tmp_path, mock_cache: Mock, mock_query_l
 )
 """
     mock_query_loader.load_query.return_value = class_func_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     # query = tree_sitter.Query(language, class_func_query_string)
 
     code = """
@@ -188,8 +200,10 @@ class DecoratedClass:
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
 def test_calls_and_references(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
@@ -211,7 +225,11 @@ def test_calls_and_references(tmp_path, mock_cache: Mock, mock_query_loader: Moc
 (identifier) @reference.name
 """
     mock_query_loader.load_query.return_value = calls_refs_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     # query = tree_sitter.Query(language, calls_refs_query_string)
 
     code = """
@@ -252,11 +270,15 @@ math.sqrt(y)
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_assignments_and_parameters(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
+def test_assignments_and_parameters(
+    tmp_path, mock_cache: Mock, mock_query_loader: Mock
+):
     language = get_language("python")
     assign_params_query_string = """
 ; Capture assigned variables (left-hand side of assignment)
@@ -265,7 +287,11 @@ def test_assignments_and_parameters(tmp_path, mock_cache: Mock, mock_query_loade
 )
 """
     mock_query_loader.load_query.return_value = assign_params_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     # query = tree_sitter.Query(language, assign_params_query_string)
 
     code = """
@@ -299,8 +325,10 @@ class MyClass:
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
 def test_advanced_constructs(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
@@ -334,7 +362,11 @@ def test_advanced_constructs(tmp_path, mock_cache: Mock, mock_query_loader: Mock
 )
 """
     mock_query_loader.load_query.return_value = advanced_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
     # query = tree_sitter.Query(language, advanced_query_string)
 
     code = """
@@ -364,8 +396,8 @@ def process_data(data):
     expected_tags_simplified = [
         ("lambda.parameter", "x"),
         ("lambda.body", "x * x"),
-        ("lambda.parameter", "a"), 
-        ("lambda.parameter", "b"), 
+        ("lambda.parameter", "a"),
+        ("lambda.parameter", "b"),
         ("lambda.body", "a + b"),
         ("comprehension.iterator", "x"),
         ("comprehension.iterator", "x"),
@@ -373,11 +405,15 @@ def process_data(data):
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_with_statement_variable_capture(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
+def test_with_statement_variable_capture(
+    tmp_path, mock_cache: Mock, mock_query_loader: Mock
+):
     language = get_language("python")
     with_query_string = """
 ; Capture variable definition in a 'with' statement (e.g., 'with open() as f:')
@@ -388,7 +424,11 @@ def test_with_statement_variable_capture(tmp_path, mock_cache: Mock, mock_query_
 )
 """
     mock_query_loader.load_query.return_value = with_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
 
     code = """
 with open("file.txt", "r") as f:
@@ -402,7 +442,9 @@ with MyContext() as ctx, another_resource as res:
     tags = ts_parser.get_tags(str(temp_file))
     actual_tags_simplified = [(tag.kind, tag.name) for tag in tags]
     print(f"Actual Tags: {actual_tags_simplified}")
-    print(f"DEBUG: S-expression of code:\n{ts_parser.parse_file_to_sexp(str(temp_file))}")
+    print(
+        f"DEBUG: S-expression of code:\n{ts_parser.parse_file_to_sexp(str(temp_file))}"
+    )
 
     expected_tags_simplified = [
         ("name.definition.variable", "f"),
@@ -411,11 +453,15 @@ with MyContext() as ctx, another_resource as res:
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
 
 
-def test_function_parameter_capture(tmp_path, mock_cache: Mock, mock_query_loader: Mock):
+def test_function_parameter_capture(
+    tmp_path, mock_cache: Mock, mock_query_loader: Mock
+):
     language = get_language("python")
     param_query_string = """
 ; Capture simple parameters (e.g., 'a')
@@ -448,7 +494,11 @@ def test_function_parameter_capture(tmp_path, mock_cache: Mock, mock_query_loade
 )
 """
     mock_query_loader.load_query.return_value = param_query_string
-    ts_parser = TreeSitterParser(project_root=tmp_path.resolve(), cache=mock_cache, query_loader=mock_query_loader)
+    ts_parser = TreeSitterParser(
+        project_root=tmp_path.resolve(),
+        cache=mock_cache,
+        query_loader=mock_query_loader,
+    )
 
     code = """
 def func(a, b: str, c=True, *, d, **kwargs):
@@ -464,7 +514,9 @@ class MyClass:
     tags = ts_parser.get_tags(str(temp_file))
     actual_tags_simplified = [(tag.kind, tag.name) for tag in tags]
     print(f"Actual Tags: {actual_tags_simplified}")
-    print(f"DEBUG: S-expression of code:\n{ts_parser.parse_file_to_sexp(str(temp_file))}")
+    print(
+        f"DEBUG: S-expression of code:\n{ts_parser.parse_file_to_sexp(str(temp_file))}"
+    )
 
     expected_tags_simplified = [
         ("name.definition.parameter", "a"),
@@ -480,5 +532,7 @@ class MyClass:
     ]
 
     for expected_kind, expected_name in expected_tags_simplified:
-        assert any(tag_kind == expected_kind and tag_name == expected_name for tag_kind, tag_name in actual_tags_simplified), \
-            f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"
+        assert any(
+            tag_kind == expected_kind and tag_name == expected_name
+            for tag_kind, tag_name in actual_tags_simplified
+        ), f"Missing expected tag: Kind='{expected_kind}', Name='{expected_name}'"

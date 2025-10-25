@@ -68,7 +68,9 @@ class TreeSitterParser:
         try:
             # Get language for the file
             lang = filename_to_lang(file_path)
-            logger.debug(f"_parse_file: Detected language: {lang} for file: {file_path}")
+            logger.debug(
+                f"_parse_file: Detected language: {lang} for file: {file_path}"
+            )
             if not lang:
                 logger.debug(f"No language detected for {file_path}")
                 return []
@@ -76,11 +78,15 @@ class TreeSitterParser:
             # Get parser and language
             parser = get_parser(lang)
             language = get_language(lang)
-            logger.debug(f"_parse_file: Retrieved parser and language for {lang}. Language object: {language}")
+            logger.debug(
+                f"_parse_file: Retrieved parser and language for {lang}. Language object: {language}"
+            )
 
             # Load query file using the injected QueryLoader
             query_scm = self.query_loader.load_query(lang)
-            logger.debug(f"_parse_file: Loaded query SCM for {lang}. Query length: {len(query_scm) if query_scm else 0}")
+            logger.debug(
+                f"_parse_file: Loaded query SCM for {lang}. Query length: {len(query_scm) if query_scm else 0}"
+            )
 
             if not query_scm:
                 logger.warning(f"_parse_file: No query SCM found for language {lang}.")
@@ -93,19 +99,25 @@ class TreeSitterParser:
 
             # Read file content
             code_content = self._read_file(file_path)
-            logger.debug(f"_parse_file: Read file content for {file_path}. Content length: {len(code_content) if code_content else 0}")
+            logger.debug(
+                f"_parse_file: Read file content for {file_path}. Content length: {len(code_content) if code_content else 0}"
+            )
             if not code_content:
                 logger.warning(f"_parse_file: Could not read file: {file_path}")
                 return []
 
             # Parse with tree-sitter
             tree = parser.parse(bytes(code_content, "utf-8"))
-            logger.debug(f"_parse_file: Parsed file into tree for {file_path}. Root node: {tree.root_node.type}")
+            logger.debug(
+                f"_parse_file: Parsed file into tree for {file_path}. Root node: {tree.root_node.type}"
+            )
 
             query_cursor = tree_sitter.QueryCursor(query)
             logger.debug(f"_parse_file: Created tree_sitter.QueryCursor object.")
             captures = query_cursor.captures(tree.root_node)
-            logger.debug(f"_parse_file: QueryCursor.captures returned {len(list(captures))} entries.") # Convert to list for accurate count, but keep original iterable for the loop
+            logger.debug(
+                f"_parse_file: QueryCursor.captures returned {len(list(captures))} entries."
+            )  # Convert to list for accurate count, but keep original iterable for the loop
             # print(f"DEBUG: Type of captures: {type(captures)}") # Removed debug print
             # print(f"DEBUG: First few captures: {list(captures)[:5]}") # Removed debug print
             tags = []
@@ -113,7 +125,9 @@ class TreeSitterParser:
             # Process captures dictionary
             if isinstance(captures, dict):
                 for tag_kind, nodes in captures.items():
-                    logger.debug(f"_parse_file: Processing tag_kind: {tag_kind} with {len(nodes)} nodes.")
+                    logger.debug(
+                        f"_parse_file: Processing tag_kind: {tag_kind} with {len(nodes)} nodes."
+                    )
                     for node in nodes:
                         tags.append(
                             CodeTag(
@@ -127,9 +141,13 @@ class TreeSitterParser:
                             )
                         )
             else:
-                logger.warning(f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict.")
+                logger.warning(
+                    f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict."
+                )
 
-            logger.debug(f"_parse_file: Extracted {len(tags)} CodeTags from {file_path}")
+            logger.debug(
+                f"_parse_file: Extracted {len(tags)} CodeTags from {file_path}"
+            )
             return tags
 
         except Exception as e:
@@ -172,7 +190,7 @@ class TreeSitterParser:
         """Parses a file and returns its S-expression."""
         lang = filename_to_lang(file_path)
         parser = get_parser(lang)
-        with open(file_path, 'rb') as f:
+        with open(file_path, "rb") as f:
             tree = parser.parse(f.read())
         if tree is None or tree.root_node is None:
             logger.warning(f"Failed to parse file or root node is None for {file_path}")
@@ -189,7 +207,7 @@ class TreeSitterParser:
         Returns:
             S-expression string.
         """
-        sexp_str = "" # Initialize an empty string
+        sexp_str = ""  # Initialize an empty string
         prefix = "  " * indent
 
         # Check if node is named or a token
@@ -268,7 +286,7 @@ class TreeSitterParser:
         lang = filename_to_lang(file_path)
         if lang is None:
             return False
-        
+
         # Check if query file exists without loading it to avoid warnings
         query_path = self.query_loader.custom_queries_dir / f"{lang}-tags.scm"
         return query_path.exists()

@@ -16,8 +16,15 @@ from repomap_tool.cli.controllers.view_models import (
     FileDensityViewModel,
     PackageDensityViewModel,
 )
-from repomap_tool.models import SuccessResponse, OutputConfig, ErrorResponse # Import ErrorResponse
-from repomap_tool.cli.output.manager import OutputManager # Import OutputManager to mock it correctly
+from repomap_tool.models import (
+    SuccessResponse,
+    OutputConfig,
+    ErrorResponse,
+)  # Import ErrorResponse
+from repomap_tool.cli.output.manager import (
+    OutputManager,
+)  # Import OutputManager to mock it correctly
+
 
 # Mock data for DensityController
 @pytest.fixture
@@ -78,12 +85,14 @@ def test_density_command_file_scope_text_output(
         # Mock the entire container and its density_controller provider
         mock_container_instance = MagicMock()
         mock_create_container.return_value = mock_container_instance
-        mock_container_instance.density_controller.return_value = mock_density_controller
-        
+        mock_container_instance.density_controller.return_value = (
+            mock_density_controller
+        )
+
         # Mock the output manager
         mock_output_manager = MagicMock()
         mock_container_instance.output_manager.return_value = mock_output_manager
-        
+
         # Configure the mock controller
         mock_density_controller.execute.return_value = DensityAnalysisViewModel(
             scope="file",
@@ -117,8 +126,10 @@ def test_density_command_package_scope_text_output(
         # Mock the entire container and its density_controller provider
         mock_container_instance = MagicMock()
         mock_create_container.return_value = mock_container_instance
-        mock_container_instance.density_controller.return_value = mock_density_controller
-        
+        mock_container_instance.density_controller.return_value = (
+            mock_density_controller
+        )
+
         # Mock the output manager
         mock_output_manager = MagicMock()
         mock_container_instance.output_manager.return_value = mock_output_manager
@@ -155,8 +166,10 @@ def test_density_command_json_output(
         # Mock the entire container and its density_controller provider
         mock_container_instance = MagicMock()
         mock_create_container.return_value = mock_container_instance
-        mock_container_instance.density_controller.return_value = mock_density_controller
-        
+        mock_container_instance.density_controller.return_value = (
+            mock_density_controller
+        )
+
         # Mock the output manager
         mock_output_manager = MagicMock()
         mock_container_instance.output_manager.return_value = mock_output_manager
@@ -202,7 +215,9 @@ def test_density_command_error_handling(runner):
         assert result.exit_code == 1
         # The error message format may vary, just check that it contains the error
         # The error might be in the exception or output
-        assert "DI Container Error" in result.output or "DI Container Error" in str(result.exception)
+        assert "DI Container Error" in result.output or "DI Container Error" in str(
+            result.exception
+        )
 
 
 def test_density_command_missing_project_path(runner):

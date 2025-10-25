@@ -63,7 +63,12 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "create" in result.output.lower()
 
-    def test_analyze_basic_usage(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_analyze_basic_usage(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test basic analyze command usage."""
         # No longer patching get_output_manager. It comes from the injected container.
 
@@ -88,7 +93,12 @@ class TestCLICore:
             assert result.exit_code == 0
             assert "LLM-Optimized Project" in result.output  # Check for TEXT output
 
-    def test_analyze_with_config_file(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_analyze_with_config_file(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test analyze command with config file."""
         config_content = f"""
         {{
@@ -127,7 +137,12 @@ class TestCLICore:
         finally:
             os.unlink(config_file)
 
-    def test_analyze_with_options(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_analyze_with_options(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test analyze command with various options."""
         # Mock RepoMapService and its analyze_project method
         mock_repo_map_service = MagicMock()
@@ -140,7 +155,7 @@ class TestCLICore:
             analysis_time_ms=100.0,
             last_updated=datetime.now(),
         )
-        
+
         # Debug: Check if the mock is being called
         def mock_analyze_project(*args, **kwargs):
             print(f"Mock analyze_project called with args: {args}, kwargs: {kwargs}")
@@ -153,14 +168,18 @@ class TestCLICore:
                 analysis_time_ms=100.0,
                 last_updated=datetime.now(),
             )
-        
+
         mock_repo_map_service.analyze_project.side_effect = mock_analyze_project
 
         # Mock the service factory to return our mock service
-        with patch('repomap_tool.cli.services.service_factory.get_service_factory') as mock_factory:
-            mock_factory.return_value.create_repomap_service.return_value = mock_repo_map_service
+        with patch(
+            "repomap_tool.cli.services.service_factory.get_service_factory"
+        ) as mock_factory:
+            mock_factory.return_value.create_repomap_service.return_value = (
+                mock_repo_map_service
+            )
             print(f"Mock factory set up: {mock_factory.return_value}")
-            
+
             # Also mock the analyze_project method directly on the mock service
             mock_repo_map_service.analyze_project.return_value = ProjectInfo(
                 project_root=temp_project,
@@ -171,9 +190,11 @@ class TestCLICore:
                 analysis_time_ms=100.0,
                 last_updated=datetime.now(),
             )
-            
+
             # Also patch the RepoMapService.analyze_project method directly
-            with patch('repomap_tool.core.repo_map.RepoMapService.analyze_project') as mock_analyze:
+            with patch(
+                "repomap_tool.core.repo_map.RepoMapService.analyze_project"
+            ) as mock_analyze:
                 mock_analyze.return_value = ProjectInfo(
                     project_root=temp_project,
                     total_files=1,
@@ -183,7 +204,7 @@ class TestCLICore:
                     analysis_time_ms=100.0,
                     last_updated=datetime.now(),
                 )
-                
+
                 result = cli_runner_with_container.invoke(
                     cli,
                     [
@@ -199,23 +220,32 @@ class TestCLICore:
                 print(f"Exit code: {result.exit_code}")
                 print(f"Output: {result.output}")
                 print(f"Mock factory called: {mock_factory.called}")
-                print(f"Mock factory return value called: {mock_factory.return_value.create_repomap_service.called}")
-                print(f"Mock service analyze_project called: {mock_repo_map_service.analyze_project.called}")
+                print(
+                    f"Mock factory return value called: {mock_factory.return_value.create_repomap_service.called}"
+                )
+                print(
+                    f"Mock service analyze_project called: {mock_repo_map_service.analyze_project.called}"
+                )
                 print(f"Mock analyze called: {mock_analyze.called}")
-                
+
                 # Check if the command succeeded
                 if result.exit_code != 0:
                     print(f"Command failed with exit code {result.exit_code}")
                     print(f"Error output: {result.output}")
-                    assert False, f"Command failed with exit code {result.exit_code}: {result.output}"
-                
+                    assert (
+                        False
+                    ), f"Command failed with exit code {result.exit_code}: {result.output}"
+
                 # Verify that JSON output contains expected fields
                 import json
                 import re
+
                 try:
                     # Extract JSON from captured console buffer if present; fallback to stdout
-                    raw_output = getattr(result, "captured_output", None) or result.output
-                    
+                    raw_output = (
+                        getattr(result, "captured_output", None) or result.output
+                    )
+
                     # More robust JSON extraction - handle mixed logging and JSON output
                     # Try to find JSON object in the output using regex - look for proper JSON format
                     # Look for JSON that starts with a quoted key (not Python dict format)
@@ -227,9 +257,9 @@ class TestCLICore:
                         brace_count = 0
                         json_end = start_pos
                         for i, char in enumerate(raw_output[start_pos:], start_pos):
-                            if char == '{':
+                            if char == "{":
                                 brace_count += 1
-                            elif char == '}':
+                            elif char == "}":
                                 brace_count -= 1
                                 if brace_count == 0:
                                     json_end = i + 1
@@ -237,30 +267,32 @@ class TestCLICore:
                         json_output = raw_output[start_pos:json_end]
                     else:
                         # Fallback: extract JSON lines (skip logging messages and errors)
-                        output_lines = raw_output.strip().split('\n')
+                        output_lines = raw_output.strip().split("\n")
                         json_lines = []
                         in_json = False
                         for line in output_lines:
                             # Skip logging messages, errors, and empty lines
-                            if (line.startswith('--- Logging error ---') or 
-                                line.startswith('Traceback') or 
-                                line.startswith('  File ') or
-                                line.startswith('INFO') or
-                                line.startswith('ERROR') or
-                                line.startswith('WARNING') or
-                                line.startswith('DEBUG') or
-                                not line.strip()):
+                            if (
+                                line.startswith("--- Logging error ---")
+                                or line.startswith("Traceback")
+                                or line.startswith("  File ")
+                                or line.startswith("INFO")
+                                or line.startswith("ERROR")
+                                or line.startswith("WARNING")
+                                or line.startswith("DEBUG")
+                                or not line.strip()
+                            ):
                                 continue
-                            if line.strip().startswith('{'):
+                            if line.strip().startswith("{"):
                                 in_json = True
                             if in_json:
                                 json_lines.append(line)
-                        
+
                         if not json_lines:
                             assert False, f"No JSON found in output: {raw_output[:500]}"
-                        
-                        json_output = '\n'.join(json_lines)
-                    
+
+                        json_output = "\n".join(json_lines)
+
                     output_data = json.loads(json_output)
                     assert "project_root" in output_data
                     assert output_data["project_root"] == temp_project
@@ -275,7 +307,12 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "search" in result.output.lower()
 
-    def test_search_basic_usage(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_search_basic_usage(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test basic search command usage."""
         mock_repo_map_service = MagicMock()
         mock_repo_map_service.search_identifiers.return_value = SearchResponse(
@@ -297,7 +334,9 @@ class TestCLICore:
         )
 
         # Mock the RepoMapService.search_identifiers method directly
-        with patch('repomap_tool.core.repo_map.RepoMapService.search_identifiers') as mock_search:
+        with patch(
+            "repomap_tool.core.repo_map.RepoMapService.search_identifiers"
+        ) as mock_search:
             mock_search.return_value = SearchResponse(
                 query="test",
                 match_type="fuzzy",
@@ -315,7 +354,7 @@ class TestCLICore:
                 ],
                 search_time_ms=50.0,
             )
-            
+
             # CLI signature: search QUERY [PROJECT_PATH] [OPTIONS]
             result = cli_runner_with_container.invoke(
                 cli,
@@ -327,14 +366,19 @@ class TestCLICore:
                     "fuzzy",
                 ],
             )
-            
+
             if result.exit_code != 0:
                 print(f"CLI Output: {result.output}")
                 print(f"CLI Exception: {result.exception}")
             assert result.exit_code == 0
             assert "test_function" in result.output
 
-    def test_search_with_options(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_search_with_options(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test search command with various options."""
         mock_repo_map_service = MagicMock()
         mock_repo_map_service.search_identifiers.return_value = SearchResponse(
@@ -370,7 +414,12 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "config" in result.output.lower()
 
-    def test_config_basic_usage(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_config_basic_usage(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test basic config command usage."""
         # Create a temporary config file path
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
@@ -413,7 +462,12 @@ class TestCLICore:
         assert "explore" in result.output.lower()
 
     @pytest.mark.skip(reason="Disabling explore verb tests")
-    def test_explore_basic_usage(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_explore_basic_usage(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test basic explore command usage."""
         # Explore command is complex and requires session management
         # Just test that it accepts the basic arguments
@@ -425,8 +479,12 @@ class TestCLICore:
         )
 
         # Patch the exploration_controller provider in the container
-        with session_container.exploration_controller.override(mock_exploration_controller):
-            result = cli_runner_with_container.invoke(cli, ["explore", "start", "analyze", temp_project])
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
+            result = cli_runner_with_container.invoke(
+                cli, ["explore", "start", "analyze", temp_project]
+            )
 
             # It might fail due to missing dependencies, but that's expected
             # We're just testing that the command structure is correct
@@ -440,7 +498,9 @@ class TestCLICore:
         assert "focus" in result.output.lower()
 
     @pytest.mark.skip(reason="Disabling explore verb tests")
-    def test_focus_basic_usage(self, cli_runner_with_container: CliRunner, session_container: Container) -> None:
+    def test_focus_basic_usage(
+        self, cli_runner_with_container: CliRunner, session_container: Container
+    ) -> None:
         """Test basic focus command usage."""
         # Focus command requires session management
         # Just test that it accepts the basic arguments
@@ -449,8 +509,12 @@ class TestCLICore:
             session_id="test_session_id", tree_id="test_tree_id"
         )
 
-        with session_container.exploration_controller.override(mock_exploration_controller):
-            result = cli_runner_with_container.invoke(cli, ["explore", "focus", "tree_123"])
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
+            result = cli_runner_with_container.invoke(
+                cli, ["explore", "focus", "tree_123"]
+            )
 
             # It might fail due to missing session, but that's expected
             assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
@@ -461,7 +525,9 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "expand" in result.output.lower()
 
-    def test_expand_basic_usage(self, cli_runner_with_container: CliRunner, session_container: Container) -> None:
+    def test_expand_basic_usage(
+        self, cli_runner_with_container: CliRunner, session_container: Container
+    ) -> None:
         """Test basic expand command usage."""
         # Expand command requires session management
         # Just test that it accepts the basic arguments
@@ -470,8 +536,12 @@ class TestCLICore:
             session_id="test_session_id", tree_id="test_tree_id"
         )
 
-        with session_container.exploration_controller.override(mock_exploration_controller):
-            result = cli_runner_with_container.invoke(cli, ["explore", "expand", "src/"])
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
+            result = cli_runner_with_container.invoke(
+                cli, ["explore", "expand", "src/"]
+            )
 
             # It might fail due to missing session, but that's expected
             assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
@@ -482,7 +552,9 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "prune" in result.output.lower()
 
-    def test_prune_basic_usage(self, cli_runner_with_container: CliRunner, session_container: Container) -> None:
+    def test_prune_basic_usage(
+        self, cli_runner_with_container: CliRunner, session_container: Container
+    ) -> None:
         """Test basic prune command usage."""
         # Prune command requires session management
         # Just test that it accepts the basic arguments
@@ -491,8 +563,12 @@ class TestCLICore:
             session_id="test_session_id", tree_id="test_tree_id"
         )
 
-        with session_container.exploration_controller.override(mock_exploration_controller):
-            result = cli_runner_with_container.invoke(cli, ["explore", "prune", "tests/"])
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
+            result = cli_runner_with_container.invoke(
+                cli, ["explore", "prune", "tests/"]
+            )
 
             # It might fail due to missing session, but that's expected
             assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
@@ -503,7 +579,9 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "map" in result.output.lower()
 
-    def test_map_basic_usage(self, cli_runner_with_container: CliRunner, session_container: Container) -> None:
+    def test_map_basic_usage(
+        self, cli_runner_with_container: CliRunner, session_container: Container
+    ) -> None:
         """Test basic map command usage."""
         # Map command requires session management
         # Just test that it accepts the basic arguments
@@ -512,19 +590,25 @@ class TestCLICore:
             session_id="test_session_id", tree_id="test_tree_id"
         )
 
-        with session_container.exploration_controller.override(mock_exploration_controller):
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
             result = cli_runner_with_container.invoke(cli, ["explore", "map"])
 
             # It might fail due to missing session, but that's expected
             assert result.exit_code in [0, 1]  # 0 for success, 1 for expected failure
 
-    def test_list_trees_command_exists(self, cli_runner_with_container: CliRunner) -> None:
+    def test_list_trees_command_exists(
+        self, cli_runner_with_container: CliRunner
+    ) -> None:
         """Test that list-trees command exists and shows help."""
         result = cli_runner_with_container.invoke(cli, ["explore", "trees", "--help"])
         assert result.exit_code == 0
         assert "trees" in result.output.lower()
 
-    def test_list_trees_basic_usage(self, cli_runner_with_container: CliRunner, session_container: Container) -> None:
+    def test_list_trees_basic_usage(
+        self, cli_runner_with_container: CliRunner, session_container: Container
+    ) -> None:
         """Test basic usage of list-trees command."""
         # List-trees command requires session management
         # Just test that it accepts the basic arguments
@@ -533,7 +617,9 @@ class TestCLICore:
             session_id="test_session_id", tree_id="test_tree_id"
         )
 
-        with session_container.exploration_controller.override(mock_exploration_controller):
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
             result = cli_runner_with_container.invoke(cli, ["explore", "trees"])
 
             # It might fail due to missing session, but that's expected
@@ -545,7 +631,9 @@ class TestCLICore:
         assert result.exit_code == 0
         assert "status" in result.output.lower()
 
-    def test_status_basic_usage(self, cli_runner_with_container: CliRunner, session_container: Container) -> None:
+    def test_status_basic_usage(
+        self, cli_runner_with_container: CliRunner, session_container: Container
+    ) -> None:
         """Test basic usage of status command."""
         # Status command requires session management
         # Just test that it accepts the basic arguments
@@ -554,7 +642,9 @@ class TestCLICore:
             session_id="test_session_id", tree_id="test_tree_id"
         )
 
-        with session_container.exploration_controller.override(mock_exploration_controller):
+        with session_container.exploration_controller.override(
+            mock_exploration_controller
+        ):
             result = cli_runner_with_container.invoke(cli, ["explore", "status"])
 
             # It might fail due to missing session, but that's expected
@@ -566,13 +656,19 @@ class TestCLICore:
         result = cli_runner_with_container.invoke(cli, ["nonexistent-command"])
         assert result.exit_code == 2  # Click usage error
 
-    def test_cli_invalid_project_path(self, cli_runner_with_container: CliRunner) -> None:
+    def test_cli_invalid_project_path(
+        self, cli_runner_with_container: CliRunner
+    ) -> None:
         """Test CLI with invalid project path."""
         # We expect a Click usage error (exit code 2) for an invalid project path.
-        result = cli_runner_with_container.invoke(cli, ["index", "create", "/nonexistent/path"])
+        result = cli_runner_with_container.invoke(
+            cli, ["index", "create", "/nonexistent/path"]
+        )
         assert result.exit_code == 2  # Click usage error
 
-    def test_cli_output_format_validation(self, cli_runner_with_container: CliRunner, temp_project: str) -> None:
+    def test_cli_output_format_validation(
+        self, cli_runner_with_container: CliRunner, temp_project: str
+    ) -> None:
         """Test CLI output format validation."""
         # We expect a Click usage error (exit code 2) for an invalid output format.
         result = cli_runner_with_container.invoke(
@@ -580,7 +676,12 @@ class TestCLICore:
         )
         assert result.exit_code == 2  # Click usage error
 
-    def test_cli_verbose_output(self, cli_runner_with_container: CliRunner, temp_project: str, session_container: Container) -> None:
+    def test_cli_verbose_output(
+        self,
+        cli_runner_with_container: CliRunner,
+        temp_project: str,
+        session_container: Container,
+    ) -> None:
         """Test CLI verbose output."""
         # Mock RepoMapService and its analyze_project method
         mock_repo_map_service = MagicMock()

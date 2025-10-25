@@ -220,8 +220,8 @@ class EmbeddingMatcher:
                     self.embedding_cache[cache_key] = embedding
                     results[identifier] = embedding
                     continue
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to load cached embedding for {identifier}: {e}")
 
             # Need to compute
             to_compute.append(identifier)
@@ -282,8 +282,8 @@ class EmbeddingMatcher:
                     embedding = np.load(cache_path)
                     self.embedding_cache[cache_key] = embedding
                     results[identifier] = embedding
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.debug(f"Failed to load cached embedding from file {cache_path}: {e}")
 
         return results
 

@@ -25,6 +25,7 @@ from .view_models import (
     ControllerConfig,
     AnalysisType,
 )
+
 if TYPE_CHECKING:
     from repomap_tool.models import SymbolViewModel
 

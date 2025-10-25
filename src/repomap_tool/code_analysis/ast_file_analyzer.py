@@ -127,7 +127,7 @@ class ASTFileAnalyzer:
                 used_variables=[],  # TODO: Extract from tags if needed
                 line_count=self._get_line_count(full_path),
                 analysis_errors=analysis_errors,
-                defined_methods=defined_methods, # Added defined_methods to result
+                defined_methods=defined_methods,  # Added defined_methods to result
             )
 
             # Cache the result
@@ -175,15 +175,23 @@ class ASTFileAnalyzer:
 
         for tag in tags:
             if tag.kind in ["import", "import_from"]:
-                module = getattr(tag, "module", tag.name) # Use module if available, otherwise name
-                symbols = getattr(tag, "symbols", []) # Get symbols if available
-                is_relative = module.startswith(".") # Determine if relative based on module name
+                module = getattr(
+                    tag, "module", tag.name
+                )  # Use module if available, otherwise name
+                symbols = getattr(tag, "symbols", [])  # Get symbols if available
+                is_relative = module.startswith(
+                    "."
+                )  # Determine if relative based on module name
 
                 # Determine import type more robustly based on tag kind and module name
                 if tag.kind == "import_from":
-                    import_type = ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
-                else: # tag.kind == "import"
-                    import_type = ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                    import_type = (
+                        ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                    )
+                else:  # tag.kind == "import"
+                    import_type = (
+                        ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                    )
 
                 imports.append(
                     Import(
@@ -219,7 +227,7 @@ class ASTFileAnalyzer:
     def _is_likely_variable_assignment(self, tag: Any) -> bool:
         """Check if a tag is likely a variable assignment rather than a function definition."""
         # This heuristic is no longer needed if we rely on explicit tag kinds
-        return False # Always return False as we no longer filter based on this
+        return False  # Always return False as we no longer filter based on this
 
     def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
         """Extract class names from tree-sitter tags."""

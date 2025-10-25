@@ -28,7 +28,7 @@ from ..config.loader import (
     resolve_project_path,
     load_or_create_config,
 )
-from ..output import OutputManager, OutputConfig, OutputFormat #, get_output_manager
+from ..output import OutputManager, OutputConfig, OutputFormat  # , get_output_manager
 from ..utils.console import get_console
 
 
@@ -155,7 +155,14 @@ def cycles(
 )
 @click.option("--verbose", "-v", is_flag=True, help="Verbose output")
 @click.pass_context
-@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
 def density(
     ctx: click.Context,
     config: Optional[str],
@@ -185,7 +192,9 @@ def density(
             for p in input_paths:
                 abs_path = Path(p).resolve()
                 if not abs_path.is_relative_to(resolved_project_path):
-                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                    raise click.BadParameter(
+                        f"Input path '{p}' is not within the project root '{resolved_project_path}'."
+                    )
                 target_files.append(str(abs_path))
         else:
             # If no specific input_paths, analyze the entire project_root
@@ -270,7 +279,14 @@ def density(
     help="Maximum tokens for LLM optimization",
 )
 @click.pass_context
-@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
 def centrality(
     ctx: click.Context,
     files: tuple,
@@ -315,7 +331,9 @@ def centrality(
         # Determine target files for analysis
         target_files = []
         if files and input_paths:
-            raise click.BadParameter("Cannot specify both --files and positional input paths.")
+            raise click.BadParameter(
+                "Cannot specify both --files and positional input paths."
+            )
         elif files:
             target_files = []
             project_path = Path(resolved_project_path)
@@ -324,7 +342,9 @@ def centrality(
                 if file_path.is_absolute():
                     # Absolute path - validate it's within project root
                     if not file_path.is_relative_to(project_path):
-                        raise click.BadParameter(f"File '{f}' is not within the project root '{resolved_project_path}'.")
+                        raise click.BadParameter(
+                            f"File '{f}' is not within the project root '{resolved_project_path}'."
+                        )
                     target_files.append(str(file_path))
                 else:
                     # Relative path - join with project root
@@ -334,7 +354,9 @@ def centrality(
             for p in input_paths:
                 abs_path = Path(p).resolve()
                 if not abs_path.is_relative_to(project_path):
-                    raise click.BadParameter(f"Input path '{p}' is not within the project root '{resolved_project_path}'.")
+                    raise click.BadParameter(
+                        f"Input path '{p}' is not within the project root '{resolved_project_path}'."
+                    )
                 target_files.append(str(abs_path))
         else:
             # If no specific files, the controller will discover them within the project_root
@@ -415,7 +437,14 @@ def centrality(
     help="Maximum tokens for LLM optimization",
 )
 @click.pass_context
-@click.argument("input_paths", nargs=-1, type=click.Path(exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path), required=False)
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
 def impact(
     ctx: click.Context,
     config: Optional[str],
@@ -433,30 +462,39 @@ def impact(
     # Determine target files for analysis
     target_files_for_impact = []
     if files and input_paths:
-        raise click.BadParameter("Cannot specify both --files and positional input paths.")
+        raise click.BadParameter(
+            "Cannot specify both --files and positional input paths."
+        )
     elif files:
         # Ensure files are absolute paths - use the project root from context
         project_root = Path(ctx.obj.get("project_root", ".")).resolve()
         for f in files:
             abs_path = Path(f).resolve()
-            if not abs_path.is_relative_to(project_root): # type: ignore
-                 raise click.BadParameter(f"File '{f}' is not within the project root '{project_root}'.")
+            if not abs_path.is_relative_to(project_root):  # type: ignore
+                raise click.BadParameter(
+                    f"File '{f}' is not within the project root '{project_root}'."
+                )
             target_files_for_impact.append(str(abs_path))
 
     elif input_paths:
         project_root = Path(ctx.obj.get("project_root", ".")).resolve()
         for p in input_paths:
             abs_path = Path(p).resolve()
-            if not abs_path.is_relative_to(project_root): # type: ignore
-                raise click.BadParameter(f"Input path '{p}' is not within the project root '{project_root}'.")
+            if not abs_path.is_relative_to(project_root):  # type: ignore
+                raise click.BadParameter(
+                    f"Input path '{p}' is not within the project root '{project_root}'."
+                )
             target_files_for_impact.append(str(abs_path))
-    
+
     if not target_files_for_impact:
         # Use OutputManager for error handling
         output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
         output_manager.display_error(
-            ValueError("Must specify at least one file with --files or as a positional argument."), output_config
+            ValueError(
+                "Must specify at least one file with --files or as a positional argument."
+            ),
+            output_config,
         )
         sys.exit(1)
 
@@ -486,7 +524,9 @@ def impact(
         output_manager.display_progress(
             f"🎯 Inspecting impact for project: {resolved_project_path}"
         )
-        output_manager.display_progress(f"📁 Target files: {', '.join(target_files_for_impact)}")
+        output_manager.display_progress(
+            f"📁 Target files: {', '.join(target_files_for_impact)}"
+        )
 
         # Use DI container to get Controllers
         container = ctx.obj["container"]

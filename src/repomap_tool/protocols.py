@@ -4,15 +4,28 @@ Protocols for type safety in repomap-tool.
 This module defines protocols and type-safe interfaces for the core components.
 """
 
-from typing import Protocol, List, Set, Optional, Dict, Any, TypedDict, Union, Type, TypeVar
-from abc import ABC, abstractmethod # Import ABC and abstractmethod from abc module
+from typing import (
+    Protocol,
+    List,
+    Set,
+    Optional,
+    Dict,
+    Any,
+    TypedDict,
+    Union,
+    Type,
+    TypeVar,
+)
+from abc import ABC, abstractmethod  # Import ABC and abstractmethod from abc module
 from pathlib import Path
 
 from repomap_tool.code_analysis.models import CodeTag
 from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
 import click
 from rich.console import Console
-from repomap_tool.core.logging_service import get_logger # Correct import for get_logger
+from repomap_tool.core.logging_service import (
+    get_logger,
+)  # Correct import for get_logger
 
 # Removed ConsoleManagerProtocol and TemplateLoader imports to avoid circular dependencies
 
@@ -115,6 +128,7 @@ ProjectInfo = Dict[str, Any]
 
 class QueryLoaderProtocol(Protocol):
     """Protocol for loading tree-sitter query strings."""
+
     def load_query(self, language: str) -> Optional[str]:
         """Loads the query string for a given language."""
         ...
@@ -147,7 +161,7 @@ class BaseFormatter(ABC):
 
     def __init__(
         self,
-        *, # Make subsequent arguments keyword-only
+        *,  # Make subsequent arguments keyword-only
         console_manager: "ConsoleManagerProtocol",
         template_engine: "TemplateEngine",
         template_registry: "TemplateRegistryProtocol",
@@ -155,19 +169,21 @@ class BaseFormatter(ABC):
     ) -> None:
         """Initialize the base formatter."""
         if console_manager is None:
-            raise ValueError("ConsoleManagerProtocol must be injected - no fallback allowed")
+            raise ValueError(
+                "ConsoleManagerProtocol must be injected - no fallback allowed"
+            )
         if template_engine is None:
             raise ValueError("TemplateEngine must be injected - no fallback allowed")
         if template_registry is None:
-            raise ValueError("TemplateRegistryProtocol must be injected - no fallback allowed")
-        
+            raise ValueError(
+                "TemplateRegistryProtocol must be injected - no fallback allowed"
+            )
+
         self._console_manager = console_manager
         self._template_engine = template_engine
         self._template_registry = template_registry
-        self._enable_logging = enable_logging # Store enable_logging
-        self._logger = (
-            get_logger(self.__class__.__name__) if enable_logging else None
-        )
+        self._enable_logging = enable_logging  # Store enable_logging
+        self._logger = get_logger(self.__class__.__name__) if enable_logging else None
         self._supported_formats: List[OutputFormat] = []
 
     @abstractmethod
@@ -293,6 +309,7 @@ class FormatterRegistryProtocol(Protocol):
 
 class TagCacheProtocol(Protocol):
     """Protocol for caching tree-sitter tags (CodeTag objects)."""
+
     def get_tags(self, file_path: str) -> Optional[List[CodeTag]]:
         """Retrieve cached tags for a file.
         Args:
@@ -358,15 +375,24 @@ class TemplateRegistryProtocol(Protocol):
 class OutputManagerProtocol(Protocol):
     """Protocol for output manager implementations."""
 
-    def display(self, data: Any, config: OutputConfig, ctx: Optional[click.Context] = None) -> None:
+    def display(
+        self, data: Any, config: OutputConfig, ctx: Optional[click.Context] = None
+    ) -> None:
         """Display data to the console with proper formatting."""
         ...
 
-    def display_error(self, error: Union[Exception, Any], config: OutputConfig, ctx: Optional[click.Context] = None) -> None:
+    def display_error(
+        self,
+        error: Union[Exception, Any],
+        config: OutputConfig,
+        ctx: Optional[click.Context] = None,
+    ) -> None:
         """Display an error message with consistent formatting."""
         ...
 
-    def display_success(self, message: str, config: OutputConfig, ctx: Optional[click.Context] = None) -> None:
+    def display_success(
+        self, message: str, config: OutputConfig, ctx: Optional[click.Context] = None
+    ) -> None:
         """Display a success message with consistent formatting."""
         ...
 
@@ -421,4 +447,4 @@ class ConsoleManagerProtocol(Protocol):
 
 
 # Forward reference for TemplateEngine to prevent circular imports
-TemplateEngine = TypeVar("TemplateEngine") 
+TemplateEngine = TypeVar("TemplateEngine")

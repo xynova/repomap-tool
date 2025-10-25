@@ -78,10 +78,8 @@ class TestContainer:
             project_root.mkdir()
             cache_dir = Path(temp_dir) / "cache"
             cache_dir.mkdir()
-            
-            config_obj = RepoMapConfig(
-                project_root=project_root, cache_dir=cache_dir
-            )
+
+            config_obj = RepoMapConfig(project_root=project_root, cache_dir=cache_dir)
             container = create_container(config_obj)
             repo_map_config = container.config()
             # The container returns a dict, so we need to check the dict values
@@ -119,6 +117,7 @@ class TestContainer:
         # The container doesn't have a direct logger method, but we can test logging functionality
         # through the logging service that's used internally
         from repomap_tool.core.logging_service import get_logger
+
         logger = get_logger("test_logger")
         assert logger is not None
         assert isinstance(logger, logging.Logger)
@@ -367,8 +366,10 @@ class TestContainer:
         assert container is not None
 
         # Check for the actual message pattern (container logs different message)
-        assert any("Dependency injection container created" in str(call) 
-                  for call in mock_logger.debug.call_args_list)
+        assert any(
+            "Dependency injection container created" in str(call)
+            for call in mock_logger.debug.call_args_list
+        )
 
     def test_container_with_missing_dependencies(self) -> None:
         """Test container behavior with missing optional dependencies."""
@@ -383,4 +384,6 @@ class TestContainer:
 
         # Semantic matcher should not be available when disabled
         # (This would be handled by the service factory in practice)
-        assert container.config.semantic_match.threshold() == 0.2  # actual default value
+        assert (
+            container.config.semantic_match.threshold() == 0.2
+        )  # actual default value

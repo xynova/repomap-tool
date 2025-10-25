@@ -42,7 +42,9 @@ class TestInspectCommandsIntegration:
 
         shutil.rmtree(self.temp_dir, ignore_errors=True)
 
-    def _invoke_inspect_command(self, command_type, files=None, output_format="text", **kwargs):
+    def _invoke_inspect_command(
+        self, command_type, files=None, output_format="text", **kwargs
+    ):
         """Helper method to invoke inspect commands with common parameters."""
         cmd_args = [
             "inspect",
@@ -50,7 +52,7 @@ class TestInspectCommandsIntegration:
             "--output",
             output_format,
         ]
-        
+
         if files:
             # When using --files, don't pass project root as positional argument
             # The project root will be resolved from current working directory
@@ -67,16 +69,17 @@ class TestInspectCommandsIntegration:
         else:
             # When not using --files, pass project root as positional argument
             cmd_args.append(str(self.project_root))
-        
+
         # Add any additional kwargs as CLI arguments
         for key, value in kwargs.items():
             if key == "max_tokens":
                 cmd_args.extend(["--max-tokens", str(value)])
             elif key == "verbose" and value:
                 cmd_args.append("--verbose")
-        
+
         # Set working directory to test project root for all cases
         import os
+
         original_cwd = os.getcwd()
         try:
             os.chdir(str(self.project_root))
@@ -366,7 +369,9 @@ class TestUserService:
         )
         auth_path = str(self.project_root / "src" / "test_project" / "auth.py")
 
-        result = self._invoke_inspect_command("impact", files=[user_service_path, auth_path])
+        result = self._invoke_inspect_command(
+            "impact", files=[user_service_path, auth_path]
+        )
         self._assert_inspect_success(result, "impact")
         assert "Target files" in result.output
 
@@ -387,7 +392,9 @@ class TestUserService:
         )
         auth_path = str(self.project_root / "src" / "test_project" / "auth.py")
 
-        result = self._invoke_inspect_command("centrality", files=[user_service_path, auth_path])
+        result = self._invoke_inspect_command(
+            "centrality", files=[user_service_path, auth_path]
+        )
         self._assert_inspect_success(result, "centrality")
         assert "Files" in result.output
 
@@ -397,7 +404,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("impact", files=[user_service_path], output_format="json")
+        result = self._invoke_inspect_command(
+            "impact", files=[user_service_path], output_format="json"
+        )
         self._assert_inspect_success(result, "impact")
         assert "Output format: json" in result.output
 
@@ -407,7 +416,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("centrality", files=[user_service_path], output_format="json")
+        result = self._invoke_inspect_command(
+            "centrality", files=[user_service_path], output_format="json"
+        )
         self._assert_inspect_success(result, "centrality")
         assert "Output format: json" in result.output
 
@@ -417,7 +428,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("impact", files=[user_service_path], max_tokens=2000)
+        result = self._invoke_inspect_command(
+            "impact", files=[user_service_path], max_tokens=2000
+        )
         self._assert_inspect_success(result, "impact")
 
     def test_inspect_centrality_with_token_budget(self):
@@ -426,7 +439,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("centrality", files=[user_service_path], max_tokens=2000)
+        result = self._invoke_inspect_command(
+            "centrality", files=[user_service_path], max_tokens=2000
+        )
         self._assert_inspect_success(result, "centrality")
 
     def test_inspect_impact_no_files_specified(self):
@@ -451,9 +466,7 @@ class TestUserService:
         )
 
         result = self._invoke_inspect_command(
-            "impact", 
-            files=[user_service_path], 
-            output_format="text"
+            "impact", files=[user_service_path], output_format="text"
         )
 
         assert result.exit_code == 0
@@ -466,7 +479,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("centrality", files=[user_service_path], output_format="text")
+        result = self._invoke_inspect_command(
+            "centrality", files=[user_service_path], output_format="text"
+        )
         self._assert_inspect_success(result, "centrality")
 
     def test_inspect_impact_verbose_output(self):
@@ -475,7 +490,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("impact", files=[user_service_path], verbose=True)
+        result = self._invoke_inspect_command(
+            "impact", files=[user_service_path], verbose=True
+        )
         self._assert_inspect_success(result, "impact")
 
     def test_inspect_centrality_verbose_output(self):
@@ -484,7 +501,9 @@ class TestUserService:
             self.project_root / "src" / "test_project" / "user_service.py"
         )
 
-        result = self._invoke_inspect_command("centrality", files=[user_service_path], verbose=True)
+        result = self._invoke_inspect_command(
+            "centrality", files=[user_service_path], verbose=True
+        )
         self._assert_inspect_success(result, "centrality")
 
 
@@ -512,19 +531,131 @@ class TestASTFileAnalyzerIntegration:
     def _get_standard_mock_tags(self):
         """Helper method to get standard mock tags for test files."""
         return [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
-            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
-            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="__init__", line=13, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method1", line=16, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method2", line=19, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="test_function", callee="test_function", line=23, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=24, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=25, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method2", callee="obj.method2", line=26, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(
+                kind="import",
+                name="os",
+                line=2,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="os",
+            ),
+            MagicMock(
+                kind="import",
+                name="sys",
+                line=3,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="sys",
+            ),
+            MagicMock(
+                kind="import_from",
+                name="Path",
+                module="pathlib",
+                line=4,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["Path"],
+            ),
+            MagicMock(
+                kind="import_from",
+                name="List",
+                module="typing",
+                line=5,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["List", "Dict", "Optional"],
+            ),
+            MagicMock(
+                kind="function",
+                name="test_function",
+                line=7,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="class",
+                name="TestClass",
+                line=12,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="method",
+                name="__init__",
+                line=13,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="method",
+                name="method1",
+                line=16,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="method",
+                name="method2",
+                line=19,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="test_function",
+                callee="test_function",
+                line=23,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="TestClass",
+                callee="TestClass",
+                line=24,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="method1",
+                callee="obj.method1",
+                line=25,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="method2",
+                callee="obj.method2",
+                line=26,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
         ]
 
     def _create_simple_test_file(self):
@@ -567,13 +698,20 @@ counts = obj.method2(["a", "bb", "ccc"])
         mock_tags = self._get_standard_mock_tags()
         tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
         result = analyzer.analyze_file(self.test_file_path)
 
         assert result.file_path == self.test_file_path
         assert len(result.imports) >= 4  # os, sys, pathlib, typing
-        assert len(result.function_calls) >= 4  # test_function, TestClass, method1, method2
-        assert len(result.defined_functions) == 1  # test_function (only function from mock tags)
+        assert (
+            len(result.function_calls) >= 4
+        )  # test_function, TestClass, method1, method2
+        assert (
+            len(result.defined_functions) == 1
+        )  # test_function (only function from mock tags)
         assert len(result.defined_classes) == 1  # TestClass
         assert len(result.defined_methods) == 3  # __init__, method1, method2
         assert result.line_count > 0
@@ -584,7 +722,10 @@ counts = obj.method2(["a", "bb", "ccc"])
         mock_tags = self._get_standard_mock_tags()
         tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
         result = analyzer.analyze_file(self.test_file_path)
 
         # Check specific imports
@@ -595,8 +736,12 @@ counts = obj.method2(["a", "bb", "ccc"])
         assert "typing" in import_modules
 
         # Check import types
-        from_imports = [imp for imp in result.imports if imp.symbols]  # from imports have symbols
-        standard_imports = [imp for imp in result.imports if not imp.symbols]  # standard imports have no symbols
+        from_imports = [
+            imp for imp in result.imports if imp.symbols
+        ]  # from imports have symbols
+        standard_imports = [
+            imp for imp in result.imports if not imp.symbols
+        ]  # standard imports have no symbols
 
         assert len(from_imports) == 2  # pathlib.Path, typing.List
         assert len(standard_imports) == 2  # os, sys
@@ -606,7 +751,10 @@ counts = obj.method2(["a", "bb", "ccc"])
         mock_tags = self._get_standard_mock_tags()
         tree_sitter_parser_instance = self._create_mock_tree_sitter_parser(mock_tags)
 
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
         result = analyzer.analyze_file(self.test_file_path)
 
         # Check function calls
@@ -638,27 +786,183 @@ def another_function():
 
         # Inlined mock tags for the first file
         mock_tags_file1 = [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
-            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
-            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="__init__", line=13, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method1", line=16, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="method", name="method2", line=19, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="test_function", callee="test_function", line=23, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=24, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=25, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method2", callee="obj.method2", line=26, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(
+                kind="import",
+                name="os",
+                line=2,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="os",
+            ),
+            MagicMock(
+                kind="import",
+                name="sys",
+                line=3,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="sys",
+            ),
+            MagicMock(
+                kind="import_from",
+                name="Path",
+                module="pathlib",
+                line=4,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["Path"],
+            ),
+            MagicMock(
+                kind="import_from",
+                name="List",
+                module="typing",
+                line=5,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["List", "Dict", "Optional"],
+            ),
+            MagicMock(
+                kind="function",
+                name="test_function",
+                line=7,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="class",
+                name="TestClass",
+                line=12,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="method",
+                name="__init__",
+                line=13,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="method",
+                name="method1",
+                line=16,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="method",
+                name="method2",
+                line=19,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="test_function",
+                callee="test_function",
+                line=23,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="TestClass",
+                callee="TestClass",
+                line=24,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="method1",
+                callee="obj.method1",
+                line=25,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="method2",
+                callee="obj.method2",
+                line=26,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
         ]
         # Inlined mock tags for the second file
         mock_tags_file2 = [
-            MagicMock(kind="import", name="test_file", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="test_file"),
-            MagicMock(kind="import_from", name="TestClass", module="test_file", line=3, alias=None, is_relative=False, resolved_path=None, symbols=["TestClass"]),
-            MagicMock(kind="function", name="another_function", line=5, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=6, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(
+                kind="import",
+                name="test_file",
+                line=2,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="test_file",
+            ),
+            MagicMock(
+                kind="import_from",
+                name="TestClass",
+                module="test_file",
+                line=3,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["TestClass"],
+            ),
+            MagicMock(
+                kind="function",
+                name="another_function",
+                line=5,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="TestClass",
+                callee="TestClass",
+                line=6,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="method1",
+                callee="obj.method1",
+                line=7,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
         ]
 
         # Mock get_tags for each file path correctly
@@ -667,11 +971,14 @@ def another_function():
                 return mock_tags_file1
             elif file_path == str(test_file2):
                 return mock_tags_file2
-            return [] # Default empty list if file not mocked
+            return []  # Default empty list if file not mocked
 
         tree_sitter_parser_instance.get_tags.side_effect = get_tags_side_effect
 
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
         results = analyzer.analyze_multiple_files(
             [self.test_file_path, str(test_file2)]
         )
@@ -684,10 +991,10 @@ def another_function():
         second_result = results[str(test_file2)]
         import_modules = [imp.module for imp in second_result.imports]
         assert "test_file" in import_modules
-        assert len(import_modules) == 2 # test_file (import), test_file (from import)
-        assert len(second_result.defined_functions) == 1 # another_function
-        assert len(second_result.defined_methods) == 0 # No methods in second file
-        assert len(second_result.defined_classes) == 0 # No classes in second file
+        assert len(import_modules) == 2  # test_file (import), test_file (from import)
+        assert len(second_result.defined_functions) == 1  # another_function
+        assert len(second_result.defined_methods) == 0  # No methods in second file
+        assert len(second_result.defined_classes) == 0  # No classes in second file
 
     def test_ast_analyzer_reverse_dependencies(self):
         """Test AST analyzer reverse dependency detection."""
@@ -710,20 +1017,125 @@ def use_test_file():
 
         # Inlined mock tags for this test
         mock_tags_file1 = [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="import", name="sys", line=3, alias=None, is_relative=False, resolved_path=None, symbols=[], module="sys"),
-            MagicMock(kind="import_from", name="Path", module="pathlib", line=4, alias=None, is_relative=False, resolved_path=None, symbols=["Path"]),
-            MagicMock(kind="import_from", name="List", module="typing", line=5, alias=None, is_relative=False, resolved_path=None, symbols=["List", "Dict", "Optional"]),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="class", name="TestClass", line=12, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(
+                kind="import",
+                name="os",
+                line=2,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="os",
+            ),
+            MagicMock(
+                kind="import",
+                name="sys",
+                line=3,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="sys",
+            ),
+            MagicMock(
+                kind="import_from",
+                name="Path",
+                module="pathlib",
+                line=4,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["Path"],
+            ),
+            MagicMock(
+                kind="import_from",
+                name="List",
+                module="typing",
+                line=5,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["List", "Dict", "Optional"],
+            ),
+            MagicMock(
+                kind="function",
+                name="test_function",
+                line=7,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="class",
+                name="TestClass",
+                line=12,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
         ]
         mock_tags_dependent_file = [
-            MagicMock(kind="import", name="test_file", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="test_file"),
-            MagicMock(kind="import_from", name="TestClass", module="test_file", line=3, alias=None, is_relative=False, resolved_path=None, symbols=["TestClass", "test_function"]),
-            MagicMock(kind="function", name="use_test_file", line=5, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="test_function", callee="test_function", line=6, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="TestClass", callee="TestClass", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
-            MagicMock(kind="call", name="method1", callee="obj.method1", line=8, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(
+                kind="import",
+                name="test_file",
+                line=2,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="test_file",
+            ),
+            MagicMock(
+                kind="import_from",
+                name="TestClass",
+                module="test_file",
+                line=3,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=["TestClass", "test_function"],
+            ),
+            MagicMock(
+                kind="function",
+                name="use_test_file",
+                line=5,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="test_function",
+                callee="test_function",
+                line=6,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="TestClass",
+                callee="TestClass",
+                line=7,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
+            MagicMock(
+                kind="call",
+                name="method1",
+                callee="obj.method1",
+                line=8,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
         ]
 
         # Mock get_tags for both files correctly
@@ -736,7 +1148,10 @@ def use_test_file():
 
         tree_sitter_parser_instance.get_tags.side_effect = get_tags_side_effect_deps
 
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
         all_files = [self.test_file_path, str(dependent_file)]
 
         reverse_deps = analyzer.find_reverse_dependencies(
@@ -761,20 +1176,27 @@ def broken_function(
         mock_cache_manager = MagicMock(spec=CacheManager)
         tree_sitter_parser_instance = MagicMock(spec=TreeSitterParser)
         # Mock get_tags to simulate a parsing error by returning an empty list and setting analysis_errors
-        tree_sitter_parser_instance.get_tags.return_value = [] # Return empty list on error
+        tree_sitter_parser_instance.get_tags.return_value = (
+            []
+        )  # Return empty list on error
         # ASTFileAnalyzer expects errors to be populated during analysis if parsing fails
         # Mock the analyzer itself to control analysis_errors directly if needed, or check the parsing path
 
         # For simplicity, we'll assume a parsing error from TreeSitterParser results in an empty tags list and the analyzer adding an error.
         # The analyzer's internal error handling is what we're truly testing.
 
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
         result = analyzer.analyze_file(str(invalid_file))
 
         assert result.file_path == str(invalid_file)
         assert len(result.analysis_errors) > 0
         # The error message is now from ASTFileAnalyzer's error handling, not a direct mock. We can simplify to 'Error analyzing file'
-        assert "Syntax error at line 2: '(' was never closed" in result.analysis_errors[0] # Updated assertion to expect specific error
+        assert (
+            "Syntax error at line 2: '(' was never closed" in result.analysis_errors[0]
+        )  # Updated assertion to expect specific error
 
     def test_ast_analyzer_cache_functionality(self):
         """Test AST analyzer caching functionality."""
@@ -782,14 +1204,34 @@ def broken_function(
         tree_sitter_parser_instance = MagicMock(spec=TreeSitterParser)
         # Mock get_tags to return tags
         mock_tags = [
-            MagicMock(kind="import", name="os", line=2, alias=None, is_relative=False, resolved_path=None, symbols=[], module="os"),
-            MagicMock(kind="function", name="test_function", line=7, alias=None, is_relative=False, resolved_path=None, symbols=[]),
+            MagicMock(
+                kind="import",
+                name="os",
+                line=2,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+                module="os",
+            ),
+            MagicMock(
+                kind="function",
+                name="test_function",
+                line=7,
+                alias=None,
+                is_relative=False,
+                resolved_path=None,
+                symbols=[],
+            ),
         ]
         tree_sitter_parser_instance.get_tags.return_value = mock_tags
 
         # Instantiate ASTFileAnalyzer - its internal cache is an empty dict by default
-        analyzer = ASTFileAnalyzer(tree_sitter_parser=tree_sitter_parser_instance, project_root=str(self.project_root))
-        analyzer.cache_enabled = True # Ensure caching is enabled
+        analyzer = ASTFileAnalyzer(
+            tree_sitter_parser=tree_sitter_parser_instance,
+            project_root=str(self.project_root),
+        )
+        analyzer.cache_enabled = True  # Ensure caching is enabled
 
         # First analysis - should populate analyzer's internal cache
         result1 = analyzer.analyze_file(self.test_file_path)
@@ -798,7 +1240,9 @@ def broken_function(
         result2 = analyzer.analyze_file(self.test_file_path)
 
         # Assert that get_tags was called only once due to internal caching by ASTFileAnalyzer
-        tree_sitter_parser_instance.get_tags.assert_called_once_with(self.test_file_path, use_cache=True) # Ensure tree-sitter's cache is used
+        tree_sitter_parser_instance.get_tags.assert_called_once_with(
+            self.test_file_path, use_cache=True
+        )  # Ensure tree-sitter's cache is used
 
         # Results should be identical
         assert result1.file_path == result2.file_path
@@ -808,9 +1252,11 @@ def broken_function(
         # Check cache stats - these are ASTFileAnalyzer's internal stats
         cache_stats = analyzer.get_cache_stats()
         assert cache_stats["cache_enabled"] is True
-        assert cache_stats["cache_size"] == 1 # One item cached
+        assert cache_stats["cache_size"] == 1  # One item cached
 
         # Clear cache - should clear ASTFileAnalyzer's internal cache
         analyzer.clear_cache()
         cache_stats_after = analyzer.get_cache_stats()
-        assert cache_stats_after["cache_size"] == 0 # Verify cache size is 0 after clear
+        assert (
+            cache_stats_after["cache_size"] == 0
+        )  # Verify cache size is 0 after clear
