@@ -26,13 +26,13 @@ from repomap_tool.models import (
 from repomap_tool.protocols import (
     OutputManagerProtocol,
     TemplateRegistryProtocol,
+    FormatterProtocol,
 )  # Import TemplateRegistryProtocol
 
 from .console_manager import ConsoleManagerProtocol
 from .standard_formatters import FormatterRegistry
 from .templates.config import TemplateConfig
 from .templates.engine import TemplateEngine
-from .templates.registry import TemplateRegistryProtocol  # Use the protocol here
 
 logger = get_logger(__name__)
 

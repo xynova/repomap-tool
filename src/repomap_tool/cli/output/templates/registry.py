@@ -32,7 +32,9 @@ class DefaultTemplateRegistry(
         self._registered_templates: Dict[str, str] = (
             {}
         )  # Initialize _registered_templates
-        self._template_loader = template_loader or FileTemplateLoader()
+        if template_loader is None:
+            raise ValueError("TemplateLoader must be injected - no fallback allowed")
+        self._template_loader = template_loader
         self._logger = get_logger(__name__) if enable_logging else None
         self._default_config = default_config
 

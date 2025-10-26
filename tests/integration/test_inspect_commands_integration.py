@@ -78,8 +78,6 @@ class TestInspectCommandsIntegration:
                 cmd_args.append("--verbose")
 
         # Set working directory to test project root for all cases
-        import os
-
         original_cwd = os.getcwd()
         try:
             os.chdir(str(self.project_root))

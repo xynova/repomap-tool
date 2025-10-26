@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from repomap_tool.core.config_service import get_config
+from repomap_tool.models import SymbolViewModel
 
 """
 ViewModels for CLI Controllers.

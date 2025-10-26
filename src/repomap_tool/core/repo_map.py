@@ -27,8 +27,8 @@ from repomap_tool.code_search.hybrid_matcher import HybridMatcher
 from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
 from repomap_tool.core.spellchecker_service import SpellCheckerService
 from repomap_tool.core.tag_cache import TreeSitterTagCache
+from repomap_tool.protocols import RepoMapProtocol
 from rich.console import Console
-import traceback
 
 logger = get_logger(__name__)  # Initialize logger at module level
 
@@ -41,17 +41,12 @@ from ..models import (
 )
 from .analyzer import analyze_file_types, analyze_identifier_types, get_cache_size
 from .search_engine import fuzzy_search, semantic_search, hybrid_search, basic_search
-from rich.console import Console
 
 # Import matchers
 try:
-    from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
     from repomap_tool.code_search.adaptive_semantic_matcher import (
         AdaptiveSemanticMatcher,
     )
-    from repomap_tool.code_search.hybrid_matcher import HybridMatcher
-    from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
-    from repomap_tool.code_search.embedding_matcher import EmbeddingMatcher
 
     MATCHERS_AVAILABLE = True
 except ImportError:

@@ -88,7 +88,7 @@ warn_required_dynamic_aliases = true
 warn_untyped_fields = true
 
 [tool.pytest.ini_options]
-addopts = "--cov=repomap_tool --cov-report=xml --cov-report=html --cov-report=term-missing --strict-markers -n auto -p no:warnings"
+addopts = "--cov=repomap_tool --cov-report=xml --cov-report=html --cov-report=term-missing --strict-markers -n auto -p no:warnings --max-worker-restart=0 --dist=worksteal"
 testpaths = ["tests"]
 python_files = ["test_*.py", "*_test.py"]
 pythonpath = ["src"]
@@ -96,7 +96,7 @@ markers = ["slow", "integration"]
 
 [tool.coverage.run]
 branch = true
-omit = ["tests/*", "venv/*"]
+omit = ["tests/*", "venv/*", "**/dependency_injector/**/*.pyx"]
 
 [tool.ruff]
 line-length = 88

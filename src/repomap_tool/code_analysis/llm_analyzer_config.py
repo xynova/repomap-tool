@@ -7,6 +7,7 @@ for the LLM file analyzer, making it easier to manage and test.
 
 from typing import Optional, TYPE_CHECKING, Any
 from pydantic import BaseModel, Field, field_validator
+from .dependency_graph import DependencyGraph
 
 if TYPE_CHECKING:
     from .advanced_dependency_graph import AdvancedDependencyGraph

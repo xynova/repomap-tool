@@ -50,11 +50,11 @@ class SpellCheckerService:
     def _get_codespell_path(self) -> Optional[str]:
         """
         Safely find codespell executable using shutil.which().
-        
+
         Returns:
             Full path to codespell executable, or None if not found
         """
-        return shutil.which('codespell')
+        return shutil.which("codespell")
 
     def _check_codespell_availability(self) -> bool:
         """
@@ -66,7 +66,7 @@ class SpellCheckerService:
         codespell_path = self._get_codespell_path()
         if not codespell_path:
             return False
-            
+
         try:
             result = subprocess.run(
                 [codespell_path, "--version"], capture_output=True, text=True, timeout=5
@@ -102,7 +102,7 @@ class SpellCheckerService:
             codespell_path = self._get_codespell_path()
             if not codespell_path:
                 return []
-                
+
             result = subprocess.run(
                 [codespell_path, temp_file], capture_output=True, text=True, timeout=10
             )

@@ -13,7 +13,7 @@ from pathlib import Path
 
 from repomap_tool.code_exploration.tree_builder import TreeBuilder
 from repomap_tool.cli.controllers.view_models import SearchViewModel
-from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
+from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode, SymbolViewModel
 
 
 class TestTreeBuilderClustering:

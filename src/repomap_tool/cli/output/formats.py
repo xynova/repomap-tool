@@ -59,8 +59,6 @@ class FormatConverter:
     def _validate_json_compatible(data: Any) -> bool:
         """Validate that data is JSON serializable."""
         try:
-            import json
-
             json.dumps(data)
             return True
         except (TypeError, ValueError):
@@ -108,8 +106,6 @@ class FormatConverter:
     @staticmethod
     def _convert_to_json(data: Any, config: Optional[OutputConfig] = None) -> str:
         """Convert data to JSON format."""
-        import json
-
         indent = 2 if config and config.verbose else None
         return json.dumps(data, indent=indent, default=str)
 

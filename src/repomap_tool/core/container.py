@@ -29,6 +29,7 @@ from repomap_tool.utils.path_normalizer import PathNormalizer
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from repomap_tool.code_search.adaptive_semantic_matcher import AdaptiveSemanticMatcher
 from repomap_tool.code_search.hybrid_matcher import HybridMatcher
+from repomap_tool.core.search_engine import SearchEngine
 from repomap_tool.core.cache_manager import CacheManager
 from repomap_tool.code_exploration.session_manager import SessionManager, SessionStore
 from repomap_tool.code_exploration.tree_mapper import TreeMapper

@@ -7,6 +7,10 @@ analysis of the same codebase.
 """
 
 import os
+import signal
+import sys
+import atexit
+import time
 import pytest
 from pathlib import Path
 from typing import Dict, List, Any, Set
@@ -25,6 +29,74 @@ import click
 from click.testing import CliRunner
 from unittest.mock import patch
 import io
+
+
+# Enhanced signal handling for pytest-xdist worker cleanup
+def cleanup_pytest_workers():
+    """Clean up pytest worker processes on termination."""
+    try:
+        import subprocess
+        import time
+        print("🧹 Starting cleanup of pytest workers...")
+        
+        # Find and terminate pytest worker processes
+        result = subprocess.run(['pgrep', '-f', 'pytest.*worker'], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            pids = [int(pid) for pid in result.stdout.strip().split('\n') if pid]
+            print(f"🔍 Found {len(pids)} worker processes: {pids}")
+            for pid in pids:
+                try:
+                    print(f"💀 Terminating worker process {pid}...")
+                    # Try SIGTERM first
+                    os.kill(pid, signal.SIGTERM)
+                    time.sleep(0.1)
+                    # Force kill if still running
+                    if os.kill(pid, 0) == 0:  # Process still exists
+                        print(f"💀 Force killing worker process {pid}...")
+                        os.kill(pid, signal.SIGKILL)
+                except (OSError, ProcessLookupError):
+                    pass
+        else:
+            print("✅ No worker processes found")
+        
+        # Also clean up any remaining pytest processes
+        result = subprocess.run(['pgrep', '-f', 'python.*pytest'], capture_output=True, text=True)
+        if result.returncode == 0 and result.stdout.strip():
+            pids = [int(pid) for pid in result.stdout.strip().split('\n') if pid]
+            current_pid = os.getpid()
+            pytest_pids = [pid for pid in pids if pid != current_pid]
+            if pytest_pids:
+                print(f"🔍 Found {len(pytest_pids)} pytest processes: {pytest_pids}")
+                for pid in pytest_pids:
+                    try:
+                        print(f"💀 Terminating pytest process {pid}...")
+                        # Try SIGTERM first
+                        os.kill(pid, signal.SIGTERM)
+                        time.sleep(0.1)  # Give it a moment to terminate
+                        # Force kill if still running
+                        if os.kill(pid, 0) == 0:  # Process still exists
+                            print(f"💀 Force killing pytest process {pid}...")
+                            os.kill(pid, signal.SIGKILL)
+                    except (OSError, ProcessLookupError):
+                        pass
+            else:
+                print("✅ No other pytest processes found")
+        else:
+            print("✅ No pytest processes found")
+    except Exception:
+        pass  # Ignore errors during cleanup
+
+def signal_handler(signum, frame):
+    """Handle interrupt signals and clean up workers."""
+    print(f"\n🛑 Received signal {signum}, cleaning up worker processes...")
+    cleanup_pytest_workers()
+    # Use SIGKILL for more aggressive termination
+    os.kill(os.getpid(), signal.SIGKILL)
+
+# Register signal handlers for graceful termination
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+atexit.register(cleanup_pytest_workers)
 
 # Cache is now enabled for tests - database locking issues have been resolved
 # os.environ["REPOMAP_DISABLE_CACHE"] = "1"

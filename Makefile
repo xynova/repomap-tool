@@ -23,6 +23,7 @@ help:
 	@echo "  security    - Run security checks"
 	@echo "  build       - Build package"
 	@echo "  clean       - Clean build artifacts and venv"
+	@echo "  kill-tests  - Force kill any lingering test processes"
 	@echo "  ci          - Run all CI checks"
 	@echo "  performance - Run performance tests"
 	@echo "  demo        - Run performance demo"
@@ -67,15 +68,15 @@ install: venv
 
 # Run tests with coverage
 test: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html -n auto
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html -n auto --max-worker-restart=0 --dist=worksteal
 
 # Run only unit tests
 test-unit: install
-	REPOMAP_DISABLE_CACHE=1 $(VENV_PYTHON) -m pytest tests/unit/ -v --tb=short -n auto
+	REPOMAP_DISABLE_CACHE=1 $(VENV_PYTHON) -m pytest tests/unit/ -v --tb=short -n auto --max-worker-restart=0 --dist=worksteal
 
 # Run only integration tests
 test-integration: install
-	$(VENV_PYTHON) -m pytest tests/integration/ -v -n auto
+	$(VENV_PYTHON) -m pytest tests/integration/ -v -n auto --max-worker-restart=0 --dist=worksteal
 
 # Run performance tests
 performance: install
@@ -124,6 +125,13 @@ clean:
 	rm -f .deps-image-tag
 	@echo "Cleanup complete!"
 
+# Force kill any lingering test processes
+kill-tests:
+	@echo "💀 Force killing lingering test processes..."
+	@pkill -f "pytest.*worker" 2>/dev/null || true
+	@pkill -f "python.*pytest" 2>/dev/null || true
+	@echo "✅ Test processes terminated"
+
 # Run code quality checks
 check: lint mypy
 	@echo "Code quality checks completed!"
@@ -134,9 +142,9 @@ ci: test security build check
 
 # Run comprehensive nightly tests
 nightly: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10 -n auto
+	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --durations=10 -n auto --max-worker-restart=0 --dist=worksteal
 	$(VENV_PYTHON) -m pytest tests/integration/test_self_integration.py -v --durations=10
-	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10 -n auto
+	$(VENV_PYTHON) -m pytest tests/integration/ -v --durations=10 -n auto --max-worker-restart=0 --dist=worksteal
 
 # Run performance demo
 demo: install

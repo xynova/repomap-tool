@@ -16,6 +16,7 @@ import click
 from rich.console import Console
 
 from repomap_tool.models import AnalysisFormat, OutputConfig, OutputFormat
+from repomap_tool.protocols import FormatterProtocol
 from .console_manager import ConsoleManagerProtocol
 
 # Type variables for generic formatters

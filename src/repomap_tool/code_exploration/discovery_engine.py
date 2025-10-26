@@ -22,10 +22,6 @@ from repomap_tool.code_analysis.centrality_calculator import CentralityCalculato
 from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
 
 # Phase 2: Dependency analysis integration
-from repomap_tool.code_analysis import (
-    ImportAnalyzer,
-    DependencyGraph,
-)
 
 logger = get_logger(__name__)
 

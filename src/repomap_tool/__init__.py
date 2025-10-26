@@ -15,10 +15,6 @@ this_file = Path(__file__).resolve()
 src_dir = str(this_file.parent.parent)  # points to .../src
 
 try:
-    import sys
-    import types
-    from pathlib import Path
-
     this_file = Path(__file__).resolve()
     src_dir = str(this_file.parent.parent)  # points to .../src
     if "src" not in sys.modules:

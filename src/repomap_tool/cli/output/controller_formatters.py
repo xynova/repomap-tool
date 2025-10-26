@@ -13,9 +13,14 @@ from typing import Any, List, Optional, Type
 
 import click
 
-from repomap_tool.protocols import DataFormatter
-from .formats import OutputFormat
+from repomap_tool.protocols import (
+    DataFormatter,
+    TemplateRegistryProtocol,
+    ConsoleManagerProtocol,
+)
+from .formats import OutputConfig, OutputFormat
 from .template_formatter import TemplateBasedFormatter
+from .templates.engine import TemplateEngine
 from ..controllers.view_models import (
     SearchViewModel,
     CentralityViewModel,

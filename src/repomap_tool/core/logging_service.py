@@ -354,7 +354,7 @@ def _suppress_external_library_logs() -> None:
             external_logger.setLevel(logging.WARNING)
         except Exception as e:
             # Log external logger configuration failure for debugging
-            logger.debug(f"Failed to configure external logger '{logger_name}': {e}")
+            pass
 
 
 # Configure external libraries immediately

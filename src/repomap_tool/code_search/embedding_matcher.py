@@ -221,7 +221,9 @@ class EmbeddingMatcher:
                     results[identifier] = embedding
                     continue
                 except Exception as e:
-                    logger.debug(f"Failed to load cached embedding for {identifier}: {e}")
+                    logger.debug(
+                        f"Failed to load cached embedding for {identifier}: {e}"
+                    )
 
             # Need to compute
             to_compute.append(identifier)
@@ -283,7 +285,9 @@ class EmbeddingMatcher:
                     self.embedding_cache[cache_key] = embedding
                     results[identifier] = embedding
                 except Exception as e:
-                    logger.debug(f"Failed to load cached embedding from file {cache_path}: {e}")
+                    logger.debug(
+                        f"Failed to load cached embedding from file {cache_path}: {e}"
+                    )
 
         return results
 

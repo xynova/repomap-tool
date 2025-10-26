@@ -26,7 +26,6 @@ from ...models import (
 from ...core import RepoMapService
 from ..config.loader import (
     resolve_project_path,
-    load_or_create_config,
 )
 from ..output import OutputManager, OutputConfig, OutputFormat  # , get_output_manager
 from ..utils.console import get_console

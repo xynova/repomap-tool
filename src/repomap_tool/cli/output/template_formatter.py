@@ -21,7 +21,6 @@ from repomap_tool.protocols import (
 from .console_manager import ConsoleManagerProtocol
 from .templates.config import TemplateConfig
 from .templates.engine import TemplateEngine
-from .templates.registry import TemplateRegistryProtocol
 from repomap_tool.core.logging_service import get_logger
 
 

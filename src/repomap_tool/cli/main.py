@@ -53,13 +53,9 @@ def cli(ctx: click.Context, project_root: Optional[Path], no_color: bool) -> Non
 
     # Initialize console provider with dependency injection
     from repomap_tool.core.container import create_container
-    from repomap_tool.models import RepoMapConfig
     from repomap_tool.cli.output.console_manager import (
         DefaultConsoleManager,
     )  # Import DefaultConsoleManager
-
-    # Removed: from repomap_tool.core.logging_service import logger # Import logger
-    # Removed: from repomap_tool.cli.output.console_manager import configure_console # Import configure_console
 
     # Initialize an empty container and attach it to the context
     # The container will be configured with the actual RepoMapConfig in each command
