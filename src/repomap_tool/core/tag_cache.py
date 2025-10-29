@@ -31,8 +31,21 @@ class TreeSitterTagCache:
             cache_dir: Directory for cache storage. Defaults to ~/.repomap-tool/cache
         """
         self.cache_dir = cache_dir or Path.home() / ".repomap-tool" / "cache"
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.db_path = self.cache_dir / "tags.db"
+
+        # Check if we're running in a pytest worker (parallel execution)
+        # Use worker-specific database files to avoid SQLite concurrency issues
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+        if worker_id:
+            logger.info(
+                f"Running in pytest worker {worker_id}, using worker-specific cache"
+            )
+            # Create worker-specific cache directory
+            self.cache_dir = self.cache_dir / f"worker_{worker_id}"
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            self.db_path = self.cache_dir / "tags.db"
+        else:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            self.db_path = self.cache_dir / "tags.db"
 
         # Check if cache is disabled via environment variable
         if os.getenv("REPOMAP_DISABLE_CACHE", "0").lower() in ("1", "true", "yes"):

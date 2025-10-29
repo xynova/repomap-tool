@@ -68,15 +68,15 @@ install: venv
 
 # Run tests with coverage
 test: install
-	$(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html -n auto --max-worker-restart=0 --dist=worksteal
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/ -v --cov=src --cov-report=term-missing --cov-report=html -n 4 --max-worker-restart=0 --dist=worksteal
 
 # Run only unit tests
 test-unit: install
-	REPOMAP_DISABLE_CACHE=1 $(VENV_PYTHON) -m pytest tests/unit/ -v --tb=short -n auto --max-worker-restart=0 --dist=worksteal
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/unit/ -v --tb=short -n auto --max-worker-restart=0 --dist=worksteal
 
 # Run only integration tests
 test-integration: install
-	$(VENV_PYTHON) -m pytest tests/integration/ -v -n auto --max-worker-restart=0 --dist=worksteal
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/ -v -n 2 --max-worker-restart=0 --dist=worksteal
 
 # Run performance tests
 performance: install
@@ -95,7 +95,7 @@ format: install
 
 # Run type checking with mypy
 mypy: install
-	$(VENV_PYTHON) -m mypy src/
+	$(VENV_PYTHON) -m mypy src/ --explicit-package-bases
 
 # Run security checks
 security: install
@@ -137,7 +137,7 @@ check: lint mypy
 	@echo "Code quality checks completed!"
 
 # Run all CI checks  
-ci: test security build check
+ci: build check test security
 	@echo "CI pipeline completed successfully!"
 
 # Run comprehensive nightly tests

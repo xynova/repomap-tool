@@ -215,7 +215,12 @@ class RepoMapConfig(BaseModel):
     fuzzy_match: FuzzyMatchConfig = Field(default_factory=FuzzyMatchConfig)
     semantic_match: SemanticMatchConfig = Field(default_factory=SemanticMatchConfig)
     embedding: EmbeddingConfig = Field(
-        default_factory=EmbeddingConfig, description="Embedding configuration"
+        default_factory=lambda: EmbeddingConfig(
+            cache_dir=".repomap/cache/embeddings",
+            model="nomic-ai/CodeRankEmbed",
+            enabled=False,
+        ),
+        description="Embedding configuration",
     )
 
     # Tree exploration configuration

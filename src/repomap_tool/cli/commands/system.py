@@ -111,9 +111,9 @@ def config(
     except Exception as e:
         error_response = create_error_response(str(e), "ConfigError")
         # Get output manager from context for error handling
-        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        error_output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(error_response, output_config)
+        error_output_manager.display_error(error_response, output_config)
         sys.exit(1)
 
 
@@ -174,7 +174,7 @@ def cache_info(ctx: click.Context) -> None:
     repomap_service = service_factory.create_repomap_service(config)
     cache = repomap_service.tree_sitter_parser.tag_cache
     if cache is None:  # Add None check
-        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_config = OutputConfig(format=OutputFormat.TEXT)  # type: ignore[unreachable]
         output_manager.display_error("Tag cache is not available.", output_config)
         sys.exit(1)
     stats = cache.get_cache_stats()
@@ -225,7 +225,7 @@ def cache_clear(ctx: click.Context, force: bool) -> None:
     repomap_service = service_factory.create_repomap_service(config)
     cache = repomap_service.tree_sitter_parser.tag_cache
     if cache is None:  # Add None check
-        output_config = OutputConfig(format=OutputFormat.TEXT)
+        output_config = OutputConfig(format=OutputFormat.TEXT)  # type: ignore[unreachable]
         output_manager.display_error("Tag cache is not available.", output_config)
         sys.exit(1)
     cache.clear()

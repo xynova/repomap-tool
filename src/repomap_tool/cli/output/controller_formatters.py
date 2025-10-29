@@ -16,8 +16,8 @@ import click
 from repomap_tool.protocols import (
     DataFormatter,
     TemplateRegistryProtocol,
-    ConsoleManagerProtocol,
 )
+from .console_manager import ConsoleManagerProtocol
 from .formats import OutputConfig, OutputFormat
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import TemplateEngine
@@ -106,7 +106,10 @@ class CentralityViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected CentralityViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("centrality_analysis", data, config)
         else:
@@ -176,7 +179,10 @@ class ImpactViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected ImpactViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("impact_analysis", data, config)
         else:
@@ -246,7 +252,10 @@ class SearchViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected SearchViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("search_results", data, config)
         else:

@@ -6,7 +6,7 @@ codespell, which is specifically designed for programming and code contexts.
 """
 
 from typing import List, Tuple, Optional, Set
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import os
 import shutil
@@ -68,7 +68,7 @@ class SpellCheckerService:
             return False
 
         try:
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 [codespell_path, "--version"], capture_output=True, text=True, timeout=5
             )
             return result.returncode == 0
@@ -103,7 +103,7 @@ class SpellCheckerService:
             if not codespell_path:
                 return []
 
-            result = subprocess.run(
+            result = subprocess.run(  # nosec B603
                 [codespell_path, temp_file], capture_output=True, text=True, timeout=10
             )
 

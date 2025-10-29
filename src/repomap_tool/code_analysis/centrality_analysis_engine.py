@@ -210,7 +210,9 @@ class CentralityAnalysisEngine:
             import_list = (
                 [imp.module for imp in ast_result.imports] if ast_result.imports else []
             )
-            reverse_dep_list = reverse_dep_relationships  # Already a list of file paths
+            reverse_dep_list = [
+                rel.target_file for rel in reverse_dep_relationships
+            ]  # Extract file paths from relationships
 
         return {
             "direct_imports": direct_imports,

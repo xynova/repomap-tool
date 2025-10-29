@@ -40,8 +40,11 @@ class TestTemplateEngineIntegration:
         # as the DI container might not easily support dynamic `enable_logging` for singletons.
         # This is an acceptable deviation for focused unit testing of a specific behavior.
         from repomap_tool.cli.output.templates.loader import FileTemplateLoader
+
         template_loader = FileTemplateLoader()
-        registry = DefaultTemplateRegistry(template_loader=template_loader, enable_logging=False)
+        registry = DefaultTemplateRegistry(
+            template_loader=template_loader, enable_logging=False
+        )
         engine = TemplateEngine(template_registry=registry, enable_logging=False)
         assert engine is not None
         # Logger may be None when logging is disabled
@@ -276,6 +279,7 @@ class TestTemplateSystemEndToEnd:
                 "Jinja2 not available"
             )
             from repomap_tool.cli.output.templates.loader import FileTemplateLoader
+
             template_loader = FileTemplateLoader()
             registry = DefaultTemplateRegistry(template_loader=template_loader)
             mock_console_manager = Mock(

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from repomap_tool.core.logging_service import get_logger
+from .registry import DefaultTemplateRegistry
 from typing import Any, Dict, List, Optional, Union
 
 # Try to import Jinja2
@@ -373,5 +374,7 @@ def get_template_engine() -> TemplateEngine:
     """
     global _global_template_engine
     if _global_template_engine is None:
-        _global_template_engine = TemplateEngineFactory.create_template_engine()
+        _global_template_engine = TemplateEngineFactory.create_template_engine(
+            DefaultTemplateRegistry()
+        )
     return _global_template_engine

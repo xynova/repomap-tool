@@ -352,7 +352,7 @@ def _suppress_external_library_logs() -> None:
         try:
             external_logger = logging.getLogger(logger_name)
             external_logger.setLevel(logging.WARNING)
-        except Exception as e:
+        except Exception as e:  # nosec B110
             # Log external logger configuration failure for debugging
             pass
 

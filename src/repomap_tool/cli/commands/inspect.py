@@ -328,7 +328,7 @@ def centrality(
         )
 
         # Determine target files for analysis
-        target_files = []
+        target_files: list[str] = []
         if files and input_paths:
             raise click.BadParameter(
                 "Cannot specify both --files and positional input paths."
@@ -469,7 +469,7 @@ def impact(
         project_root = Path(ctx.obj.get("project_root", ".")).resolve()
         for f in files:
             abs_path = Path(f).resolve()
-            if not abs_path.is_relative_to(project_root):  # type: ignore
+            if not abs_path.is_relative_to(project_root):
                 raise click.BadParameter(
                     f"File '{f}' is not within the project root '{project_root}'."
                 )
@@ -479,7 +479,7 @@ def impact(
         project_root = Path(ctx.obj.get("project_root", ".")).resolve()
         for p in input_paths:
             abs_path = Path(p).resolve()
-            if not abs_path.is_relative_to(project_root):  # type: ignore
+            if not abs_path.is_relative_to(project_root):
                 raise click.BadParameter(
                     f"Input path '{p}' is not within the project root '{project_root}'."
                 )
@@ -517,13 +517,13 @@ def impact(
         configure_container(ctx.obj["container"], config_obj)
 
         # Use OutputManager for progress messages
-        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        progress_output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
 
-        output_manager.display_progress(
+        progress_output_manager.display_progress(
             f"🎯 Inspecting impact for project: {resolved_project_path}"
         )
-        output_manager.display_progress(
+        progress_output_manager.display_progress(
             f"📁 Target files: {', '.join(target_files_for_impact)}"
         )
 

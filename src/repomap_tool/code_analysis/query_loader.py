@@ -15,7 +15,7 @@ class FileQueryLoader(QueryLoaderProtocol):
     from a designated, fixed directory.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the FileQueryLoader.
 
         The custom_queries_dir is always derived from the current file's location.

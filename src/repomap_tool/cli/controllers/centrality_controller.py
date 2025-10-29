@@ -97,6 +97,9 @@ class CentralityController(BaseController):
                     create_file_discovery_service,
                 )
 
+                if self.path_resolver.project_root is None:
+                    raise ValueError("Project root is required for file discovery")
+
                 file_discovery = create_file_discovery_service(
                     self.path_resolver.project_root
                 )
@@ -481,6 +484,9 @@ class CentralityController(BaseController):
         try:
             # Get project root from path resolver
             project_root = self.path_resolver.project_root
+
+            if project_root is None:
+                raise ValueError("Project root is required for import analysis")
 
             # Use the injected import analyzer instead of creating a new one
             # This ensures proper dependency injection with tree_sitter_parser

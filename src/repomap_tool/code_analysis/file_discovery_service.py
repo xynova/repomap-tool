@@ -25,7 +25,8 @@ class FileDiscoveryService:
         Args:
             project_root: Root path of the project
         """
-        self.project_root = project_root
+        # Always normalize to absolute path to ensure consistency with cache
+        self.project_root = str(Path(project_root).resolve())
         self._all_files_cache: Optional[List[str]] = None
         self._code_files_cache: Optional[List[str]] = None
         self._analyzable_files_cache: Optional[List[str]] = None
@@ -129,7 +130,7 @@ class FileDiscoveryService:
             return self.get_code_files(exclude_tests=exclude_tests)
 
     def get_tree_sitter_supported_files(
-        self, tree_sitter_parser, exclude_tests: bool = True
+        self, tree_sitter_parser: Any, exclude_tests: bool = True
     ) -> List[str]:
         """Get files that are supported by tree-sitter parser.
 

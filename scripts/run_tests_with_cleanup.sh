@@ -28,12 +28,13 @@ cleanup_processes() {
         done
     fi
     
-    # Find and kill any remaining pytest processes
+    # Find and kill any remaining pytest processes (excluding our own)
     PYTEST_PIDS=$(pgrep -f "python.*pytest" 2>/dev/null || true)
     if [ -n "$PYTEST_PIDS" ]; then
         echo "🔍 Found pytest processes: $PYTEST_PIDS"
         for pid in $PYTEST_PIDS; do
-            if [ "$pid" != "$$" ]; then  # Don't kill ourselves
+            # Don't kill ourselves or the main test process
+            if [ "$pid" != "$$" ] && [ "$pid" != "$TEST_PID" ]; then
                 echo "💀 Terminating pytest process $pid..."
                 kill -TERM "$pid" 2>/dev/null || true
             fi
@@ -42,29 +43,8 @@ cleanup_processes() {
         
         # Force kill if still running
         for pid in $PYTEST_PIDS; do
-            if [ "$pid" != "$$" ] && kill -0 "$pid" 2>/dev/null; then
+            if [ "$pid" != "$$" ] && [ "$pid" != "$TEST_PID" ] && kill -0 "$pid" 2>/dev/null; then
                 echo "💀 Force killing pytest process $pid..."
-                kill -KILL "$pid" 2>/dev/null || true
-            fi
-        done
-    fi
-    
-    # Also check for any Python processes that might be test-related
-    PYTHON_PIDS=$(pgrep -f "python.*test" 2>/dev/null || true)
-    if [ -n "$PYTHON_PIDS" ]; then
-        echo "🔍 Found test-related Python processes: $PYTHON_PIDS"
-        for pid in $PYTHON_PIDS; do
-            if [ "$pid" != "$$" ]; then  # Don't kill ourselves
-                echo "💀 Terminating test process $pid..."
-                kill -TERM "$pid" 2>/dev/null || true
-            fi
-        done
-        sleep 1
-        
-        # Force kill if still running
-        for pid in $PYTHON_PIDS; do
-            if [ "$pid" != "$$" ] && kill -0 "$pid" 2>/dev/null; then
-                echo "💀 Force killing test process $pid..."
                 kill -KILL "$pid" 2>/dev/null || true
             fi
         done
@@ -74,16 +54,8 @@ cleanup_processes() {
 }
 
 # Set up signal handlers
-trap cleanup_processes SIGINT SIGTERM EXIT
+trap cleanup_processes SIGINT SIGTERM
 
 # Run the actual test command
 echo "🚀 Running tests with automatic cleanup..."
-"$@" &
-TEST_PID=$!
-
-# Wait for the test command to complete
-wait $TEST_PID
-TEST_EXIT_CODE=$?
-
-# Exit with the same code as the test command
-exit $TEST_EXIT_CODE
+"$@"

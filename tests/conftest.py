@@ -13,7 +13,7 @@ import atexit
 import time
 import pytest
 from pathlib import Path
-from typing import Dict, List, Any, Set
+from typing import Dict, List, Any, Set, Generator, Optional, Union
 from repomap_tool.models import (
     RepoMapConfig,
     FuzzyMatchConfig,
@@ -31,67 +31,222 @@ from unittest.mock import patch
 import io
 
 
+# Worker-isolated logging setup to prevent I/O operation on closed file errors
+def setup_worker_isolated_logging() -> None:
+    """Set up logging isolation for pytest workers to prevent stream conflicts."""
+    try:
+        import logging
+        import threading
+
+        # Get worker ID for unique log files
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "main")
+
+        # Create worker-specific log handler
+        log_file = f"/tmp/pytest_worker_{worker_id}_{os.getpid()}.log"
+
+        # Remove all existing handlers to prevent conflicts
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers[:]:
+            try:
+                root_logger.removeHandler(handler)
+                handler.close()
+            except Exception:
+                # Ignore errors when closing handlers
+                pass
+
+        # Create file handler for this worker
+        try:
+            file_handler = logging.FileHandler(log_file, mode="w")
+            file_handler.setLevel(logging.DEBUG)
+            formatter = logging.Formatter(
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+            )
+            file_handler.setFormatter(formatter)
+
+            # Add handler to root logger
+            root_logger.addHandler(file_handler)
+            root_logger.setLevel(logging.DEBUG)
+        except Exception:
+            # If file logging fails, continue without it
+            pass
+
+        # Also disable console logging to prevent stdout conflicts
+        try:
+            console_handler = logging.StreamHandler(
+                sys.stderr
+            )  # Use stderr instead of stdout
+            console_handler.setLevel(logging.WARNING)  # Only show warnings and errors
+            console_handler.setFormatter(
+                logging.Formatter("%(levelname)s: %(message)s")
+            )
+            root_logger.addHandler(console_handler)
+        except Exception:
+            # If console logging fails, continue without it
+            pass
+
+    except Exception:
+        # If logging setup fails completely, continue without it
+        pass
+
+
 # Enhanced signal handling for pytest-xdist worker cleanup
-def cleanup_pytest_workers():
+def cleanup_pytest_workers() -> None:
     """Clean up pytest worker processes on termination."""
     try:
         import subprocess
-        import time
-        print("🧹 Starting cleanup of pytest workers...")
-        
+
+        # Use logging instead of print to avoid stdout conflicts
+        try:
+            import logging
+
+            logger = logging.getLogger(__name__)
+            logger.info("🧹 Starting cleanup of pytest workers...")
+        except Exception:
+            # If logging fails, use print as fallback
+            print("🧹 Starting cleanup of pytest workers...")
+
         # Find and terminate pytest worker processes
-        result = subprocess.run(['pgrep', '-f', 'pytest.*worker'], capture_output=True, text=True)
-        if result.returncode == 0 and result.stdout.strip():
-            pids = [int(pid) for pid in result.stdout.strip().split('\n') if pid]
-            print(f"🔍 Found {len(pids)} worker processes: {pids}")
-            for pid in pids:
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "pytest.*worker"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                pids = [int(pid) for pid in result.stdout.strip().split("\n") if pid]
                 try:
-                    print(f"💀 Terminating worker process {pid}...")
-                    # Try SIGTERM first
-                    os.kill(pid, signal.SIGTERM)
-                    time.sleep(0.1)
-                    # Force kill if still running
-                    if os.kill(pid, 0) == 0:  # Process still exists
-                        print(f"💀 Force killing worker process {pid}...")
-                        os.kill(pid, signal.SIGKILL)
-                except (OSError, ProcessLookupError):
-                    pass
-        else:
-            print("✅ No worker processes found")
-        
-        # Also clean up any remaining pytest processes
-        result = subprocess.run(['pgrep', '-f', 'python.*pytest'], capture_output=True, text=True)
-        if result.returncode == 0 and result.stdout.strip():
-            pids = [int(pid) for pid in result.stdout.strip().split('\n') if pid]
-            current_pid = os.getpid()
-            pytest_pids = [pid for pid in pids if pid != current_pid]
-            if pytest_pids:
-                print(f"🔍 Found {len(pytest_pids)} pytest processes: {pytest_pids}")
-                for pid in pytest_pids:
+                    logger.info(f"🔍 Found {len(pids)} worker processes: {pids}")
+                except Exception:
+                    print(f"🔍 Found {len(pids)} worker processes: {pids}")
+
+                for pid in pids:
                     try:
-                        print(f"💀 Terminating pytest process {pid}...")
+                        try:
+                            logger.info(f"💀 Terminating worker process {pid}...")
+                        except Exception:
+                            print(f"💀 Terminating worker process {pid}...")
+
                         # Try SIGTERM first
                         os.kill(pid, signal.SIGTERM)
-                        time.sleep(0.1)  # Give it a moment to terminate
+                        time.sleep(0.1)
                         # Force kill if still running
-                        if os.kill(pid, 0) == 0:  # Process still exists
-                            print(f"💀 Force killing pytest process {pid}...")
+                        try:
+                            os.kill(pid, 0)  # Check if process still exists
+                            # Process still exists, force kill it
+                            try:
+                                logger.info(f"💀 Force killing worker process {pid}...")
+                            except Exception:
+                                print(f"💀 Force killing worker process {pid}...")
                             os.kill(pid, signal.SIGKILL)
+                        except (OSError, ProcessLookupError):
+                            # Process already dead, continue
+                            pass
                     except (OSError, ProcessLookupError):
                         pass
             else:
-                print("✅ No other pytest processes found")
-        else:
-            print("✅ No pytest processes found")
-    except Exception:
-        pass  # Ignore errors during cleanup
+                try:
+                    logger.info("✅ No worker processes found")
+                except Exception:
+                    print("✅ No worker processes found")
+        except subprocess.TimeoutExpired:
+            # If pgrep times out, continue with cleanup
+            pass
+        except Exception:
+            # If pgrep fails, continue with cleanup
+            pass
 
-def signal_handler(signum, frame):
+        # Also clean up any remaining pytest processes
+        try:
+            result = subprocess.run(
+                ["pgrep", "-f", "python.*pytest"],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                pids = [int(pid) for pid in result.stdout.strip().split("\n") if pid]
+                current_pid = os.getpid()
+                pytest_pids = [pid for pid in pids if pid != current_pid]
+                if pytest_pids:
+                    try:
+                        logger.info(
+                            f"🔍 Found {len(pytest_pids)} pytest processes: {pytest_pids}"
+                        )
+                    except Exception:
+                        print(
+                            f"🔍 Found {len(pytest_pids)} pytest processes: {pytest_pids}"
+                        )
+
+                    for pid in pytest_pids:
+                        try:
+                            try:
+                                logger.info(f"💀 Terminating pytest process {pid}...")
+                            except Exception:
+                                print(f"💀 Terminating pytest process {pid}...")
+
+                            # Try SIGTERM first
+                            os.kill(pid, signal.SIGTERM)
+                            time.sleep(0.1)  # Give it a moment to terminate
+                            # Force kill if still running
+                            try:
+                                os.kill(pid, 0)  # Check if process still exists
+                                # Process still exists, force kill it
+                                try:
+                                    logger.info(
+                                        f"💀 Force killing pytest process {pid}..."
+                                    )
+                                except Exception:
+                                    print(f"💀 Force killing pytest process {pid}...")
+                                os.kill(pid, signal.SIGKILL)
+                            except (OSError, ProcessLookupError):
+                                # Process already dead, continue
+                                pass
+                        except (OSError, ProcessLookupError):
+                            pass
+                else:
+                    try:
+                        logger.info("✅ No other pytest processes found")
+                    except Exception:
+                        print("✅ No other pytest processes found")
+            else:
+                try:
+                    logger.info("✅ No pytest processes found")
+                except Exception:
+                    print("✅ No pytest processes found")
+        except subprocess.TimeoutExpired:
+            # If pgrep times out, continue
+            pass
+        except Exception:
+            # If pgrep fails, continue
+            pass
+
+    except Exception:
+        pass  # Ignore all errors during cleanup
+
+
+def signal_handler(signum: int, frame: Any) -> None:
     """Handle interrupt signals and clean up workers."""
-    print(f"\n🛑 Received signal {signum}, cleaning up worker processes...")
-    cleanup_pytest_workers()
+    try:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.warning(f"🛑 Received signal {signum}, cleaning up worker processes...")
+        cleanup_pytest_workers()
+    except Exception:
+        # Ignore logging errors during cleanup
+        pass
+
     # Use SIGKILL for more aggressive termination
-    os.kill(os.getpid(), signal.SIGKILL)
+    try:
+        os.kill(os.getpid(), signal.SIGKILL)
+    except Exception:
+        # If SIGKILL fails, just exit
+        sys.exit(1)
+
+
+# Set up worker-isolated logging first
+setup_worker_isolated_logging()
 
 # Register signal handlers for graceful termination
 signal.signal(signal.SIGINT, signal_handler)
@@ -131,13 +286,13 @@ LANGUAGE_CSHARP = get_language("csharp")  # C# uses 'csharp' name
 
 
 @pytest.fixture(scope="session")
-def session_test_repo_path():
+def session_test_repo_path() -> Path:
     """Path to the comprehensive test fixture repository."""
     return Path(__file__).parent / "fixtures" / "test-repo"
 
 
 @pytest.fixture(scope="session")
-def session_config(session_test_repo_path):
+def session_config(session_test_repo_path: Path) -> RepoMapConfig:
     """Base RepoMapConfig for all tests."""
     return RepoMapConfig(
         project_root=str(session_test_repo_path),
@@ -150,7 +305,9 @@ def session_config(session_test_repo_path):
 
 
 @pytest.fixture(scope="session")
-def session_tree_sitter_parser(session_test_repo_path) -> TreeSitterParser:
+def session_tree_sitter_parser(
+    session_test_repo_path: Path,
+) -> Generator[TreeSitterParser, None, None]:
     """Provides a TreeSitterParser instance for the entire test session."""
     from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
     from repomap_tool.code_analysis.query_loader import (
@@ -181,7 +338,9 @@ def session_tree_sitter_parser(session_test_repo_path) -> TreeSitterParser:
 
 
 @pytest.fixture(scope="function")
-def get_tree_sitter_parser_function_fixture(session_test_repo_path) -> TreeSitterParser:
+def get_tree_sitter_parser_function_fixture(
+    session_test_repo_path: Path,
+) -> Generator[TreeSitterParser, None, None]:
     """Provides a TreeSitterParser instance for each test function."""
     from repomap_tool.protocols import TagCacheProtocol, QueryLoaderProtocol
     from repomap_tool.code_analysis.query_loader import (
@@ -211,7 +370,9 @@ def get_tree_sitter_parser_function_fixture(session_test_repo_path) -> TreeSitte
 
 
 @pytest.fixture(scope="session")
-def session_parsed_files(session_test_repo_path, session_tree_sitter_parser):
+def session_parsed_files(
+    session_test_repo_path: Path, session_tree_sitter_parser: TreeSitterParser
+) -> Dict[str, List[Any]]:
     """Pre-parse all test files once per session."""
     parsed_data = {}
 
@@ -232,7 +393,7 @@ def session_parsed_files(session_test_repo_path, session_tree_sitter_parser):
 
 
 @pytest.fixture(scope="session")
-def session_identifiers(session_parsed_files):
+def session_identifiers(session_parsed_files: Dict[str, List[Any]]) -> Set[str]:
     """Extract all identifiers from parsed files."""
     identifiers = set()
 
@@ -245,7 +406,7 @@ def session_identifiers(session_parsed_files):
 
 
 @pytest.fixture(scope="session")
-def session_import_data(session_container, session_test_repo_path):
+def session_import_data(session_container: Any, session_test_repo_path: Path) -> Any:
     """Pre-analyze all imports once per session."""
     analyzer = session_container.import_analyzer()
 
@@ -257,7 +418,7 @@ def session_import_data(session_container, session_test_repo_path):
 
 
 @pytest.fixture(scope="session")
-def session_dependency_graph(session_import_data, session_container):
+def session_dependency_graph(session_import_data: Any, session_container: Any) -> Any:
     """Pre-build dependency graph once per session."""
     graph = session_container.dependency_graph()
 
@@ -267,7 +428,7 @@ def session_dependency_graph(session_import_data, session_container):
 
 
 @pytest.fixture(scope="session")
-def session_container(session_config):
+def session_container(session_config: RepoMapConfig) -> Any:
     """Pre-created DI container for session."""
     # Create a custom container that doesn't use cache to avoid database locks
     from repomap_tool.core.container import Container
@@ -288,7 +449,9 @@ def session_container(session_config):
 
 
 @pytest.fixture(scope="session")
-def cli_runner_with_container(session_container):
+def cli_runner_with_container(
+    session_container: Any,
+) -> Generator[CliRunner, None, None]:
     """Provides a Click CliRunner with a pre-configured session_container injected."""
     from repomap_tool.cli.main import cli
     from repomap_tool.cli.output.console_manager import DefaultConsoleManager
@@ -303,8 +466,12 @@ def cli_runner_with_container(session_container):
     buffer = io.StringIO()
 
     class BufferConsoleFactory(_RichConsoleFactory):
-        def create_console(self, no_color: bool = False) -> Console:  # type: ignore[override]
-            return Console(
+        def create_console(self, no_color: bool = False) -> Console:
+            # Use ConsoleProvider to avoid direct instantiation
+            from repomap_tool.cli.utils.console import ConsoleProvider
+
+            provider = ConsoleProvider()
+            return provider.create_console(
                 file=buffer,  # isolate stdout output to in-memory buffer
                 stderr=False,
                 force_terminal=False,
@@ -318,21 +485,13 @@ def cli_runner_with_container(session_container):
     isolated_manager = DefaultConsoleManager(provider=provider, enable_logging=False)
     session_container.console_manager.override(lambda: isolated_manager)
 
-    # Also redirect logging to the isolated buffer to prevent logging from corrupting JSON output
-    # This prevents "I/O operation on closed file" errors when pytest tears down logging handlers
-    logging_handler = logging.StreamHandler(buffer)
-    logging_handler.setLevel(logging.DEBUG)
-
-    # Store original handlers to restore later
-    original_handlers = logging.getLogger().handlers[:]
-
-    # Clear existing handlers and add our isolated handler
-    logging.getLogger().handlers.clear()
-    logging.getLogger().addHandler(logging_handler)
+    # Use the worker-isolated logging instead of buffer logging
+    # The setup_worker_isolated_logging() function already handles this
+    # No need to modify logging handlers here since they're already isolated per worker
 
     # Patch the cli.__call__ method to ensure our container is always used
     # when CliRunner.invoke calls cli.
-    def mock_cli_call(*args, **kwargs):
+    def mock_cli_call(*args: Any, **kwargs: Any) -> Any:
         ctx = click.Context(cli, obj={})
         ctx.obj["container"] = session_container
         ctx.obj["no_color"] = True  # Disable color for consistent test output
@@ -342,10 +501,10 @@ def cli_runner_with_container(session_container):
         console_manager_instance = ctx.obj["container"].console_manager()
         console_manager_instance.configure(no_color=ctx.obj.get("no_color", False))
 
-        result = cli.invoke(ctx, args, **kwargs)
+        result = cli.invoke(ctx)
         # Attach captured console output to result for tests that need to parse it
         try:
-            result.captured_output = buffer.getvalue()  # type: ignore[attr-defined]
+            result.captured_output = buffer.getvalue()
         except Exception:
             pass
         return result
@@ -360,23 +519,33 @@ def cli_runner_with_container(session_container):
             except Exception:
                 pass
 
-            # Restore original logging handlers
-            try:
-                logging.getLogger().handlers.clear()
-                logging.getLogger().handlers.extend(original_handlers)
-            except Exception:
-                pass
+            # No need to restore logging handlers since we're using worker-isolated logging
 
 
 # Isolated fixtures for cache testing
 @pytest.fixture
-def isolated_tree_sitter_parser():
+def isolated_tree_sitter_parser() -> TreeSitterParser:
     """Function-scoped TreeSitter parser for cache isolation tests."""
-    return TreeSitterParser()
+    # Create a minimal TreeSitterParser for testing
+    from repomap_tool.core.tag_cache import TreeSitterTagCache
+    from repomap_tool.code_analysis.query_loader import FileQueryLoader
+    import tempfile
+
+    temp_cache_dir = tempfile.TemporaryDirectory()
+    cache_path = Path(temp_cache_dir.name)
+
+    cache = TreeSitterTagCache(cache_dir=cache_path)
+    query_loader = FileQueryLoader()
+
+    return TreeSitterParser(
+        project_root=Path.cwd(),
+        cache=cache,
+        query_loader=query_loader,
+    )
 
 
 # Test markers
-def pytest_configure(config):
+def pytest_configure(config: Any) -> None:
     """Configure pytest markers."""
     config.addinivalue_line(
         "markers", "cache_isolation: mark test as requiring cache isolation"
@@ -409,7 +578,9 @@ def get_identifiers_from_file(
     return identifiers
 
 
-def create_repomap_service_from_session_container(session_container, config):
+def create_repomap_service_from_session_container(
+    session_container: Any, config: RepoMapConfig
+) -> Any:
     """Helper function to create RepoMapService using session container.
 
     This replicates the service factory pattern but uses the session container

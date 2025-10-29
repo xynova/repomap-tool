@@ -61,7 +61,7 @@ def create_exploration_controller_with_repomap(
 
     # Create controller configuration
     controller_config = ControllerConfig(
-        project_root=config_obj.project_root,  # Pass project_root from config_obj
+        project_root=str(config_obj.project_root),  # Convert Path to str
         max_tokens=get_config("EXPLORATION_MAX_TOKENS", 4000),
         output_format=output_format,
         verbose=verbose,
@@ -78,7 +78,7 @@ def create_exploration_controller_with_repomap(
     exploration_controller.tree_builder.entrypoint_discoverer.repo_map = repomap
     exploration_controller.search_controller.config = controller_config
 
-    return exploration_controller
+    return exploration_controller  # type: ignore[no-any-return]
 
 
 @click.group()

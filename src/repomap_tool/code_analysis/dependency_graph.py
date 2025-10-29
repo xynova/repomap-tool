@@ -31,7 +31,7 @@ class DependencyGraph:
         """
         # All dependencies are required and injected via DI container
 
-        self.graph = nx.DiGraph()
+        self.graph: nx.DiGraph = nx.DiGraph()
         self.nodes: Dict[str, DependencyNode] = {}
         self.import_analyzer = import_analyzer
         self.project_path: Optional[str] = None
@@ -82,7 +82,9 @@ class DependencyGraph:
                             self.nodes[resolved_path].imported_by = []
                         # At this point, imported_by is guaranteed to be a list
                         imported_by = self.nodes[resolved_path].imported_by
-                        assert imported_by is not None  # Type assertion for MyPy
+                        assert (
+                            imported_by is not None
+                        )  # Type assertion for MyPy  # nosec B101
                         imported_by.append(file_path)
 
             logger.debug(
@@ -152,7 +154,9 @@ class DependencyGraph:
                             self.nodes[resolved_path].imported_by = []
                         # At this point, imported_by is guaranteed to be a list
                         imported_by = self.nodes[resolved_path].imported_by
-                        assert imported_by is not None  # Type assertion for MyPy
+                        assert (
+                            imported_by is not None
+                        )  # Type assertion for MyPy  # nosec B101
                         imported_by.append(file_path)
 
         logger.info(f"Added {len(self.graph.edges)} dependency edges")
@@ -222,7 +226,9 @@ class DependencyGraph:
                         self.nodes[resolved_path].imported_by = []
                     # At this point, imported_by is guaranteed to be a list
                     imported_by = self.nodes[resolved_path].imported_by
-                    assert imported_by is not None  # Type assertion for MyPy
+                    assert (
+                        imported_by is not None
+                    )  # Type assertion for MyPy  # nosec B101
                     imported_by.append(file_path)
 
             logger.info(f"Added file {file_path} to dependency graph")
@@ -402,7 +408,7 @@ class DependencyGraph:
                 except nx.NetworkXNoPath:
                     continue
 
-            return max(depths) if depths else 0
+            return int(max(depths)) if depths else 0
 
         except Exception as e:
             logger.debug(f"Error calculating depth for {file_path}: {e}")
@@ -418,8 +424,10 @@ class DependencyGraph:
             # Use NetworkX's strongly connected components
             clusters = list(nx.strongly_connected_components(self.graph))
 
-            # Filter out single-node clusters
-            meaningful_clusters = [cluster for cluster in clusters if len(cluster) > 1]
+            # Filter out single-node clusters and convert sets to lists
+            meaningful_clusters = [
+                list(cluster) for cluster in clusters if len(cluster) > 1
+            ]
 
             logger.info(f"Found {len(meaningful_clusters)} dependency clusters")
             return meaningful_clusters

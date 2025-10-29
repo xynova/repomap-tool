@@ -122,8 +122,9 @@ class TreeSitterParser:
             # print(f"DEBUG: First few captures: {list(captures)[:5]}") # Removed debug print
             tags = []
 
-            # Process captures dictionary
-            if isinstance(captures, dict):
+            # Process captures iterable
+            if hasattr(captures, "items") and callable(getattr(captures, "items")):
+                # It's a dict-like object
                 for tag_kind, nodes in captures.items():
                     logger.debug(
                         f"_parse_file: Processing tag_kind: {tag_kind} with {len(nodes)} nodes."
@@ -131,7 +132,7 @@ class TreeSitterParser:
                     for node in nodes:
                         tags.append(
                             CodeTag(
-                                name=node.text.decode("utf-8"),
+                                name=node.text.decode("utf-8") if node.text else "",
                                 kind=tag_kind,
                                 line=node.start_point[0] + 1,
                                 column=node.start_point[1],
@@ -142,7 +143,7 @@ class TreeSitterParser:
                         )
             else:
                 logger.warning(
-                    f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict."
+                    f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict-like object."
                 )
 
             logger.debug(
@@ -165,24 +166,31 @@ class TreeSitterParser:
             List of CodeTag objects
         """
         if use_cache and self.tag_cache:
-            cached_tags = self.tag_cache.get_tags(file_path)
-            if cached_tags is not None:
-                logger.debug(f"Using cached tags for {file_path}")
-                # Ensure cached_tags is a List[CodeTag]
-                if isinstance(cached_tags, list):
-                    return cached_tags
-                else:
-                    logger.warning(
+            try:
+                cached_tags = self.tag_cache.get_tags(file_path)
+                if cached_tags is not None:
+                    logger.debug(f"Using cached tags for {file_path}")
+                    # Ensure cached_tags is a List[CodeTag]
+                    if isinstance(cached_tags, list):
+                        return cached_tags
+                    logger.warning(  # type: ignore[unreachable]
                         f"Invalid cached tags type for {file_path}, falling back to parsing"
                     )
+            except Exception as e:
+                logger.debug(
+                    f"Cache error for {file_path}: {e}, falling back to direct parsing"
+                )
 
         # Parse file using internal _parse_file method
         tags = self._parse_file(file_path)
 
-        # Cache results
+        # Cache results (only if cache is available and not disabled)
         if use_cache and self.tag_cache:
-            self.tag_cache.set_tags(file_path, tags)
-            logger.debug(f"Cached {len(tags)} tags for {file_path}")
+            try:
+                self.tag_cache.set_tags(file_path, tags)
+                logger.debug(f"Cached {len(tags)} tags for {file_path}")
+            except Exception as e:
+                logger.debug(f"Failed to cache tags for {file_path}: {e}")
 
         return tags
 
@@ -215,7 +223,7 @@ class TreeSitterParser:
             sexp_str += f"({node.type}"
         else:
             # For unnamed nodes (tokens), just print their text
-            return f"\"{(node.text.decode('utf-8'))}\""
+            return f"\"{(node.text.decode('utf-8') if node.text else '')}\""
 
         # Add fields for named nodes
         for i, child in enumerate(node.children):

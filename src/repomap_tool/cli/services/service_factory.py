@@ -62,7 +62,7 @@ class ServiceFactory:
         console: Console = container.console()
         fuzzy_matcher: FuzzyMatcher = container.fuzzy_matcher()
         embedding_matcher = container.embedding_matcher()
-        semantic_matcher = None
+        semantic_matcher: Optional[Any] = None
         hybrid_matcher = None
         if config.semantic_match.enabled:
             semantic_matcher = container.adaptive_semantic_matcher()
@@ -265,7 +265,7 @@ class ServiceFactory:
         # No longer casting directly to Container, as it's a dynamic import
         return self._containers[
             container_key
-        ]  # Return type handled by string literal hint
+        ]  # type: ignore[no-any-return]  # Return type handled by string literal hint
 
     def clear_cache(self, project_root: Optional[Union[str, Path]] = None) -> None:
         """Clear cached services and containers.

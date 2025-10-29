@@ -79,7 +79,7 @@ class FuzzyMatcher:
             )
 
     def match_identifiers(
-        self, query: str, all_identifiers: Set[str]
+        self, query: str, all_identifiers: Set[str], threshold: Optional[float] = None
     ) -> List[Tuple[str, int]]:
         """
         Match a query against all identifiers using multiple strategies.
@@ -87,6 +87,7 @@ class FuzzyMatcher:
         Args:
             query: The identifier to search for
             all_identifiers: Set of all available identifiers
+            threshold: Optional threshold override (uses instance threshold if None)
 
         Returns:
             List of (identifier, score) tuples, sorted by score (highest first)
@@ -94,8 +95,11 @@ class FuzzyMatcher:
         if not query or not all_identifiers:
             return []
 
+        # Use provided threshold or fall back to instance threshold
+        effective_threshold = threshold if threshold is not None else self.threshold
+
         # Check cache first
-        cache_key = f"{query}_{self.threshold}_{','.join(sorted(self.strategies))}"
+        cache_key = f"{query}_{effective_threshold}_{','.join(sorted(self.strategies))}"
         if self.cache_results and self.cache_manager:
             cached_result = self.cache_manager.get(cache_key)
             if cached_result is not None:
@@ -145,7 +149,7 @@ class FuzzyMatcher:
 
                 # Take the best score from all algorithms
                 score = max(ratio, partial_ratio, token_sort_ratio, token_set_ratio)
-                if score >= self.threshold:
+                if score >= effective_threshold:
                     best_score = max(best_score, score)
 
             # Strategy 6: Word-based matching
@@ -157,10 +161,10 @@ class FuzzyMatcher:
                     common_words = len(query_words.intersection(ident_words))
                     total_words = len(query_words.union(ident_words))
                     score = int((common_words / total_words) * 100)
-                    if score >= self.threshold:
+                    if score >= effective_threshold:
                         best_score = max(best_score, score)
 
-            if best_score >= self.threshold:
+            if best_score >= effective_threshold:
                 matches.append((ident, best_score))
 
         # Sort by score (highest first), then by identifier name for consistency
@@ -194,7 +198,11 @@ class FuzzyMatcher:
         return results
 
     def get_match_summary(
-        self, query: str, all_identifiers: Set[str], max_matches: int = 5
+        self,
+        query: str,
+        all_identifiers: Set[str],
+        max_matches: int = 5,
+        threshold: Optional[float] = None,
     ) -> str:
         """
         Get a human-readable summary of matches for a query.
@@ -203,16 +211,18 @@ class FuzzyMatcher:
             query: The identifier to search for
             all_identifiers: Set of all available identifiers
             max_matches: Maximum number of matches to include in summary
+            threshold: Optional threshold override (uses instance threshold if None)
 
         Returns:
             Formatted string summary of matches
         """
-        matches = self.match_identifiers(query, all_identifiers)
+        effective_threshold = threshold if threshold is not None else self.threshold
+        matches = self.match_identifiers(query, all_identifiers, threshold)
 
         if not matches:
-            return f"No matches found for '{query}' (threshold: {self.threshold}%)"
+            return f"No matches found for '{query}' (threshold: {effective_threshold}%)"
 
-        summary = f"Fuzzy matches for '{query}' (threshold: {self.threshold}%):\n"
+        summary = f"Fuzzy matches for '{query}' (threshold: {effective_threshold}%):\n"
         for i, (ident, score) in enumerate(matches[:max_matches], 1):
             summary += f"  {i}. {ident} (similarity: {score}%)\n"
 

@@ -28,6 +28,7 @@ wheels/
 
 # Cache
 cache/
+.cache/
 # Old aider cache (legacy)
 .aider*
 

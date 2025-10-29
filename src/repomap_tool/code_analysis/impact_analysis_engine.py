@@ -225,7 +225,8 @@ class ImpactAnalysisEngine:
         try:
             # Use path normalizer if available (same as centrality analysis)
             if self.path_normalizer:
-                normalized = self.path_normalizer.normalize_path(file_path)
+                # PathResolver doesn't have normalize_path, use convert_to_relative_path instead
+                normalized = self.path_normalizer.convert_to_relative_path(file_path)
                 return str(normalized) if normalized else file_path
 
             # Fallback to simple path resolution

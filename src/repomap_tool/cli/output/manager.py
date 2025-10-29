@@ -276,7 +276,7 @@ class OutputManager(OutputManagerProtocol):
             self.display(response, output_config, ctx)
         else:
             # Fallback for unexpected response types
-            self.display(response, output_config, ctx)
+            self.display(response, output_config, ctx)  # type: ignore[unreachable]
 
     def validate_format(
         self,

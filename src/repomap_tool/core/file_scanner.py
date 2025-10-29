@@ -166,11 +166,11 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
         verbose: Whether to enable verbose logging
 
     Returns:
-        List of file paths relative to project root
+        List of file paths (absolute paths)
     """
     import os
 
-    project_root_path = Path(project_root)
+    project_root_path = Path(project_root).resolve()
     if verbose:
         logging.debug(
             f"get_project_files: Starting file discovery for project root: {project_root_path}"
@@ -458,7 +458,7 @@ def get_project_files(project_root: str, verbose: bool = False) -> List[str]:
         )
 
     files = []
-    for root, dirs, filenames in os.walk(project_root):
+    for root, dirs, filenames in os.walk(project_root_path):
         # Filter out ignored directories
         dirs[:] = [
             d

@@ -113,7 +113,7 @@ def get_console(ctx: Optional[click.Context] = None) -> Console:
     # If context is provided and has a console_manager, use it
     if ctx and ctx.obj and "console_manager" in ctx.obj:
         console_manager = ctx.obj["console_manager"]
-        return console_manager.get_console(ctx)
+        return console_manager.get_console(ctx)  # type: ignore[no-any-return]
 
     # Fallback to the global console provider if no console_manager is found in context.
     # This ensures consistent console behavior even outside of a fully initialized Click context.

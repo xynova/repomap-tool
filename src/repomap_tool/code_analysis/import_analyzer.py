@@ -225,7 +225,7 @@ class JavaImportParser(ImportParser):
             # Extract imports from tree-sitter tags
             for tag in tags:
                 if tag.kind in ["import.statement", "import.static"]:
-                    import_obj = self._parse_import_tag(tag, file_path)
+                    import_obj = self._parse_import_tag(tag.__dict__, file_path)
                     if import_obj:
                         imports.append(import_obj)
 
@@ -298,7 +298,7 @@ class GoImportParser(ImportParser):
             # Extract imports from tree-sitter tags
             for tag in tags:
                 if tag.kind in ["import.single", "import.grouped"]:
-                    import_obj = self._parse_import_tag(tag, file_path)
+                    import_obj = self._parse_import_tag(tag.__dict__, file_path)
                     if import_obj:
                         imports.append(import_obj)
 
@@ -369,7 +369,7 @@ class CSharpImportParser(ImportParser):
                     "using.alias",
                     "using.global",
                 ]:
-                    import_obj = self._parse_import_tag(tag, file_path)
+                    import_obj = self._parse_import_tag(tag.__dict__, file_path)
                     if import_obj:
                         imports.append(import_obj)
 

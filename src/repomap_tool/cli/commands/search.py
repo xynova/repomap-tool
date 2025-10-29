@@ -18,7 +18,8 @@ from ..utils.console import get_console
 from ...core.config_service import get_config
 from ...core.container_config import configure_container
 from ...models import create_error_response
-from ..output import OutputManager, OutputConfig, OutputFormat
+from ...cli.output.manager import OutputManager
+from ...cli.output.protocols import OutputConfig, OutputFormat
 
 
 @click.command()
@@ -152,7 +153,6 @@ def search(
             threshold=threshold,  # Keep as float for API consistency
             max_results=max_results,
             strategies=list(strategies) if strategies else None,
-            target_files=target_files if target_files else None,
         )
 
         # Initialize services using service factory with detailed progress
@@ -210,10 +210,18 @@ def search(
                 max_tokens=get_config("MAX_TOKENS_SEARCH", 2000),
             )
 
+            # Create search engine
+            from repomap_tool.core.search_engine import SearchEngine
+            search_engine = SearchEngine(
+                fuzzy_matcher=fuzzy_matcher,
+                semantic_matcher=semantic_matcher,
+                hybrid_matcher=hybrid_matcher,
+            )
+            
             # Create search controller
             search_controller = SearchController(
                 repomap_service=repomap,
-                search_engine=None,  # Not needed for search controller
+                search_engine=search_engine,
                 fuzzy_matcher=fuzzy_matcher,
                 semantic_matcher=semantic_matcher,
                 config=controller_config,
@@ -233,7 +241,7 @@ def search(
 
     except Exception as e:
         # Use OutputManager for error handling
-        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        error_output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(e, output_config)
+        error_output_manager.display_error(e, output_config)
         sys.exit(1)

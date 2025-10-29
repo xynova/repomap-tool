@@ -421,7 +421,7 @@ class EntrypointDiscoverer:
                     self.centrality_calculator.calculate_composite_importance()
                 )
             else:
-                centrality_scores = {}
+                centrality_scores = {}  # type: ignore[unreachable]
             if file_path in centrality_scores:
                 entrypoint.dependency_centrality = centrality_scores[file_path]
 
@@ -434,14 +434,14 @@ class EntrypointDiscoverer:
 
             # Calculate impact risk
             if self.impact_analyzer is not None:
-                impact_report = self.impact_analyzer.analyze_change_impact(file_path)
+                impact_report = self.impact_analyzer.analyze_change_impact([file_path])
             else:
                 impact_report = None
             if impact_report:
-                entrypoint.impact_risk = impact_report.overall_risk_score
+                entrypoint.impact_risk = impact_report.risk_score
 
                 # Calculate refactoring priority based on impact risk and centrality
-                if entrypoint.dependency_centrality is not None:
+                if entrypoint.dependency_centrality is not None and entrypoint.impact_risk is not None:
                     entrypoint.refactoring_priority = (
                         entrypoint.impact_risk * 0.4
                         + entrypoint.dependency_centrality * 0.6

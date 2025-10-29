@@ -259,7 +259,7 @@ def create(
 
     except Exception as e:
         # Get output manager from context for error handling
-        output_manager: OutputManager = ctx.obj["container"].output_manager()
+        error_output_manager: OutputManager = ctx.obj["container"].output_manager()
         output_config = OutputConfig(format=OutputFormat.TEXT)
-        output_manager.display_error(e, output_config)
+        error_output_manager.display_error(e, output_config)
         sys.exit(1)

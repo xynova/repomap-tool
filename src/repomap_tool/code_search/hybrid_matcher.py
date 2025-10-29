@@ -632,3 +632,23 @@ class HybridMatcher:
                 suggestions.append(f"{words[i]}{words[j]}")
 
         return suggestions[:10]  # Limit to 10 suggestions
+
+    def clear_cache(self) -> None:
+        """Clear the cache for both fuzzy and semantic matchers."""
+        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "clear_cache"):
+            self.fuzzy_matcher.clear_cache()
+        if self.domain_semantic_matcher and hasattr(
+            self.domain_semantic_matcher, "clear_cache"
+        ):
+            self.domain_semantic_matcher.clear_cache()
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics from both matchers."""
+        stats = {}
+        if self.fuzzy_matcher and hasattr(self.fuzzy_matcher, "get_cache_stats"):
+            stats["fuzzy"] = self.fuzzy_matcher.get_cache_stats()
+        if self.domain_semantic_matcher and hasattr(
+            self.domain_semantic_matcher, "get_cache_stats"
+        ):
+            stats["semantic"] = self.domain_semantic_matcher.get_cache_stats()
+        return stats

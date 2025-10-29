@@ -113,6 +113,9 @@ class RepoMapService:
         self.spellchecker_service = spellchecker_service
         self.tree_sitter_parser = tree_sitter_parser  # Assign injected parser
         self.tag_cache = tag_cache  # Assign injected cache
+        self.import_analysis_cache: Dict[str, Any] = (
+            {}
+        )  # Separate cache for import analysis
         self.file_discovery_service = (
             file_discovery_service  # Assign injected file discovery service
         )
@@ -131,20 +134,13 @@ class RepoMapService:
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging based on configuration."""
+        # Use centralized logging service - don't add custom handlers
+        # The centralized service already handles worker isolation
         logger = get_logger(__name__)
 
-        # Set log level
+        # Set log level based on config
         level = getattr(logging, self.config.log_level)
         logger.setLevel(level)
-
-        # Create handler if none exists
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
 
         return logger
 
@@ -165,7 +161,7 @@ class RepoMapService:
         try:
             # Get all project files
             project_files = get_project_files(
-                self.config.project_root,
+                str(self.config.project_root),
                 self.config.verbose,  # Pass Path object directly
             )
             self.logger.debug(
@@ -220,7 +216,7 @@ class RepoMapService:
         try:
             # Get current project files
             project_files = get_project_files(
-                self.config.project_root,
+                str(self.config.project_root),
                 self.config.verbose,  # Pass Path object directly
             )
 
@@ -255,7 +251,8 @@ class RepoMapService:
 
         # Get project files
         all_project_files = get_project_files(
-            self.config.project_root, self.config.verbose  # Pass Path object directly
+            str(self.config.project_root),
+            self.config.verbose,  # Pass Path object directly
         )
 
         # Filter project files if specific files are provided
@@ -341,7 +338,7 @@ class RepoMapService:
             # Task 1: Scan files
             scan_task = progress.add_task("Scanning project files...", total=None)
             project_files = get_project_files(
-                self.config.project_root,
+                str(self.config.project_root),
                 self.config.verbose,  # Pass Path object directly
             )
             progress.update(scan_task, completed=True)
@@ -582,14 +579,17 @@ class RepoMapService:
         )
 
         try:
-            cache = self.tag_cache  # Use injected tag_cache directly
-            self.logger.info(
-                f"Tree-sitter cache type: {type(cache)}, size: {cache.get_cache_stats() if cache else 'N/A'}"
-            )
+            # Try to get cache stats, but don't fail if cache is disabled
+            try:
+                cache_stats = (
+                    self.tag_cache.get_cache_stats() if self.tag_cache else "N/A"
+                )
+            except Exception:
+                cache_stats = "disabled"
 
-            if not cache:
-                self.logger.info("Tree-sitter cache is empty")
-                return []
+            self.logger.info(
+                f"Tree-sitter cache type: {type(self.tag_cache)}, size: {cache_stats}"
+            )
 
             # Get tree-sitter supported files and retrieve their cached tags
             project_files = self.file_discovery_service.get_tree_sitter_supported_files(
@@ -600,16 +600,14 @@ class RepoMapService:
             files_with_tags = 0
             for file_path in project_files:
                 try:
-                    cached_tags = cache.get_tags(file_path)
-                    if cached_tags:
-                        all_tags.extend(cached_tags)
+                    # Use tree_sitter_parser.get_tags() which handles cache fallback automatically
+                    tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
+                    if tags:
+                        all_tags.extend(tags)
                         files_with_tags += 1
-                        self.logger.debug(
-                            f"Retrieved {len(cached_tags)} tags from cache for {file_path}"
-                        )
+                        self.logger.debug(f"Retrieved {len(tags)} tags for {file_path}")
                 except Exception as e:
-                    self.logger.debug(f"Error getting cached tags for {file_path}: {e}")
-                    continue
+                    self.logger.warning(f"Failed to retrieve tags for {file_path}: {e}")
 
             self.logger.info(
                 f"Retrieved tags from {files_with_tags} files out of {len(project_files)} total files"
@@ -630,10 +628,12 @@ class RepoMapService:
         if not identifiers:
             # Fallback: re-parse files
             project_files = get_project_files(
-                self.config.project_root,
+                str(self.config.project_root),
                 self.config.verbose,  # Pass Path object directly
             )
-            identifiers = self._extract_identifiers_from_files(project_files)
+            identifiers = [
+                tag.name for tag in self._extract_identifiers_from_files(project_files)
+            ]
 
         return sorted(list(set(identifiers)))
 
@@ -702,7 +702,7 @@ class RepoMapService:
     def _get_project_files(self) -> List[str]:
         """Get list of project files, respecting .gitignore patterns."""
         return get_project_files(
-            self.config.project_root, self.config.verbose
+            str(self.config.project_root), self.config.verbose
         )  # Pass Path object directly
 
     def _extract_identifiers_from_files(
@@ -733,7 +733,7 @@ class RepoMapService:
             )
             return self._extract_identifiers_sequential(project_files)
 
-    def _extract_identifiers_parallel(self, project_files: List[str]) -> List[str]:
+    def _extract_identifiers_parallel(self, project_files: List[str]) -> List[CodeTag]:
         """
         Extract identifiers from files using parallel processing.
 
@@ -743,13 +743,13 @@ class RepoMapService:
             project_files: List of file paths to process
 
         Returns:
-            List of identifier names extracted from the files
+            List of CodeTag objects extracted from the files
 
         Raises:
             Exception: If parallel processing fails, with helpful debugging info
         """
         try:
-            identifiers: List[str]
+            identifiers: List[CodeTag]
             stats: Any
             # Fallback to sequential processing since parallel_extractor is removed
             identifiers = self._extract_identifiers_sequential(project_files)
@@ -817,7 +817,7 @@ class RepoMapService:
         ts_parser = self.tree_sitter_parser  # Resolve the instance from the provider
         if ts_parser is None:
             self.logger.error("Tree-sitter parser is not available.")
-            return []
+            return []  # type: ignore[unreachable]
 
         for file_path in file_paths:
             try:
@@ -847,7 +847,7 @@ class RepoMapService:
             return None
 
         try:
-            cache = self.tag_cache  # Use injected tag_cache directly
+            cache = self.import_analysis_cache  # Use separate import analysis cache
             # Include max_graph_size in cache key to ensure different configs get different cache entries
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"
@@ -886,7 +886,7 @@ class RepoMapService:
             return
 
         try:
-            cache = self.tag_cache  # Use injected tag_cache directly
+            cache = self.import_analysis_cache  # Use separate import analysis cache
             # Include max_graph_size in cache key to ensure different configs get different cache entries
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"
@@ -983,8 +983,8 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            assert self.centrality_calculator is not None  # For mypy
-            return self.centrality_calculator.calculate_composite_importance()  # type: ignore
+            assert self.centrality_calculator is not None  # For mypy  # nosec B101
+            return self.centrality_calculator.calculate_composite_importance()
         except Exception as e:
             self.logger.error(f"Failed to calculate centrality scores: {e}")
             raise
@@ -1004,7 +1004,7 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            assert self.impact_analyzer is not None  # For mypy
+            assert self.impact_analyzer is not None  # For mypy  # nosec B101
             return self.impact_analyzer.analyze_change_impact([file_path])  # type: ignore
         except Exception as e:
             self.logger.error(f"Failed to analyze change impact: {e}")
@@ -1019,8 +1019,8 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            assert self.dependency_graph is not None  # For mypy
-            return self.dependency_graph.find_cycles()  # type: ignore
+            assert self.dependency_graph is not None  # For mypy  # nosec B101
+            return self.dependency_graph.find_cycles()
         except Exception as e:
             self.logger.error(f"Failed to find circular dependencies: {e}")
             raise

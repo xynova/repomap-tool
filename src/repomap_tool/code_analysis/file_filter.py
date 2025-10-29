@@ -278,8 +278,8 @@ def filter_analyzable_files(
     for file_path_str in file_paths:
         file_path = Path(file_path_str)
         # Temporarily only include Python files to bypass JS/TS parsing issues
-        if FileFilter.is_python_file(file_path):
-            if exclude_tests and FileFilter.is_test_file(file_path):
+        if FileFilter.is_python_file(str(file_path)):
+            if exclude_tests and FileFilter.is_test_file(str(file_path)):
                 continue
             filtered_files.append(file_path_str)
     return filtered_files

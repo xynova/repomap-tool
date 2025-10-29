@@ -16,9 +16,9 @@ import click
 from repomap_tool.protocols import (
     DataFormatter,
     TemplateRegistryProtocol,
-    ConsoleManagerProtocol,
-    TemplateEngine,
 )
+from .templates.engine import TemplateEngine
+from .console_manager import ConsoleManagerProtocol
 from .formats import OutputFormat, OutputConfig
 from .template_formatter import TemplateBasedFormatter
 
@@ -90,7 +90,10 @@ class TreeClusterViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected TreeClusterViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("tree_cluster", data, config)
         else:
@@ -149,7 +152,10 @@ class TreeFocusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected TreeFocusViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("tree_focus", data, config)
         else:
@@ -208,7 +214,10 @@ class TreeExpansionViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected TreeExpansionViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("tree_expansion", data, config)
         else:
@@ -267,7 +276,10 @@ class TreePruningViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected TreePruningViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("tree_pruning", data, config)
         else:
@@ -326,7 +338,10 @@ class TreeMappingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected TreeMappingViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("tree_mapping", data, config)
         else:
@@ -385,7 +400,10 @@ class TreeListingViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected TreeListingViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("tree_listing", data, config)
         else:
@@ -444,7 +462,10 @@ class SessionStatusViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected SessionStatusViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("session_status", data, config)
         else:
@@ -503,7 +524,10 @@ class ExplorationViewModelFormatter(TemplateBasedFormatter, DataFormatter):
             raise ValueError(f"Expected ExplorationViewModel, got {type(data)}")
 
         if output_format == OutputFormat.JSON:
-            return data.model_dump_json(indent=2)
+            # Serialize dataclass to JSON using proper method
+            import json
+
+            return json.dumps(data.__dict__, indent=2, default=str)
         elif output_format == OutputFormat.TEXT:
             return self.render_template("exploration", data, config)
         else:

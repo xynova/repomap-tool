@@ -38,8 +38,8 @@ class SearchEngine:
         query: str,
         identifiers: List[str],
         search_type: str = "fuzzy",
-        limit: int = None,
-        threshold: float = None,
+        limit: Optional[int] = None,
+        threshold: Optional[float] = None,
     ) -> List[MatchResult]:
         """Perform search based on the specified type.
 
@@ -59,10 +59,16 @@ class SearchEngine:
             threshold = get_config("HYBRID_THRESHOLD", 0.3)
 
         if search_type == "fuzzy":
+            if self.fuzzy_matcher is None:
+                raise ValueError("Fuzzy matcher is not available")
             return fuzzy_search(query, identifiers, self.fuzzy_matcher, limit)
         elif search_type == "semantic":
+            if self.semantic_matcher is None:
+                raise ValueError("Semantic matcher is not available")
             return semantic_search(query, identifiers, self.semantic_matcher, limit)
         elif search_type == "hybrid":
+            if self.hybrid_matcher is None:
+                raise ValueError("Hybrid matcher is not available")
             return hybrid_search(
                 query, identifiers, self.hybrid_matcher, limit, threshold
             )

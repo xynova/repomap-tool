@@ -129,6 +129,8 @@ ProjectInfo = Dict[str, Any]
 class QueryLoaderProtocol(Protocol):
     """Protocol for loading tree-sitter query strings."""
 
+    custom_queries_dir: Path
+
     def load_query(self, language: str) -> Optional[str]:
         """Loads the query string for a given language."""
         ...
@@ -162,9 +164,9 @@ class BaseFormatter(ABC):
     def __init__(
         self,
         *,  # Make subsequent arguments keyword-only
-        console_manager: "ConsoleManagerProtocol",
-        template_engine: "TemplateEngine",
-        template_registry: "TemplateRegistryProtocol",
+        console_manager: Any,  # Use Any to avoid circular import issues
+        template_engine: Any,  # Use Any to avoid circular import issues
+        template_registry: Optional["TemplateRegistryProtocol"],
         enable_logging: bool = True,
     ) -> None:
         """Initialize the base formatter."""
@@ -210,7 +212,7 @@ class BaseFormatter(ABC):
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:
         """Get console instance for output."""
         if self._console_manager:
-            return self._console_manager.get_console(ctx)
+            return self._console_manager.get_console(ctx)  # type: ignore[no-any-return]
         else:
             from repomap_tool.cli.utils.console import get_console
 
@@ -445,6 +447,10 @@ class ConsoleManagerProtocol(Protocol):
         """Get console usage statistics."""
         ...
 
+    def reset_usage_stats(self) -> None:
+        """Reset console usage statistics."""
+        ...
+
 
 # Forward reference for TemplateEngine to prevent circular imports
-TemplateEngine = TypeVar("TemplateEngine")
+# TemplateEngine = TypeVar("TemplateEngine")

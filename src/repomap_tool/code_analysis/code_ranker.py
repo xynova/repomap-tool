@@ -91,7 +91,7 @@ class CodeRanker:
         Returns:
             NetworkX MultiDiGraph representing code dependencies
         """
-        G = nx.MultiDiGraph()
+        G: nx.MultiDiGraph = nx.MultiDiGraph()
 
         # Organize tags by file and identifier
         defines = defaultdict(set)  # identifier -> set of files

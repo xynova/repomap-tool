@@ -20,7 +20,7 @@ try:
     if "src" not in sys.modules:
         src_pkg = types.ModuleType("src")
         # Mark as package by providing __path__ where Python can find subpackages
-        src_pkg.__path__ = [src_dir]  # type: ignore[attr-defined]
+        src_pkg.__path__ = [src_dir]
         sys.modules["src"] = src_pkg
 except Exception as e:
     # Log package setup failure for debugging, but don't fail import
@@ -76,9 +76,6 @@ try:
         CacheManagerProtocol,
         FileScannerProtocol,
         ProjectAnalyzerProtocol,
-        ProjectMap,
-        Tag,
-        FileData,
         IdentifierSet,
         MatchResult as ProtocolMatchResult,
         CacheStats,
@@ -86,21 +83,18 @@ try:
     )
 except ImportError:
     # Fallback imports
-    RepoMapProtocol = None  # type: ignore
-    MatcherProtocol = None  # type: ignore
-    FuzzyMatcherProtocol = None  # type: ignore
-    SemanticMatcherProtocol = None  # type: ignore
-    HybridMatcherProtocol = None  # type: ignore
-    CacheManagerProtocol = None  # type: ignore
-    FileScannerProtocol = None  # type: ignore
-    ProjectAnalyzerProtocol = None  # type: ignore
-    ProjectMap = None  # type: ignore
-    Tag = None  # type: ignore
-    FileData = None  # type: ignore
-    IdentifierSet = None  # type: ignore
-    ProtocolMatchResult = None  # type: ignore
-    CacheStats = None  # type: ignore
-    ProtocolProjectInfo = None  # type: ignore
+    RepoMapProtocol = None  # type: ignore[assignment,misc]
+    MatcherProtocol = None  # type: ignore[assignment,misc]
+    FuzzyMatcherProtocol = None  # type: ignore[assignment,misc]
+    SemanticMatcherProtocol = None  # type: ignore[assignment,misc]
+    HybridMatcherProtocol = None  # type: ignore[assignment,misc]
+    CacheManagerProtocol = None  # type: ignore[assignment,misc]
+    FileScannerProtocol = None  # type: ignore[assignment,misc]
+    ProjectAnalyzerProtocol = None  # type: ignore[assignment,misc]
+    IdentifierSet = None  # type: ignore[assignment,misc]
+    ProtocolMatchResult = None  # type: ignore[assignment,misc]
+    CacheStats = None  # type: ignore[assignment,misc]
+    ProtocolProjectInfo = None  # type: ignore[assignment,misc]
 
 # Import exception hierarchy
 try:

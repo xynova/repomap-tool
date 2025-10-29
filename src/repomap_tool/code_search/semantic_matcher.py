@@ -10,7 +10,7 @@ import re
 import logging
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
-from typing import Dict, List, Set, Tuple, Optional
+from typing import Dict, List, Set, Tuple, Optional, Any
 
 # Configure logging
 logger = get_logger(__name__)
@@ -560,6 +560,50 @@ class DomainSemanticMatcher:
             logger.info(
                 f"Added custom mapping for category '{category}' with {len(terms)} terms"
             )
+
+    def match_identifiers(
+        self, query: str, all_identifiers: Set[str], threshold: Optional[float] = None
+    ) -> List[Tuple[str, int]]:
+        """
+        Match a query against all identifiers using semantic similarity.
+
+        This method provides a consistent interface with MatcherProtocol by returning
+        (identifier, score) tuples where score is an integer (0-100).
+
+        Args:
+            query: The identifier to search for
+            all_identifiers: Set of all available identifiers
+            threshold: Optional threshold override (uses config default if None)
+
+        Returns:
+            List of (identifier, score) tuples, sorted by score (highest first)
+        """
+        effective_threshold = (
+            threshold
+            if threshold is not None
+            else get_config("SEMANTIC_THRESHOLD", 0.3)
+        )
+
+        # Use the existing find_semantic_matches method
+        matches = self.find_semantic_matches(
+            query, all_identifiers, effective_threshold
+        )
+
+        # Convert float scores to integer scores (0-100)
+        integer_matches = [(ident, int(score * 100)) for ident, score in matches]
+
+        # Sort by score (highest first), then by identifier name for consistency
+        integer_matches.sort(key=lambda x: (-x[1], x[0]))
+
+        return integer_matches
+
+    def clear_cache(self) -> None:
+        """Clear any cached data (DomainSemanticMatcher doesn't use caching)."""
+        pass
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get cache statistics (DomainSemanticMatcher doesn't use caching)."""
+        return {"cache_enabled": False, "hit_rate": 0.0, "size": 0}
 
 
 # Alias for backward compatibility

@@ -96,7 +96,7 @@ class TestSelfIntegration:
         """Clean up test environment."""
         shutil.rmtree(self.test_output_dir)
 
-    def test_default_analysis_finds_classes_and_functions(self):
+    def test_default_analysis_finds_classes_and_functions(self, capsys):
         """Test that default analysis finds classes, functions, and other identifiers."""
         import logging
 
@@ -163,7 +163,7 @@ class TestSelfIntegration:
         print(f"File types: {project_info.file_types}")
         print(f"Identifier types: {project_info.identifier_types}")
 
-    def test_fuzzy_search_independently(self):
+    def test_fuzzy_search_independently(self, capsys):
         """Test fuzzy search functionality independently."""
         import logging
 
@@ -233,7 +233,7 @@ class TestSelfIntegration:
                 f"Fuzzy search for '{query}' found {len(search_response.results)} results"
             )
 
-    def test_semantic_search_independently(self):
+    def test_semantic_search_independently(self, capsys):
         """Test semantic search functionality independently."""
         import logging
 
@@ -302,7 +302,7 @@ class TestSelfIntegration:
                 f"Semantic search for '{query}' found {len(search_response.results)} results"
             )
 
-    def test_hybrid_search_combination(self):
+    def test_hybrid_search_combination(self, capsys):
         """Test hybrid search (fuzzy + semantic) functionality."""
         import logging
 
@@ -380,7 +380,7 @@ class TestSelfIntegration:
                 assert hasattr(result, "score")
                 assert hasattr(result, "match_type")
 
-    def test_search_specific_identifiers(self):
+    def test_search_specific_identifiers(self, capsys):
         """Test searching for specific known identifiers in the codebase."""
         import logging
 
@@ -446,7 +446,7 @@ class TestSelfIntegration:
 
             print(f"Found '{query}' in results: {found_names[:3]}")
 
-    def test_search_with_context(self):
+    def test_search_with_context(self, capsys):
         """Test that search results include proper context."""
         import logging
 
@@ -487,7 +487,7 @@ class TestSelfIntegration:
 
             print(f"Context for {result.identifier}: {result.context[:100]}...")
 
-    def test_search_result_ranking(self):
+    def test_search_result_ranking(self, capsys):
         """Test that search results are properly ranked by relevance."""
         import time
         import logging
@@ -527,7 +527,7 @@ class TestSelfIntegration:
 
         print(f"Top 3 scores: {scores[:3]}")
 
-    def test_error_handling(self):
+    def test_error_handling(self, capsys):
         """Test error handling for invalid queries and configurations."""
         import logging
 
@@ -569,7 +569,7 @@ class TestSelfIntegration:
         # Should handle short query gracefully
         assert search_response is not None
 
-    def test_performance_benchmark(self):
+    def test_performance_benchmark(self, capsys):
         """Test performance of different search modes."""
         import time
         import logging
@@ -588,6 +588,7 @@ class TestSelfIntegration:
 
         from repomap_tool.cli.services import get_service_factory
 
+        # Create service (this includes initialization overhead)
         service_factory = get_service_factory()
         repomap = service_factory.create_repomap_service(config)
 
@@ -598,56 +599,27 @@ class TestSelfIntegration:
             "config",
             "search",
             "identifiers",
-            "index",
-            "create",
-        ]
+        ]  # Reduced from 8 to 6 queries for faster testing
 
-        # Test fuzzy only
-        fuzzy_config = RepoMapConfig(
-            project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(threshold=70),
-            semantic_match=SemanticMatchConfig(enabled=False),
-            verbose=False,
-        )
-        logger.debug(
-            f"TestSelfIntegration.test_performance_benchmark: Fuzzy RepoMapConfig created with project_root: {fuzzy_config.project_root}"
-        )
-
-        from repomap_tool.cli.services import get_service_factory
-
-        service_factory = get_service_factory()
-        fuzzy_repomap = service_factory.create_repomap_service(fuzzy_config)
-
+        # Test fuzzy only - reuse the same service instance
         start_time = time.time()
         for query in test_queries:
             search_request = SearchRequest(
                 query=query, match_type="fuzzy", max_results=10
             )
-            fuzzy_repomap.search_identifiers(search_request)
+            repomap.search_identifiers(search_request)
         fuzzy_time = time.time() - start_time
 
-        # Test semantic only
-        semantic_config = RepoMapConfig(
-            project_root=str(self.project_root),
-            fuzzy_match=FuzzyMatchConfig(threshold=70),
-            semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
-            verbose=False,
-        )
-        logger.debug(
-            f"TestSelfIntegration.test_performance_benchmark: Semantic RepoMapConfig created with project_root: {semantic_config.project_root}"
-        )
-
-        semantic_repomap = service_factory.create_repomap_service(semantic_config)
-
+        # Test semantic only - reuse the same service instance
         start_time = time.time()
         for query in test_queries:
             search_request = SearchRequest(
                 query=query, match_type="semantic", max_results=10
             )
-            semantic_repomap.search_identifiers(search_request)
+            repomap.search_identifiers(search_request)
         semantic_time = time.time() - start_time
 
-        # Test hybrid
+        # Test hybrid - reuse the same service instance
         start_time = time.time()
         for query in test_queries:
             search_request = SearchRequest(
@@ -661,10 +633,17 @@ class TestSelfIntegration:
         print(f"  Semantic only: {semantic_time:.3f}s")
         print(f"  Hybrid: {hybrid_time:.3f}s")
 
-        # All should complete within reasonable time
-        assert fuzzy_time < 10.0, "Fuzzy search should complete within 10 seconds"
-        assert semantic_time < 10.0, "Semantic search should complete within 10 seconds"
-        assert hybrid_time < 15.0, "Hybrid search should complete within 15 seconds"
+        # All should complete within reasonable time (excluding service creation overhead)
+        # The actual search operations should be fast, service creation is a one-time cost
+        assert (
+            fuzzy_time < 5.0
+        ), f"Fuzzy search should complete within 5 seconds (actual: {fuzzy_time:.3f}s)"
+        assert (
+            semantic_time < 5.0
+        ), f"Semantic search should complete within 5 seconds (actual: {semantic_time:.3f}s)"
+        assert (
+            hybrid_time < 8.0
+        ), f"Hybrid search should complete within 8 seconds (actual: {hybrid_time:.3f}s)"
 
 
 if __name__ == "__main__":

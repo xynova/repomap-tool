@@ -17,8 +17,8 @@ from repomap_tool.protocols import (
     TemplateRegistryProtocol,
     FormatterProtocol,
     BaseFormatter,
+    ConsoleManagerProtocol,
 )
-from .console_manager import ConsoleManagerProtocol
 from .templates.config import TemplateConfig
 from .templates.engine import TemplateEngine
 from repomap_tool.core.logging_service import get_logger
@@ -31,7 +31,7 @@ class TemplateBasedFormatter(BaseFormatter):
         self,
         template_engine: TemplateEngine,
         template_registry: TemplateRegistryProtocol,
-        console_manager: Optional[ConsoleManagerProtocol] = None,
+        console_manager: Optional[ConsoleManagerProtocol],
         enable_logging: bool = True,
     ) -> None:
         """Initialize the template-based formatter.
@@ -86,9 +86,10 @@ class TemplateBasedFormatter(BaseFormatter):
 
         try:
             # Render template
-            return self._template_engine.render_template(
+            result = self._template_engine.render_template(
                 template_name, data, template_config
             )
+            return result if isinstance(result, str) else None
         except Exception as e:
             if self._logger:
                 self._logger.error(f"Template rendering failed: {e}")
@@ -157,9 +158,10 @@ class TemplateBasedFormatter(BaseFormatter):
                 template_config = self._create_template_config(None)
             else:
                 template_config = self._create_template_config(config)
-            return self._template_engine.render_template(
+            result = self._template_engine.render_template(
                 template_name, data, template_config
             )
+            return result if isinstance(result, str) else ""
         except Exception as e:
             if self._logger:
                 self._logger.error(f"Template rendering failed: {e}")
@@ -171,7 +173,7 @@ class TemplateBasedFormatter(BaseFormatter):
         Returns:
             List of template names
         """
-        return self._template_engine._template_registry.list_templates()
+        return self._template_engine._template_registry.list_templates()  # type: ignore[no-any-return]
 
     def _get_template_name(self, data: Any) -> Optional[str]:
         """Get template name based on data type.

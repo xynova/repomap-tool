@@ -40,6 +40,20 @@ class TokenOptimizer:
         self.token_estimator = TokenEstimator()
         logger.info(f"TokenOptimizer initialized with max_tokens: {max_tokens}")
 
+    def optimize_for_token_budget(
+        self, content: str, max_tokens: int, model: str = "gpt-4"
+    ) -> str:
+        """Optimize content for token budget (compatibility with TokenOptimizerProtocol)."""
+        # Use the existing optimize_context method
+        context_selection = self.optimize_context(content)
+
+        # If the content fits within the token budget, return it as-is
+        if context_selection.tokens_used <= max_tokens:
+            return content
+
+        # Otherwise, return the optimized content
+        return str(context_selection.data)
+
     def optimize_context(
         self,
         data: Any,

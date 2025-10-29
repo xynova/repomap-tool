@@ -34,8 +34,8 @@ from repomap_tool.protocols import (
     FormatterProtocol,
     BaseFormatter,
     DataFormatter,
+    ConsoleManagerProtocol,
 )
-from .console_manager import ConsoleManagerProtocol
 from .template_formatter import TemplateBasedFormatter
 from .templates.engine import TemplateEngine
 from .templates.registry import (

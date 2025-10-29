@@ -17,7 +17,6 @@ from repomap_tool.protocols import (
     FormatterProtocol,
     FormatterRegistryProtocol,
     ConsoleManagerProtocol,
-    TemplateEngine,
     TemplateRegistryProtocol,
 )  # Updated imports
 from repomap_tool.cli.output.templates.engine import (
@@ -46,7 +45,7 @@ class MockFormatter(FormatterProtocol):
         data_type: Type[Any] = Any,
         # Accept these for compatibility with BaseFormatter, but don't use them
         console_manager: Optional[ConsoleManagerProtocol] = None,
-        template_engine: Optional[TemplateEngine] = None,
+        template_engine: Optional[ConcreteTemplateEngine] = None,
         template_registry: Optional[TemplateRegistryProtocol] = None,
         enable_logging: bool = True,
     ):
@@ -90,7 +89,7 @@ class MockFormatterRegistry(FormatterRegistryProtocol):
 
     def __init__(
         self,
-        template_engine: TemplateEngine = Mock(spec=ConcreteTemplateEngine),
+        template_engine: ConcreteTemplateEngine = Mock(spec=ConcreteTemplateEngine),
         template_registry: TemplateRegistryProtocol = Mock(
             spec=DefaultTemplateRegistry
         ),
