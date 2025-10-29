@@ -537,23 +537,27 @@ def impact(
         # Perform impact analysis using Controller
         try:
             # Print output format
-            output_manager.display_progress(f"📊 Output format: {output}")
+            progress_output_manager.display_progress(f"📊 Output format: {output}")
 
             # Execute Controller to get ViewModel
             view_model = impact_controller.execute(list(target_files_for_impact))
 
             # Display the ViewModel using OutputManager
-            output_manager.display(view_model, output_config)
+            progress_output_manager.display(view_model, output_config)
 
             # Print completion message
-            output_manager.display_success("Impact inspection completed", output_config)
+            progress_output_manager.display_success(
+                "Impact inspection completed", output_config
+            )
 
         except Exception as analysis_error:
-            output_manager.display_error(analysis_error, output_config)
+            progress_output_manager.display_error(analysis_error, output_config)
             if verbose:
                 import traceback
 
-                output_manager.display_progress(f"Traceback: {traceback.format_exc()}")
+                progress_output_manager.display_progress(
+                    f"Traceback: {traceback.format_exc()}"
+                )
             sys.exit(1)
 
     except Exception as e:

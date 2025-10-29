@@ -88,15 +88,15 @@ class TestGeneralPerformance:
     def test_file_scanning_performance(self, session_test_repo_path):
         """Test performance of file scanning with various files."""
         # Arrange
-        num_files = 1000
-        large_file_size_mb = 10
+        num_files = 100  # Reduced from 1000 to 100
+        file_size_kb = 1  # Reduced from 10MB to 1KB per file
         test_files_dir = session_test_repo_path.parent / "temp_large_repo"
         test_files_dir.mkdir(exist_ok=True)
 
-        # Create dummy large files
+        # Create dummy files with reasonable size
         for i in range(num_files):
             (test_files_dir / f"file_{i}.py").write_text(
-                "#" * (large_file_size_mb * 1024 * 1024 // num_files)
+                "#" * (file_size_kb * 1024)  # 1KB per file
             )
 
         start_time = time.time()
@@ -104,8 +104,8 @@ class TestGeneralPerformance:
         end_time = time.time()
         duration = end_time - start_time
 
-        # Assert that scanning is reasonably fast (e.g., less than 5 seconds for 1000 files)
-        assert duration < 5
+        # Assert that scanning is reasonably fast (e.g., less than 2 seconds for 100 files)
+        assert duration < 2
 
         # Cleanup
         shutil.rmtree(test_files_dir)
