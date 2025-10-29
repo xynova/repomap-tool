@@ -19,7 +19,6 @@ import tempfile
 from ...models import (
     RepoMapConfig,
     create_error_response,
-    ProjectInfo,
     PerformanceConfig,
     DependencyConfig,
 )

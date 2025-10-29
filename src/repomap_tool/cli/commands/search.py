@@ -7,10 +7,9 @@ and other code elements within the project.
 """
 
 import sys
-from typing import Any, Optional
+from typing import Optional
 
 import click
-from rich.console import Console
 from pathlib import Path
 
 from ..config.loader import load_or_create_config, resolve_project_path
@@ -212,12 +211,13 @@ def search(
 
             # Create search engine
             from repomap_tool.core.search_engine import SearchEngine
+
             search_engine = SearchEngine(
                 fuzzy_matcher=fuzzy_matcher,
                 semantic_matcher=semantic_matcher,
                 hybrid_matcher=hybrid_matcher,
             )
-            
+
             # Create search controller
             search_controller = SearchController(
                 repomap_service=repomap,

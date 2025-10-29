@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 from repomap_tool.core.logging_service import get_logger
 from repomap_tool.code_analysis.file_discovery_service import (

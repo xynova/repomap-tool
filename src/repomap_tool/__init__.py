@@ -92,7 +92,7 @@ except ImportError:
     FileScannerProtocol = None  # type: ignore[assignment,misc]
     ProjectAnalyzerProtocol = None  # type: ignore[assignment,misc]
     IdentifierSet = None  # type: ignore[assignment,misc]
-    ProtocolMatchResult = None  # type: ignore[assignment,misc]
+    ProtocolMatchResult = None  # type: ignore[misc]
     CacheStats = None  # type: ignore[assignment,misc]
     ProtocolProjectInfo = None  # type: ignore[assignment,misc]
 

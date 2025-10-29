@@ -366,7 +366,12 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
     )
     if dep_enable_impact_analysis_env:
         config.dependencies.enable_impact_analysis = (
-            dep_enable_impact_analysis_env.lower() in ("true", "1", "yes")
+            dep_enable_impact_analysis_env.lower()
+            in (
+                "true",
+                "1",
+                "yes",
+            )
         )
 
     dep_centrality_algorithms_env = os.environ.get("REPOMAP_DEP_CENTRALITY_ALGORITHMS")

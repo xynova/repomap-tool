@@ -5,25 +5,17 @@ This module contains commands for code inspection, analysis, and discovery.
 Merges functionality from the previous 'analyze' and 'search' commands.
 """
 
-import os
 import sys
-from typing import Optional, Literal, List
+from typing import Optional
 from pathlib import Path
 
 import click
 from rich.progress import Progress, SpinnerColumn, TextColumn
 
-from repomap_tool.core.config_service import get_config
 from repomap_tool.core.container_config import configure_container
 from repomap_tool.cli.config.loader import load_or_create_config
 
-from ...models import (
-    SearchRequest,
-    RepoMapConfig,
-    DependencyConfig,
-    create_error_response,
-)
-from ...core import RepoMapService
+from ...models import create_error_response
 from ..config.loader import (
     resolve_project_path,
 )

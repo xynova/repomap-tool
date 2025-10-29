@@ -7,7 +7,6 @@ following proper MVC architecture patterns and AI optimization principles.
 
 from __future__ import annotations
 
-import logging
 from repomap_tool.core.logging_service import get_logger
 from typing import Any, List, Optional, Type
 

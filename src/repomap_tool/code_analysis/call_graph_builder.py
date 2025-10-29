@@ -6,7 +6,6 @@ call graph that shows how functions depend on each other.
 """
 
 import logging
-import os
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 import re

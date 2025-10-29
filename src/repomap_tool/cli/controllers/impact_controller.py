@@ -7,7 +7,6 @@ coordinating between code_analysis, code_exploration, and code_search services.
 
 from __future__ import annotations
 
-import logging
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
 from typing import List, Dict, Any, Optional, TYPE_CHECKING

@@ -1,5 +1,4 @@
 from repomap_tool.core.config_service import get_config
-from repomap_tool.core.logging_service import get_logger
 from repomap_tool.core.container_config import configure_container
 from pathlib import Path
 
@@ -13,13 +12,10 @@ import sys
 from typing import Optional, Literal
 
 import click
-from rich.console import Console
 
 from ...models import create_error_response
-from ...core import RepoMapService
 from ..config.loader import (
     resolve_project_path,
-    create_default_config,
     load_or_create_config,
 )
 from ..output import OutputManager, OutputConfig, OutputFormat  # , get_output_manager

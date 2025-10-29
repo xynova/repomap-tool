@@ -441,7 +441,10 @@ class EntrypointDiscoverer:
                 entrypoint.impact_risk = impact_report.risk_score
 
                 # Calculate refactoring priority based on impact risk and centrality
-                if entrypoint.dependency_centrality is not None and entrypoint.impact_risk is not None:
+                if (
+                    entrypoint.dependency_centrality is not None
+                    and entrypoint.impact_risk is not None
+                ):
                     entrypoint.refactoring_priority = (
                         entrypoint.impact_risk * 0.4
                         + entrypoint.dependency_centrality * 0.6

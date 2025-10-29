@@ -203,8 +203,16 @@ class ExplorationController(BaseController):
                 context_name=tree.context_name,
                 current_focus=True,
                 tree_structure=self._build_tree_structure(tree),
-                expanded_areas=list(tree.expanded_areas) if isinstance(tree.expanded_areas, set) else tree.expanded_areas,
-                pruned_areas=list(tree.pruned_areas) if isinstance(tree.pruned_areas, set) else tree.pruned_areas,
+                expanded_areas=(
+                    list(tree.expanded_areas)
+                    if isinstance(tree.expanded_areas, set)
+                    else tree.expanded_areas
+                ),
+                pruned_areas=(
+                    list(tree.pruned_areas)
+                    if isinstance(tree.pruned_areas, set)
+                    else tree.pruned_areas
+                ),
                 total_nodes=1 if tree.tree_structure else 0,
                 max_depth=tree.max_depth,
             )
@@ -231,7 +239,7 @@ class ExplorationController(BaseController):
             session = self.session_manager.get_session(session_id)
             if session is None:
                 raise ValueError(f"Session {session_id} not found")
-            
+
             tree = session.get_tree(tree_id)
             if tree is None:
                 raise ValueError(f"Tree {tree_id} not found in session {session_id}")
@@ -249,9 +257,9 @@ class ExplorationController(BaseController):
                 tree_id=tree_id,
                 expanded_area=area,
                 new_nodes=new_nodes,
-                total_nodes=len(getattr(tree, 'nodes', [])),
-                expansion_depth=getattr(tree, 'current_depth', 0),
-                confidence_score=getattr(tree, 'confidence', 0.0),
+                total_nodes=len(getattr(tree, "nodes", [])),
+                expansion_depth=getattr(tree, "current_depth", 0),
+                confidence_score=getattr(tree, "confidence", 0.0),
             )
 
         except Exception as e:
@@ -297,7 +305,7 @@ class ExplorationController(BaseController):
                 tree_id=tree_id,
                 pruned_area=area,
                 removed_nodes=removed_nodes,
-                remaining_nodes=len(getattr(tree, 'nodes', [])),
+                remaining_nodes=len(getattr(tree, "nodes", [])),
                 pruning_reason=reason,
             )
 
@@ -348,8 +356,8 @@ class ExplorationController(BaseController):
             return TreeMappingViewModel(
                 tree_id=tree_id,
                 tree_structure=tree_structure,
-                total_nodes=len(getattr(tree, 'nodes', [])),
-                max_depth=getattr(tree, 'max_depth', 0),
+                total_nodes=len(getattr(tree, "nodes", [])),
+                max_depth=getattr(tree, "max_depth", 0),
                 include_code=include_code,
                 code_snippets=code_snippets,
                 token_count=self._estimate_token_count([tree]) if tree else 0,
@@ -379,14 +387,20 @@ class ExplorationController(BaseController):
             trees = []
             for tree in session.exploration_trees.values():
                 tree_cluster_vm = TreeClusterViewModel(
-                    tree_id=getattr(tree, 'tree_id', ''),
-                    context_name=getattr(tree, 'context_name', ''),
-                    confidence=getattr(tree, 'confidence', 0.0),
+                    tree_id=getattr(tree, "tree_id", ""),
+                    context_name=getattr(tree, "context_name", ""),
+                    confidence=getattr(tree, "confidence", 0.0),
                     entrypoints=self._extract_entrypoints(tree),
-                    total_nodes=len(getattr(tree, 'nodes', [])),
-                    max_depth=getattr(tree, 'max_depth', 0),
-                    root_file=str(getattr(tree, 'root_entrypoint', type('obj', (object,), {'file_path': ''})()).file_path),
-                    description=getattr(tree, 'description', ''),
+                    total_nodes=len(getattr(tree, "nodes", [])),
+                    max_depth=getattr(tree, "max_depth", 0),
+                    root_file=str(
+                        getattr(
+                            tree,
+                            "root_entrypoint",
+                            type("obj", (object,), {"file_path": ""})(),
+                        ).file_path
+                    ),
+                    description=getattr(tree, "description", ""),
                 )
                 trees.append(tree_cluster_vm)
 

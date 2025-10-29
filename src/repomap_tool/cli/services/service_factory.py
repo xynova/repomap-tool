@@ -263,9 +263,9 @@ class ServiceFactory:
         else:
             logger.debug(f"Using cached container for {config.project_root}")
         # No longer casting directly to Container, as it's a dynamic import
-        return self._containers[
+        return self._containers[  # type: ignore[no-any-return]
             container_key
-        ]  # type: ignore[no-any-return]  # Return type handled by string literal hint
+        ]  # Return type handled by string literal hint
 
     def clear_cache(self, project_root: Optional[Union[str, Path]] = None) -> None:
         """Clear cached services and containers.

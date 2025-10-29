@@ -7,7 +7,6 @@ to render output using Jinja2 templates.
 
 from __future__ import annotations
 
-import logging
 from typing import Any, Optional, List, Dict
 
 import click

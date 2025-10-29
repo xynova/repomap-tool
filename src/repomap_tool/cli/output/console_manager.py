@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 from repomap_tool.core.logging_service import get_logger
 from typing import Optional, Dict, Any, Protocol
-from pathlib import Path
 
 import click
 from rich.console import Console

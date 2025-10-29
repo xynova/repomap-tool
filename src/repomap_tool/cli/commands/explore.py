@@ -5,23 +5,19 @@ This module contains commands for session-based exploration.
 """
 
 import sys
-from typing import Any, Optional
+from typing import Optional
 from pathlib import Path
 
 import click
-from rich.console import Console
 from rich.table import Table
-from rich.panel import Panel
 
 from ...models import create_error_response, RepoMapConfig
-from ...core import RepoMapService
 from ...core.config_service import get_config
 from ...core.container_config import configure_container
 from ..controllers.exploration_controller import ExplorationController
 from ..config.loader import resolve_project_path
 from ..output import OutputManager, OutputConfig, OutputFormat
-from ..utils.session import get_project_path_from_session, get_or_create_session
-from ..utils.console import get_console
+from ..utils.session import get_or_create_session
 from dependency_injector.containers import DynamicContainer
 
 

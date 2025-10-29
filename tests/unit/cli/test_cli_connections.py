@@ -10,7 +10,7 @@ import json
 import tempfile
 import pytest
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from repomap_tool.cli import (
     create_default_config,

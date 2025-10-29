@@ -816,8 +816,8 @@ class RepoMapService:
         all_identifiers: List[CodeTag] = []
         ts_parser = self.tree_sitter_parser  # Resolve the instance from the provider
         if ts_parser is None:
-            self.logger.error("Tree-sitter parser is not available.")
-            return []  # type: ignore[unreachable]
+            self.logger.error("Tree-sitter parser is not available.")  # type: ignore[unreachable]
+            return []
 
         for file_path in file_paths:
             try:
