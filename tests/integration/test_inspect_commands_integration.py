@@ -658,7 +658,7 @@ class TestASTFileAnalyzerIntegration:
 
     def _create_simple_test_file(self):
         """Create a simple test file for AST analysis."""
-        test_file = self.project_root / "test_file.py"
+        test_file = self.project_root / "sample_file.py"
         test_file.write_text(
             """# Test file for AST analysis
 import os
@@ -766,11 +766,11 @@ counts = obj.method2(["a", "bb", "ccc"])
     def test_ast_analyzer_multiple_files(self):
         """Test AST analyzer with multiple files."""
         # Create another test file
-        test_file2 = self.project_root / "test_file2.py"
+        test_file2 = self.project_root / "sample_file2.py"
         test_file2.write_text(
             """# Second test file
-import test_file
-from test_file import TestClass
+import sample_file
+from sample_file import TestClass
 
 def another_function():
     obj = TestClass("test")
@@ -914,18 +914,18 @@ def another_function():
         mock_tags_file2 = [
             MagicMock(
                 kind="import",
-                name="test_file",
+                name="sample_file",
                 line=2,
                 alias=None,
                 is_relative=False,
                 resolved_path=None,
                 symbols=[],
-                module="test_file",
+                module="sample_file",
             ),
             MagicMock(
                 kind="import_from",
                 name="TestClass",
-                module="test_file",
+                module="sample_file",
                 line=3,
                 alias=None,
                 is_relative=False,
@@ -973,6 +973,22 @@ def another_function():
 
         tree_sitter_parser_instance.get_tags.side_effect = get_tags_side_effect
 
+        # Mock get_tags_batch to return tags for both files
+        def get_tags_batch_side_effect(file_paths, use_cache=True):
+            result = {}
+            for fp in file_paths:
+                if fp == self.test_file_path:
+                    result[fp] = mock_tags_file1
+                elif fp == str(test_file2):
+                    result[fp] = mock_tags_file2
+                else:
+                    result[fp] = []
+            return result
+
+        tree_sitter_parser_instance.get_tags_batch = MagicMock(
+            side_effect=get_tags_batch_side_effect
+        )
+
         analyzer = ASTFileAnalyzer(
             tree_sitter_parser=tree_sitter_parser_instance,
             project_root=str(self.project_root),
@@ -988,8 +1004,10 @@ def another_function():
         # Check that the second file imports from the first
         second_result = results[str(test_file2)]
         import_modules = [imp.module for imp in second_result.imports]
-        assert "test_file" in import_modules
-        assert len(import_modules) == 2  # test_file (import), test_file (from import)
+        assert "sample_file" in import_modules
+        assert (
+            len(import_modules) == 2
+        )  # sample_file (import), sample_file (from import)
         assert len(second_result.defined_functions) == 1  # another_function
         assert len(second_result.defined_methods) == 0  # No methods in second file
         assert len(second_result.defined_classes) == 0  # No classes in second file
@@ -999,9 +1017,9 @@ def another_function():
         # Create a file that imports from the test file
         dependent_file = self.project_root / "dependent.py"
         dependent_file.write_text(
-            """# File that depends on test_file
-import test_file
-from test_file import TestClass, test_function
+            """# File that depends on sample_file
+import sample_file
+from sample_file import TestClass, test_function
 
 def use_test_file():
     result = test_function("hello", 5)
@@ -1077,18 +1095,18 @@ def use_test_file():
         mock_tags_dependent_file = [
             MagicMock(
                 kind="import",
-                name="test_file",
+                name="sample_file",
                 line=2,
                 alias=None,
                 is_relative=False,
                 resolved_path=None,
                 symbols=[],
-                module="test_file",
+                module="sample_file",
             ),
             MagicMock(
                 kind="import_from",
                 name="TestClass",
-                module="test_file",
+                module="sample_file",
                 line=3,
                 alias=None,
                 is_relative=False,

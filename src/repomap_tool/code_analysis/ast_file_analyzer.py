@@ -21,6 +21,7 @@ from .models import (
     FunctionCall,
     FileAnalysisResult,
     CrossFileRelationship,
+    CodeTag,
 )
 
 logger = get_logger(__name__)
@@ -66,13 +67,18 @@ class ASTFileAnalyzer:
         )
 
     def analyze_file(
-        self, file_path: str, analysis_type: AnalysisType = AnalysisType.ALL
+        self,
+        file_path: str,
+        analysis_type: AnalysisType = AnalysisType.ALL,
+        prefetched_tags: Optional[List[CodeTag]] = None,
     ) -> FileAnalysisResult:
         """Analyze a single file using tree-sitter.
 
         Args:
             file_path: Path to the file to analyze
             analysis_type: Type of analysis to perform
+            prefetched_tags: Optional list of CodeTag objects from batch query.
+                If provided, uses these tags instead of fetching individually.
 
         Returns:
             FileAnalysisResult with extracted information
@@ -86,6 +92,23 @@ class ASTFileAnalyzer:
         try:
             # Resolve file path
             full_path = self._resolve_file_path(file_path)
+
+            # Check if file should be excluded before attempting to parse
+            from .file_filter import FileFilter
+
+            if FileFilter.should_exclude_file(full_path):
+                logger.debug(f"Skipping excluded file: {full_path}")
+                return FileAnalysisResult(
+                    file_path=file_path,
+                    imports=[],
+                    function_calls=[],
+                    defined_functions=[],
+                    defined_classes=[],
+                    used_classes=[],
+                    used_variables=[],
+                    line_count=0,
+                    analysis_errors=[],
+                )
 
             # Check for syntax errors first
             analysis_errors = []
@@ -106,8 +129,12 @@ class ASTFileAnalyzer:
             except Exception as e:
                 analysis_errors.append(f"File read error: {str(e)}")
 
-            # Use TreeSitterParser directly for tag extraction
-            tags = self.tree_sitter_parser.get_tags(full_path, use_cache=True)
+            # Use prefetched tags if available, otherwise fetch them
+            if prefetched_tags is not None:
+                tags = prefetched_tags
+                logger.debug(f"Using prefetched tags for {full_path}")
+            else:
+                tags = self.tree_sitter_parser.get_tags(full_path, use_cache=True)
 
             # Extract information from tags
             imports = self._extract_imports_from_tags(tags, full_path)
@@ -143,7 +170,17 @@ class ASTFileAnalyzer:
             return result
 
         except Exception as e:
-            logger.error(f"Error analyzing file {file_path} with tree-sitter: {e}")
+            # Check if file should be excluded - if so, log at debug level
+            from .file_filter import FileFilter
+
+            if FileFilter.should_exclude_file(file_path):
+                logger.debug(
+                    f"Skipped excluded file during parsing: {file_path} (error: {e})"
+                )
+            else:
+                logger.warning(
+                    f"Error analyzing file {file_path} with tree-sitter: {e}"
+                )
             # Return empty result on error
             return FileAnalysisResult(
                 file_path=file_path,
@@ -293,9 +330,25 @@ class ASTFileAnalyzer:
         """
         results = {}
 
+        # Prefetch all tags in one batch query for better performance
+        try:
+            tags_dict = self.tree_sitter_parser.get_tags_batch(
+                file_paths, use_cache=True
+            )
+            logger.debug(
+                f"Prefetched tags for {len(tags_dict)} files using batch query"
+            )
+        except Exception as e:
+            logger.debug(f"Batch tag prefetch failed: {e}, will fetch individually")
+            tags_dict = {}
+
         for file_path in file_paths:
             try:
-                result = self.analyze_file(file_path, analysis_type)
+                # Use prefetched tags if available
+                prefetched_tags = tags_dict.get(file_path)
+                result = self.analyze_file(
+                    file_path, analysis_type, prefetched_tags=prefetched_tags
+                )
                 results[file_path] = result
             except Exception as e:
                 logger.error(f"Error analyzing file {file_path}: {e}")
@@ -327,8 +380,14 @@ class ASTFileAnalyzer:
                 return reverse_deps
 
             # Check each file to see if it imports the target module
+            from .file_filter import FileFilter
+
             for other_file in all_files:
                 if other_file == file_path:
+                    continue
+
+                # Skip excluded files
+                if FileFilter.should_exclude_file(other_file):
                     continue
 
                 try:

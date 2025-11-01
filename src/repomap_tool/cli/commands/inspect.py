@@ -111,50 +111,14 @@ def cycles(
         sys.exit(1)
 
 
-@inspect.command()
-@click.option(
-    "--config",
-    "-c",
-    type=click.Path(exists=True),
-    help="Configuration file path",
-)
-@click.option(
-    "--scope",
-    type=click.Choice(["file", "package"]),
-    default="file",
-    help="Analysis scope: 'file' for individual files, 'package' for directories",
-)
-@click.option(
-    "--limit",
-    "-l",
-    type=int,
-    default=10,
-    help="Maximum number of results to show",
-)
-@click.option(
-    "--min-identifiers",
-    type=int,
-    default=1,
-    help="Minimum number of identifiers to include",
-)
-@click.option(
-    "--output",
-    "-o",
-    type=click.Choice(["text", "json"]),
-    default="text",
-    help="Output format",
-)
-@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@inspect.group()
 @click.pass_context
-@click.argument(
-    "input_paths",
-    nargs=-1,
-    type=click.Path(
-        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
-    ),
-    required=False,
-)
-def density(
+def density(ctx: click.Context) -> None:
+    """Inspect code density - files or packages with most identifiers by type."""
+    pass
+
+
+def _run_density_analysis(
     ctx: click.Context,
     config: Optional[str],
     scope: str,
@@ -164,10 +128,7 @@ def density(
     verbose: bool,
     input_paths: tuple,
 ) -> None:
-    """Inspect code density - files/packages with most identifiers by type."""
-
-    console = get_console(ctx)
-
+    """Helper function to run density analysis for both files and packages subcommands."""
     try:
         # Resolve project path and load config
         # Use project_root from ctx.obj if available, otherwise resolve from current working directory
@@ -206,7 +167,7 @@ def density(
         output_config = OutputConfig(format=OutputFormat(output))
 
         output_manager.display_progress(
-            f"🎯 Analyzing code density: {resolved_project_path}"
+            f"🎯 Analyzing code density ({scope} level): {resolved_project_path}"
         )
 
         # Use DI container to get controller
@@ -240,6 +201,110 @@ def density(
         output_config_error = OutputConfig(format=OutputFormat.TEXT)
         output_manager_error.display_error(e, output_config_error)
         sys.exit(1)
+
+
+@density.command("files")
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+@click.option(
+    "--limit",
+    "-l",
+    type=int,
+    default=10,
+    help="Maximum number of results to show",
+)
+@click.option(
+    "--min-identifiers",
+    type=int,
+    default=1,
+    help="Minimum number of identifiers to include",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.pass_context
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
+def density_files(
+    ctx: click.Context,
+    config: Optional[str],
+    limit: int,
+    min_identifiers: int,
+    output: str,
+    verbose: bool,
+    input_paths: tuple,
+) -> None:
+    """Inspect code density at the file level - files with most identifiers by type."""
+    _run_density_analysis(
+        ctx, config, "file", limit, min_identifiers, output, verbose, input_paths
+    )
+
+
+@density.command("packages")
+@click.option(
+    "--config",
+    "-c",
+    type=click.Path(exists=True),
+    help="Configuration file path",
+)
+@click.option(
+    "--limit",
+    "-l",
+    type=int,
+    default=10,
+    help="Maximum number of results to show",
+)
+@click.option(
+    "--min-identifiers",
+    type=int,
+    default=1,
+    help="Minimum number of identifiers to include",
+)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Choice(["text", "json"]),
+    default="text",
+    help="Output format",
+)
+@click.option("--verbose", "-v", is_flag=True, help="Verbose output")
+@click.pass_context
+@click.argument(
+    "input_paths",
+    nargs=-1,
+    type=click.Path(
+        exists=True, file_okay=True, dir_okay=True, resolve_path=True, path_type=Path
+    ),
+    required=False,
+)
+def density_packages(
+    ctx: click.Context,
+    config: Optional[str],
+    limit: int,
+    min_identifiers: int,
+    output: str,
+    verbose: bool,
+    input_paths: tuple,
+) -> None:
+    """Inspect code density at the package level - packages with most identifiers by type."""
+    _run_density_analysis(
+        ctx, config, "package", limit, min_identifiers, output, verbose, input_paths
+    )
 
 
 @inspect.command()

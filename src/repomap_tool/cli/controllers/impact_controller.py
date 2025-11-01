@@ -122,7 +122,8 @@ class ImpactController(BaseController):
         resolved_paths = self.path_resolver.resolve_file_paths(changed_files)
 
         # Get all files in project for comprehensive analysis
-        all_files = self.path_resolver.get_all_project_files()
+        # Include test files for impact analysis - we want to know which test files are affected
+        all_files = self.path_resolver.get_all_project_files(exclude_tests=False)
         # Validate that all file paths are absolute (architectural requirement)
         all_files = self.path_resolver.resolve_file_paths(all_files)
 

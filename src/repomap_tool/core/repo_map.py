@@ -596,18 +596,40 @@ class RepoMapService:
                 self.tree_sitter_parser, exclude_tests=True
             )
 
-            all_tags = []
-            files_with_tags = 0
-            for file_path in project_files:
-                try:
-                    # Use tree_sitter_parser.get_tags() which handles cache fallback automatically
-                    tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
+            # Use batch query for better performance - single SQL query instead of N queries
+            try:
+                tags_dict = self.tree_sitter_parser.get_tags_batch(
+                    project_files, use_cache=True
+                )
+                all_tags = []
+                files_with_tags = 0
+                for file_path, tags in tags_dict.items():
                     if tags:
                         all_tags.extend(tags)
                         files_with_tags += 1
                         self.logger.debug(f"Retrieved {len(tags)} tags for {file_path}")
-                except Exception as e:
-                    self.logger.warning(f"Failed to retrieve tags for {file_path}: {e}")
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to retrieve tags in batch: {e}, falling back to individual queries"
+                )
+                # Fallback to individual queries if batch fails
+                all_tags = []
+                files_with_tags = 0
+                for file_path in project_files:
+                    try:
+                        tags = self.tree_sitter_parser.get_tags(
+                            file_path, use_cache=True
+                        )
+                        if tags:
+                            all_tags.extend(tags)
+                            files_with_tags += 1
+                            self.logger.debug(
+                                f"Retrieved {len(tags)} tags for {file_path}"
+                            )
+                    except Exception as e2:
+                        self.logger.warning(
+                            f"Failed to retrieve tags for {file_path}: {e2}"
+                        )
 
             self.logger.info(
                 f"Retrieved tags from {files_with_tags} files out of {len(project_files)} total files"

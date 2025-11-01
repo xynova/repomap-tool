@@ -152,7 +152,7 @@ class TreeSitterParser:
             return tags
 
         except Exception as e:
-            logger.error(f"Error parsing file {file_path} with tree-sitter: {e}")
+            logger.warning(f"Error parsing file {file_path} with tree-sitter: {e}")
             return []
 
     def get_tags(self, file_path: str, use_cache: bool = True) -> List[CodeTag]:
@@ -193,6 +193,50 @@ class TreeSitterParser:
                 logger.debug(f"Failed to cache tags for {file_path}: {e}")
 
         return tags
+
+    def get_tags_batch(
+        self, file_paths: List[str], use_cache: bool = True
+    ) -> Dict[str, List[CodeTag]]:
+        """Get tags for multiple files in a single batch query.
+
+        Args:
+            file_paths: List of file paths to get tags for
+            use_cache: Whether to use cache if available
+
+        Returns:
+            Dictionary mapping file_path -> List[CodeTag]. Files with cache misses
+            or parsing errors will have empty lists.
+        """
+        if not file_paths:
+            return {}
+
+        if use_cache and self.tag_cache:
+            try:
+                # Try batch cache lookup first
+                cached_tags_dict: Dict[str, List[CodeTag]] = (
+                    self.tag_cache.get_tags_batch(file_paths)
+                )
+                if cached_tags_dict:
+                    logger.debug(
+                        f"Using batch cached tags for {len(cached_tags_dict)} files"
+                    )
+                    return cached_tags_dict
+            except Exception as e:
+                logger.debug(
+                    f"Batch cache error for {len(file_paths)} files: {e}, falling back to individual parsing"
+                )
+
+        # Fallback: parse files individually if batch cache miss
+        tags_dict: Dict[str, List[CodeTag]] = {}
+        for file_path in file_paths:
+            try:
+                tags = self.get_tags(file_path, use_cache=use_cache)
+                tags_dict[file_path] = tags if tags else []
+            except Exception as e:
+                logger.debug(f"Error parsing file {file_path}: {e}")
+                tags_dict[file_path] = []
+
+        return tags_dict
 
     def parse_file_to_sexp(self, file_path: str) -> str:
         """Parses a file and returns its S-expression."""

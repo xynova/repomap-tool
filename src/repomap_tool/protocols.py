@@ -321,6 +321,16 @@ class TagCacheProtocol(Protocol):
         """
         ...
 
+    def get_tags_batch(self, file_paths: List[str]) -> Dict[str, List[CodeTag]]:
+        """Retrieve cached tags for multiple files in a batch query.
+        Args:
+            file_paths: List of absolute file paths.
+        Returns:
+            Dictionary mapping file_path -> List[CodeTag]. Files with invalid cache
+            or not in cache will have empty lists.
+        """
+        ...
+
     def set_tags(self, file_path: str, tags: List[CodeTag]) -> None:
         """Cache tags for a file.
         Args:

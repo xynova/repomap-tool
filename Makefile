@@ -76,7 +76,7 @@ test-unit: install
 
 # Run only integration tests
 test-integration: install
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/ -v -n 2 --max-worker-restart=0 --dist=worksteal
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/ -v -n 4 --max-worker-restart=0 --dist=worksteal
 
 # Run performance tests
 performance: install
@@ -241,6 +241,6 @@ docker-run: docker-build
 	docker run -it --rm -v "$(PWD):/project" $(DOCKER_IMAGE_NAME):$(DOCKER_TAG) bash
 
 # Complete CI workflow (local + Docker)
-ci-all: ci docker-test
+ci-all: format ci docker-test
 	@echo "✅ Complete CI workflow completed successfully"
 	@echo "🎯 All tests passed in both local and Docker environments"

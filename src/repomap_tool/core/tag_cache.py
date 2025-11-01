@@ -13,7 +13,7 @@ import sqlite3
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 
 from ..core.logging_service import get_logger
 from ..code_analysis.models import CodeTag
@@ -183,6 +183,76 @@ class TreeSitterTagCache:
 
         return tags
 
+    def get_tags_batch(self, file_paths: List[str]) -> Dict[str, List[CodeTag]]:
+        """Get cached tags for multiple files in a single SQL query.
+
+        Args:
+            file_paths: List of file paths to get tags for
+
+        Returns:
+            Dictionary mapping file_path -> List[CodeTag]. Files with invalid cache
+            or not in cache will have empty lists.
+        """
+        if self._cache_disabled or not file_paths:
+            return {file_path: [] for file_path in file_paths}
+
+        # Batch validate cache for all files first
+        valid_files = self._validate_cache_batch(file_paths)
+
+        if not valid_files:
+            # No valid cache entries, return empty lists for all files
+            return {file_path: [] for file_path in file_paths}
+
+        conn = self._get_db_connection()
+        cursor = conn.cursor()
+
+        # Batch query for tags - only query valid files
+        valid_files_list = list(valid_files)
+        placeholders = ",".join("?" * len(valid_files_list))
+        cursor.execute(
+            f"""
+            SELECT file_path, name, kind, file, line, column, end_line, end_column, rel_fname
+            FROM tags
+            WHERE file_path IN ({placeholders})
+            ORDER BY file_path, line
+        """,
+            tuple(valid_files_list),
+        )
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Group tags by file_path
+        tags_by_file: Dict[str, List[CodeTag]] = {
+            file_path: [] for file_path in file_paths
+        }
+
+        for row in rows:
+            (
+                file_path,
+                name,
+                kind,
+                file,
+                line,
+                column,
+                end_line,
+                end_column,
+                rel_fname,
+            ) = row
+            tag = CodeTag(
+                name=name,
+                kind=kind,
+                file=file,
+                line=line,
+                column=column,
+                end_line=end_line,
+                end_column=end_column,
+                rel_fname=rel_fname,
+            )
+            tags_by_file[file_path].append(tag)
+
+        return tags_by_file
+
     def set_tags(self, file_path: str, tags: List[CodeTag]) -> None:
         """Cache tags for a file - accepts CodeTag objects
 
@@ -313,6 +383,72 @@ class TreeSitterTagCache:
         # Check if content changed
         current_hash = self._compute_file_hash(file_path)
         return bool(current_hash == cached_hash)
+
+    def _validate_cache_batch(self, file_paths: List[str]) -> Set[str]:
+        """Batch validate cache for multiple files.
+
+        Args:
+            file_paths: List of file paths to validate
+
+        Returns:
+            Set of file paths that have valid cache entries
+        """
+        if self._cache_disabled or not file_paths:
+            return set()
+
+        conn = self._get_db_connection()
+        cursor = conn.cursor()
+
+        # Batch query for cache metadata
+        placeholders = ",".join("?" * len(file_paths))
+        cursor.execute(
+            f"""
+            SELECT file_path, file_hash, mtime FROM file_cache
+            WHERE file_path IN ({placeholders})
+        """,
+            tuple(file_paths),
+        )
+
+        cached_files = cursor.fetchall()
+        conn.close()
+
+        # Validate each cached file
+        valid_files = set()
+        for file_path in file_paths:
+            # Check if file exists
+            file_path_obj = Path(file_path)
+            if not file_path_obj.exists():
+                continue
+
+            # Find cached entry for this file
+            cached_entry = None
+            for cached_path, cached_hash, cached_mtime in cached_files:
+                if cached_path == file_path:
+                    cached_entry = (cached_hash, cached_mtime)
+                    break
+
+            if not cached_entry:
+                continue
+
+            cached_hash, cached_mtime = cached_entry
+            if cached_hash is None or cached_mtime is None:
+                continue
+
+            # Check file modification time
+            try:
+                current_mtime = file_path_obj.stat().st_mtime
+                if current_mtime > cached_mtime:
+                    continue
+
+                # Check file content hash
+                current_hash = self._compute_file_hash(file_path)
+                if current_hash == cached_hash:
+                    valid_files.add(file_path)
+            except (OSError, IOError):
+                # File access error, skip
+                continue
+
+        return valid_files
 
     def _compute_file_hash(self, file_path: str) -> str:
         """Compute SHA256 hash of file content

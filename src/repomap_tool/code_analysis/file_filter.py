@@ -66,6 +66,7 @@ class FileFilter:
         "*.test.py",
         "__test__",
         "test_",
+        "grammar.js",  # Tree-sitter grammar definition files, not actual code
     }
 
     # Test file patterns (more specific than exclude patterns)
@@ -128,9 +129,29 @@ class FileFilter:
         """
         file_path_str = str(file_path)
 
-        # Check exclude patterns
-        if any(pattern in file_path_str for pattern in cls.EXCLUDE_PATTERNS):
+        # Exclude tree-sitter grammar definition files
+        if file_path_str.endswith("grammar.js") or "/grammar.js" in file_path_str:
             return True
+
+        # Check exclude patterns - handle special cases
+        path_obj = Path(file_path_str)
+        filename = path_obj.name
+
+        # Special handling for "test_" pattern - only match at start of filename
+        if "test_" in file_path_str:
+            # Match if filename starts with "test_" (e.g., test_file.py, test_utils.py)
+            if filename.startswith("test_"):
+                return True
+            # Also match if pattern appears as directory name
+            if "/test_" in file_path_str or "\\test_" in file_path_str:
+                return True
+
+        # Check other exclude patterns
+        for pattern in cls.EXCLUDE_PATTERNS:
+            if pattern == "test_":
+                continue  # Already handled above
+            if pattern in file_path_str:
+                return True
 
         # Check if it's a test file
         if cls.is_test_file(file_path_str):

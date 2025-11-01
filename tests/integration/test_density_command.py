@@ -107,9 +107,7 @@ def test_density_command_file_scope_text_output(
             },
         )
 
-        result = runner.invoke(
-            cli, ["inspect", "density", ".", "--scope", "file", "-o", "text"]
-        )
+        result = runner.invoke(cli, ["inspect", "density", "files", ".", "-o", "text"])
 
         assert result.exit_code == 0
         # The output manager should have been called to display the results
@@ -148,7 +146,7 @@ def test_density_command_package_scope_text_output(
         )
 
         result = runner.invoke(
-            cli, ["inspect", "density", ".", "--scope", "package", "-o", "text"]
+            cli, ["inspect", "density", "packages", ".", "-o", "text"]
         )
 
         assert result.exit_code == 0
@@ -183,9 +181,7 @@ def test_density_command_json_output(
             analysis_summary={},
         )
 
-        result = runner.invoke(
-            cli, ["inspect", "density", ".", "--scope", "file", "-o", "json"]
-        )
+        result = runner.invoke(cli, ["inspect", "density", "files", ".", "-o", "json"])
 
         assert result.exit_code == 0, f"CLI command failed with output: {result.output}"
 
@@ -210,7 +206,7 @@ def test_density_command_error_handling(runner):
     with patch("repomap_tool.core.container.create_container") as mock_create_container:
         mock_create_container.side_effect = Exception("DI Container Error")
 
-        result = runner.invoke(cli, ["inspect", "density", ".", "-o", "text"])
+        result = runner.invoke(cli, ["inspect", "density", "files", ".", "-o", "text"])
 
         assert result.exit_code == 1
         # The error message format may vary, just check that it contains the error
@@ -221,9 +217,16 @@ def test_density_command_error_handling(runner):
 
 
 def test_density_command_missing_project_path(runner):
+    # Running "inspect density" without a subcommand should show an error
+    # because it's now a command group requiring a subcommand
     result = runner.invoke(cli, ["inspect", "density"])
 
+    # Click groups require a subcommand, so missing subcommand results in exit_code 2
+    assert result.exit_code == 2
+    # Should show help or usage information for the group
     assert (
-        result.exit_code == 0
-    )  # Default project path is ".", so it should not exit with error
-    assert "CODE DENSITY ANALYSIS" in result.output
+        "files" in result.output
+        or "packages" in result.output
+        or "Usage" in result.output
+        or "Missing command" in result.output
+    )
