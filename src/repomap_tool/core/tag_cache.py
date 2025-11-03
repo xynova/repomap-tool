@@ -209,7 +209,9 @@ class TreeSitterTagCache:
         # Batch query for tags - only query valid files
         valid_files_list = list(valid_files)
         placeholders = ",".join("?" * len(valid_files_list))
-        cursor.execute(
+        # f-string only generates placeholder count, not user data
+        # User input safely passed via tuple() parameter (parameterized query)
+        cursor.execute(  # nosec B608
             f"""
             SELECT file_path, name, kind, file, line, column, end_line, end_column, rel_fname
             FROM tags
@@ -401,7 +403,9 @@ class TreeSitterTagCache:
 
         # Batch query for cache metadata
         placeholders = ",".join("?" * len(file_paths))
-        cursor.execute(
+        # f-string only generates placeholder count, not user data
+        # User input safely passed via tuple() parameter (parameterized query)
+        cursor.execute(  # nosec B608
             f"""
             SELECT file_path, file_hash, mtime FROM file_cache
             WHERE file_path IN ({placeholders})

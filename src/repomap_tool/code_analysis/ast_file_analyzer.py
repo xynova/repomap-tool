@@ -157,9 +157,11 @@ class ASTFileAnalyzer:
                 defined_methods=defined_methods,  # Added defined_methods to result
             )
 
-            # Cache the result
+            # Cache the result with size limit to prevent unbounded growth
             if self.cache_enabled:
                 self.analysis_cache[cache_key] = result
+                # Limit cache size to prevent memory issues during long-running operations
+                self.limit_cache_size(max_size=1000)
 
             logger.debug(
                 f"Tree-sitter analysis complete for {full_path}: "
@@ -350,6 +352,8 @@ class ASTFileAnalyzer:
                     file_path, analysis_type, prefetched_tags=prefetched_tags
                 )
                 results[file_path] = result
+                # Clear prefetched_tags reference to allow GC
+                prefetched_tags = None
             except Exception as e:
                 logger.error(f"Error analyzing file {file_path}: {e}")
                 # Add empty result for failed files
@@ -364,6 +368,9 @@ class ASTFileAnalyzer:
                     line_count=0,
                     analysis_errors=[str(e)],
                 )
+
+        # Clear tags_dict to free memory after batch processing
+        tags_dict.clear()
 
         return results
 
@@ -449,8 +456,23 @@ class ASTFileAnalyzer:
 
     def clear_cache(self) -> None:
         """Clear the analysis cache."""
+        cache_size_before = len(self.analysis_cache)
         self.analysis_cache.clear()
-        logger.debug("Analysis cache cleared")
+        logger.debug(f"Analysis cache cleared ({cache_size_before} entries removed)")
+
+    def limit_cache_size(self, max_size: int = 1000) -> None:
+        """Limit cache size by removing oldest entries when limit is exceeded.
+
+        Args:
+            max_size: Maximum number of entries to keep in cache
+        """
+        if len(self.analysis_cache) > max_size:
+            # Remove oldest entries (dict order is insertion order in Python 3.7+)
+            excess = len(self.analysis_cache) - max_size
+            keys_to_remove = list(self.analysis_cache.keys())[:excess]
+            for key in keys_to_remove:
+                del self.analysis_cache[key]
+            logger.debug(f"Cache size limited: removed {excess} oldest entries")
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""

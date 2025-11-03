@@ -11,7 +11,9 @@ import signal
 import sys
 import atexit
 import time
+import warnings
 import pytest
+import gc
 from pathlib import Path
 from typing import Dict, List, Any, Set, Generator, Optional, Union
 from repomap_tool.models import (
@@ -248,6 +250,15 @@ def signal_handler(signum: int, frame: Any) -> None:
 # Set up worker-isolated logging first
 setup_worker_isolated_logging()
 
+# Suppress multiprocessing resource tracker warnings for pytest-xdist workers
+# This warning occurs when pytest-xdist forks workers and they use ThreadPoolExecutor
+# The semaphores are cleaned up, but the warning appears before cleanup completes
+# warnings is already imported at the top of the file
+
+warnings.filterwarnings(
+    "ignore", category=UserWarning, module="multiprocessing.resource_tracker"
+)
+
 # Register signal handlers for graceful termination
 signal.signal(signal.SIGINT, signal_handler)
 signal.signal(signal.SIGTERM, signal_handler)
@@ -346,7 +357,7 @@ def get_tree_sitter_parser_function_fixture(
     from repomap_tool.code_analysis.query_loader import (
         FileQueryLoader,
     )  # Use real query loader
-    from repomap_tool.core.tag_cache import TreeSitterTagCache  # Use real tag cache
+    from repomap_tool.core.tag_cache import TreeSitterTagCache  # Use real cache
 
     # Setup a temporary directory for the cache
     import tempfile
@@ -446,6 +457,42 @@ def session_container(session_config: RepoMapConfig) -> Any:
     # container.tag_cache.override(None)
 
     return container
+
+
+@pytest.fixture(scope="function", autouse=True)
+def cleanup_memory_after_test() -> Generator[None, None, None]:
+    """Automatically cleanup memory caches and force GC after each test."""
+    # Profile memory usage during test execution
+    # Check if we're in profiling mode (single worker or explicit profile flag)
+    import os
+    from tests.utils.memory_profiler import memory_profile
+
+    # Always show memory profile if explicit profile flag is set
+    # Check environment variable first (most reliable)
+    is_profiling = os.environ.get("REPOMAP_MEMORY_PROFILE", "").lower() == "true"
+
+    # Also show if running in main process (not a worker) - means single worker mode
+    if not is_profiling:
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+        is_profiling = worker_id is None  # Main process, not a worker
+
+    # Debug: Print profiling status (only in profiling mode to avoid spam)
+    if is_profiling:
+        import sys
+
+        print(
+            f"\n[DEBUG] Memory profiling enabled (worker: {os.environ.get('PYTEST_XDIST_WORKER', 'main')})",
+            file=sys.stderr,
+        )
+
+    with memory_profile(threshold_mb=5.0, always_show=is_profiling):
+        yield
+        # After test completion:
+        try:
+            # Force garbage collection to release memory
+            gc.collect()
+        except Exception:
+            pass  # Ignore GC errors
 
 
 @pytest.fixture(scope="session")
