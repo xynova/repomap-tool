@@ -99,15 +99,15 @@
 ; Type parameters
 (type_parameters
   (type_parameter
-    name: (identifier) @type_param.name
-    extends: (type_bound) @type_param.bound
+    name: (type_identifier) @type_param.name
+    (type_bound) @type_param.bound
   )
-) @type_param.definition
+)
 
 ; Type arguments
 (type_arguments
-  (type) @type_arg.type
-) @type_arg.usage
+  (_type) @type_arg.type
+)
 
 ; Generic types
 (generic_type
@@ -117,7 +117,7 @@
 
 ; Array types
 (array_type
-  element: (type) @array.element
+  element: (_type) @array.element
 ) @array.type
 
 ; Primitive types
@@ -139,44 +139,44 @@
 ; Method references
 (method_reference
   object: (identifier) @method_ref.object
-  method: (identifier) @method_ref.method
-) @method_ref.expression
+  name: (identifier) @method_ref.method
+)
 
 ; Try-catch-finally blocks
 (try_statement
   body: (block) @try.body
-  catch_clause: (catch_clause) @try.catch
-  finally_clause: (finally_clause) @try.finally
-) @try.statement
+  (catch_clause) @try.catch
+  (finally_clause) @try.finally
+)
 
 ; Throw statements
 (throw_statement
-  expression: (expression) @throw.expression
-) @throw.statement
+  (expression) @throw.expression
+)
 
 ; Assert statements
 (assert_statement
-  condition: (expression) @assert.condition
-  detail: (expression) @assert.detail
-) @assert.statement
+  (expression) @assert.condition
+  (expression) @assert.detail
+)
 
 ; Synchronized statements
 (synchronized_statement
-  expression: (expression) @synchronized.expression
+  (expression) @synchronized.expression
   body: (block) @synchronized.body
-) @synchronized.statement
+)
 
 ; Switch expressions
 (switch_expression
-  condition: (expression) @switch.condition
-  case: (switch_rule) @switch.case
-) @switch.expression
+  condition: (parenthesized_expression) @switch.condition
+  body: (switch_block) @switch.body
+)
 
 ; Pattern matching (Java 17+)
 (instanceof_expression
   left: (expression) @instanceof.expression
-  right: (type) @instanceof.type
-) @instanceof.expression
+  right: (_type) @instanceof.type
+)
 
 ; Record declarations (Java 14+)
 (record_declaration
@@ -184,20 +184,15 @@
   type_parameters: (type_parameters) @record.type_params
 ) @record.declaration
 
-; Sealed classes (Java 17+)
+; Sealed classes (Java 17+) - modifiers are children, not fields
 (class_declaration
-  modifiers: (modifiers
-    (modifier) @class.sealed
-  )
   name: (identifier) @class.name
-) @class.sealed
+)
 
-; Text blocks (Java 15+)
-(text_block) @text.block
+; Text blocks (Java 15+) - handled by string literal patterns
 
 ; Var declarations (Java 10+)
 (local_variable_declaration
-  type: (var) @var.type
   declarator: (variable_declarator
     name: (identifier) @var.name
   )
@@ -205,51 +200,40 @@
 
 ; Enhanced for loops
 (enhanced_for_statement
-  variable: (identifier) @for.variable
-  iterable: (expression) @for.iterable
+  (identifier) @for.variable
   body: (block) @for.body
-) @for.enhanced
+)
 
 ; Traditional for loops
 (for_statement
-  init: (expression) @for.init
-  condition: (expression) @for.condition
-  update: (expression) @for.update
   body: (block) @for.body
 ) @for.traditional
 
 ; While loops
 (while_statement
-  condition: (expression) @while.condition
   body: (block) @while.body
 ) @while.statement
 
 ; Do-while loops
 (do_statement
   body: (block) @do.body
-  condition: (expression) @do.condition
 ) @do.statement
 
 ; If statements
 (if_statement
-  condition: (expression) @if.condition
   consequence: (block) @if.consequence
-  alternative: (else_clause) @if.alternative
 ) @if.statement
 
 ; Return statements
 (return_statement
-  expression: (expression) @return.expression
 ) @return.statement
 
 ; Break statements
 (break_statement
-  label: (identifier) @break.label
 ) @break.statement
 
 ; Continue statements
 (continue_statement
-  label: (identifier) @continue.label
 ) @continue.statement
 
 ; Assignment expressions
@@ -261,27 +245,24 @@
 ; Binary expressions
 (binary_expression
   left: (expression) @binary.left
-  operator: (binary_operator) @binary.operator
   right: (expression) @binary.right
 ) @binary.expression
 
 ; Unary expressions
 (unary_expression
-  operator: (unary_operator) @unary.operator
   operand: (expression) @unary.operand
 ) @unary.expression
 
 ; Ternary expressions
 (ternary_expression
-  condition: (expression) @ternary.condition
-  consequence: (expression) @ternary.consequence
-  alternative: (expression) @ternary.alternative
-) @ternary.expression
+  (expression) @ternary.consequence
+  (expression) @ternary.alternative
+)
 
 ; Parenthesized expressions
 (parenthesized_expression
-  expression: (expression) @paren.expression
-) @paren.expression
+  (expression) @paren.expression
+)
 
 ; Array access
 (array_access
@@ -321,8 +302,8 @@
 
 ; Class literals
 (class_literal
-  type: (type) @class.type
-) @class.literal
+  type: (_type) @class.type
+)
 
 ; ✨ NEW: Comments (single-line and block)
 (comment) @comment

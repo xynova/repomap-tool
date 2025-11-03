@@ -2,7 +2,7 @@
 
 ; Class Definitions
 (class_declaration
-  name: (identifier) @name.definition.class
+  name: (type_identifier) @name.definition.class
 ) @definition.class
 
 ; Function Definitions
@@ -23,17 +23,17 @@
 
 (pair
   key: (property_identifier) @name.definition.method
-  value: (function)
+  value: (function_expression)
 ) @definition.method
 
 ; Interface Definitions
 (interface_declaration
-  name: (identifier) @name.definition.interface
+  name: (type_identifier) @name.definition.interface
 ) @definition.interface
 
 ; Type Alias Definitions
 (type_alias_declaration
-  name: (identifier) @name.definition.type_alias
+  name: (type_identifier) @name.definition.type_alias
 ) @definition.type_alias
 
 ; Enum Definitions
@@ -42,29 +42,7 @@
 ) @definition.enum
 
 ; Imports
-(import_statement
-  (import_clause
-    (named_imports
-      (import_specifier
-        name: (identifier) @name.reference.import
-      )
-    )
-  )
-) @reference.import
-
-(import_statement
-  (import_clause
-    (namespace_import
-      name: (identifier) @name.reference.import
-    )
-  )
-) @reference.import
-
-(import_statement
-  (import_clause
-    (identifier) @name.reference.import
-  )
-) @reference.import
+(import_statement) @reference.import
 
 ; Exports
 (export_statement
@@ -75,7 +53,7 @@
 
 (export_statement
   declaration: (class_declaration
-    name: (identifier) @name.definition.export
+    name: (type_identifier) @name.definition.export
   )
 ) @definition.export
 
@@ -89,13 +67,13 @@
 
 (export_statement
   declaration: (interface_declaration
-    name: (identifier) @name.definition.export
+    name: (type_identifier) @name.definition.export
   )
 ) @definition.export
 
 (export_statement
   declaration: (type_alias_declaration
-    name: (identifier) @name.definition.export
+    name: (type_identifier) @name.definition.export
   )
 ) @definition.export
 
@@ -105,13 +83,14 @@
   )
 ) @definition.export
 
+; Named exports: export { a, b }
 (export_statement
-  (named_exports
+  (export_clause
     (export_specifier
       name: (identifier) @name.reference.export
     )
   )
-) @reference.export
+)
 
 ; Variable Declarations
 (variable_declarator

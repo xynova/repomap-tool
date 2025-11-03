@@ -23,33 +23,11 @@
 
 (pair
   key: (property_identifier) @name.definition.method
-  value: (function)
+  value: (function_expression)
 ) @definition.method
 
 ; Imports
-(import_statement
-  (import_clause
-    (named_imports
-      (import_specifier
-        name: (identifier) @name.reference.import
-      )
-    )
-  )
-) @reference.import
-
-(import_statement
-  (import_clause
-    (namespace_import
-      name: (identifier) @name.reference.import
-    )
-  )
-) @reference.import
-
-(import_statement
-  (import_clause
-    (identifier) @name.reference.import
-  )
-) @reference.import
+(import_statement) @reference.import
 
 ; Exports
 (export_statement
@@ -72,13 +50,14 @@
   )
 ) @definition.export
 
+; Named exports: export { a, b }
 (export_statement
-  (named_exports
+  (export_clause
     (export_specifier
       name: (identifier) @name.reference.export
     )
   )
-) @reference.export
+)
 
 ; Variable Declarations
 (variable_declarator

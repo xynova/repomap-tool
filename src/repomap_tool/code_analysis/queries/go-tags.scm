@@ -2,38 +2,38 @@
 ; Captures imports, package declarations, function definitions, struct definitions, and calls
 
 ; Package declarations
-(package_declaration
+(package_clause
   (package_identifier) @package.name
-) @package.declaration
+)
 
 ; Import declarations
 (import_declaration
   (import_spec_list
     (import_spec
-      path: (string_literal) @import.path
+      path: [(interpreted_string_literal) (raw_string_literal)] @import.path
       name: (package_identifier) @import.alias
     )
   )
-) @import.statement
+)
 
 ; Single import
 (import_declaration
   (import_spec
-    path: (string_literal) @import.path
+    path: [(interpreted_string_literal) (raw_string_literal)] @import.path
   )
-) @import.single
+)
 
 ; Grouped imports
 (import_declaration
   "("
   (import_spec_list
     (import_spec
-      path: (string_literal) @import.path
+      path: [(interpreted_string_literal) (raw_string_literal)] @import.path
       name: (package_identifier) @import.alias
     )
   )
   ")"
-) @import.grouped
+)
 
 ; Function declarations
 (function_declaration
@@ -52,16 +52,15 @@
 (func_literal
   parameters: (parameter_list) @func.params
   body: (block) @func.body
-) @func.literal
+)
 
 ; Variable declarations
 (var_declaration
   (var_spec
     name: (identifier) @var.name
-    type: (type_identifier) @var.type
-    value: (expression) @var.value
+    value: (_expression) @var.value
   )
-) @var.declaration
+)
 
 ; Short variable declarations
 (short_var_declaration
@@ -73,46 +72,48 @@
 (type_declaration
   (type_spec
     name: (type_identifier) @type.name
-    type: (type) @type.definition
   )
-) @type.declaration
+)
 
-; Struct declarations
-(struct_declaration
-  name: (type_identifier) @struct.name
-  fields: (field_declaration_list) @struct.fields
-) @struct.declaration
+; Struct declarations (via type_declaration)
+(type_declaration
+  (type_spec
+    name: (type_identifier) @struct.name
+    (struct_type
+      (field_declaration_list) @struct.fields
+    )
+  )
+)
 
-; Interface declarations
-(interface_declaration
-  name: (type_identifier) @interface.name
-  methods: (method_spec_list) @interface.methods
-) @interface.declaration
+; Interface declarations (via type_declaration)
+(type_declaration
+  (type_spec
+    name: (type_identifier) @interface.name
+  )
+)
 
 ; Field declarations
 (field_declaration
   name: (field_identifier) @field.name
-  type: (type) @field.type
   tag: (raw_string_literal) @field.tag
-) @field.declaration
+)
 
-; Method specifications
-(method_spec
-  name: (field_identifier) @method_spec.name
-  parameters: (parameter_list) @method_spec.params
-  result: (type) @method_spec.result
-) @method_spec.definition
+; Method specifications (disabled - causes query compilation errors)
+; (method_spec
+;   name: (field_identifier) @method_spec.name
+;   parameters: (parameter_list) @method_spec.params
+; )
 
 ; Function calls
 (call_expression
   function: (identifier) @call.function
   arguments: (argument_list) @call.args
-) @call.expression
+)
 
 ; Method calls
 (call_expression
   function: (selector_expression
-    operand: (expression) @call.object
+    operand: (_expression) @call.object
     field: (field_identifier) @call.method
   )
   arguments: (argument_list) @call.args
@@ -120,31 +121,26 @@
 
 ; Built-in function calls
 (call_expression
-  function: (builtin) @call.builtin
+  function: (_) @call.builtin
   arguments: (argument_list) @call.args
-) @call.builtin
+)
 
 ; Type assertions
-(type_assertion
-  expression: (expression) @assert.expression
-  type: (type) @assert.type
+(type_assertion_expression
+  operand: (_expression) @assert.expression
 ) @assert.type
 
 ; Type switches
 (type_switch_statement
-  expression: (expression) @switch.expression
-  cases: (type_case_list) @switch.cases
 ) @switch.type
 
 ; Type cases
 (type_case
-  type: (type) @case.type
   body: (block) @case.body
 ) @case.type
 
 ; Regular cases
 (expression_case
-  expression: (expression) @case.expression
   body: (block) @case.body
 ) @case.expression
 
@@ -155,7 +151,6 @@
 
 ; Select statements
 (select_statement
-  cases: (communication_case_list) @select.cases
 ) @select.statement
 
 ; Communication cases
@@ -171,57 +166,52 @@
 
 ; Send statements
 (send_statement
-  channel: (expression) @send.channel
-  value: (expression) @send.value
+  channel: (_expression) @send.channel
+  value: (_expression) @send.value
 ) @send.statement
 
 ; Receive statements
 (receive_statement
-  channel: (expression) @receive.channel
-  left: (expression) @receive.left
+  channel: (_expression) @receive.channel
+  left: (_expression) @receive.left
 ) @receive.statement
 
 ; Go statements
 (go_statement
-  expression: (expression) @go.expression
 ) @go.statement
 
 ; Defer statements
 (defer_statement
-  expression: (expression) @defer.expression
 ) @defer.statement
 
 ; If statements
 (if_statement
-  condition: (expression) @if.condition
+  condition: (_expression) @if.condition
   consequence: (block) @if.consequence
   alternative: (else_clause) @if.alternative
 ) @if.statement
 
 ; For statements
 (for_statement
-  init: (expression) @for.init
-  condition: (expression) @for.condition
-  update: (expression) @for.update
+  init: (_expression) @for.init
+  condition: (_expression) @for.condition
+  update: (_expression) @for.update
   body: (block) @for.body
 ) @for.statement
 
 ; For range statements
 (for_statement
   left: (expression_list) @for.left
-  right: (expression) @for.right
+  right: (_expression) @for.right
   body: (block) @for.body
 ) @for.range
 
 ; Switch statements
 (switch_statement
-  expression: (expression) @switch.expression
-  cases: (expression_case_list) @switch.cases
 ) @switch.statement
 
 ; Return statements
 (return_statement
-  expression: (expression) @return.expression
 ) @return.statement
 
 ; Break statements
@@ -247,69 +237,67 @@
 
 ; Assignment expressions
 (assignment_expression
-  left: (expression) @assignment.left
-  right: (expression) @assignment.right
+  left: (_expression) @assignment.left
+  right: (_expression) @assignment.right
 ) @assignment.expression
 
 ; Binary expressions
 (binary_expression
-  left: (expression) @binary.left
+  left: (_expression) @binary.left
   operator: (binary_operator) @binary.operator
-  right: (expression) @binary.right
+  right: (_expression) @binary.right
 ) @binary.expression
 
 ; Unary expressions
 (unary_expression
   operator: (unary_operator) @unary.operator
-  operand: (expression) @unary.operand
+  operand: (_expression) @unary.operand
 ) @unary.expression
 
 ; Ternary expressions
 (ternary_expression
-  condition: (expression) @ternary.condition
-  consequence: (expression) @ternary.consequence
-  alternative: (expression) @ternary.alternative
+  condition: (_expression) @ternary.condition
+  consequence: (_expression) @ternary.consequence
+  alternative: (_expression) @ternary.alternative
 ) @ternary.expression
 
 ; Parenthesized expressions
 (parenthesized_expression
-  expression: (expression) @paren.expression
 ) @paren.expression
 
 ; Index expressions
 (index_expression
-  operand: (expression) @index.operand
-  index: (expression) @index.index
+  operand: (_expression) @index.operand
+  index: (_expression) @index.index
 ) @index.expression
 
 ; Slice expressions
 (slice_expression
-  operand: (expression) @slice.operand
-  start: (expression) @slice.start
-  end: (expression) @slice.end
+  operand: (_expression) @slice.operand
+  start: (_expression) @slice.start
+  end: (_expression) @slice.end
 ) @slice.expression
 
 ; Selector expressions
 (selector_expression
-  operand: (expression) @selector.operand
+  operand: (_expression) @selector.operand
   field: (field_identifier) @selector.field
 ) @selector.expression
 
 ; Composite literals
 (composite_literal
-  type: (type) @composite.type
   elements: (element_list) @composite.elements
-) @composite.literal
+)
 
 ; Keyed elements
 (keyed_element
-  key: (expression) @element.key
-  value: (expression) @element.value
+  key: (_expression) @element.key
+  value: (_expression) @element.value
 ) @element.keyed
 
 ; Unkeyed elements
 (unkeyed_element
-  value: (expression) @element.value
+  value: (_expression) @element.value
 ) @element.unkeyed
 
 ; String literals
@@ -357,41 +345,33 @@
 ; Channel types
 (channel_type
   direction: (channel_direction) @channel.direction
-  value: (type) @channel.value
 ) @channel.type
 
 ; Pointer types
 (pointer_type
-  base: (type) @pointer.base
 ) @pointer.type
 
 ; Array types
 (array_type
-  length: (expression) @array.length
-  element: (type) @array.element
+  length: (_expression) @array.length
 ) @array.type
 
 ; Slice types
 (slice_type
-  element: (type) @slice.element
 ) @slice.type
 
 ; Map types
 (map_type
-  key: (type) @map.key
-  value: (type) @map.value
 ) @map.type
 
 ; Function types
 (function_type
   parameters: (parameter_list) @func_type.params
-  result: (type) @func_type.result
-) @func_type.definition
+  result: (_simple_type) @func_type.result
+)
 
 ; Interface types
-(interface_type
-  methods: (method_spec_list) @interface_type.methods
-) @interface_type.definition
+(interface_type) @interface_type.definition
 
 ; Struct types
 (struct_type
@@ -399,26 +379,21 @@
 ) @struct_type.definition
 
 ; Type assertions
-(type_assertion
-  expression: (expression) @assert.expression
-  type: (type) @assert.type
+(type_assertion_expression
+  operand: (_expression) @assert.expression
 ) @assert.type
 
 ; Type switches
 (type_switch_statement
-  expression: (expression) @switch.expression
-  cases: (type_case_list) @switch.cases
 ) @switch.type
 
 ; Type cases
 (type_case
-  type: (type) @case.type
   body: (block) @case.body
 ) @case.type
 
 ; Regular cases
 (expression_case
-  expression: (expression) @case.expression
   body: (block) @case.body
 ) @case.expression
 
@@ -429,7 +404,6 @@
 
 ; Select statements
 (select_statement
-  cases: (communication_case_list) @select.cases
 ) @select.statement
 
 ; Communication cases
@@ -445,24 +419,22 @@
 
 ; Send statements
 (send_statement
-  channel: (expression) @send.channel
-  value: (expression) @send.value
+  channel: (_expression) @send.channel
+  value: (_expression) @send.value
 ) @send.statement
 
 ; Receive statements
 (receive_statement
-  channel: (expression) @receive.channel
-  left: (expression) @receive.left
+  channel: (_expression) @receive.channel
+  left: (_expression) @receive.left
 ) @receive.statement
 
 ; Go statements
 (go_statement
-  expression: (expression) @go.expression
 ) @go.statement
 
 ; Defer statements
 (defer_statement
-  expression: (expression) @defer.expression
 ) @defer.statement
 
 ; ✨ NEW: Comments (single-line and block)
