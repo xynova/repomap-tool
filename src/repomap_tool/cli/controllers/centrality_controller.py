@@ -258,9 +258,22 @@ class CentralityController(BaseController):
         file_analyses = []
         rankings = []
 
+        # Filter out __init__.py files (boilerplate package structure files)
+        filtered_analyses = [
+            analysis
+            for analysis in centrality_analyses
+            if not analysis.file_path.endswith("__init__.py")
+        ]
+
+        if len(filtered_analyses) < len(centrality_analyses):
+            logger.debug(
+                f"Filtered out {len(centrality_analyses) - len(filtered_analyses)} "
+                f"__init__.py files from centrality rankings"
+            )
+
         # Sort analyses by centrality score to calculate proper rankings
         sorted_analyses = sorted(
-            centrality_analyses, key=lambda x: x.centrality_score, reverse=True
+            filtered_analyses, key=lambda x: x.centrality_score, reverse=True
         )
 
         for rank, analysis in enumerate(sorted_analyses, 1):
@@ -296,9 +309,9 @@ class CentralityController(BaseController):
                 }
             )
 
-        # Calculate summary statistics from structured data
+        # Calculate summary statistics from structured data (using filtered analyses)
         centrality_scores = [
-            analysis.centrality_score for analysis in centrality_analyses
+            analysis.centrality_score for analysis in filtered_analyses
         ]
         high_centrality = len([s for s in centrality_scores if s >= 0.7])
         medium_centrality = len([s for s in centrality_scores if 0.3 <= s < 0.7])
@@ -323,9 +336,9 @@ class CentralityController(BaseController):
         return CentralityViewModel(
             files=file_analyses,
             rankings=rankings,
-            total_files=len(centrality_analyses),
+            total_files=len(filtered_analyses),
             analysis_summary=centrality_summary,
-            token_count=len(str(centrality_analyses)),
+            token_count=len(str(filtered_analyses)),
             max_tokens=get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
