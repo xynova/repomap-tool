@@ -115,16 +115,16 @@ class TreeSitterParser:
             query_cursor = tree_sitter.QueryCursor(query)
             logger.debug(f"_parse_file: Created tree_sitter.QueryCursor object.")
             captures = query_cursor.captures(tree.root_node)
-            logger.debug(
-                f"_parse_file: QueryCursor.captures returned {len(list(captures))} entries."
-            )  # Convert to list for accurate count, but keep original iterable for the loop
-            # print(f"DEBUG: Type of captures: {type(captures)}") # Removed debug print
-            # print(f"DEBUG: First few captures: {list(captures)[:5]}") # Removed debug print
             tags = []
 
             # Process captures iterable
+            # query_cursor.captures() returns an iterator of (Node, int) tuples
+            # where the int is the capture index that maps to query.capture_names
             if hasattr(captures, "items") and callable(getattr(captures, "items")):
-                # It's a dict-like object
+                # Backward compatibility: dict-like object (e.g., from grep_ast wrapper)
+                logger.debug(
+                    f"_parse_file: Processing captures as dict-like object with {len(captures)} entries."
+                )
                 for tag_kind, nodes in captures.items():
                     logger.debug(
                         f"_parse_file: Processing tag_kind: {tag_kind} with {len(nodes)} nodes."
@@ -142,8 +142,44 @@ class TreeSitterParser:
                             )
                         )
             else:
-                logger.warning(
-                    f"_parse_file: Unexpected captures type: {type(captures)}. Expected dict-like object."
+                # Standard tree-sitter API: iterator of (Node, int) tuples
+                logger.debug(
+                    f"_parse_file: Processing captures as iterator of (Node, int) tuples."
+                )
+                capture_count = 0
+                # Type ignore: tree-sitter QueryCursor.captures() returns Iterator[Tuple[Node, int]]
+                # but MyPy can't infer this from the dynamic type
+                for node, index in captures:  # type: ignore[misc]
+                    try:
+                        # Use query.capture_name(index) to get the capture name
+                        if index < query.capture_count:  # type: ignore[has-type]
+                            tag_kind = query.capture_name(index)  # type: ignore[has-type]
+                            capture_count += 1
+                            logger.debug(
+                                f"_parse_file: Processing capture {capture_count}: tag_kind={tag_kind}, node={node.type}"
+                            )
+                            tags.append(
+                                CodeTag(
+                                    name=node.text.decode("utf-8") if node.text else "",
+                                    kind=tag_kind,
+                                    line=node.start_point[0] + 1,
+                                    column=node.start_point[1],
+                                    file=file_path,
+                                    end_line=node.end_point[0] + 1,
+                                    end_column=node.end_point[1],
+                                )
+                            )
+                        else:
+                            logger.warning(
+                                f"_parse_file: Capture index {index} out of bounds for query in {file_path}. "  # type: ignore[has-type]
+                                f"Query has {query.capture_count} capture names."
+                            )
+                    except Exception as e:
+                        logger.warning(
+                            f"_parse_file: Error processing capture in {file_path}: {e}"
+                        )
+                logger.debug(
+                    f"_parse_file: Processed {capture_count} captures from iterator."
                 )
 
             logger.debug(

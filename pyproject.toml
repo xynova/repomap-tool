@@ -39,6 +39,9 @@ requires-python = ">=3.11,<3.12"
 readme = "README.md"
 license = { file = "LICENSE" }
 
+[project.scripts]
+repomap-tool = "repomap_tool.cli.main:cli"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=7.4.0",

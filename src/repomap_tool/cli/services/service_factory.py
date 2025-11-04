@@ -181,11 +181,11 @@ class ServiceFactory:
         )  # Moved import
 
         # Create TreeManager with injected dependencies
-        # The TreeManager constructor expects repo_map_service
+        # TreeManager.__init__ signature: (repo_map, session_manager, tree_builder)
         tree_manager = TreeManager(
+            repo_map=repo_map_service,
             session_manager=session_manager,
             tree_builder=tree_builder,
-            repo_map=repo_map_service,  # Add missing repo_map argument
         )
         self._services["tree_manager_" + str(config.project_root)] = (
             tree_manager  # Explicitly cast to str
