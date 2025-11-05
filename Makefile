@@ -14,6 +14,15 @@ VENV_PIP = $(VENV_BIN)/pip
 DOCKER_IMAGE_NAME ?= repomap-tool
 DOCKER_TAG ?= local
 
+# Test parallelization configuration
+# Set PYTEST_WORKERS=1 to run tests sequentially (single worker)
+# Set PYTEST_WORKERS=auto to auto-detect CPU count (default for unit tests)
+# Set PYTEST_WORKERS=2 to use 2 workers (default for integration tests)
+# Set PYTEST_WORKERS=0 to disable parallelization entirely
+# Override from command line: make test-unit PYTEST_WORKERS=1
+PYTEST_WORKERS_UNIT ?= $(if $(PYTEST_WORKERS),$(PYTEST_WORKERS),auto)
+PYTEST_WORKERS_INTEGRATION ?= $(if $(PYTEST_WORKERS),$(PYTEST_WORKERS),2)
+
 
 # ============================================================================
 # HELP / DEFAULT TARGET
@@ -28,8 +37,11 @@ help:
 	@echo ""
 	@echo "Testing:"
 	@echo "  test        - Run all tests with coverage (unit + integration)"
-	@echo "  test-unit   - Run unit tests (parallel)"
-	@echo "  test-integration - Run integration tests in batches (sequential)"
+	@echo "  test-unit   - Run unit tests (parallel, default: auto)"
+	@echo "  test-integration - Run integration tests in batches (parallel, default: 2 workers)"
+	@echo ""
+	@echo "  Control parallelization: PYTEST_WORKERS=1 make test-unit"
+	@echo "    Examples: PYTEST_WORKERS=1 (single), PYTEST_WORKERS=2, PYTEST_WORKERS=0 (disabled)"
 	@echo "  test-integration-core - Core search/matching tests"
 	@echo "  test-integration-components - Component/service tests"
 	@echo "  test-integration-tree - Tree/exploration tests"
@@ -131,8 +143,8 @@ test-unit: install
 
 # Run unit tests (no install - assumes install already done)
 test-unit-no-install:
-	@echo "🧪 Running unit tests..."
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/unit/ -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml -n auto --max-worker-restart=0 --dist=worksteal
+	@echo "🧪 Running unit tests with $(PYTEST_WORKERS_UNIT) worker(s)..."
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/unit/ -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml -n $(PYTEST_WORKERS_UNIT) --max-worker-restart=0 --dist=worksteal
 
 # --- Integration Tests ---
 
@@ -154,23 +166,23 @@ test-integration-no-install:
 
 # Core integration tests - Basic search and matching functionality
 test-integration-core:
-	@echo "  📦 Batch 1/5: Core integration tests (search/matching)"
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_self_integration.py tests/integration/test_real_integration.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n 2 --max-worker-restart=0 --dist=worksteal
+	@echo "  📦 Batch 1/5: Core integration tests (search/matching) with $(PYTEST_WORKERS_INTEGRATION) worker(s)..."
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_self_integration.py tests/integration/test_real_integration.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n $(PYTEST_WORKERS_INTEGRATION) --max-worker-restart=0 --dist=worksteal
 
 # Component integration tests - Service factory, dependencies, templates
 test-integration-components:
-	@echo "  📦 Batch 2/5: Component integration tests (services/components)"
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_service_factory_integration.py tests/integration/test_dependency_components_real.py tests/integration/test_template_system_integration.py tests/integration/test_venv_setup.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n 2 --max-worker-restart=0 --dist=worksteal
+	@echo "  📦 Batch 2/5: Component integration tests (services/components) with $(PYTEST_WORKERS_INTEGRATION) worker(s)..."
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_service_factory_integration.py tests/integration/test_dependency_components_real.py tests/integration/test_template_system_integration.py tests/integration/test_venv_setup.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n $(PYTEST_WORKERS_INTEGRATION) --max-worker-restart=0 --dist=worksteal
 
 # Tree/exploration integration tests
 test-integration-tree:
-	@echo "  📦 Batch 3/5: Tree/exploration integration tests"
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_tree_integration.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n 2 --max-worker-restart=0 --dist=worksteal
+	@echo "  📦 Batch 3/5: Tree/exploration integration tests with $(PYTEST_WORKERS_INTEGRATION) worker(s)..."
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_tree_integration.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n $(PYTEST_WORKERS_INTEGRATION) --max-worker-restart=0 --dist=worksteal
 
 # Lightweight CLI integration tests - Basic CLI functionality
 test-integration-cli-light:
-	@echo "  📦 Batch 4/5: Lightweight CLI integration tests"
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_cli_integration.py tests/integration/test_density_command.py tests/integration/test_inspect_commands_integration.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n 2 --max-worker-restart=0 --dist=worksteal
+	@echo "  📦 Batch 4/5: Lightweight CLI integration tests with $(PYTEST_WORKERS_INTEGRATION) worker(s)..."
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_cli_integration.py tests/integration/test_density_command.py tests/integration/test_inspect_commands_integration.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n $(PYTEST_WORKERS_INTEGRATION) --max-worker-restart=0 --dist=worksteal
 
 # Heavy CLI integration tests - Full CLI with real codebase (most memory-intensive)
 test-integration-cli-heavy:
@@ -179,8 +191,8 @@ test-integration-cli-heavy:
 
 # Edge cases integration tests
 test-integration-edge-cases:
-	@echo "  📦 Batch 5/5: Edge cases integration tests"
-	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_integration_edge_cases.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n 2 --max-worker-restart=0 --dist=worksteal
+	@echo "  📦 Batch 5/5: Edge cases integration tests with $(PYTEST_WORKERS_INTEGRATION) worker(s)..."
+	./scripts/run_tests_with_cleanup.sh $(VENV_PYTHON) -m pytest tests/integration/test_integration_edge_cases.py -v --cov=src --cov-report=term-missing --cov-report=html --cov-report=xml --cov-append -n $(PYTEST_WORKERS_INTEGRATION) --max-worker-restart=0 --dist=worksteal
 
 # --- Test Utilities ---
 
