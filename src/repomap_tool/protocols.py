@@ -444,14 +444,15 @@ class ConsoleManagerProtocol(Protocol):
 
     def get_console(self, ctx: Optional[click.Context] = None) -> Console:
         """Get a console instance."""
+        ...
 
-    @abstractmethod
     def configure(self, no_color: bool = False) -> None:
         """Configure the console settings, e.g., enable/disable color."""
+        ...
 
-    @abstractmethod
     def log_operation(self, operation: str, context: Dict[str, Any]) -> None:
         """Log a console operation."""
+        ...
 
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get console usage statistics."""

@@ -17,8 +17,6 @@ if TYPE_CHECKING:
     from .impact_analysis_engine import ImpactAnalysisEngine
     from .centrality_analysis_engine import CentralityAnalysisEngine
     from .path_resolver import PathResolver
-    from ..llm.token_optimizer import TokenOptimizer
-    from ..llm.context_selector import ContextSelector
     from ..llm.hierarchical_formatter import HierarchicalFormatter
 else:
     # Import for runtime to avoid circular imports
@@ -29,8 +27,6 @@ else:
     from .impact_analysis_engine import ImpactAnalysisEngine
     from .centrality_analysis_engine import CentralityAnalysisEngine
     from .path_resolver import PathResolver
-    from ..llm.token_optimizer import TokenOptimizer
-    from ..llm.context_selector import ContextSelector
     from ..llm.hierarchical_formatter import HierarchicalFormatter
 
 
@@ -82,8 +78,6 @@ class LLMAnalyzerDependencies(BaseModel):
 
     # Analysis engines
     ast_analyzer: ASTFileAnalyzer = Field(..., description="AST file analyzer")
-    token_optimizer: TokenOptimizer = Field(..., description="Token optimizer")
-    context_selector: ContextSelector = Field(..., description="Context selector")
     hierarchical_formatter: HierarchicalFormatter = Field(
         ..., description="Hierarchical formatter"
     )
@@ -102,8 +96,6 @@ class LLMAnalyzerDependencies(BaseModel):
     @field_validator(
         "dependency_graph",
         "ast_analyzer",
-        "token_optimizer",
-        "context_selector",
         "hierarchical_formatter",
         "path_resolver",
         "impact_analyzer",

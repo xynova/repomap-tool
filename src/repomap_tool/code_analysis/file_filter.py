@@ -215,12 +215,8 @@ class FileFilter:
         filtered_files = []
 
         for file_path in file_paths:
-            # Temporarily enable all languages for debugging
-            # if not cls.is_python_file(file_path):
-            #     continue
-
-            # Revert to original behavior: filter out non-python files (temporarily for debugging other language queries)
-            if not cls.is_python_file(file_path):
+            # Check if it's an analyzable file (supports multiple languages: Python, JS/TS, Java, Go, C#)
+            if not cls.is_analyzable_file(file_path):
                 continue
 
             # Check if it should be excluded
@@ -295,12 +291,5 @@ def filter_analyzable_files(
     file_paths: List[str], exclude_tests: bool = True
 ) -> List[str]:
     """Filter files to only include analyzable files."""
-    filtered_files = []
-    for file_path_str in file_paths:
-        file_path = Path(file_path_str)
-        # Temporarily only include Python files to bypass JS/TS parsing issues
-        if FileFilter.is_python_file(str(file_path)):
-            if exclude_tests and FileFilter.is_test_file(str(file_path)):
-                continue
-            filtered_files.append(file_path_str)
-    return filtered_files
+    # Use the class method which properly supports all languages
+    return FileFilter.filter_analyzable_files(file_paths, exclude_tests)

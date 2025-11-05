@@ -10,6 +10,7 @@ import os
 import signal
 import sys
 import atexit
+import tempfile
 import time
 import warnings
 import pytest
@@ -43,8 +44,11 @@ def setup_worker_isolated_logging() -> None:
         # Get worker ID for unique log files
         worker_id = os.environ.get("PYTEST_XDIST_WORKER", "main")
 
-        # Create worker-specific log handler
-        log_file = f"/tmp/pytest_worker_{worker_id}_{os.getpid()}.log"
+        # Create worker-specific log handler using secure temporary directory
+        temp_dir = tempfile.gettempdir()
+        log_file = os.path.join(
+            temp_dir, f"pytest_worker_{worker_id}_{os.getpid()}.log"
+        )
 
         # Remove all existing handlers to prevent conflicts
         root_logger = logging.getLogger()
@@ -265,7 +269,6 @@ signal.signal(signal.SIGTERM, signal_handler)
 atexit.register(cleanup_pytest_workers)
 
 # Cache is now enabled for tests - database locking issues have been resolved
-# os.environ["REPOMAP_DISABLE_CACHE"] = "1"
 
 # This makes tests run faster - otherwise it tries to re-parse the grammar files constantly
 # and can take 5-10 seconds for each test. With pre-compiled, it's < 1 second.
@@ -634,7 +637,7 @@ def create_repomap_service_from_session_container(
     to avoid database locks and improve test performance.
     """
     # Get all dependencies from session container (same as service factory)
-    console = session_container.console()
+    console = session_container.console_manager().get_console()
     fuzzy_matcher = session_container.fuzzy_matcher()
     dependency_graph = session_container.dependency_graph()
     centrality_calculator = session_container.centrality_calculator()
@@ -658,18 +661,19 @@ def create_repomap_service_from_session_container(
     # Create RepoMapService with injected dependencies
     from repomap_tool.core.repo_map import RepoMapService
 
+    # RepoMapService.__init__ signature: (config, console, fuzzy_matcher, dependency_graph, centrality_calculator, tree_sitter_parser, tag_cache, file_discovery_service, semantic_matcher, embedding_matcher, hybrid_matcher, impact_analyzer, spellchecker_service)
     return RepoMapService(
         config=config,
         console=console,
         fuzzy_matcher=fuzzy_matcher,
-        semantic_matcher=semantic_matcher,
-        embedding_matcher=None,
-        hybrid_matcher=hybrid_matcher,
         dependency_graph=dependency_graph,
-        impact_analyzer=impact_analyzer,
         centrality_calculator=centrality_calculator,
-        spellchecker_service=spellchecker_service,
         tree_sitter_parser=tree_sitter_parser,
         tag_cache=tag_cache,
         file_discovery_service=file_discovery_service,
+        semantic_matcher=semantic_matcher,
+        embedding_matcher=None,
+        hybrid_matcher=hybrid_matcher,
+        impact_analyzer=impact_analyzer,
+        spellchecker_service=spellchecker_service,
     )

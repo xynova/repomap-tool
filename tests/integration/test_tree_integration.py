@@ -45,11 +45,12 @@ class TestTreeDependencyIntegration:
         from repomap_tool.core.container import create_container
 
         container = create_container(config)
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repomap_service,
             import_analyzer=container.import_analyzer(),
             dependency_graph=container.dependency_graph(),
             centrality_calculator=container.centrality_calculator(),
+            repo_map=repomap_service,
             impact_analyzer=(
                 container.impact_analyzer()
                 if config.dependencies.enable_impact_analysis
@@ -90,11 +91,12 @@ class TestTreeDependencyIntegration:
         from repomap_tool.core.container import create_container
 
         container = create_container(config)
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repomap_service,
             import_analyzer=container.import_analyzer(),
             dependency_graph=container.dependency_graph(),
             centrality_calculator=container.centrality_calculator(),
+            repo_map=repomap_service,
             impact_analyzer=(
                 container.impact_analyzer()
                 if config.dependencies.enable_impact_analysis
@@ -157,11 +159,12 @@ class TestTreeDependencyIntegration:
         from repomap_tool.core.container import create_container
 
         container = create_container(config)
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repomap_service,
             import_analyzer=container.import_analyzer(),
             dependency_graph=container.dependency_graph(),
             centrality_calculator=container.centrality_calculator(),
+            repo_map=repomap_service,
             impact_analyzer=(
                 container.impact_analyzer()
                 if config.dependencies.enable_impact_analysis
@@ -236,11 +239,12 @@ class TestTreeDependencyIntegration:
         from repomap_tool.core.container import create_container
 
         container = create_container(config)
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repomap_service,
             import_analyzer=container.import_analyzer(),
             dependency_graph=container.dependency_graph(),
             centrality_calculator=container.centrality_calculator(),
+            repo_map=repomap_service,
             impact_analyzer=(
                 container.impact_analyzer()
                 if config.dependencies.enable_impact_analysis
@@ -277,11 +281,12 @@ class TestTreeDependencyIntegration:
         from repomap_tool.core.container import create_container
 
         container = create_container(config)
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repomap_service,
             import_analyzer=container.import_analyzer(),
             dependency_graph=container.dependency_graph(),
             centrality_calculator=container.centrality_calculator(),
+            repo_map=repomap_service,
             impact_analyzer=(
                 container.impact_analyzer()
                 if config.dependencies.enable_impact_analysis
@@ -317,11 +322,12 @@ class TestTreeDependencyIntegration:
         from repomap_tool.core.container import create_container
 
         container = create_container(config)
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repomap_service,
             import_analyzer=container.import_analyzer(),
             dependency_graph=container.dependency_graph(),
             centrality_calculator=container.centrality_calculator(),
+            repo_map=repomap_service,
             impact_analyzer=(
                 container.impact_analyzer()
                 if config.dependencies.enable_impact_analysis

@@ -83,20 +83,21 @@ class ServiceFactory:
         )  # Get file_discovery_service from container
 
         # Create RepoMapService with injected dependencies
+        # RepoMapService.__init__ signature: (config, console, fuzzy_matcher, dependency_graph, centrality_calculator, tree_sitter_parser, tag_cache, file_discovery_service, semantic_matcher, embedding_matcher, hybrid_matcher, impact_analyzer, spellchecker_service)
         service = RepoMapService(
             config=config,
             console=console,
             fuzzy_matcher=fuzzy_matcher,
+            dependency_graph=dependency_graph,
+            centrality_calculator=centrality_calculator,
+            tree_sitter_parser=tree_sitter_parser,
+            tag_cache=tag_cache,
+            file_discovery_service=file_discovery_service,
             semantic_matcher=semantic_matcher,
             embedding_matcher=embedding_matcher,
             hybrid_matcher=hybrid_matcher,
-            dependency_graph=dependency_graph,
             impact_analyzer=impact_analyzer,
-            centrality_calculator=centrality_calculator,
             spellchecker_service=spellchecker_service,
-            tree_sitter_parser=tree_sitter_parser,  # Pass injected parser
-            tag_cache=tag_cache,  # Pass injected cache
-            file_discovery_service=file_discovery_service,  # Pass injected file discovery service
         )
 
         self._services[cache_key] = service
@@ -121,11 +122,12 @@ class ServiceFactory:
         impact_analyzer = container.impact_analyzer()
 
         # Create EntrypointDiscoverer with injected dependencies
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repo_map_service,
             import_analyzer=import_analyzer,
             dependency_graph=dependency_graph,
             centrality_calculator=centrality_calculator,
+            repo_map=repo_map_service,
             impact_analyzer=impact_analyzer,
         )
 
@@ -152,9 +154,10 @@ class ServiceFactory:
         )  # Moved import
 
         # Create TreeBuilder with injected dependencies
+        # TreeBuilder.__init__ signature: (entrypoint_discoverer, repo_map)
         tree_builder = TreeBuilder(
-            repo_map=repo_map_service,
             entrypoint_discoverer=entrypoint_discoverer,
+            repo_map=repo_map_service,
         )
 
         self._services[cache_key] = tree_builder

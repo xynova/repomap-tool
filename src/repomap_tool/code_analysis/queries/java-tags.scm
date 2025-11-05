@@ -100,7 +100,7 @@
 (type_parameters
   (type_parameter
     name: (type_identifier) @type_param.name
-    (type_bound) @type_param.bound
+    constraint: (type_bound) @type_param.bound
   )
 )
 

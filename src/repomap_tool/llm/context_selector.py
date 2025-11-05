@@ -1,22 +1,39 @@
 from __future__ import annotations
 
-import logging
-from typing import Any, List, Optional
+from typing import Any, Optional
+from dataclasses import dataclass
 
 from repomap_tool.core.logging_service import get_logger
-from .token_optimizer import SelectionStrategy, ContextSelection, TokenOptimizer
 
 logger = get_logger(__name__)
 
 
+@dataclass
+class ContextSelection:
+    """Context selection result (kept for compatibility)."""
+
+    data: Any
+    tokens_used: int = 0
+
+
+class SelectionStrategy:
+    """Selection strategy enum (kept for compatibility)."""
+
+    CENTRALITY_BASED = "centrality_based"
+    BREADTH_FIRST = "breadth_first"
+    DEPTH_FIRST = "depth_first"
+    HYBRID = "hybrid"
+
+
 class ContextSelector:
-    """Selects and optimizes context for LLM consumption based on various strategies."""
+    """Selects and optimizes context for LLM consumption (simplified - no longer uses TokenOptimizer)."""
 
-    def __init__(self, token_optimizer: TokenOptimizer, max_tokens: int = 8000):
-        if token_optimizer is None:
-            raise ValueError("TokenOptimizer must be injected - no fallback allowed")
+    def __init__(self, max_tokens: int = 8000):
+        """Initialize ContextSelector.
 
-        self.token_optimizer = token_optimizer
+        Args:
+            max_tokens: Maximum tokens for context (kept for compatibility, not enforced)
+        """
         self.max_tokens = max_tokens
         logger.info(f"ContextSelector initialized with max_tokens: {max_tokens}")
 
@@ -24,11 +41,19 @@ class ContextSelector:
         self,
         data: Any,
         max_tokens: Optional[int] = None,
-        strategy: SelectionStrategy = SelectionStrategy.CENTRALITY_BASED,
+        strategy: Any = None,  # Strategy no longer used
     ) -> ContextSelection:
-        """Select optimal context based on token budget and strategy."""
-        effective_max_tokens = max_tokens if max_tokens is not None else self.max_tokens
+        """Select optimal context (simplified - returns data as-is).
+
+        Args:
+            data: Data to return
+            max_tokens: Maximum tokens (kept for compatibility, not enforced)
+            strategy: Selection strategy (kept for compatibility, not used)
+
+        Returns:
+            ContextSelection with data as-is
+        """
         logger.debug(
-            f"Selecting context with strategy: {strategy}, effective_max_tokens: {effective_max_tokens}"
+            f"ContextSelector.select_context called (no-op, returns data as-is)"
         )
-        return self.token_optimizer.optimize_context(data, strategy)
+        return ContextSelection(data=data, tokens_used=0)

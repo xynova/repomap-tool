@@ -156,11 +156,13 @@ class JavaScriptImportParser(ImportParser):
     def _parse_import_tag(self, tag: Any, file_path: str) -> Optional[Import]:
         """Parse a single import tag from tree-sitter."""
         try:
-            # All tags are now CodeTag objects
-            kind = tag.get("kind")
-            name = tag.get("name")
-            line = tag.get("line")
-            source = getattr(tag, "source", "")
+            # All tags are now CodeTag objects - access attributes directly
+            kind = tag.kind
+            name = tag.name
+            line = tag.line
+            # For import statements, the module name is typically in the name attribute
+            # or we can extract it from the tag's name/comment fields
+            source = getattr(tag, "source", "") or name or ""
 
             # Handle different import types
             if kind in [

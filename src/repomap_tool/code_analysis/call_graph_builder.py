@@ -132,17 +132,48 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
             tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract function calls from tags
+            # Track current function context for caller extraction
+            current_caller = None
             for tag in tags:
-                if tag.kind in ["ref"]:  # References to functions
+                # Track current function context for caller extraction
+                if "definition.function" in tag.kind or "definition.method" in tag.kind:
+                    current_caller = tag.name
+                elif "definition.class" in tag.kind:
+                    # Reset caller when entering class (methods will set it)
+                    current_caller = None
+
+                # Extract calls from call tags
+                if "call" in tag.kind.lower() or "name.call" in tag.kind:
+                    # Determine if it's a method call (member_expression in JS/TS)
+                    is_method_call = (
+                        "attribute" in tag.kind.lower() or "member" in tag.kind.lower()
+                    )
+                    object_name = None
+
+                    # Extract object name from method calls (e.g., obj.method())
+                    method_name = tag.name  # Use local variable to avoid mutating tag
+                    if is_method_call and tag.name:
+                        # Try to extract object name from tag metadata or context
+                        # For now, we'll parse it from the tag name if available
+                        if hasattr(tag, "object") and tag.object:
+                            object_name = tag.object
+                        elif "." in tag.name:
+                            parts = tag.name.rsplit(".", 1)
+                            if len(parts) == 2:
+                                object_name = parts[0]
+                                method_name = parts[
+                                    1
+                                ]  # Extract method name, don't mutate tag
+
                     calls.append(
                         FunctionCall(
-                            name=tag.name,
-                            caller="unknown",  # TODO: Extract caller from context
-                            callee=tag.name,
+                            name=method_name,
+                            caller=current_caller or "unknown",
+                            callee=method_name,
                             file_path=file_path,
                             line_number=tag.line,
-                            is_method_call=False,  # TODO: Determine if it's a method call
-                            object_name=None,
+                            is_method_call=is_method_call,
+                            object_name=object_name,
                         )
                     )
 

@@ -14,7 +14,6 @@ from pathlib import Path
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import logging
-from dataclasses import dataclass
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
 
@@ -733,18 +732,27 @@ class ExplorationSession(BaseModel):
         return False
 
 
-@dataclass
-class SymbolViewModel:
+class SymbolViewModel(BaseModel):
     """ViewModel for code symbols."""
 
-    name: str
-    file_path: str
-    line_number: int
-    symbol_type: str  # function, class, method, etc.
-    signature: Optional[str] = None
-    critical_lines: Optional[List[str]] = None
-    dependencies: Optional[List[str]] = None
-    centrality_score: Optional[float] = None
-    impact_risk: Optional[float] = None
-    importance_score: Optional[float] = None
-    is_critical: bool = False
+    name: str = Field(description="Symbol name")
+    file_path: str = Field(description="File path containing the symbol")
+    line_number: int = Field(ge=1, description="Line number in file")
+    symbol_type: str = Field(description="Type: function, class, method, etc.")
+    signature: Optional[str] = Field(
+        default=None, description="Function/class signature"
+    )
+    critical_lines: Optional[List[str]] = Field(
+        default=None, description="Critical code lines"
+    )
+    dependencies: Optional[List[str]] = Field(default=None, description="Dependencies")
+    centrality_score: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Centrality score"
+    )
+    impact_risk: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Impact risk score"
+    )
+    importance_score: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Importance score"
+    )
+    is_critical: bool = Field(default=False, description="Whether symbol is critical")

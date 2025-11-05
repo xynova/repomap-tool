@@ -19,7 +19,11 @@ def signal_handler(signum, frame):
     with signal_lock:
         signals_received.append((signum, time.time()))
         print(f"\n🛑 SIGNAL RECEIVED: {signum} at {time.time()}")
-        print(f"   Signal name: {signal.Signals(signum).name if hasattr(signal.Signals, signum) else 'UNKNOWN'}")
+        try:
+            signal_name = signal.Signals(signum).name
+        except (ValueError, AttributeError):
+            signal_name = f"UNKNOWN({signum})"
+        print(f"   Signal name: {signal_name}")
         print(f"   Frame: {frame}")
         print(f"   Total signals received: {len(signals_received)}")
         
@@ -84,7 +88,10 @@ def main():
         print("\n📊 FINAL RESULTS:")
         print(f"   Total signals received: {len(signals_received)}")
         for i, (signum, timestamp) in enumerate(signals_received):
-            signal_name = signal.Signals(signum).name if hasattr(signal.Signals, signum) else f"UNKNOWN({signum})"
+            try:
+                signal_name = signal.Signals(signum).name
+            except (ValueError, AttributeError):
+                signal_name = f"UNKNOWN({signum})"
             print(f"   {i+1}. {signal_name} at {timestamp}")
         
         if not signals_received:

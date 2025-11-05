@@ -81,6 +81,10 @@ class TestSelfIntegration:
         # Create temporary directory for test outputs
         self.test_output_dir = tempfile.mkdtemp()
 
+        # Create isolated temporary cache directory for this test to prevent memory issues
+        # and avoid database locking when running in parallel
+        self.test_cache_dir = tempfile.mkdtemp(prefix="repomap_test_cache_")
+
         # Expected Python files in the project
         self.expected_python_files = ["core.py", "cli.py", "models.py", "__init__.py"]
 
@@ -94,7 +98,9 @@ class TestSelfIntegration:
 
     def teardown_method(self):
         """Clean up test environment."""
-        shutil.rmtree(self.test_output_dir)
+        shutil.rmtree(self.test_output_dir, ignore_errors=True)
+        if hasattr(self, "test_cache_dir"):
+            shutil.rmtree(self.test_cache_dir, ignore_errors=True)
 
     def test_default_analysis_finds_classes_and_functions(self, capsys):
         """Test that default analysis finds classes, functions, and other identifiers."""
@@ -102,9 +108,12 @@ class TestSelfIntegration:
 
         logger = logging.getLogger(self.__class__.__name__)
 
-        # Create default configuration
+        # Create default configuration with isolated cache directory
         config = RepoMapConfig(
-            project_root=str(self.project_root), verbose=True, output_format="json"
+            project_root=str(self.project_root),
+            verbose=True,
+            output_format="json",
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_default_analysis: RepoMapConfig created with project_root: {config.project_root}"
@@ -178,6 +187,7 @@ class TestSelfIntegration:
             ),
             semantic_match=SemanticMatchConfig(enabled=False),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_fuzzy_search_independently: RepoMapConfig created with project_root: {config.project_root}"
@@ -247,6 +257,7 @@ class TestSelfIntegration:
                 enabled=True, threshold=0.1, use_tfidf=True
             ),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_semantic_search_independently: RepoMapConfig created with project_root: {config.project_root}"
@@ -317,6 +328,7 @@ class TestSelfIntegration:
             ),
             semantic_match=SemanticMatchConfig(threshold=0.1, use_tfidf=True),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_hybrid_search_combination: RepoMapConfig created with project_root: {config.project_root}"
@@ -402,6 +414,7 @@ class TestSelfIntegration:
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_search_specific_identifiers: RepoMapConfig created with project_root: {config.project_root}"
@@ -500,6 +513,7 @@ class TestSelfIntegration:
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_search_with_context: RepoMapConfig created with project_root: {config.project_root}"
@@ -542,6 +556,7 @@ class TestSelfIntegration:
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_search_result_ranking: RepoMapConfig created with project_root: {config.project_root}"
@@ -581,6 +596,7 @@ class TestSelfIntegration:
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=True,
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_error_handling: RepoMapConfig created with project_root: {config.project_root}"
@@ -624,6 +640,7 @@ class TestSelfIntegration:
             fuzzy_match=FuzzyMatchConfig(threshold=70),
             semantic_match=SemanticMatchConfig(enabled=True, threshold=0.1),
             verbose=False,  # Disable verbose for performance test
+            cache_dir=self.test_cache_dir,
         )
         logger.debug(
             f"TestSelfIntegration.test_performance_benchmark: RepoMapConfig created with project_root: {config.project_root}"

@@ -142,6 +142,8 @@ class ASTFileAnalyzer:
             defined_classes = self._extract_classes_from_tags(tags)
             function_calls = self._extract_function_calls_from_tags(tags, full_path)
             defined_methods = self._extract_methods_from_tags(tags)
+            used_classes = self._extract_used_classes_from_tags(tags, defined_classes)
+            used_variables = self._extract_used_variables_from_tags(tags)
 
             # Create result
             result = FileAnalysisResult(
@@ -150,8 +152,8 @@ class ASTFileAnalyzer:
                 function_calls=function_calls,
                 defined_functions=defined_functions,
                 defined_classes=defined_classes,
-                used_classes=[],  # TODO: Extract from tags if needed
-                used_variables=[],  # TODO: Extract from tags if needed
+                used_classes=used_classes,
+                used_variables=used_variables,
                 line_count=self._get_line_count(full_path),
                 analysis_errors=analysis_errors,
                 defined_methods=defined_methods,  # Added defined_methods to result
@@ -270,13 +272,88 @@ class ASTFileAnalyzer:
 
     def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
         """Extract class names from tree-sitter tags."""
+        from repomap_tool.code_analysis.tag_kinds import is_class_definition
+
         classes = []
+        for tag in tags:
+            if is_class_definition(tag.kind):
+                classes.append(tag.name)
+        return classes
+
+    def _extract_used_classes_from_tags(
+        self, tags: List[Any], defined_classes: List[str]
+    ) -> List[str]:
+        """Extract used class names from tree-sitter tags (references to classes).
+
+        Args:
+            tags: List of CodeTag objects from tree-sitter
+            defined_classes: List of class names defined in this file
+
+        Returns:
+            List of class names that are referenced (used) but not defined in this file
+        """
+        used_classes = set()
+        defined_classes_set = set(defined_classes)
 
         for tag in tags:
-            if tag.kind in ["class", "interface", "enum"]:
-                classes.append(tag.name)
+            # Look for name.reference.name that match class patterns
+            # These are references to classes that might be imported or defined elsewhere
+            if "reference" in tag.kind.lower() and "name" in tag.kind.lower():
+                # Check if this reference looks like a class usage
+                # (e.g., MyClass() or MyClass.method())
+                if tag.name and tag.name not in defined_classes_set:
+                    # Check if it's used in a call context (class instantiation)
+                    # or attribute access (class method/property access)
+                    if "call" in tag.kind.lower() or "attribute" in tag.kind.lower():
+                        # Capitalized names are likely classes (Python convention)
+                        if len(tag.name) > 0 and tag.name[0].isupper():
+                            used_classes.add(tag.name)
 
-        return classes
+        return sorted(list(used_classes))
+
+    def _extract_used_variables_from_tags(self, tags: List[Any]) -> List[str]:
+        """Extract used variable names from tree-sitter tags (references to variables).
+
+        Args:
+            tags: List of CodeTag objects from tree-sitter
+
+        Returns:
+            List of variable names that are referenced (used) in the file
+        """
+        from repomap_tool.code_analysis.tag_kinds import (
+            is_variable_definition,
+            is_function_call,
+            is_import,
+        )
+
+        used_variables = set()
+        defined_variables = set()
+
+        # First pass: collect defined variables
+        for tag in tags:
+            if is_variable_definition(tag.kind):
+                if tag.name:
+                    defined_variables.add(tag.name)
+
+        # Second pass: collect used variables (references that aren't definitions)
+        for tag in tags:
+            # Look for name.reference.name that aren't calls, imports, or definitions
+            if "reference" in tag.kind.lower() and "name" in tag.kind.lower():
+                # Skip if it's a call, import, or definition
+                if (
+                    not is_function_call(tag.kind)
+                    and not is_import(tag.kind)
+                    and not is_variable_definition(tag.kind)
+                ):
+                    if tag.name:
+                        # Only include if it's not a defined variable (to avoid duplicates)
+                        # or if it's used in a different context
+                        if tag.name not in defined_variables:
+                            # Lowercase names are likely variables (Python convention)
+                            if len(tag.name) > 0 and tag.name[0].islower():
+                                used_variables.add(tag.name)
+
+        return sorted(list(used_variables))
 
     def _extract_function_calls_from_tags(
         self, tags: List[Any], file_path: str

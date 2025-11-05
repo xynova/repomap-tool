@@ -486,25 +486,27 @@ class Container(containers.DeclarativeContainer):
     )
 
     # Entrypoint discoverer for exploration
+    # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
     entrypoint_discoverer: "providers.Factory[EntrypointDiscoverer]" = cast(
         "providers.Factory[EntrypointDiscoverer]",
         providers.Factory(
             "repomap_tool.code_exploration.discovery_engine.EntrypointDiscoverer",
-            repo_map=None,  # Will be injected from context
             import_analyzer=import_analyzer,
             dependency_graph=dependency_graph,
             centrality_calculator=centrality_calculator,
+            repo_map=None,  # Will be injected from context
             impact_analyzer=impact_analyzer,
         ),
     )
 
     # Tree builder for exploration
+    # TreeBuilder.__init__ signature: (entrypoint_discoverer, repo_map)
     tree_builder: "providers.Factory[TreeBuilder]" = cast(
         "providers.Factory[TreeBuilder]",
         providers.Factory(
             "repomap_tool.code_exploration.tree_builder.TreeBuilder",
-            repo_map=None,  # Will be injected from context
             entrypoint_discoverer=entrypoint_discoverer,
+            repo_map=None,  # Will be injected from context
         ),
     )
 
@@ -539,6 +541,7 @@ class Container(containers.DeclarativeContainer):
     )
 
     # RepoMap Service
+    # RepoMapService.__init__ signature: (config, console, fuzzy_matcher, dependency_graph, centrality_calculator, tree_sitter_parser, tag_cache, file_discovery_service, semantic_matcher, embedding_matcher, hybrid_matcher, impact_analyzer, spellchecker_service)
     repo_map_service: "providers.Singleton[RepoMapService]" = cast(
         "providers.Singleton[RepoMapService]",
         providers.Singleton(
@@ -546,16 +549,16 @@ class Container(containers.DeclarativeContainer):
             config=repo_map_config,
             console=console_manager(),  # Pass the resolved console_manager instance
             fuzzy_matcher=fuzzy_matcher,
-            semantic_matcher=adaptive_semantic_matcher,
-            embedding_matcher=embedding_matcher,
-            hybrid_matcher=hybrid_matcher,
             dependency_graph=dependency_graph,
-            impact_analyzer=impact_analyzer,
             centrality_calculator=centrality_calculator,
-            spellchecker_service=spellchecker_service,
             tree_sitter_parser=tree_sitter_parser,
             tag_cache=tag_cache,
             file_discovery_service=file_discovery_service,
+            semantic_matcher=adaptive_semantic_matcher,
+            embedding_matcher=embedding_matcher,
+            hybrid_matcher=hybrid_matcher,
+            impact_analyzer=impact_analyzer,
+            spellchecker_service=spellchecker_service,
         ),
     )
 

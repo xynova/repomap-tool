@@ -26,9 +26,10 @@ class TestTreeBuilderClustering:
         self.mock_entrypoint_discoverer = Mock()
 
         # Create TreeBuilder instance
+        # TreeBuilder.__init__ signature: (entrypoint_discoverer, repo_map)
         self.tree_builder = TreeBuilder(
-            repo_map=self.mock_repo_map,
             entrypoint_discoverer=self.mock_entrypoint_discoverer,
+            repo_map=self.mock_repo_map,
         )
 
     @pytest.mark.skip(reason="Disabling tree/exploration tests")
