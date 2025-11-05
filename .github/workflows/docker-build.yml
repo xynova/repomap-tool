@@ -91,6 +91,14 @@ jobs:
         python3 -m pip install toml
         ./.github/scripts/build-deps-image.sh
 
+    - name: Free disk space before final build
+      run: |
+        df -h
+        docker system prune -f || true
+        sudo rm -rf /usr/share/dotnet || true
+        sudo rm -rf /usr/local/lib/android || true
+        df -h
+
     - name: Build and push final image using cached dependencies
       run: |
         echo "🔧 Building final image using cached dependencies..."
@@ -99,6 +107,12 @@ jobs:
         NIGHTLY_TAG="${{ steps.tags.outputs.nightly_tag }}" \
         NIGHTLY_LATEST_TAG="${{ steps.tags.outputs.nightly_latest_tag }}" \
         ./.github/scripts/build-final-image.sh
+
+    - name: Cleanup Docker build cache
+      if: always()
+      run: |
+        docker builder prune -af || true
+        df -h
 
   docker-test:
     runs-on: ubuntu-latest
@@ -131,6 +145,15 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Free disk space before Docker tests
+      run: |
+        df -h
+        docker system prune -f || true
+        sudo rm -rf /usr/share/dotnet
+        sudo rm -rf /usr/local/lib/android
+        sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+        df -h
+
     - name: Pull Docker image for testing
       run: |
         docker pull ${{ needs.docker-build.outputs.image_tag }}
@@ -152,9 +175,11 @@ jobs:
         # Run the comprehensive Docker tests
         make docker-test-ci
 
-    - name: Cleanup Docker image
+    - name: Cleanup Docker image and system
       run: |
         docker rmi ${{ needs.docker-build.outputs.image_tag }} || true
+        docker system prune -af --volumes || true
+        df -h
 
   cleanup-old-images:
     runs-on: ubuntu-latest
