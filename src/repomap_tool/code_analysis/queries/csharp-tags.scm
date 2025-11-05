@@ -6,21 +6,8 @@
   (identifier) @using.name
 ) @using.directive
 
-; Using static directives
-(using_static_directive
-  (identifier) @using.static
-) @using.static
-
-; Using alias directives
-(using_alias_directive
-  alias: (identifier) @using.alias
-  name: (identifier) @using.name
-) @using.alias
-
-; Global using directives
-(global_using_directive
-  (identifier) @using.global
-) @using.global
+; Using directives with static (handled by using_directive)
+; Using alias directives (handled by using_directive with name field)
 
 ; Namespace declarations
 (namespace_declaration
@@ -31,50 +18,44 @@
 ; File-scoped namespace declarations
 (file_scoped_namespace_declaration
   name: (qualified_name) @namespace.name
-  body: (declaration_list) @namespace.body
-) @namespace.file_scoped
+  (declaration_list) @namespace.body
+)
 
 ; Class declarations
 (class_declaration
   name: (identifier) @class.name
-  type_parameter_list: (type_parameter_list) @class.type_params
-  base_list: (base_list) @class.base
+  type_parameters: (type_parameter_list) @class.type_params
 ) @class.declaration
 
 ; Interface declarations
 (interface_declaration
   name: (identifier) @interface.name
-  type_parameter_list: (type_parameter_list) @interface.type_params
-  base_list: (base_list) @interface.base
+  type_parameters: (type_parameter_list) @interface.type_params
 ) @interface.declaration
 
 ; Struct declarations
 (struct_declaration
   name: (identifier) @struct.name
-  type_parameter_list: (type_parameter_list) @struct.type_params
-  base_list: (base_list) @struct.base
+  type_parameters: (type_parameter_list) @struct.type_params
 ) @struct.declaration
 
 ; Enum declarations
 (enum_declaration
   name: (identifier) @enum.name
-  base_list: (base_list) @enum.base
 ) @enum.declaration
 
 ; Delegate declarations
 (delegate_declaration
   name: (identifier) @delegate.name
-  type_parameter_list: (type_parameter_list) @delegate.type_params
+  type_parameters: (type_parameter_list) @delegate.type_params
   parameters: (parameter_list) @delegate.params
-  return_type: (type) @delegate.return
 ) @delegate.declaration
 
 ; Method declarations
 (method_declaration
   name: (identifier) @method.name
-  type_parameter_list: (type_parameter_list) @method.type_params
+  type_parameters: (type_parameter_list) @method.type_params
   parameters: (parameter_list) @method.params
-  return_type: (type) @method.return
 ) @method.declaration
 
 ; Constructor declarations
@@ -91,9 +72,7 @@
 ; Property declarations
 (property_declaration
   name: (identifier) @property.name
-  type: (type) @property.type
-) @property.declaration
-
+)
 ; Indexer declarations
 (indexer_declaration
   parameters: (bracketed_parameter_list) @indexer.params
@@ -108,16 +87,12 @@
 
 ; Field declarations
 (field_declaration
-  declarator: (variable_declarator
-    name: (identifier) @field.name
   )
   type: (type) @field.type
 ) @field.declaration
 
 ; Local variable declarations
 (local_declaration_statement
-  declarator: (variable_declarator
-    name: (identifier) @variable.name
   )
   type: (type) @variable.type
 ) @variable.declaration
@@ -174,7 +149,7 @@
     name: (identifier) @attribute.name
     type_argument_list: (type_argument_list) @attribute.type_args
   )
-) @attribute.generic
+)
 
 ; Type parameters
 (type_parameter_list
@@ -226,7 +201,6 @@
 (function_pointer_type
   calling_convention: (calling_convention) @func_ptr.calling_convention
   parameters: (function_pointer_parameter_list) @func_ptr.params
-  return_type: (type) @func_ptr.return
 ) @func_ptr.type
 
 ; Lambda expressions

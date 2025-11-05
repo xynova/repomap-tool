@@ -102,24 +102,37 @@ Enhanced Tree Exploration (smarter entrypoints, dependency-aware trees)
 project_files = ["/src/auth/handler.py", "/src/auth/validator.py", ...]
 
 # Stage 1: Import Analysis
-import_analyzer = ImportAnalyzer()
+from repomap_tool.cli.services import get_service_factory
+from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+
+# Use service factory for proper DI
+config = RepoMapConfig(
+    project_root="/src",
+    performance=PerformanceConfig(),
+    dependencies=DependencyConfig(),
+)
+service_factory = get_service_factory()
+repomap_service = service_factory.create_repomap_service(config)
+
+# Get services through DI
+import_analyzer = repomap_service.dependency_graph.import_analyzer
 project_imports = import_analyzer.analyze_project_imports(project_files)
 # Output: ProjectImports(file_imports={"/src/auth/handler.py": [Import("validator", "local"), ...]})
 
 # Stage 2: Basic Dependency Graph
-dependency_graph = DependencyGraph()
+dependency_graph = repomap_service.dependency_graph
 dependency_graph.build_graph(project_files)
 # Output: Graph with nodes (files) and edges (import relationships)
 
 # Stage 3: Call Graph Analysis
-call_graph_builder = CallGraphBuilder()
+call_graph_builder = repomap_service.dependency_graph.call_graph_builder
 call_graph = call_graph_builder.build_call_graph(project_files)
 # Output: CallGraph with function-level dependencies
 
 # Stage 4: Advanced Analysis
-advanced_graph = AdvancedDependencyGraph()
+advanced_graph = repomap_service.dependency_graph
 advanced_graph.integrate_call_graph(call_graph)
-centrality_calc = CentralityCalculator(advanced_graph)
+centrality_calc = repomap_service.centrality_calculator
 centrality_scores = centrality_calc.calculate_composite_importance()
 # Output: {"auth/handler.py": 0.9, "auth/validator.py": 0.7, ...}
 
@@ -636,7 +649,18 @@ def get_impact_analysis_WRONG(self, file_path):
 ```python
 # Test 1: Multi-Language Import Analysis
 def test_multi_language_import_analysis():
-    analyzer = ImportAnalyzer()
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+    
+    # Use service factory for proper DI
+    config = RepoMapConfig(
+        project_root=".",
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    analyzer = repomap_service.dependency_graph.import_analyzer
     
     # Test Python imports
     python_imports = analyzer.analyze_file_imports("test_files/sample.py")
@@ -787,7 +811,18 @@ class DependencyGraph:
     def __init__(self):
         self.nodes: Dict[str, DependencyNode] = {}
         self.edges: List[Tuple[str, str]] = []  # (source, target)
-        self.import_analyzer = ImportAnalyzer()
+        # Use service factory for proper DI
+        from repomap_tool.cli.services import get_service_factory
+        from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+        
+        config = RepoMapConfig(
+            project_root=".",
+            performance=PerformanceConfig(),
+            dependencies=DependencyConfig(),
+        )
+        service_factory = get_service_factory()
+        repomap_service = service_factory.create_repomap_service(config)
+        self.import_analyzer = repomap_service.dependency_graph.import_analyzer
     
     def build_graph(self, project_files: List[str]):
         """Build complete dependency graph"""

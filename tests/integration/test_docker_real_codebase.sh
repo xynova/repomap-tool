@@ -31,8 +31,8 @@ run_test() {
     local docker_image="${DOCKER_IMAGE_NAME:-repomap-tool}:${DOCKER_TAG:-local}"
     
     # Run test in separate container instance against the real codebase
-    # Run command directly so the entrypoint script can handle it
-    if docker run --rm -v "$(pwd):/project" "$docker_image" "${test_args[@]}"; then
+    # Mount the current directory as /workspace to match the container's working directory
+    if docker run --rm -v "$(pwd):/workspace" "$docker_image" "${test_args[@]}"; then
         echo "✅ $test_name passed"
         return 0
     else
@@ -43,47 +43,47 @@ run_test() {
 
 # Test 1: Search for identifiers in the real repomap-tool codebase
 run_test "Test 1: Search for DockerRepoMap Class" \
-    search "DockerRepoMap" /project --match-type hybrid --threshold 0.5 --verbose --output json || exit 1
+    search "DockerRepoMap" /workspace --match-type hybrid --threshold 0.5 --verbose --output json || exit 1
 
 # Test 2: Search for function names
 run_test "Test 2: Search for analyze_project Function" \
-    search "analyze_project" /project --match-type fuzzy --threshold 0.6 --verbose --output json || exit 1
+    search "analyze_project" /workspace --match-type fuzzy --threshold 0.6 --verbose --output json || exit 1
 
 # Test 3: Search for matcher classes
 run_test "Test 3: Search for FuzzyMatcher Class" \
-    search "FuzzyMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "FuzzyMatcher" /workspace --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 4: Search for SemanticMatcher
 run_test "Test 4: Search for SemanticMatcher Class" \
-    search "SemanticMatcher" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "SemanticMatcher" /workspace --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 5: Search for CLI commands
 run_test "Test 5: Search for CLI Commands" \
-    search "analyze" /project --match-type semantic --threshold 0.4 --verbose --output json || exit 1
+    search "analyze" /workspace --match-type semantic --threshold 0.4 --verbose --output json || exit 1
 
 # Test 6: Search for configuration related code
 run_test "Test 6: Search for Configuration Code" \
-    search "config" /project --match-type semantic --threshold 0.3 --verbose --output json || exit 1
+    search "config" /workspace --match-type semantic --threshold 0.3 --verbose --output json || exit 1
 
 # Test 7: Search for test related code
 run_test "Test 7: Search for Test Code" \
-    search "test" /project --match-type hybrid --threshold 0.4 --verbose --output json || exit 1
+    search "test" /workspace --match-type hybrid --threshold 0.4 --verbose --output json || exit 1
 
 # Test 8: Search for specific function types
 run_test "Test 8: Search for Function Definitions" \
-    search "def" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "def" /workspace --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 9: Search for class definitions
 run_test "Test 9: Search for Class Definitions" \
-    search "class" /project --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
+    search "class" /workspace --match-type fuzzy --threshold 0.5 --verbose --output json || exit 1
 
 # Test 10: Find circular dependencies
 run_test "Test 10: Find Circular Dependencies" \
-    inspect cycles /project --verbose --output json || exit 1
+    inspect cycles --verbose --output json || exit 1
 
 # Test 11: Analyze centrality
 run_test "Test 11: Analyze File Centrality" \
-    inspect centrality /project --verbose --output json || exit 1
+    inspect centrality --verbose --output json || exit 1
 
 echo ""
 echo "✅ All Docker tests against real codebase completed successfully!"

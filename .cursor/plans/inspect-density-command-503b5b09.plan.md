@@ -2,11 +2,13 @@
 # Inspect Density Command Implementation
 
 ## Overview
+
 Create `inspect density` command that analyzes code density at file and module levels, showing identifier breakdowns (classes, functions, methods, variables, imports) using TreeSitterParser for accurate cross-language support.
 
 ## Phase 1: Core Density Analysis Service
 
 ### Create DensityAnalyzer Service
+
 **File**: `src/repomap_tool/code_analysis/density_analyzer.py`
 
 ```python
@@ -60,6 +62,7 @@ Key: Use TreeSitterParser.parse_file() which returns tags with detailed `kind` f
 ## Phase 2: CLI Command Implementation
 
 ### Add density subcommand
+
 **File**: `src/repomap_tool/cli/commands/inspect.py`
 
 ```python
@@ -90,6 +93,7 @@ def density(ctx, project_path, scope, limit, min_identifiers, output):
 ## Phase 3: Controller and ViewModel
 
 ### Create DensityController
+
 **File**: `src/repomap_tool/cli/controllers/density_controller.py`
 
 ```python
@@ -137,6 +141,7 @@ class DensityController(BaseController):
 ## Phase 4: Output Formatting
 
 ### Create density template
+
 **File**: `src/repomap_tool/cli/output/templates/jinja/density_analysis.jinja2`
 
 ```jinja2
@@ -170,6 +175,7 @@ Module Density Analysis
 ```
 
 ### Create DensityFormatter
+
 **File**: `src/repomap_tool/cli/output/controller_formatters.py`
 
 ```python
@@ -184,6 +190,7 @@ class DensityAnalysisFormatter(TemplateBasedFormatter):
 ## Phase 5: DI Container Integration
 
 ### Register services
+
 **File**: `src/repomap_tool/core/container.py`
 
 ```python
@@ -203,14 +210,18 @@ density_controller = providers.Factory(
 ## Phase 6: Testing
 
 ### Unit tests
+
 **File**: `tests/unit/test_density_analyzer.py`
+
 - Test tag categorization mapping
 - Test file density calculation
 - Test module aggregation
 - Test sorting by density
 
 ### Integration tests  
+
 **File**: `tests/integration/test_density_command.py`
+
 - Test CLI command execution
 - Test file scope output
 - Test module scope output
@@ -231,7 +242,6 @@ density_controller = providers.Factory(
 - Works across all supported languages (Python, JS, TS, Java, etc.)
 - No aider dependency for this feature
 - Output is clear and actionable for refactoring decisions
-
 
 ### To-dos
 

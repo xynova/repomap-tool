@@ -6,8 +6,11 @@ This module defines structured data models for configuration, API requests/respo
 and match results using Pydantic for validation and serialization.
 """
 
+from __future__ import annotations
+
+from typing import List, Dict, Optional, Any, Literal, Union, Set, TypedDict
+from enum import Enum
 from pathlib import Path
-from typing import List, Dict, Optional, Any, Literal, Union, Set
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
 from datetime import datetime
 import logging
@@ -15,6 +18,32 @@ from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
 
 logger = get_logger(__name__)
+
+
+# TypedDict definitions for structured data
+class Tag(TypedDict):
+    """Tag structure for project identifiers."""
+
+    name: str
+    type: Optional[str]
+    file: Optional[str]
+    line: Optional[int]
+
+
+class FileData(TypedDict):
+    """File data structure in project map."""
+
+    identifiers: Optional[List[str]]
+    tags: Optional[List["Tag"]]
+    content: Optional[str]
+
+
+class ProjectMap(TypedDict):
+    """Structured project map data."""
+
+    tags: Optional[List["Tag"]]
+    identifiers: Optional[List[str]]
+    files: Optional[Dict[str, "FileData"]]
 
 
 class PerformanceConfig(BaseModel):
@@ -92,22 +121,30 @@ class SemanticMatchConfig(BaseModel):
 
 
 class EmbeddingConfig(BaseModel):
-    """Configuration for CodeRankEmbed embeddings (always enabled)."""
+    """Configuration for embedding-based search and analysis.
 
-    model_config = ConfigDict(frozen=False)
+    Attributes:
+        cache_dir: Directory to cache embedding models and data.
+        model: Name of the embedding model to use (e.g., 'nomic-ai/CodeRankEmbed').
+        enabled: Whether embedding-based features are enabled.
+    """
 
-    enabled: bool = Field(default=True, description="Always enabled")
-    model_name: str = Field(
-        default="nomic-ai/CodeRankEmbed", description="CodeRankEmbed model (fixed)"
+    model_config = ConfigDict(
+        str_strip_whitespace=True,
+        validate_assignment=True,
+        extra="forbid",
     )
-    trust_remote_code: bool = Field(
-        default=True, description="Required for CodeRankEmbed"
-    )
-    threshold: float = Field(
-        default=0.3, ge=0.0, le=1.0, description="Similarity threshold"
-    )
+
     cache_dir: Optional[str] = Field(
-        default=None, description="Embedding cache directory"
+        ".repomap/cache/embeddings",
+        description="Directory to cache embedding models and data.",
+    )
+    model: str = Field(
+        "nomic-ai/CodeRankEmbed",
+        description="Name of the embedding model to use (e.g., 'nomic-ai/CodeRankEmbed').",
+    )
+    enabled: bool = Field(
+        False, description="Whether embedding-based features are enabled."
     )
 
 
@@ -176,7 +213,14 @@ class RepoMapConfig(BaseModel):
     # Matching configurations
     fuzzy_match: FuzzyMatchConfig = Field(default_factory=FuzzyMatchConfig)
     semantic_match: SemanticMatchConfig = Field(default_factory=SemanticMatchConfig)
-    embedding: EmbeddingConfig = Field(default_factory=EmbeddingConfig)
+    embedding: EmbeddingConfig = Field(
+        default_factory=lambda: EmbeddingConfig(
+            cache_dir=".repomap/cache/embeddings",
+            model="nomic-ai/CodeRankEmbed",
+            enabled=False,
+        ),
+        description="Embedding configuration",
+    )
 
     # Tree exploration configuration
     trees: TreeConfig = Field(default_factory=TreeConfig)
@@ -186,10 +230,11 @@ class RepoMapConfig(BaseModel):
 
     # Advanced options
     refresh_cache: bool = Field(default=False, description="Refresh cache")
-    output_format: Literal["text", "json"] = "text"
     max_results: int = Field(
         default=50, ge=1, le=1000, description="Maximum results to return"
     )
+
+    output_format: Literal["text", "json"] = "text"
 
     @field_validator("project_root")
     @classmethod
@@ -256,6 +301,59 @@ class RepoMapConfig(BaseModel):
         """Validate matching configuration."""
         # Fuzzy matching is always enabled, so no validation needed
         return self
+
+
+class OutputFormat(str, Enum):
+    """Unified output formats for all CLI commands."""
+
+    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
+    JSON = "json"  # Raw data for programmatic consumption
+
+
+class AnalysisFormat(str, Enum):
+    """Output formats specifically for LLM analysis."""
+
+    TEXT = "text"  # Rich, hierarchical, token-optimized format (default)
+    JSON = "json"  # Raw data for programmatic consumption
+
+
+class OutputConfig(BaseModel):
+    """Configuration for output formatting and display."""
+
+    format: OutputFormat = Field(default=OutputFormat.TEXT, description="Output format")
+    template_config: Optional[Dict[str, Any]] = Field(
+        default=None, description="Template configuration"
+    )
+    max_tokens: Optional[int] = Field(
+        default=None, ge=1, description="Maximum tokens for optimization"
+    )
+    verbose: bool = Field(default=False, description="Enable verbose output")
+    no_emojis: bool = Field(default=False, description="Disable emojis in output")
+    no_color: bool = Field(default=False, description="Disable colored output")
+    no_hierarchy: bool = Field(
+        default=False, description="Disable hierarchical structure"
+    )
+    no_line_numbers: bool = Field(default=False, description="Disable line numbers")
+    no_centrality: bool = Field(default=False, description="Disable centrality scores")
+    no_impact_risk: bool = Field(
+        default=False, description="Disable impact risk analysis"
+    )
+    max_critical_lines: int = Field(
+        default=3, ge=1, le=10, description="Max critical lines to show"
+    )
+    max_dependencies: int = Field(
+        default=3, ge=1, le=10, description="Max dependencies to show"
+    )
+    compression: str = Field(default="medium", description="Output compression level")
+
+    @field_validator("compression")
+    @classmethod
+    def validate_compression(cls, v: str) -> str:
+        """Validate compression level."""
+        valid_levels = ["low", "medium", "high"]
+        if v not in valid_levels:
+            raise ValueError(f"Compression must be one of {valid_levels}, got {v}")
+        return v
 
 
 class MatchResult(BaseModel):
@@ -379,6 +477,28 @@ class HealthCheck(BaseModel):
         default_factory=dict, description="Cache status"
     )
     errors: List[str] = Field(default_factory=list, description="Recent errors")
+
+
+class SuccessResponse(BaseModel):
+    """Standard success response for API endpoints."""
+
+    message: str = Field(description="Success message")
+    status_code: int = Field(
+        default=200, ge=200, lt=300, description="HTTP status code"
+    )
+    data: Optional[Dict[str, Any]] = Field(
+        default=None, description="Optional response data"
+    )
+    timestamp: datetime = Field(
+        default_factory=datetime.now, description="Response timestamp"
+    )
+    request_id: Optional[str] = Field(
+        default=None, description="Request ID for tracking"
+    )
+
+    model_config = ConfigDict(
+        validate_assignment=True, extra="forbid", ser_json_timedelta="iso8601"
+    )
 
 
 class ErrorResponse(BaseModel):
@@ -610,3 +730,29 @@ class ExplorationSession(BaseModel):
             self.last_activity = datetime.now()
             return True
         return False
+
+
+class SymbolViewModel(BaseModel):
+    """ViewModel for code symbols."""
+
+    name: str = Field(description="Symbol name")
+    file_path: str = Field(description="File path containing the symbol")
+    line_number: int = Field(ge=1, description="Line number in file")
+    symbol_type: str = Field(description="Type: function, class, method, etc.")
+    signature: Optional[str] = Field(
+        default=None, description="Function/class signature"
+    )
+    critical_lines: Optional[List[str]] = Field(
+        default=None, description="Critical code lines"
+    )
+    dependencies: Optional[List[str]] = Field(default=None, description="Dependencies")
+    centrality_score: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Centrality score"
+    )
+    impact_risk: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Impact risk score"
+    )
+    importance_score: Optional[float] = Field(
+        default=None, ge=0.0, le=1.0, description="Importance score"
+    )
+    is_critical: bool = Field(default=False, description="Whether symbol is critical")

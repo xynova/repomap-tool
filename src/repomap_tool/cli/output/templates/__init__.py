@@ -6,15 +6,14 @@ consistent and configurable output across all CLI commands.
 """
 
 from .engine import TemplateEngine, TemplateEngineFactory
-from .registry import TemplateRegistry, get_template_registry
+from .registry import DefaultTemplateRegistry
 from .config import TemplateConfig, TemplateOptions
 from .loader import TemplateLoader, FileTemplateLoader
 
 __all__ = [
     "TemplateEngine",
     "TemplateEngineFactory",
-    "TemplateRegistry",
-    "get_template_registry",
+    "DefaultTemplateRegistry",
     "TemplateConfig",
     "TemplateOptions",
     "TemplateLoader",

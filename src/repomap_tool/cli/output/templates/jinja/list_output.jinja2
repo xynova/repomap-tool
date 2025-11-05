@@ -1,0 +1,14 @@
+{# Template Name: list_output.jinja2 #}
+{% set emoji = config.options.use_emojis if config and config.options else true %}
+{% set hierarchical = config.options.use_hierarchical_structure if config and config.options else true %}
+
+{% if emoji %}📋{% endif %} List Output:
+{{ "=" * 60 }}
+
+{% if data %}
+    {% for item in data %}
+        {% if hierarchical %}├──{% else %}•{% endif %} {{ item }}
+    {% endfor %}
+{% else %}
+    {% if emoji %}❌{% endif %} No items to display.
+{% endif %}

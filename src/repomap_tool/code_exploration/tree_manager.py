@@ -25,8 +25,8 @@ class TreeManager:
     def __init__(
         self,
         repo_map: RepoMapService,
-        session_manager: Optional[Any] = None,
-        tree_builder: Optional[Any] = None,
+        session_manager: SessionManager,
+        tree_builder: TreeBuilder,
     ):
         """Initialize tree manager with injected dependencies.
 
@@ -37,11 +37,7 @@ class TreeManager:
         """
         self.repo_map = repo_map
 
-        # Use injected dependencies - no fallback
-        if session_manager is None:
-            raise ValueError("SessionManager must be injected - no fallback allowed")
-        if tree_builder is None:
-            raise ValueError("TreeBuilder must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.session_manager = session_manager
         self.tree_builder = tree_builder

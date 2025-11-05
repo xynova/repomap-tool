@@ -19,7 +19,15 @@
 {% for ranking in data.rankings %}
 {% if hierarchical %}├──{% else %}•{% endif %} #{{ ranking.rank }} {{ ranking.file_path }}
 {% if hierarchical %}│   {% else %}  {% endif %}Score: {{ ranking.centrality_score | format_percentage }}
-{% if hierarchical %}│   {% else %}  {% endif %}Total Files: {{ ranking.total_files }}
+{% if ranking.connections is defined and ranking.connections is not none %}
+{% if hierarchical %}│   {% else %}  {% endif %}Connections: {{ ranking.connections }}
+{% endif %}
+{% if ranking.imports is defined and ranking.imports is not none %}
+{% if hierarchical %}│   {% else %}  {% endif %}Imports: {{ ranking.imports }}
+{% endif %}
+{% if ranking.reverse_dependencies is defined and ranking.reverse_dependencies is not none %}
+{% if hierarchical %}│   {% else %}  {% endif %}Dependents: {{ ranking.reverse_dependencies }}
+{% endif %}
 {% if not loop.last %}
 {% if hierarchical %}│{% endif %}
 {% endif %}

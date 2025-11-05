@@ -6,7 +6,6 @@ call graph that shows how functions depend on each other.
 """
 
 import logging
-import os
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 import re
@@ -16,6 +15,7 @@ from .models import CodeTag
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from .models import FunctionCall, CallGraph
+from .tree_sitter_parser import TreeSitterParser
 
 logger = get_logger(__name__)
 
@@ -39,12 +39,9 @@ class CallAnalyzer:
 class PythonCallAnalyzer(CallAnalyzer):
     """Parser for Python function calls using tree-sitter."""
 
-    def __init__(self, tree_sitter_parser: Optional[Any] = None) -> None:
-        """Initialize with tree-sitter parser.
-
-        Args:
-            tree_sitter_parser: TreeSitterParser instance for parsing
-        """
+    def __init__(self, tree_sitter_parser: TreeSitterParser) -> None:
+        """Initialize with tree-sitter parser."""
+        # All dependencies are required and injected via DI container
         self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
@@ -57,7 +54,7 @@ class PythonCallAnalyzer(CallAnalyzer):
 
         try:
             # Get all tags from tree-sitter
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Look for function call tags
             for tag in tags:
@@ -111,16 +108,20 @@ class PythonCallAnalyzer(CallAnalyzer):
 class JavaScriptCallAnalyzer(CallAnalyzer):
     """Parser for JavaScript/TypeScript function calls using tree-sitter."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(
+        self,
+        tree_sitter_parser: TreeSitterParser,
+        project_root: Optional[str] = None,
+    ):
         """Initialize with project root for tree-sitter RepoMap."""
+        # All dependencies are required and injected via DI container
+
         super().__init__()
         self.project_root = project_root
         self._repo_map = None
 
-        # Initialize tree-sitter parser
-        from .tree_sitter_parser import TreeSitterParser
-
-        self.tree_sitter_parser = TreeSitterParser()
+        # Use injected tree-sitter parser
+        self.tree_sitter_parser = tree_sitter_parser
 
     def extract_calls(self, file_content: str, file_path: str) -> List[FunctionCall]:
         """Extract JavaScript/TypeScript function calls using TreeSitterParser."""
@@ -128,20 +129,51 @@ class JavaScriptCallAnalyzer(CallAnalyzer):
 
         try:
             # Use TreeSitterParser directly for tag extraction
-            tags = self.tree_sitter_parser.parse_file(file_path)
+            tags = self.tree_sitter_parser.get_tags(file_path, use_cache=True)
 
             # Extract function calls from tags
+            # Track current function context for caller extraction
+            current_caller = None
             for tag in tags:
-                if tag.kind in ["ref"]:  # References to functions
+                # Track current function context for caller extraction
+                if "definition.function" in tag.kind or "definition.method" in tag.kind:
+                    current_caller = tag.name
+                elif "definition.class" in tag.kind:
+                    # Reset caller when entering class (methods will set it)
+                    current_caller = None
+
+                # Extract calls from call tags
+                if "call" in tag.kind.lower() or "name.call" in tag.kind:
+                    # Determine if it's a method call (member_expression in JS/TS)
+                    is_method_call = (
+                        "attribute" in tag.kind.lower() or "member" in tag.kind.lower()
+                    )
+                    object_name = None
+
+                    # Extract object name from method calls (e.g., obj.method())
+                    method_name = tag.name  # Use local variable to avoid mutating tag
+                    if is_method_call and tag.name:
+                        # Try to extract object name from tag metadata or context
+                        # For now, we'll parse it from the tag name if available
+                        if hasattr(tag, "object") and tag.object:
+                            object_name = tag.object
+                        elif "." in tag.name:
+                            parts = tag.name.rsplit(".", 1)
+                            if len(parts) == 2:
+                                object_name = parts[0]
+                                method_name = parts[
+                                    1
+                                ]  # Extract method name, don't mutate tag
+
                     calls.append(
                         FunctionCall(
-                            name=tag.name,
-                            caller="unknown",  # TODO: Extract caller from context
-                            callee=tag.name,
+                            name=method_name,
+                            caller=current_caller or "unknown",
+                            callee=method_name,
                             file_path=file_path,
                             line_number=tag.line,
-                            is_method_call=False,  # TODO: Determine if it's a method call
-                            object_name=None,
+                            is_method_call=is_method_call,
+                            object_name=object_name,
                         )
                     )
 
@@ -191,21 +223,28 @@ class CallGraphBuilder:
     def __init__(
         self,
         project_root: Optional[str] = None,
-        tree_sitter_parser: Optional[Any] = None,
+        python_call_analyzer: Optional[PythonCallAnalyzer] = None,
+        javascript_call_analyzer: Optional[JavaScriptCallAnalyzer] = None,
     ) -> None:
         """Initialize the call graph builder with language analyzers."""
-        self.project_root = project_root
-        self.tree_sitter_parser = tree_sitter_parser
+        if python_call_analyzer is None:
+            raise ValueError(
+                "PythonCallAnalyzer must be injected - no fallback allowed"
+            )
+        if javascript_call_analyzer is None:
+            raise ValueError(
+                "JavaScriptCallAnalyzer must be injected - no fallback allowed"
+            )
 
-        # Initialize Python analyzer with tree-sitter
-        python_analyzer = PythonCallAnalyzer(tree_sitter_parser=tree_sitter_parser)
+        self.project_root = project_root
+        # self.tree_sitter_parser = tree_sitter_parser # TreeSitterParser is now injected into individual analyzers
 
         self.language_analyzers: Dict[str, CallAnalyzer] = {
-            "py": python_analyzer,
-            "js": JavaScriptCallAnalyzer(),
-            "ts": JavaScriptCallAnalyzer(),  # TypeScript uses same analyzer
-            "jsx": JavaScriptCallAnalyzer(),
-            "tsx": JavaScriptCallAnalyzer(),
+            "py": python_call_analyzer,
+            "js": javascript_call_analyzer,
+            "ts": javascript_call_analyzer,  # TypeScript uses same analyzer
+            "jsx": javascript_call_analyzer,
+            "tsx": javascript_call_analyzer,
         }
 
         # File extensions that should be analyzed

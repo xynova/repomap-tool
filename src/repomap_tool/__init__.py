@@ -4,6 +4,28 @@ RepoMap-Tool Tool - A comprehensive tool for analyzing Docker repositories
 and finding similar identifiers across different codebases.
 """
 
+import sys
+import types
+from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
+
+this_file = Path(__file__).resolve()
+src_dir = str(this_file.parent.parent)  # points to .../src
+
+try:
+    this_file = Path(__file__).resolve()
+    src_dir = str(this_file.parent.parent)  # points to .../src
+    if "src" not in sys.modules:
+        src_pkg = types.ModuleType("src")
+        # Mark as package by providing __path__ where Python can find subpackages
+        src_pkg.__path__ = [src_dir]
+        sys.modules["src"] = src_pkg
+except Exception as e:
+    # Log package setup failure for debugging, but don't fail import
+    logger.debug(f"Package shim setup failed: {e}")
+
 __version__ = "0.1.0"
 __author__ = "Your Name"
 __email__ = "your.email@example.com"
@@ -54,9 +76,6 @@ try:
         CacheManagerProtocol,
         FileScannerProtocol,
         ProjectAnalyzerProtocol,
-        ProjectMap,
-        Tag,
-        FileData,
         IdentifierSet,
         MatchResult as ProtocolMatchResult,
         CacheStats,
@@ -64,21 +83,18 @@ try:
     )
 except ImportError:
     # Fallback imports
-    RepoMapProtocol = None  # type: ignore
-    MatcherProtocol = None  # type: ignore
-    FuzzyMatcherProtocol = None  # type: ignore
-    SemanticMatcherProtocol = None  # type: ignore
-    HybridMatcherProtocol = None  # type: ignore
-    CacheManagerProtocol = None  # type: ignore
-    FileScannerProtocol = None  # type: ignore
-    ProjectAnalyzerProtocol = None  # type: ignore
-    ProjectMap = None  # type: ignore
-    Tag = None  # type: ignore
-    FileData = None  # type: ignore
-    IdentifierSet = None  # type: ignore
-    ProtocolMatchResult = None  # type: ignore
-    CacheStats = None  # type: ignore
-    ProtocolProjectInfo = None  # type: ignore
+    RepoMapProtocol = None  # type: ignore[assignment,misc]
+    MatcherProtocol = None  # type: ignore[assignment,misc]
+    FuzzyMatcherProtocol = None  # type: ignore[assignment,misc]
+    SemanticMatcherProtocol = None  # type: ignore[assignment,misc]
+    HybridMatcherProtocol = None  # type: ignore[assignment,misc]
+    CacheManagerProtocol = None  # type: ignore[assignment,misc]
+    FileScannerProtocol = None  # type: ignore[assignment,misc]
+    ProjectAnalyzerProtocol = None  # type: ignore[assignment,misc]
+    IdentifierSet = None  # type: ignore[assignment,misc]
+    ProtocolMatchResult = None  # type: ignore[misc]
+    CacheStats = None  # type: ignore[assignment,misc]
+    ProtocolProjectInfo = None  # type: ignore[assignment,misc]
 
 # Import exception hierarchy
 try:

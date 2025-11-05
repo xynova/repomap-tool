@@ -7,6 +7,7 @@ for the LLM file analyzer, making it easier to manage and test.
 
 from typing import Optional, TYPE_CHECKING, Any
 from pydantic import BaseModel, Field, field_validator
+from .dependency_graph import DependencyGraph
 
 if TYPE_CHECKING:
     from .advanced_dependency_graph import AdvancedDependencyGraph
@@ -16,8 +17,6 @@ if TYPE_CHECKING:
     from .impact_analysis_engine import ImpactAnalysisEngine
     from .centrality_analysis_engine import CentralityAnalysisEngine
     from .path_resolver import PathResolver
-    from ..llm.token_optimizer import TokenOptimizer
-    from ..llm.context_selector import ContextSelector
     from ..llm.hierarchical_formatter import HierarchicalFormatter
 else:
     # Import for runtime to avoid circular imports
@@ -28,8 +27,6 @@ else:
     from .impact_analysis_engine import ImpactAnalysisEngine
     from .centrality_analysis_engine import CentralityAnalysisEngine
     from .path_resolver import PathResolver
-    from ..llm.token_optimizer import TokenOptimizer
-    from ..llm.context_selector import ContextSelector
     from ..llm.hierarchical_formatter import HierarchicalFormatter
 
 
@@ -74,25 +71,31 @@ class LLMAnalyzerDependencies(BaseModel):
     """Dependency injection container for LLM analyzer components."""
 
     # Core dependencies
-    dependency_graph: Any = Field(..., description="Advanced dependency graph")
+    dependency_graph: DependencyGraph = Field(
+        ..., description="Advanced dependency graph"
+    )
     project_root: str = Field(..., description="Project root path")
 
     # Analysis engines
-    ast_analyzer: Any = Field(..., description="AST file analyzer")
-    token_optimizer: Any = Field(..., description="Token optimizer")
-    context_selector: Any = Field(..., description="Context selector")
-    hierarchical_formatter: Any = Field(..., description="Hierarchical formatter")
-    path_resolver: Any = Field(..., description="Path resolver")
-    impact_analyzer: Any = Field(..., description="Impact analyzer")
-    impact_engine: Any = Field(..., description="Impact analysis engine")
-    centrality_engine: Any = Field(..., description="Centrality analysis engine")
-    centrality_calculator: Any = Field(..., description="Centrality calculator")
+    ast_analyzer: ASTFileAnalyzer = Field(..., description="AST file analyzer")
+    hierarchical_formatter: HierarchicalFormatter = Field(
+        ..., description="Hierarchical formatter"
+    )
+    path_resolver: PathResolver = Field(..., description="Path resolver")
+    impact_analyzer: ImpactAnalyzer = Field(..., description="Impact analyzer")
+    impact_engine: ImpactAnalysisEngine = Field(
+        ..., description="Impact analysis engine"
+    )
+    centrality_engine: CentralityAnalysisEngine = Field(
+        ..., description="Centrality analysis engine"
+    )
+    centrality_calculator: CentralityCalculator = Field(
+        ..., description="Centrality calculator"
+    )
 
     @field_validator(
         "dependency_graph",
         "ast_analyzer",
-        "token_optimizer",
-        "context_selector",
         "hierarchical_formatter",
         "path_resolver",
         "impact_analyzer",

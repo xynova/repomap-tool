@@ -66,7 +66,18 @@ def test_explore_workflow_mocked_everything(mock_repo, mock_matcher, mock_sessio
 ```python
 # BAD: Testing obvious functionality for coverage
 def test_get_cache_size():
-    cache = CacheManager()
+    from repomap_tool.cli.services import get_service_factory
+    from repomap_tool.models import RepoMapConfig, PerformanceConfig, DependencyConfig
+    
+    # Use service factory for proper DI
+    config = RepoMapConfig(
+        project_root=".",
+        performance=PerformanceConfig(),
+        dependencies=DependencyConfig(),
+    )
+    service_factory = get_service_factory()
+    repomap_service = service_factory.create_repomap_service(config)
+    cache = repomap_service.cache_manager
     assert cache.get_size() == 0  # Too trivial!
     
 def test_command_exists():

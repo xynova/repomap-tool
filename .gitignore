@@ -28,6 +28,7 @@ wheels/
 
 # Cache
 cache/
+.cache/
 # Old aider cache (legacy)
 .aider*
 
@@ -73,6 +74,9 @@ logs/
 # Temporary files
 *.tmp
 *.temp
-
+tmp/ 
 
 .repomap/
+
+# Temporary test fixtures
+tests/fixtures/temp_large_repo/

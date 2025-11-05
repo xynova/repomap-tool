@@ -13,7 +13,7 @@ import sqlite3
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Set
 
 from ..core.logging_service import get_logger
 from ..code_analysis.models import CodeTag
@@ -31,19 +31,54 @@ class TreeSitterTagCache:
             cache_dir: Directory for cache storage. Defaults to ~/.repomap-tool/cache
         """
         self.cache_dir = cache_dir or Path.home() / ".repomap-tool" / "cache"
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        self.db_path = self.cache_dir / "tags.db"
+
+        # Check if we're running in a pytest worker (parallel execution)
+        # Use worker-specific database files to avoid SQLite concurrency issues
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER")
+        if worker_id:
+            logger.info(
+                f"Running in pytest worker {worker_id}, using worker-specific cache"
+            )
+            # Create worker-specific cache directory
+            self.cache_dir = self.cache_dir / f"worker_{worker_id}"
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            self.db_path = self.cache_dir / "tags.db"
+        else:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
+            self.db_path = self.cache_dir / "tags.db"
 
         # Check if cache is disabled via environment variable
         if os.getenv("REPOMAP_DISABLE_CACHE", "0").lower() in ("1", "true", "yes"):
             self._cache_disabled = True
         else:
             self._cache_disabled = False
-            self._init_db()
+            # Initialize database file if it doesn't exist
+            if not self.db_path.exists():
+                self._get_db_connection().close()
 
-    def _init_db(self) -> None:
-        """Initialize SQLite database schema"""
+    def _get_db_connection(self) -> sqlite3.Connection:
+        """Get a database connection, initializing the schema if the DB is new or table is missing."""
+        db_exists = self.db_path.exists()
         conn = sqlite3.connect(str(self.db_path))
+
+        # Check if the file_cache table exists
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(file_cache)")
+        table_info = cursor.fetchall()
+        table_exists = len(table_info) > 0
+
+        if not db_exists or not table_exists:
+            if not db_exists:
+                logger.info(f"Initializing new tag cache database at {self.db_path}")
+            elif not table_exists:
+                logger.warning(
+                    f"Table 'file_cache' missing in existing database at {self.db_path}. Re-initializing schema."
+                )
+            self._init_db(conn)  # Pass the connection to init_db
+        return conn
+
+    def _init_db(self, conn: sqlite3.Connection) -> None:
+        """Initialize SQLite database schema"""
         cursor = conn.cursor()
 
         # File cache table - tracks file metadata
@@ -94,7 +129,7 @@ class TreeSitterTagCache:
         )
 
         conn.commit()
-        conn.close()
+        # conn.close() # Remove this line - connection should remain open
 
     def get_tags(self, file_path: str) -> Optional[List[CodeTag]]:
         """Get cached tags for a file if valid - returns CodeTag objects
@@ -111,7 +146,7 @@ class TreeSitterTagCache:
         if not self._is_cache_valid(file_path):
             return None
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection()  # Use the new method
         cursor = conn.cursor()
 
         cursor.execute(
@@ -122,8 +157,17 @@ class TreeSitterTagCache:
             (file_path,),
         )
 
+        rows = cursor.fetchall()
+        conn.close()
+
+        # If cache is valid for the file but there are no tag rows, return an empty list
+        # This distinguishes between "no cached entry" (handled by _is_cache_valid -> None)
+        # and "cached entry with zero tags" (valid empty result for empty files)
+        if not rows:
+            return []
+
         tags = []
-        for row in cursor.fetchall():
+        for row in rows:
             name, kind, file, line, column, end_line, end_column, rel_fname = row
             tag = CodeTag(
                 name=name,
@@ -137,8 +181,79 @@ class TreeSitterTagCache:
             )
             tags.append(tag)
 
-        conn.close()
         return tags
+
+    def get_tags_batch(self, file_paths: List[str]) -> Dict[str, List[CodeTag]]:
+        """Get cached tags for multiple files in a single SQL query.
+
+        Args:
+            file_paths: List of file paths to get tags for
+
+        Returns:
+            Dictionary mapping file_path -> List[CodeTag]. Files with invalid cache
+            or not in cache will have empty lists.
+        """
+        if self._cache_disabled or not file_paths:
+            return {file_path: [] for file_path in file_paths}
+
+        # Batch validate cache for all files first
+        valid_files = self._validate_cache_batch(file_paths)
+
+        if not valid_files:
+            # No valid cache entries, return empty lists for all files
+            return {file_path: [] for file_path in file_paths}
+
+        conn = self._get_db_connection()
+        cursor = conn.cursor()
+
+        # Batch query for tags - only query valid files
+        valid_files_list = list(valid_files)
+        placeholders = ",".join("?" * len(valid_files_list))
+        # f-string only generates placeholder count, not user data
+        # User input safely passed via tuple() parameter (parameterized query)
+        cursor.execute(  # nosec B608
+            f"""
+            SELECT file_path, name, kind, file, line, column, end_line, end_column, rel_fname
+            FROM tags
+            WHERE file_path IN ({placeholders})
+            ORDER BY file_path, line
+        """,
+            tuple(valid_files_list),
+        )
+
+        rows = cursor.fetchall()
+        conn.close()
+
+        # Group tags by file_path
+        tags_by_file: Dict[str, List[CodeTag]] = {
+            file_path: [] for file_path in file_paths
+        }
+
+        for row in rows:
+            (
+                file_path,
+                name,
+                kind,
+                file,
+                line,
+                column,
+                end_line,
+                end_column,
+                rel_fname,
+            ) = row
+            tag = CodeTag(
+                name=name,
+                kind=kind,
+                file=file,
+                line=line,
+                column=column,
+                end_line=end_line,
+                end_column=end_column,
+                rel_fname=rel_fname,
+            )
+            tags_by_file[file_path].append(tag)
+
+        return tags_by_file
 
     def set_tags(self, file_path: str, tags: List[CodeTag]) -> None:
         """Cache tags for a file - accepts CodeTag objects
@@ -153,7 +268,7 @@ class TreeSitterTagCache:
         file_hash = self._compute_file_hash(file_path)
         mtime = Path(file_path).stat().st_mtime
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection()  # Use the new method
         cursor = conn.cursor()
 
         # Delete old entry if exists
@@ -203,7 +318,7 @@ class TreeSitterTagCache:
         if self._cache_disabled:
             return
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection()  # Use the new method
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_cache WHERE file_path = ?", (file_path,))
         cursor.execute("DELETE FROM tags WHERE file_path = ?", (file_path,))
@@ -217,7 +332,7 @@ class TreeSitterTagCache:
         if self._cache_disabled:
             return
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection()  # Use the new method
         cursor = conn.cursor()
         cursor.execute("DELETE FROM file_cache")
         cursor.execute("DELETE FROM tags")
@@ -241,7 +356,7 @@ class TreeSitterTagCache:
         if not Path(file_path).exists():
             return False
 
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection()  # Use the new method
         cursor = conn.cursor()
 
         cursor.execute(
@@ -271,6 +386,74 @@ class TreeSitterTagCache:
         current_hash = self._compute_file_hash(file_path)
         return bool(current_hash == cached_hash)
 
+    def _validate_cache_batch(self, file_paths: List[str]) -> Set[str]:
+        """Batch validate cache for multiple files.
+
+        Args:
+            file_paths: List of file paths to validate
+
+        Returns:
+            Set of file paths that have valid cache entries
+        """
+        if self._cache_disabled or not file_paths:
+            return set()
+
+        conn = self._get_db_connection()
+        cursor = conn.cursor()
+
+        # Batch query for cache metadata
+        placeholders = ",".join("?" * len(file_paths))
+        # f-string only generates placeholder count, not user data
+        # User input safely passed via tuple() parameter (parameterized query)
+        cursor.execute(  # nosec B608
+            f"""
+            SELECT file_path, file_hash, mtime FROM file_cache
+            WHERE file_path IN ({placeholders})
+        """,
+            tuple(file_paths),
+        )
+
+        cached_files = cursor.fetchall()
+        conn.close()
+
+        # Validate each cached file
+        valid_files = set()
+        for file_path in file_paths:
+            # Check if file exists
+            file_path_obj = Path(file_path)
+            if not file_path_obj.exists():
+                continue
+
+            # Find cached entry for this file
+            cached_entry = None
+            for cached_path, cached_hash, cached_mtime in cached_files:
+                if cached_path == file_path:
+                    cached_entry = (cached_hash, cached_mtime)
+                    break
+
+            if not cached_entry:
+                continue
+
+            cached_hash, cached_mtime = cached_entry
+            if cached_hash is None or cached_mtime is None:
+                continue
+
+            # Check file modification time
+            try:
+                current_mtime = file_path_obj.stat().st_mtime
+                if current_mtime > cached_mtime:
+                    continue
+
+                # Check file content hash
+                current_hash = self._compute_file_hash(file_path)
+                if current_hash == cached_hash:
+                    valid_files.add(file_path)
+            except (OSError, IOError):
+                # File access error, skip
+                continue
+
+        return valid_files
+
     def _compute_file_hash(self, file_path: str) -> str:
         """Compute SHA256 hash of file content
 
@@ -292,7 +475,7 @@ class TreeSitterTagCache:
         Returns:
             Dictionary with cache statistics
         """
-        conn = sqlite3.connect(str(self.db_path))
+        conn = self._get_db_connection()  # Use the new method
         cursor = conn.cursor()
 
         cursor.execute("SELECT COUNT(*) FROM file_cache")

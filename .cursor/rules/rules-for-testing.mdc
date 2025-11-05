@@ -1,7 +1,18 @@
 ---
 description: Comprehensive testing and code quality rules with anti-cheating protocols
-globs:
-alwaysApply: true
+alwaysApply: false
+keywords: [test, testing, tests, pytest, coverage, unit test, integration test, test suite, test case, make test, test-unit, mock, mocking, fixture, test data, test quality, test strategy, assertion, test validation, test execution, test failure, test result]
+---
+
+# 🤖 **AI REASONING PROTOCOL**
+
+## **Before Taking Any Testing Action:**
+**ALWAYS provide step-by-step reasoning that:**
+1. States what testing action you're about to take
+2. Explains which rules from this document apply
+3. Shows how you've considered those rules in your approach
+4. Outlines your specific plan and next steps
+
 ---
 
 # 🚫 **FORBIDDEN ACTIONS - ANTI-CHEATING PROTOCOLS**
@@ -45,6 +56,17 @@ alwaysApply: true
 - **ALWAYS** verify actual behavior, not just return types
 - **ALWAYS** include performance constraints in relevant tests
 - **ALWAYS** test with real project structures, not artificial ones
+
+## 📁 **FIXTURE REQUIREMENTS:**
+- **PREFER static shared fixtures** over dynamic test data generation
+- **USE existing test fixtures** from `tests/fixtures/` directory
+- **AVOID state-changing operations** in test fixtures (this software doesn't change state)
+- **REUSE fixture data** across multiple test cases for consistency
+- **CREATE static test files** that represent real project structures
+- **USE shared example data** that can be referenced by multiple tests
+- **AVOID generating test data** at runtime when static data suffices
+- **PREFER deterministic fixtures** that produce consistent results
+- **USE existing test repositories** like `tests/fixtures/test-repo/` for integration tests
 
 ## 🔍 TESTING WORKFLOW:
 1. **Write tests first** for new functionality

@@ -13,6 +13,8 @@ from typing import List, Dict, Any, Optional
 from pathlib import Path
 
 from .ast_file_analyzer import ASTFileAnalyzer, FileAnalysisResult
+from .dependency_graph import DependencyGraph
+from .path_resolver import PathResolver
 from .file_utils import suggest_test_files
 from .models import FileImpactAnalysis
 
@@ -25,8 +27,8 @@ class ImpactAnalysisEngine:
     def __init__(
         self,
         ast_analyzer: ASTFileAnalyzer,
-        dependency_graph: Optional[Any] = None,
-        path_normalizer: Optional[Any] = None,
+        dependency_graph: Optional[DependencyGraph] = None,
+        path_normalizer: Optional[PathResolver] = None,
     ):
         """Initialize the impact analysis engine.
 
@@ -44,7 +46,7 @@ class ImpactAnalysisEngine:
         file_path: str,
         ast_result: FileAnalysisResult,
         all_files: List[str],
-        dependency_graph: Optional[Any] = None,
+        dependency_graph: Optional[DependencyGraph] = None,
     ) -> FileImpactAnalysis:
         """Analyze impact for a single file.
 
@@ -157,7 +159,7 @@ class ImpactAnalysisEngine:
         self,
         file_path: str,
         all_files: List[str],
-        dependency_graph: Optional[Any] = None,
+        dependency_graph: Optional[DependencyGraph] = None,
     ) -> List[Dict[str, Any]]:
         """Analyze reverse dependencies (what imports this file).
 
@@ -223,7 +225,8 @@ class ImpactAnalysisEngine:
         try:
             # Use path normalizer if available (same as centrality analysis)
             if self.path_normalizer:
-                normalized = self.path_normalizer.normalize_path(file_path)
+                # PathResolver doesn't have normalize_path, use convert_to_relative_path instead
+                normalized = self.path_normalizer.convert_to_relative_path(file_path)
                 return str(normalized) if normalized else file_path
 
             # Fallback to simple path resolution

@@ -13,6 +13,7 @@ from typing import List, Dict, Any, Optional
 
 from .ast_file_analyzer import ASTFileAnalyzer, FileAnalysisResult
 from .centrality_calculator import CentralityCalculator
+from .dependency_graph import DependencyGraph
 from .function_utils import (
     smart_categorize_function_calls,
     find_most_called_function,
@@ -32,7 +33,7 @@ class CentralityAnalysisEngine:
         self,
         ast_analyzer: ASTFileAnalyzer,
         centrality_calculator: CentralityCalculator,
-        dependency_graph: Any,
+        dependency_graph: DependencyGraph,
         path_normalizer: PathNormalizer,
     ):
         """Initialize the centrality analysis engine.
@@ -209,7 +210,9 @@ class CentralityAnalysisEngine:
             import_list = (
                 [imp.module for imp in ast_result.imports] if ast_result.imports else []
             )
-            reverse_dep_list = reverse_dep_relationships  # Already a list of file paths
+            reverse_dep_list = [
+                rel.target_file for rel in reverse_dep_relationships
+            ]  # Extract file paths from relationships
 
         return {
             "direct_imports": direct_imports,

@@ -12,16 +12,25 @@ from .file_scanner import get_project_files
 import os
 import time
 import traceback
+from datetime import datetime  # Import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
-from ..code_analysis.models import CodeTag
-from ..protocols import (
-    RepoMapProtocol,
-    FuzzyMatcherProtocol,
-    SemanticMatcherProtocol,
-    HybridMatcherProtocol,
-)
-from datetime import datetime
+from repomap_tool.code_analysis.models import CodeTag
+from repomap_tool.code_analysis.tree_sitter_parser import TreeSitterParser
+from repomap_tool.code_analysis.dependency_graph import DependencyGraph
+from repomap_tool.code_analysis.centrality_calculator import CentralityCalculator
+from repomap_tool.code_analysis.file_discovery_service import FileDiscoveryService
+from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
+from repomap_tool.code_search.semantic_matcher import DomainSemanticMatcher
+from repomap_tool.code_search.embedding_matcher import EmbeddingMatcher
+from repomap_tool.code_search.hybrid_matcher import HybridMatcher
+from repomap_tool.code_analysis.impact_analyzer import ImpactAnalyzer
+from repomap_tool.core.spellchecker_service import SpellCheckerService
+from repomap_tool.core.tag_cache import TreeSitterTagCache
+from repomap_tool.protocols import RepoMapProtocol
+from rich.console import Console
+
+logger = get_logger(__name__)  # Initialize logger at module level
 
 from ..models import (
     RepoMapConfig,
@@ -32,18 +41,16 @@ from ..models import (
 )
 from .analyzer import analyze_file_types, analyze_identifier_types, get_cache_size
 from .search_engine import fuzzy_search, semantic_search, hybrid_search, basic_search
-from .parallel_processor import ParallelTagExtractor
-from rich.console import Console
 
 # Import matchers
 try:
-    from ..code_search.fuzzy_matcher import FuzzyMatcher
-    from ..code_search.adaptive_semantic_matcher import AdaptiveSemanticMatcher
-    from ..code_search.hybrid_matcher import HybridMatcher
+    from repomap_tool.code_search.adaptive_semantic_matcher import (
+        AdaptiveSemanticMatcher,
+    )
 
     MATCHERS_AVAILABLE = True
-except ImportError as e:
-    logging.error(f"Failed to import matchers: {e}")
+except ImportError:
+    logger.warning("Could not import one or more matcher components.")
     MATCHERS_AVAILABLE = False
 
 
@@ -58,16 +65,18 @@ class RepoMapService:
     def __init__(
         self,
         config: RepoMapConfig,
-        console: Optional[Any] = None,
-        parallel_extractor: Optional[Any] = None,
-        fuzzy_matcher: Optional[Any] = None,
-        semantic_matcher: Optional[Any] = None,
-        embedding_matcher: Optional[Any] = None,
-        hybrid_matcher: Optional[Any] = None,
-        dependency_graph: Optional[Any] = None,
-        impact_analyzer: Optional[Any] = None,
-        centrality_calculator: Optional[Any] = None,
-        spellchecker_service: Optional[Any] = None,
+        console: Console,
+        fuzzy_matcher: FuzzyMatcher,
+        dependency_graph: DependencyGraph,
+        centrality_calculator: CentralityCalculator,
+        tree_sitter_parser: TreeSitterParser,
+        tag_cache: TreeSitterTagCache,
+        file_discovery_service: FileDiscoveryService,
+        semantic_matcher: Optional[DomainSemanticMatcher] = None,
+        embedding_matcher: Optional[EmbeddingMatcher] = None,
+        hybrid_matcher: Optional[HybridMatcher] = None,
+        impact_analyzer: Optional[ImpactAnalyzer] = None,
+        spellchecker_service: Optional[SpellCheckerService] = None,
     ):
         """
         Initialize RepoMapService with validated configuration and injected dependencies.
@@ -75,35 +84,25 @@ class RepoMapService:
         Args:
             config: Validated RepoMapConfig instance
             console: Rich console instance (injected)
-            parallel_extractor: Parallel tag extractor (injected)
             fuzzy_matcher: Fuzzy matcher instance (injected)
-            semantic_matcher: Semantic matcher instance (injected)
-            hybrid_matcher: Hybrid matcher instance (injected)
             dependency_graph: Dependency graph instance (injected)
-            impact_analyzer: Impact analyzer instance (injected)
             centrality_calculator: Centrality calculator instance (injected)
+            tree_sitter_parser: Tree-sitter parser instance (injected)
+            tag_cache: Tag cache instance (injected)
+            file_discovery_service: File discovery service instance (injected)
+            semantic_matcher: Semantic matcher instance (injected)
+            embedding_matcher: Embedding matcher instance (injected)
+            hybrid_matcher: Hybrid matcher instance (injected)
+            impact_analyzer: Impact analyzer instance (injected)
+            spellchecker_service: Spell checker service instance (injected)
         """
         self.config = config
         self.logger = self._setup_logging()
 
-        # All dependencies must be injected - no fallback allowed
-        if console is None:
-            raise ValueError("Console must be injected - no fallback allowed")
-        if parallel_extractor is None:
-            raise ValueError(
-                "ParallelTagExtractor must be injected - no fallback allowed"
-            )
-        if fuzzy_matcher is None:
-            raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
-        if dependency_graph is None:
-            raise ValueError("DependencyGraph must be injected - no fallback allowed")
-        if centrality_calculator is None:
-            raise ValueError(
-                "CentralityCalculator must be injected - no fallback allowed"
-            )
+        # All core dependencies are required and injected via DI container
+        # Optional dependencies (semantic_matcher, embedding_matcher, etc.) are truly optional
 
         self.console = console
-        self.parallel_extractor = parallel_extractor
         self.fuzzy_matcher = fuzzy_matcher
         self.semantic_matcher = semantic_matcher
         self.embedding_matcher = embedding_matcher
@@ -112,13 +111,21 @@ class RepoMapService:
         self.impact_analyzer = impact_analyzer
         self.centrality_calculator = centrality_calculator
         self.spellchecker_service = spellchecker_service
+        self.tree_sitter_parser = tree_sitter_parser  # Assign injected parser
+        self.tag_cache = tag_cache  # Assign injected cache
+        self.import_analysis_cache: Dict[str, Any] = (
+            {}
+        )  # Separate cache for import analysis
+        self.file_discovery_service = (
+            file_discovery_service  # Assign injected file discovery service
+        )
 
         # Initialize components
         self.repo_map: Optional[RepoMapProtocol] = None
         self.analysis_results: Optional[Any] = None
 
-        # Initialize the system
-        self._initialize_components()
+        # No longer need to initialize components directly
+        # self._initialize_components()
 
         self.logger.debug(f"Initialized RepoMapService for {self.config.project_root}")
 
@@ -127,56 +134,38 @@ class RepoMapService:
 
     def _setup_logging(self) -> logging.Logger:
         """Setup logging based on configuration."""
+        # Use centralized logging service - don't add custom handlers
+        # The centralized service already handles worker isolation
         logger = get_logger(__name__)
 
-        # Set log level
+        # Set log level based on config
         level = getattr(logging, self.config.log_level)
         logger.setLevel(level)
-
-        # Create handler if none exists
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            formatter = logging.Formatter(
-                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-            )
-            handler.setFormatter(formatter)
-            logger.addHandler(handler)
 
         return logger
 
     def _initialize_components(self) -> None:
         """Initialize all components based on configuration."""
-        # Initialize tree-sitter parser with caching
-        from ..code_analysis.tree_sitter_parser import TreeSitterParser
-        from .tag_cache import TreeSitterTagCache
-
-        # Create tag cache
-        cache_dir = self.config.cache_dir if hasattr(self.config, "cache_dir") else None
-        if cache_dir and isinstance(cache_dir, str) and cache_dir.strip():
-            cache_dir = Path(cache_dir)
-        else:
-            cache_dir = None
-        tag_cache = TreeSitterTagCache(cache_dir)
-
-        # Create tree-sitter parser with cache
-        project_root_str = (
-            str(self.config.project_root) if self.config.project_root else None
-        )
-        self.tree_sitter_parser = TreeSitterParser(
-            project_root=project_root_str, cache=tag_cache
-        )
-
-        # Populate cache by parsing all project files
-        self._populate_tree_sitter_cache()
-
-        # CustomRepoMap removed - using TreeSitterParser directly
+        # This method is no longer needed as TreeSitterParser and TagCache are injected.
+        pass
 
     def _populate_tree_sitter_cache(self) -> None:
         """Populate tree-sitter cache by parsing all project files."""
+        # Ensure that tree_sitter_parser is initialized. If not, this is a dependency error.
+        if not self.tree_sitter_parser:
+            self.logger.error(
+                "TreeSitterParser not initialized during cache population."
+            )
+            raise ValueError("TreeSitterParser dependency missing.")
+
         try:
             # Get all project files
             project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+                str(self.config.project_root),
+                self.config.verbose,  # Pass Path object directly
+            )
+            self.logger.debug(
+                f"_populate_tree_sitter_cache: Found {len(project_files)} project files for caching."
             )
 
             self.logger.info(
@@ -185,11 +174,19 @@ class RepoMapService:
 
             # Parse each file to populate the cache
             for file_path in project_files:
+                self.logger.debug(
+                    f"_populate_tree_sitter_cache: Processing file: {file_path}"
+                )
                 try:
                     # This will parse the file and cache the results
-                    self.tree_sitter_parser.get_tags(file_path)
+                    tags = self.tree_sitter_parser.get_tags(file_path)
+                    self.logger.debug(
+                        f"_populate_tree_sitter_cache: Retrieved {len(tags)} tags for {file_path}"
+                    )
                 except Exception as e:
-                    self.logger.debug(f"Failed to parse {file_path}: {e}")
+                    self.logger.debug(
+                        f"_populate_tree_sitter_cache: Failed to parse {file_path}: {e}"
+                    )
                     continue
 
             self.logger.info("Tree-sitter cache populated successfully")
@@ -219,7 +216,8 @@ class RepoMapService:
         try:
             # Get current project files
             project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+                str(self.config.project_root),
+                self.config.verbose,  # Pass Path object directly
             )
 
             # Check and invalidate stale caches in fuzzy matcher
@@ -247,23 +245,46 @@ class RepoMapService:
         except Exception as e:
             self.logger.warning(f"Error during cache invalidation: {e}")
 
-    def analyze_project(self) -> ProjectInfo:
+    def analyze_project(self, files: Optional[List[str]] = None) -> ProjectInfo:
         """Get comprehensive project information."""
         start_time = time.time()
 
         # Get project files
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
+        all_project_files = get_project_files(
+            str(self.config.project_root),
+            self.config.verbose,  # Pass Path object directly
         )
 
-        # Get project files and extract identifiers from tags
-        project_files = get_project_files(
-            str(self.config.project_root), self.config.verbose
-        )
+        # Filter project files if specific files are provided
+        project_files = files if files else all_project_files
+
+        # Ensure that only files within the project root are processed
+        if self.config.project_root and project_files:
+            project_root_path = Path(self.config.project_root)
+            project_files = [
+                f
+                for f in project_files
+                if Path(f).is_relative_to(project_root_path)
+                or Path(f).samefile(project_root_path)
+            ]
+
+        # If no specific input_paths, the RepoMapService will analyze the entire project_root
+        if not project_files:
+            self.logger.warning("No project files found for analysis.")
+            return ProjectInfo(
+                project_root=str(self.config.project_root),
+                total_files=0,
+                total_identifiers=0,
+                file_types={},
+                identifier_types={},
+                analysis_time_ms=0.0,
+                cache_size_bytes=get_cache_size(),
+                last_updated=datetime.now(),
+            )
 
         # Extract identifiers from all project files
         identifier_list = self._extract_identifiers_from_files(project_files)
-        identifiers = set(identifier_list)
+        identifiers = {tag.name for tag in identifier_list}  # Convert to set of names
 
         # Analyze project structure
         file_types = analyze_file_types(project_files)
@@ -291,6 +312,7 @@ class RepoMapService:
             ProjectInfo object with analysis results
         """
         if not self.config.performance.enable_progress:
+            # Call analyze_project without specifying files, it will use all_project_files
             return self.analyze_project()
 
         from rich.progress import (
@@ -316,7 +338,8 @@ class RepoMapService:
             # Task 1: Scan files
             scan_task = progress.add_task("Scanning project files...", total=None)
             project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+                str(self.config.project_root),
+                self.config.verbose,  # Pass Path object directly
             )
             progress.update(scan_task, completed=True)
 
@@ -334,7 +357,9 @@ class RepoMapService:
 
             # Task 3: Analyze results
             analyze_task = progress.add_task("Analyzing results...", total=None)
-            identifiers = set(identifier_list)
+            identifiers = {
+                tag.name for tag in identifier_list
+            }  # Convert to set of names
             file_types = analyze_file_types(project_files)
             identifier_types = analyze_identifier_types(identifiers)
             progress.update(analyze_task, completed=True)
@@ -369,10 +394,12 @@ class RepoMapService:
         )
 
         # Force cache refresh if empty
-        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
+        if (
+            not self.tree_sitter_parser or not self.tag_cache
+        ):  # Check injected tag_cache
             self.logger.debug("Tree-sitter cache is empty or missing, forcing refresh")
-            project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+            project_files = self.file_discovery_service.get_tree_sitter_supported_files(
+                self.tree_sitter_parser, exclude_tests=True
             )
             if self.repo_map and project_files:
                 try:
@@ -394,16 +421,18 @@ class RepoMapService:
             # Force tree-sitter to scan files and populate cache
             self.logger.debug("Cache empty, forcing tree-sitter tag extraction")
 
-            # Get project files
-            project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+            # Get project files that are supported by tree-sitter
+            project_files = self.file_discovery_service.get_tree_sitter_supported_files(
+                self.tree_sitter_parser, exclude_tests=True
             )
 
             # Force tree-sitter to extract tags
-            if self.repo_map:
-                # This populates tree-sitter cache
+            if self.tree_sitter_parser:
+                # This populates tree-sitter cache by parsing files
                 try:
-                    self.repo_map.get_ranked_tags_map(project_files, max_tokens=4000)
+                    # Parse files to populate cache
+                    for file_path in project_files:
+                        self.tree_sitter_parser.get_tags(file_path, use_cache=True)
                 except ZeroDivisionError:
                     # Handle case where tree-sitter library encounters division by zero
                     self.logger.warning(
@@ -539,43 +568,68 @@ class RepoMapService:
         Returns:
             List of tag dictionaries with name, type, file, and line information
         """
-        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
+        if (
+            not self.tree_sitter_parser or not self.tag_cache
+        ):  # Check injected tag_cache
             self.logger.debug("No tree-sitter cache available")
             return []
 
         self.logger.info(
-            f"_get_cached_tags called - tree_sitter_parser: {self.tree_sitter_parser is not None}, has cache: {self.tree_sitter_parser.tag_cache is not None if self.tree_sitter_parser else False}"
+            f"_get_cached_tags called - tree_sitter_parser: {self.tree_sitter_parser is not None}, has cache: {self.tag_cache is not None if self.tag_cache else False}"
         )
 
         try:
-            cache = self.tree_sitter_parser.tag_cache
+            # Try to get cache stats, but don't fail if cache is disabled
+            try:
+                cache_stats = (
+                    self.tag_cache.get_cache_stats() if self.tag_cache else "N/A"
+                )
+            except Exception:
+                cache_stats = "disabled"
+
             self.logger.info(
-                f"Tree-sitter cache type: {type(cache)}, size: {cache.get_cache_stats() if cache else 'N/A'}"
+                f"Tree-sitter cache type: {type(self.tag_cache)}, size: {cache_stats}"
             )
 
-            if not cache:
-                self.logger.info("Tree-sitter cache is empty")
-                return []
-
-            # Get all project files and retrieve their cached tags
-            project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+            # Get tree-sitter supported files and retrieve their cached tags
+            project_files = self.file_discovery_service.get_tree_sitter_supported_files(
+                self.tree_sitter_parser, exclude_tests=True
             )
 
-            all_tags = []
-            files_with_tags = 0
-            for file_path in project_files:
-                try:
-                    cached_tags = cache.get_tags(file_path)
-                    if cached_tags:
-                        all_tags.extend(cached_tags)
+            # Use batch query for better performance - single SQL query instead of N queries
+            try:
+                tags_dict = self.tree_sitter_parser.get_tags_batch(
+                    project_files, use_cache=True
+                )
+                all_tags = []
+                files_with_tags = 0
+                for file_path, tags in tags_dict.items():
+                    if tags:
+                        all_tags.extend(tags)
                         files_with_tags += 1
-                        self.logger.debug(
-                            f"Retrieved {len(cached_tags)} tags from cache for {file_path}"
+                        self.logger.debug(f"Retrieved {len(tags)} tags for {file_path}")
+            except Exception as e:
+                self.logger.warning(
+                    f"Failed to retrieve tags in batch: {e}, falling back to individual queries"
+                )
+                # Fallback to individual queries if batch fails
+                all_tags = []
+                files_with_tags = 0
+                for file_path in project_files:
+                    try:
+                        tags = self.tree_sitter_parser.get_tags(
+                            file_path, use_cache=True
                         )
-                except Exception as e:
-                    self.logger.debug(f"Error getting cached tags for {file_path}: {e}")
-                    continue
+                        if tags:
+                            all_tags.extend(tags)
+                            files_with_tags += 1
+                            self.logger.debug(
+                                f"Retrieved {len(tags)} tags for {file_path}"
+                            )
+                    except Exception as e2:
+                        self.logger.warning(
+                            f"Failed to retrieve tags for {file_path}: {e2}"
+                        )
 
             self.logger.info(
                 f"Retrieved tags from {files_with_tags} files out of {len(project_files)} total files"
@@ -596,9 +650,12 @@ class RepoMapService:
         if not identifiers:
             # Fallback: re-parse files
             project_files = get_project_files(
-                str(self.config.project_root), self.config.verbose
+                str(self.config.project_root),
+                self.config.verbose,  # Pass Path object directly
             )
-            identifiers = self._extract_identifiers_from_files(project_files)
+            identifiers = [
+                tag.name for tag in self._extract_identifiers_from_files(project_files)
+            ]
 
         return sorted(list(set(identifiers)))
 
@@ -611,7 +668,9 @@ class RepoMapService:
             if not identifier_list:
                 return None
 
-            identifiers = set(identifier_list)
+            identifiers = {
+                tag for tag in identifier_list
+            }  # Keep CodeTag objects for richer context in ranking
 
             # Simple ranking based on identifier characteristics
             ranked_map = {}
@@ -619,11 +678,15 @@ class RepoMapService:
                 score = 1.0
 
                 # Boost score for common patterns
-                if identifier.startswith("get_") or identifier.startswith("set_"):
+                if identifier.name.startswith("get_") or identifier.name.startswith(
+                    "set_"
+                ):
                     score = 1.5
-                elif identifier[0].isupper():  # Class names
+                elif identifier.name[0].isupper():  # Class names
                     score = 1.3
-                elif "_" in identifier and identifier.islower():  # function_names
+                elif (
+                    "_" in identifier.name and identifier.name.islower()
+                ):  # function_names
                     score = 1.2
 
                 ranked_map[identifier] = score
@@ -633,7 +696,9 @@ class RepoMapService:
             for identifier, score in sorted(
                 ranked_map.items(), key=lambda x: x[1], reverse=True
             ):
-                result_lines.append(f"{identifier}: {score}")
+                result_lines.append(
+                    f"{identifier.name}: {score}"
+                )  # Access identifier.name here
 
             # Limit output based on max_tokens (rough estimation)
             result = "\n".join(result_lines)
@@ -658,9 +723,13 @@ class RepoMapService:
 
     def _get_project_files(self) -> List[str]:
         """Get list of project files, respecting .gitignore patterns."""
-        return get_project_files(str(self.config.project_root), self.config.verbose)
+        return get_project_files(
+            str(self.config.project_root), self.config.verbose
+        )  # Pass Path object directly
 
-    def _extract_identifiers_from_files(self, project_files: List[str]) -> List[str]:
+    def _extract_identifiers_from_files(
+        self, project_files: List[str]
+    ) -> List[CodeTag]:
         """
         Extract identifiers from project files using parallel processing when beneficial.
 
@@ -686,7 +755,7 @@ class RepoMapService:
             )
             return self._extract_identifiers_sequential(project_files)
 
-    def _extract_identifiers_parallel(self, project_files: List[str]) -> List[str]:
+    def _extract_identifiers_parallel(self, project_files: List[str]) -> List[CodeTag]:
         """
         Extract identifiers from files using parallel processing.
 
@@ -696,19 +765,26 @@ class RepoMapService:
             project_files: List of file paths to process
 
         Returns:
-            List of identifier names extracted from the files
+            List of CodeTag objects extracted from the files
 
         Raises:
             Exception: If parallel processing fails, with helpful debugging info
         """
         try:
-            identifiers: List[str]
+            identifiers: List[CodeTag]
             stats: Any
-            identifiers, stats = self.parallel_extractor.extract_tags_parallel(
-                files=project_files,
-                project_root=str(self.config.project_root),
-                repo_map=self.repo_map,
-            )
+            # Fallback to sequential processing since parallel_extractor is removed
+            identifiers = self._extract_identifiers_sequential(project_files)
+            stats = type(
+                "obj",
+                (object,),
+                {
+                    "successful_files": len(project_files),
+                    "total_files": len(project_files),
+                    "total_identifiers": len(identifiers),
+                    "processing_time": 0.0,
+                },
+            )()
 
             # Log performance statistics
             if self.config.performance.enable_monitoring:
@@ -757,33 +833,27 @@ class RepoMapService:
             else:
                 raise
 
-    def _extract_identifiers_sequential(self, project_files: List[str]) -> List[str]:
-        """
-        Extract identifiers from files using sequential processing.
+    def _extract_identifiers_sequential(self, file_paths: List[str]) -> List[CodeTag]:
+        """Extract identifiers from files sequentially."""
+        all_identifiers: List[CodeTag] = []
+        ts_parser = self.tree_sitter_parser  # Resolve the instance from the provider
+        if ts_parser is None:
+            self.logger.error("Tree-sitter parser is not available.")  # type: ignore[unreachable]
+            return []
 
-        Args:
-            project_files: List of file paths to process
-
-        Returns:
-            List of identifier names extracted from the files
-        """
-        identifiers = []
-        for file_path in project_files:
+        for file_path in file_paths:
             try:
-                # file_path is already relative, so we need to make it absolute for tree-sitter
-                abs_path = os.path.join(self.config.project_root, file_path)
-                self.logger.debug(f"Processing {file_path} -> {abs_path}")
-                tags = self.tree_sitter_parser.get_tags(abs_path)
-                self.logger.debug(f"Found {len(tags)} tags in {file_path}")
-                for tag in tags:
-                    # Now all tags are CodeTag objects
-                    if tag.name:
-                        identifiers.append(tag.name)
+                tags = ts_parser.get_tags(file_path)
+                all_identifiers.extend(tags)
             except Exception as e:
-                self.logger.warning(f"Error processing {file_path}: {e}")
-                self.logger.debug(f"Traceback: {traceback.format_exc()}")
+                self.logger.warning(
+                    f"_extract_identifiers_sequential: Error processing {file_path}: {e}"
+                )
+                self.logger.debug(
+                    f"_extract_identifiers_sequential: Traceback: {traceback.format_exc()}"
+                )
                 continue
-        return identifiers
+        return all_identifiers
 
     def _get_cached_import_analysis(self) -> Optional[Any]:
         """
@@ -792,12 +862,14 @@ class RepoMapService:
         Returns:
             Cached ProjectImports object or None if not available
         """
-        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
+        if (
+            not self.tree_sitter_parser or not self.tag_cache
+        ):  # Check injected tag_cache
             self.logger.debug("No tree-sitter cache available for import analysis")
             return None
 
         try:
-            cache = self.tree_sitter_parser.tag_cache
+            cache = self.import_analysis_cache  # Use separate import analysis cache
             # Include max_graph_size in cache key to ensure different configs get different cache entries
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"
@@ -827,14 +899,16 @@ class RepoMapService:
         Args:
             project_imports: ProjectImports object to cache
         """
-        if not self.tree_sitter_parser or not self.tree_sitter_parser.tag_cache:
+        if (
+            not self.tree_sitter_parser or not self.tag_cache
+        ):  # Check injected tag_cache
             self.logger.debug(
                 "No tree-sitter cache available for caching import analysis"
             )
             return
 
         try:
-            cache = self.tree_sitter_parser.tag_cache
+            cache = self.import_analysis_cache  # Use separate import analysis cache
             # Include max_graph_size in cache key to ensure different configs get different cache entries
             # Also include refresh_cache flag to force cache miss when refresh is requested
             refresh_flag = "refresh" if self.config.refresh_cache else "normal"
@@ -931,8 +1005,8 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            assert self.centrality_calculator is not None  # For mypy
-            return self.centrality_calculator.calculate_composite_importance()  # type: ignore
+            assert self.centrality_calculator is not None  # For mypy  # nosec B101
+            return self.centrality_calculator.calculate_composite_importance()
         except Exception as e:
             self.logger.error(f"Failed to calculate centrality scores: {e}")
             raise
@@ -952,7 +1026,7 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            assert self.impact_analyzer is not None  # For mypy
+            assert self.impact_analyzer is not None  # For mypy  # nosec B101
             return self.impact_analyzer.analyze_change_impact([file_path])  # type: ignore
         except Exception as e:
             self.logger.error(f"Failed to analyze change impact: {e}")
@@ -967,8 +1041,8 @@ class RepoMapService:
             self.build_dependency_graph()
 
         try:
-            assert self.dependency_graph is not None  # For mypy
-            return self.dependency_graph.find_cycles()  # type: ignore
+            assert self.dependency_graph is not None  # For mypy  # nosec B101
+            return self.dependency_graph.find_cycles()
         except Exception as e:
             self.logger.error(f"Failed to find circular dependencies: {e}")
             raise

@@ -15,17 +15,9 @@ from typing import Any, List, Set, TYPE_CHECKING, Union, Protocol
 # Import models from llm_file_analyzer to avoid circular imports
 # These will be imported at runtime when needed
 from .function_utils import get_functions_called_from_file
+from .ast_file_analyzer import ASTFileAnalyzer
 
-if TYPE_CHECKING:
-    from ..llm.token_optimizer import TokenOptimizer
-
-
-class TokenOptimizerProtocol(Protocol):
-    """Protocol for token optimizer to avoid circular imports."""
-
-    def optimize_for_token_budget(
-        self, content: str, max_tokens: int, model: str = "gpt-4"
-    ) -> str: ...
+# TokenOptimizer removed - no longer needed
 
 
 if TYPE_CHECKING:
@@ -36,28 +28,25 @@ logger = get_logger(__name__)
 
 def format_llm_optimized_impact(
     analyses: List["FileImpactAnalysis"],
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
 ) -> str:
     """Format impact analysis for LLM consumption.
 
     Args:
         analyses: List of FileImpactAnalysis objects
-        token_optimizer: Token optimizer instance
-        max_tokens: Maximum tokens for output
+        max_tokens: Maximum tokens for output (kept for reference, not enforced)
 
     Returns:
         LLM-optimized formatted string
     """
     if len(analyses) == 1:
-        return format_single_file_impact_llm(analyses[0], token_optimizer, max_tokens)
+        return format_single_file_impact_llm(analyses[0], max_tokens)
     else:
-        return format_multiple_files_impact_llm(analyses, token_optimizer, max_tokens)
+        return format_multiple_files_impact_llm(analyses, max_tokens)
 
 
 def format_single_file_impact_llm(
     analysis: "FileImpactAnalysis",
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
 ) -> str:
     """Format single file impact analysis for LLM."""
@@ -125,14 +114,13 @@ def format_single_file_impact_llm(
         f"└── Total dependents → {reverse_deps_count} files potentially affected"
     )
 
-    # Optimize for token budget
+    # Return formatted string
     result = "\n".join(output)
-    return token_optimizer.optimize_for_token_budget(result, max_tokens)
+    return result
 
 
 def format_multiple_files_impact_llm(
     analyses: List["FileImpactAnalysis"],
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
 ) -> str:
     """Format multiple files impact analysis for LLM."""
@@ -173,35 +161,31 @@ def format_multiple_files_impact_llm(
     if len(all_reverse_deps) > 10:
         output.append(f"└── ... and {len(all_reverse_deps) - 10} more")
 
-    # Optimize for token budget
+    # Return formatted string
     result = "\n".join(output)
-    return token_optimizer.optimize_for_token_budget(result, max_tokens)
+    return result
 
 
 def format_llm_optimized_centrality(
     analyses: List["FileCentralityAnalysis"],
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
     project_root: str,
-    ast_analyzer: Any,
+    ast_analyzer: ASTFileAnalyzer,
 ) -> str:
     """Format centrality analysis for LLM consumption."""
     if len(analyses) == 1:
         return format_single_file_centrality_llm(
-            analyses[0], token_optimizer, max_tokens, project_root, ast_analyzer
+            analyses[0], max_tokens, project_root, ast_analyzer
         )
     else:
-        return format_multiple_files_centrality_llm(
-            analyses, token_optimizer, max_tokens
-        )
+        return format_multiple_files_centrality_llm(analyses, max_tokens)
 
 
 def format_single_file_centrality_llm(
     analysis: "FileCentralityAnalysis",
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
     project_root: str,
-    ast_analyzer: Any,
+    ast_analyzer: ASTFileAnalyzer,
 ) -> str:
     """Format single file centrality analysis for LLM."""
     output = []
@@ -462,14 +446,13 @@ def format_single_file_centrality_llm(
         f"└── If classes change → {analysis.structural_impact['if_classes_change']} classes affected"
     )
 
-    # Optimize for token budget
+    # Return formatted string
     result = "\n".join(output)
-    return token_optimizer.optimize_for_token_budget(result, max_tokens)
+    return result
 
 
 def format_multiple_files_centrality_llm(
     analyses: List["FileCentralityAnalysis"],
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
 ) -> str:
     """Format multiple files centrality analysis for LLM."""
@@ -506,9 +489,9 @@ def format_multiple_files_centrality_llm(
         f"└── Average centrality: {sum(a.centrality_score for a in analyses) / len(analyses):.3f}"
     )
 
-    # Optimize for token budget
+    # Return formatted string
     result = "\n".join(output)
-    return token_optimizer.optimize_for_token_budget(result, max_tokens)
+    return result
 
 
 def format_json_impact(analyses: List["FileImpactAnalysis"]) -> str:
@@ -701,21 +684,19 @@ def format_table_centrality(analyses: List["FileCentralityAnalysis"]) -> str:
 
 def format_text_impact(
     analyses: List["FileImpactAnalysis"],
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
 ) -> str:
     """Format impact analysis as plain text."""
-    return format_llm_optimized_impact(analyses, token_optimizer, max_tokens)
+    return format_llm_optimized_impact(analyses, max_tokens)
 
 
 def format_text_centrality(
     analyses: List["FileCentralityAnalysis"],
-    token_optimizer: TokenOptimizerProtocol,
     max_tokens: int,
     project_root: str,
-    ast_analyzer: Any,
+    ast_analyzer: ASTFileAnalyzer,
 ) -> str:
     """Format centrality analysis as plain text."""
     return format_llm_optimized_centrality(
-        analyses, token_optimizer, max_tokens, project_root, ast_analyzer
+        analyses, max_tokens, project_root, ast_analyzer
     )

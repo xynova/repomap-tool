@@ -6,9 +6,10 @@ codespell, which is specifically designed for programming and code contexts.
 """
 
 from typing import List, Tuple, Optional, Set
-import subprocess
+import subprocess  # nosec B404
 import tempfile
 import os
+import shutil
 
 from ..core.logging_service import get_logger
 
@@ -46,6 +47,15 @@ class SpellCheckerService:
                 "codespell not available, falling back to basic spellchecking"
             )
 
+    def _get_codespell_path(self) -> Optional[str]:
+        """
+        Safely find codespell executable using shutil.which().
+
+        Returns:
+            Full path to codespell executable, or None if not found
+        """
+        return shutil.which("codespell")
+
     def _check_codespell_availability(self) -> bool:
         """
         Check if codespell is available on the system.
@@ -53,9 +63,13 @@ class SpellCheckerService:
         Returns:
             True if codespell is available, False otherwise
         """
+        codespell_path = self._get_codespell_path()
+        if not codespell_path:
+            return False
+
         try:
-            result = subprocess.run(
-                ["codespell", "--version"], capture_output=True, text=True, timeout=5
+            result = subprocess.run(  # nosec B603
+                [codespell_path, "--version"], capture_output=True, text=True, timeout=5
             )
             return result.returncode == 0
         except (FileNotFoundError, subprocess.TimeoutExpired):
@@ -85,8 +99,12 @@ class SpellCheckerService:
                 temp_file = f.name
 
             # Run codespell
-            result = subprocess.run(
-                ["codespell", temp_file], capture_output=True, text=True, timeout=10
+            codespell_path = self._get_codespell_path()
+            if not codespell_path:
+                return []
+
+            result = subprocess.run(  # nosec B603
+                [codespell_path, temp_file], capture_output=True, text=True, timeout=10
             )
 
             # Parse the output

@@ -7,20 +7,25 @@ coordinating between code_analysis, code_exploration, and code_search services.
 
 from __future__ import annotations
 
-import logging
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 
 from ...code_analysis.models import AnalysisFormat, FileCentralityAnalysis
+from ...code_analysis.dependency_graph import DependencyGraph
+from ...code_analysis.centrality_calculator import CentralityCalculator
+from ...code_analysis.centrality_analysis_engine import CentralityAnalysisEngine
+from ...code_analysis.ast_file_analyzer import ASTFileAnalyzer
+from ...code_analysis.path_resolver import PathResolver
+from ...code_analysis.import_analyzer import ImportAnalyzer
 from .base_controller import BaseController
 from .view_models import (
     CentralityViewModel,
     FileAnalysisViewModel,
-    SymbolViewModel,
     ControllerConfig,
     AnalysisType,
 )
+from repomap_tool.models import SymbolViewModel
 
 
 logger = get_logger(__name__)
@@ -36,11 +41,12 @@ class CentralityController(BaseController):
 
     def __init__(
         self,
-        dependency_graph: Optional[Any] = None,
-        centrality_calculator: Optional[Any] = None,
-        centrality_engine: Optional[Any] = None,
-        ast_analyzer: Optional[Any] = None,
-        path_resolver: Optional[Any] = None,
+        dependency_graph: DependencyGraph,
+        centrality_calculator: CentralityCalculator,
+        centrality_engine: CentralityAnalysisEngine,
+        ast_analyzer: ASTFileAnalyzer,
+        path_resolver: PathResolver,
+        import_analyzer: ImportAnalyzer,
         config: Optional[ControllerConfig] = None,
     ):
         """Initialize the CentralityController.
@@ -55,25 +61,14 @@ class CentralityController(BaseController):
         """
         super().__init__(config)
 
-        # Validate dependencies
-        if dependency_graph is None:
-            raise ValueError("dependency_graph must be injected - no fallback allowed")
-        if centrality_calculator is None:
-            raise ValueError(
-                "centrality_calculator must be injected - no fallback allowed"
-            )
-        if centrality_engine is None:
-            raise ValueError("centrality_engine must be injected - no fallback allowed")
-        if ast_analyzer is None:
-            raise ValueError("ast_analyzer must be injected - no fallback allowed")
-        if path_resolver is None:
-            raise ValueError("path_resolver must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.dependency_graph = dependency_graph
         self.centrality_calculator = centrality_calculator
         self.centrality_engine = centrality_engine
         self.ast_analyzer = ast_analyzer
         self.path_resolver = path_resolver
+        self.import_analyzer = import_analyzer
 
     def execute(self, file_paths: Optional[List[str]] = None) -> CentralityViewModel:
         """Execute centrality analysis for the specified files.
@@ -100,6 +95,9 @@ class CentralityController(BaseController):
                 from ...code_analysis.file_discovery_service import (
                     create_file_discovery_service,
                 )
+
+                if self.path_resolver.project_root is None:
+                    raise ValueError("Project root is required for file discovery")
 
                 file_discovery = create_file_discovery_service(
                     self.path_resolver.project_root
@@ -260,9 +258,22 @@ class CentralityController(BaseController):
         file_analyses = []
         rankings = []
 
+        # Filter out __init__.py files (boilerplate package structure files)
+        filtered_analyses = [
+            analysis
+            for analysis in centrality_analyses
+            if not analysis.file_path.endswith("__init__.py")
+        ]
+
+        if len(filtered_analyses) < len(centrality_analyses):
+            logger.debug(
+                f"Filtered out {len(centrality_analyses) - len(filtered_analyses)} "
+                f"__init__.py files from centrality rankings"
+            )
+
         # Sort analyses by centrality score to calculate proper rankings
         sorted_analyses = sorted(
-            centrality_analyses, key=lambda x: x.centrality_score, reverse=True
+            filtered_analyses, key=lambda x: x.centrality_score, reverse=True
         )
 
         for rank, analysis in enumerate(sorted_analyses, 1):
@@ -298,9 +309,9 @@ class CentralityController(BaseController):
                 }
             )
 
-        # Calculate summary statistics from structured data
+        # Calculate summary statistics from structured data (using filtered analyses)
         centrality_scores = [
-            analysis.centrality_score for analysis in centrality_analyses
+            analysis.centrality_score for analysis in filtered_analyses
         ]
         high_centrality = len([s for s in centrality_scores if s >= 0.7])
         medium_centrality = len([s for s in centrality_scores if 0.3 <= s < 0.7])
@@ -325,9 +336,9 @@ class CentralityController(BaseController):
         return CentralityViewModel(
             files=file_analyses,
             rankings=rankings,
-            total_files=len(centrality_analyses),
+            total_files=len(filtered_analyses),
             analysis_summary=centrality_summary,
-            token_count=len(str(centrality_analyses)),
+            token_count=len(str(filtered_analyses)),
             max_tokens=get_config("MAX_TOKENS", 4000),
             compression_level=(
                 self.config.compression_level if self.config else "medium"
@@ -486,13 +497,12 @@ class CentralityController(BaseController):
             # Get project root from path resolver
             project_root = self.path_resolver.project_root
 
-            # Use import analyzer to get project imports
-            from repomap_tool.code_analysis.import_analyzer import ImportAnalyzer
+            if project_root is None:
+                raise ValueError("Project root is required for import analysis")
 
-            import_analyzer = ImportAnalyzer(project_root=project_root)
-
-            # Analyze project imports
-            project_imports = import_analyzer.analyze_project_imports(project_root)
+            # Use the injected import analyzer instead of creating a new one
+            # This ensures proper dependency injection with tree_sitter_parser
+            project_imports = self.import_analyzer.analyze_project_imports(project_root)
 
             # Use all files for dependency analysis (no artificial limits)
 

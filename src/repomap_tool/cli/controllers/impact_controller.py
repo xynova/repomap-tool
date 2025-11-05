@@ -7,21 +7,26 @@ coordinating between code_analysis, code_exploration, and code_search services.
 
 from __future__ import annotations
 
-import logging
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from ...code_analysis.models import AnalysisFormat, FileImpactAnalysis
+from ...code_analysis.dependency_graph import DependencyGraph
+from ...code_analysis.impact_analyzer import ImpactAnalyzer
+from ...code_analysis.impact_analysis_engine import ImpactAnalysisEngine
+from ...code_analysis.ast_file_analyzer import ASTFileAnalyzer
+from ...code_analysis.path_resolver import PathResolver
 from .base_controller import BaseController
 from .view_models import (
     ImpactViewModel,
     FileAnalysisViewModel,
-    SymbolViewModel,
     ControllerConfig,
     AnalysisType,
 )
 
+if TYPE_CHECKING:
+    from repomap_tool.models import SymbolViewModel
 
 logger = get_logger(__name__)
 
@@ -36,11 +41,11 @@ class ImpactController(BaseController):
 
     def __init__(
         self,
-        dependency_graph: Optional[Any] = None,
-        impact_analyzer: Optional[Any] = None,
-        impact_engine: Optional[Any] = None,
-        ast_analyzer: Optional[Any] = None,
-        path_resolver: Optional[Any] = None,
+        dependency_graph: DependencyGraph,
+        impact_analyzer: ImpactAnalyzer,
+        impact_engine: ImpactAnalysisEngine,
+        ast_analyzer: ASTFileAnalyzer,
+        path_resolver: PathResolver,
         config: Optional[ControllerConfig] = None,
     ):
         """Initialize the ImpactController.
@@ -55,17 +60,7 @@ class ImpactController(BaseController):
         """
         super().__init__(config)
 
-        # Validate dependencies
-        if dependency_graph is None:
-            raise ValueError("dependency_graph must be injected - no fallback allowed")
-        if impact_analyzer is None:
-            raise ValueError("impact_analyzer must be injected - no fallback allowed")
-        if impact_engine is None:
-            raise ValueError("impact_engine must be injected - no fallback allowed")
-        if ast_analyzer is None:
-            raise ValueError("ast_analyzer must be injected - no fallback allowed")
-        if path_resolver is None:
-            raise ValueError("path_resolver must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.dependency_graph = dependency_graph
         self.impact_analyzer = impact_analyzer
@@ -127,7 +122,8 @@ class ImpactController(BaseController):
         resolved_paths = self.path_resolver.resolve_file_paths(changed_files)
 
         # Get all files in project for comprehensive analysis
-        all_files = self.path_resolver.get_all_project_files()
+        # Include test files for impact analysis - we want to know which test files are affected
+        all_files = self.path_resolver.get_all_project_files(exclude_tests=False)
         # Validate that all file paths are absolute (architectural requirement)
         all_files = self.path_resolver.resolve_file_paths(all_files)
 

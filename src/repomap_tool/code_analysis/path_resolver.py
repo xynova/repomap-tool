@@ -45,11 +45,14 @@ class PathResolver:
             validated_paths.append(file_path)
         return validated_paths
 
-    def get_all_project_files(self, max_files: Optional[int] = None) -> List[str]:
+    def get_all_project_files(
+        self, max_files: Optional[int] = None, exclude_tests: bool = True
+    ) -> List[str]:
         """Get all files in the project.
 
         Args:
             max_files: Maximum number of files to return (for performance)
+            exclude_tests: Whether to exclude test files (default: True for backward compatibility)
 
         Returns:
             List of all project files
@@ -61,7 +64,7 @@ class PathResolver:
         from .file_discovery_service import create_file_discovery_service
 
         file_discovery = create_file_discovery_service(self.project_root)
-        code_files = file_discovery.get_code_files(exclude_tests=True)
+        code_files = file_discovery.get_code_files(exclude_tests=exclude_tests)
 
         # Apply file limit for performance (only if specified)
         if max_files is not None and len(code_files) > max_files:

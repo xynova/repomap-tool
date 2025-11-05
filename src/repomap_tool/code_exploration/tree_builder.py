@@ -9,12 +9,16 @@ import os
 import logging
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from pathlib import Path
 
 from repomap_tool.models import Entrypoint, ExplorationTree, TreeNode
 from repomap_tool.core import RepoMapService
-from repomap_tool.cli.controllers.view_models import SearchViewModel, SymbolViewModel
+from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
+
+if TYPE_CHECKING:
+    from repomap_tool.cli.controllers.view_models import SearchViewModel
+from repomap_tool.models import SymbolViewModel
 
 logger = get_logger(__name__)
 
@@ -24,8 +28,8 @@ class TreeBuilder:
 
     def __init__(
         self,
+        entrypoint_discoverer: EntrypointDiscoverer,
         repo_map: Optional[RepoMapService] = None,
-        entrypoint_discoverer: Optional[Any] = None,
     ):
         """Initialize tree builder with injected dependencies.
 
@@ -37,11 +41,7 @@ class TreeBuilder:
         self.entrypoint_cache: Dict[str, Any] = {}  # Cache discovered entrypoints
         self.tree_cache: Dict[str, Any] = {}  # Cache built trees
 
-        # Use injected entrypoint discoverer - no fallback
-        if entrypoint_discoverer is None:
-            raise ValueError(
-                "EntrypointDiscoverer must be injected - no fallback allowed"
-            )
+        # All dependencies are required and injected via DI container
         self.entrypoint_discoverer = entrypoint_discoverer
 
         logger.debug("TreeBuilder initialized")
@@ -682,7 +682,7 @@ class TreeBuilder:
 
     def build_tree_from_search_results(
         self,
-        search_results: SearchViewModel,
+        search_results: "SearchViewModel",  # Type hint for SearchViewModel
         intent: str,
         max_depth: int,
         project_path: str,

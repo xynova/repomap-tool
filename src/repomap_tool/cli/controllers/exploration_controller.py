@@ -10,10 +10,13 @@ from __future__ import annotations
 import time
 from datetime import datetime
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from repomap_tool.core.logging_service import get_logger
 from repomap_tool.core.config_service import get_config
 
+from .search_controller import SearchController
+from ...code_exploration.session_manager import SessionManager
+from ...code_exploration.tree_builder import TreeBuilder
 from .base_controller import BaseController
 from .view_models import (
     ControllerConfig,
@@ -25,8 +28,10 @@ from .view_models import (
     TreeMappingViewModel,
     TreeListingViewModel,
     SessionStatusViewModel,
-    SymbolViewModel,
 )
+
+if TYPE_CHECKING:
+    from repomap_tool.models import SymbolViewModel
 
 logger = get_logger(__name__)
 
@@ -36,9 +41,9 @@ class ExplorationController(BaseController):
 
     def __init__(
         self,
-        search_controller: Any,  # SearchController
-        session_manager: Any,  # SessionManager
-        tree_builder: Any,  # TreeBuilder
+        search_controller: SearchController,
+        session_manager: SessionManager,
+        tree_builder: TreeBuilder,
         config: Optional[ControllerConfig] = None,
     ) -> None:
         """Initialize the ExplorationController.
@@ -51,13 +56,7 @@ class ExplorationController(BaseController):
         """
         super().__init__(config)
 
-        # Validate dependencies
-        if search_controller is None:
-            raise ValueError("SearchController must be injected - no fallback allowed")
-        if session_manager is None:
-            raise ValueError("SessionManager must be injected - no fallback allowed")
-        if tree_builder is None:
-            raise ValueError("TreeBuilder must be injected - no fallback allowed")
+        # All dependencies are required and injected via DI container
 
         self.search_controller = search_controller
         self.session_manager = session_manager
@@ -197,15 +196,23 @@ class ExplorationController(BaseController):
 
             # Set as current focus
             session.set_current_focus(tree_id)
-            self.session_manager.save_session(session)
+            # Session is saved automatically by session manager
 
             return TreeFocusViewModel(
                 tree_id=tree_id,
                 context_name=tree.context_name,
                 current_focus=True,
                 tree_structure=self._build_tree_structure(tree),
-                expanded_areas=tree.expanded_areas,
-                pruned_areas=tree.pruned_areas,
+                expanded_areas=(
+                    list(tree.expanded_areas)
+                    if isinstance(tree.expanded_areas, set)
+                    else tree.expanded_areas
+                ),
+                pruned_areas=(
+                    list(tree.pruned_areas)
+                    if isinstance(tree.pruned_areas, set)
+                    else tree.pruned_areas
+                ),
                 total_nodes=1 if tree.tree_structure else 0,
                 max_depth=tree.max_depth,
             )
@@ -230,7 +237,12 @@ class ExplorationController(BaseController):
         try:
             # Get session and tree
             session = self.session_manager.get_session(session_id)
+            if session is None:
+                raise ValueError(f"Session {session_id} not found")
+
             tree = session.get_tree(tree_id)
+            if tree is None:
+                raise ValueError(f"Tree {tree_id} not found in session {session_id}")
 
             # Expand the specified area
             new_nodes = self.tree_builder.expand_area(
@@ -239,16 +251,15 @@ class ExplorationController(BaseController):
                 project_path=session.project_path,
             )
 
-            # Update session
-            self.session_manager.save_session(session)
+            # Session is automatically saved by session manager
 
             return TreeExpansionViewModel(
                 tree_id=tree_id,
                 expanded_area=area,
                 new_nodes=new_nodes,
-                total_nodes=len(tree.nodes),
-                expansion_depth=tree.current_depth,
-                confidence_score=tree.confidence,
+                total_nodes=len(getattr(tree, "nodes", [])),
+                expansion_depth=getattr(tree, "current_depth", 0),
+                confidence_score=getattr(tree, "confidence", 0.0),
             )
 
         except Exception as e:
@@ -272,6 +283,8 @@ class ExplorationController(BaseController):
         try:
             # Get session and tree
             session = self.session_manager.get_session(session_id)
+            if session is None:
+                raise ValueError(f"Session {session_id} not found")
 
             # Resolve "current" to actual tree ID
             if tree_id == "current":
@@ -280,18 +293,19 @@ class ExplorationController(BaseController):
                 tree_id = session.current_focus
 
             tree = session.get_tree(tree_id)
+            if tree is None:
+                raise ValueError(f"Tree {tree_id} not found in session {session_id}")
 
             # Prune the specified area
             removed_nodes = self.tree_builder.prune_area(tree, area)
 
-            # Update session
-            self.session_manager.save_session(session)
+            # Session is automatically saved by session manager
 
             return TreePruningViewModel(
                 tree_id=tree_id,
                 pruned_area=area,
                 removed_nodes=removed_nodes,
-                remaining_nodes=len(tree.nodes),
+                remaining_nodes=len(getattr(tree, "nodes", [])),
                 pruning_reason=reason,
             )
 
@@ -320,6 +334,8 @@ class ExplorationController(BaseController):
         try:
             # Get session and tree
             session = self.session_manager.get_session(session_id)
+            if session is None:
+                raise ValueError(f"Session {session_id} not found")
 
             # Resolve "current" to actual tree ID
             if tree_id == "current":
@@ -340,8 +356,8 @@ class ExplorationController(BaseController):
             return TreeMappingViewModel(
                 tree_id=tree_id,
                 tree_structure=tree_structure,
-                total_nodes=len(tree.nodes),
-                max_depth=tree.max_depth,
+                total_nodes=len(getattr(tree, "nodes", [])),
+                max_depth=getattr(tree, "max_depth", 0),
                 include_code=include_code,
                 code_snippets=code_snippets,
                 token_count=self._estimate_token_count([tree]) if tree else 0,
@@ -371,14 +387,20 @@ class ExplorationController(BaseController):
             trees = []
             for tree in session.exploration_trees.values():
                 tree_cluster_vm = TreeClusterViewModel(
-                    tree_id=tree.tree_id,
-                    context_name=tree.context_name,
-                    confidence=tree.confidence,
+                    tree_id=getattr(tree, "tree_id", ""),
+                    context_name=getattr(tree, "context_name", ""),
+                    confidence=getattr(tree, "confidence", 0.0),
                     entrypoints=self._extract_entrypoints(tree),
-                    total_nodes=len(tree.nodes),
-                    max_depth=tree.max_depth,
-                    root_file=tree.root_entrypoint.file_path,
-                    description=tree.description,
+                    total_nodes=len(getattr(tree, "nodes", [])),
+                    max_depth=getattr(tree, "max_depth", 0),
+                    root_file=str(
+                        getattr(
+                            tree,
+                            "root_entrypoint",
+                            type("obj", (object,), {"file_path": ""})(),
+                        ).file_path
+                    ),
+                    description=getattr(tree, "description", ""),
                 )
                 trees.append(tree_cluster_vm)
 

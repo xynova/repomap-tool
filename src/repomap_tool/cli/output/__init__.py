@@ -4,113 +4,97 @@ Output formatting and display utilities for RepoMap-Tool CLI.
 This package contains the unified output format system, formatters, and display utilities.
 """
 
-from .formats import (
-    OutputFormat,
-    OutputConfig,
-    FormatValidationError,
-    FormatConverter,
-    FormatRegistry,
-    format_registry,
-    get_output_config,
-    validate_output_format,
-    get_supported_formats,
-    is_valid_format,
-)
-
-# Legacy formatters removed - all output now handled by OutputManager
+from repomap_tool.models import OutputConfig, OutputFormat, AnalysisFormat
+from repomap_tool.protocols import (
+    ConsoleManagerProtocol,
+    FormatterRegistryProtocol,
+    OutputManagerProtocol,
+    TemplateRegistryProtocol,
+)  # Import protocols from centralized location
 from .console_manager import (
-    ConsoleManager,
     DefaultConsoleManager,
-    ConsoleManagerFactory,
     get_console_manager,
     set_console_manager,
     get_managed_console,
-    configure_managed_console,
     get_console_from_context,
     log_console_operation,
-)
-from .protocols import (
-    FormatterProtocol,
-    BaseFormatter,
-    DataFormatter,
-    TemplateFormatter,
-    FormatterRegistry as FormatterRegistryProtocol,
-    FormatterFactory,
-    OutputHandler,
-    validate_formatter,
-    get_formatter_info,
-    create_formatter_config,
-)
+)  # Expose public console management functions
+from .manager import OutputManager
 from .standard_formatters import (
     ProjectInfoFormatter,
     DictFormatter,
     ListFormatter,
     StringFormatter,
-    FormatterRegistry,
-    get_formatter_registry,
+    ErrorResponseFormatter,
+    SuccessResponseFormatter,
+    SearchResponseFormatter,
+)
+from .controller_formatters import (
+    CentralityViewModelFormatter,
+    ImpactViewModelFormatter,
+    SearchViewModelFormatter,
+    DensityAnalysisFormatter,
+)
+from .exploration_formatters import (
+    TreeClusterViewModelFormatter,
+    TreeFocusViewModelFormatter,
+    TreeExpansionViewModelFormatter,
+    TreePruningViewModelFormatter,
+    TreeMappingViewModelFormatter,
+    TreeListingViewModelFormatter,
+    SessionStatusViewModelFormatter,
+    ExplorationViewModelFormatter,
 )
 from .template_formatter import TemplateBasedFormatter
-from .manager import OutputManager, OutputManagerFactory, get_output_manager
-from .templates import (
-    TemplateEngine,
-    TemplateEngineFactory,
-    TemplateRegistry,
-    get_template_registry,
-    TemplateConfig,
-    TemplateOptions,
-)
+from .templates.engine import TemplateEngine
+from .templates.loader import TemplateLoader, FileTemplateLoader
+from .templates.registry import (
+    DefaultTemplateRegistry,
+)  # Import DefaultTemplateRegistry
+
 
 __all__ = [
-    # Format system
-    "OutputFormat",
-    "OutputConfig",
-    "FormatValidationError",
-    "FormatConverter",
-    "FormatRegistry",
-    "format_registry",
-    "get_output_config",
-    "validate_output_format",
-    "get_supported_formats",
-    "is_valid_format",
-    # Legacy formatters removed - all output now handled by OutputManager
-    # Console management
-    "ConsoleManager",
+    # Manager classes and accessors
+    "OutputManager",
     "DefaultConsoleManager",
-    "ConsoleManagerFactory",
     "get_console_manager",
     "set_console_manager",
     "get_managed_console",
-    "configure_managed_console",
     "get_console_from_context",
     "log_console_operation",
-    # Formatter protocols
-    "FormatterProtocol",
-    "BaseFormatter",
-    "DataFormatter",
-    "TemplateFormatter",
-    "TemplateBasedFormatter",
-    "FormatterRegistryProtocol",
-    "FormatterFactory",
-    "OutputHandler",
-    "validate_formatter",
-    "get_formatter_info",
-    "create_formatter_config",
-    # Standard formatters
+    # Output formats and config
+    "OutputConfig",
+    "OutputFormat",
+    "AnalysisFormat",
+    # Formatters
     "ProjectInfoFormatter",
     "DictFormatter",
     "ListFormatter",
     "StringFormatter",
-    "FormatterRegistry",
-    "get_formatter_registry",
-    # Template system
+    "ErrorResponseFormatter",
+    "SuccessResponseFormatter",
+    "SearchResponseFormatter",
+    "CentralityViewModelFormatter",
+    "ImpactViewModelFormatter",
+    "SearchViewModelFormatter",
+    "DensityAnalysisFormatter",
+    "TreeClusterViewModelFormatter",
+    "TreeFocusViewModelFormatter",
+    "TreeExpansionViewModelFormatter",
+    "TreePruningViewModelFormatter",
+    "TreeMappingViewModelFormatter",
+    "TreeListingViewModelFormatter",
+    "SessionStatusViewModelFormatter",
+    "ExplorationViewModelFormatter",
+    "TemplateBasedFormatter",
+    # Templates
     "TemplateEngine",
-    "TemplateEngineFactory",
-    "TemplateRegistry",
-    "get_template_registry",
-    "TemplateConfig",
-    "TemplateOptions",
-    # Output manager
-    "OutputManager",
-    "OutputManagerFactory",
-    "get_output_manager",
+    "TemplateLoader",
+    "FileTemplateLoader",
+    "DefaultTemplateRegistry",  # Expose DefaultTemplateRegistry
+    # Protocols
+    "ConsoleManagerProtocol",
+    "FormatterRegistryProtocol",
+    "OutputManagerProtocol",
+    "TemplateRegistryProtocol",
 ]

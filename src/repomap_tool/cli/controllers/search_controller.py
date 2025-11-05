@@ -7,19 +7,22 @@ coordinating between code_search, code_analysis, and core services.
 
 from __future__ import annotations
 
-import logging
 from repomap_tool.core.config_service import get_config
 from repomap_tool.core.logging_service import get_logger
 from typing import List, Dict, Any, Optional
 
 from ...models import SearchRequest, SearchResponse, MatchResult
+from ...core.repo_map import RepoMapService
+from ...core.search_engine import SearchEngine
+from ...code_search.fuzzy_matcher import FuzzyMatcher
+from ...code_search.semantic_matcher import SemanticMatcher
 from .base_controller import BaseController
 from .view_models import (
     SearchViewModel,
-    SymbolViewModel,
     ControllerConfig,
     AnalysisType,
 )
+from repomap_tool.models import SymbolViewModel
 
 
 logger = get_logger(__name__)
@@ -35,10 +38,10 @@ class SearchController(BaseController):
 
     def __init__(
         self,
-        repomap_service: Optional[Any] = None,
-        search_engine: Optional[Any] = None,
-        fuzzy_matcher: Optional[Any] = None,
-        semantic_matcher: Optional[Any] = None,
+        repomap_service: RepoMapService,
+        search_engine: SearchEngine,
+        fuzzy_matcher: FuzzyMatcher,
+        semantic_matcher: Optional[SemanticMatcher] = None,
         config: Optional[ControllerConfig] = None,
     ):
         """Initialize the SearchController.
@@ -52,10 +55,7 @@ class SearchController(BaseController):
         """
         super().__init__(config)
 
-        # All dependencies must be injected - no fallback allowed
-        if fuzzy_matcher is None:
-            raise ValueError("FuzzyMatcher must be injected - no fallback allowed")
-        # repomap_service is injected after creation in explore commands
+        # All dependencies are required and injected via DI container
         # semantic_matcher is optional - only needed for semantic/hybrid matching
 
         self.repomap_service = repomap_service

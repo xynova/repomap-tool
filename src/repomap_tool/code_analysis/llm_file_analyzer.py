@@ -44,8 +44,6 @@ from .format_utils import (
     format_text_impact,
     format_text_centrality,
 )
-from ..llm.token_optimizer import TokenOptimizer
-from ..llm.context_selector import ContextSelector
 from ..llm.hierarchical_formatter import HierarchicalFormatter
 
 logger = get_logger(__name__)
@@ -89,8 +87,6 @@ class LLMFileAnalyzer:
 
         # Store injected dependencies
         self.ast_analyzer = dependencies.ast_analyzer
-        self.token_optimizer = dependencies.token_optimizer
-        self.context_selector = dependencies.context_selector
         self.hierarchical_formatter = dependencies.hierarchical_formatter
         self.path_resolver = dependencies.path_resolver
         self.centrality_calculator = dependencies.centrality_calculator
@@ -140,9 +136,7 @@ class LLMFileAnalyzer:
 
         # Format output
         if format_type == AnalysisFormat.TEXT:
-            return format_llm_optimized_impact(
-                impact_analyses, self.token_optimizer, self.max_tokens
-            )
+            return format_llm_optimized_impact(impact_analyses, self.max_tokens)
         elif format_type == AnalysisFormat.JSON:
             return format_json_impact(impact_analyses)
         else:
@@ -243,7 +237,6 @@ class LLMFileAnalyzer:
         if format_type == AnalysisFormat.TEXT:
             return format_llm_optimized_centrality(
                 centrality_analyses,
-                self.token_optimizer,
                 self.max_tokens,
                 self.project_root or "",
                 self.ast_analyzer,

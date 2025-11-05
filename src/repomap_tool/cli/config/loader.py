@@ -13,6 +13,7 @@ from typing import Optional, Literal, Union, Dict, Any, Tuple
 
 from pydantic import ValidationError
 from rich.console import Console
+import logging
 
 from ...models import (
     RepoMapConfig,
@@ -26,6 +27,8 @@ from ...utils.file_validator import FileValidator, safe_read_text, safe_write_te
 # Note: console should be obtained via get_console(ctx) in functions that need it
 from ..utils.console import get_console
 import click
+
+logger = logging.getLogger(__name__)
 
 
 def load_config_file(config_path: str) -> RepoMapConfig:
@@ -74,8 +77,9 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
         if config_path.exists():
             try:
                 return load_config_file(str(config_path))
-            except Exception:
-                # If we can't load this config file, continue searching
+            except Exception as e:
+                # Log config loading failure for debugging
+                logger.debug(f"Failed to load config file {config_path}: {e}")
                 continue
 
     # Also check Docker workspace directory (configurable via env var)
@@ -87,8 +91,9 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
             if config_path.exists():
                 try:
                     return load_config_file(str(config_path))
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Log config loading failure for debugging
+                    logger.debug(f"Failed to load workspace config {config_path}: {e}")
 
     return None
 
@@ -96,18 +101,7 @@ def discover_config_file_in_current_dir() -> Optional[RepoMapConfig]:
 def resolve_project_path(
     provided_path: Optional[str], config_file: Optional[str]
 ) -> str:
-    """Resolve project path from provided path, config file, or discovered config.
-
-    Args:
-        provided_path: Explicitly provided project path
-        config_file: Explicitly provided config file path
-
-    Returns:
-        Resolved project path
-
-    Raises:
-        SystemExit: If no project path can be resolved
-    """
+    """Resolve project path from provided path, config file, or discovered config."""
     if provided_path:
         return provided_path
 
@@ -122,19 +116,11 @@ def resolve_project_path(
     if config_obj is None:
         # Use current directory as fallback when no project path or config is provided
         current_dir = str(Path.cwd())
-        # Get console from Click context
-        ctx = click.get_current_context(silent=True)
-        console = get_console(ctx)
-        console.print(
-            f"[blue]No project path provided, using current directory: {current_dir}[/blue]"
-        )
+        # Removed premature console access
         return current_dir
 
     project_path = str(config_obj.project_root)
-    # Get console from Click context
-    ctx = click.get_current_context(silent=True)
-    console = get_console(ctx)
-    console.print(f"[blue]Using project path from config: {project_path}[/blue]")
+    # Removed premature console access
     return project_path
 
 
@@ -380,7 +366,12 @@ def apply_environment_overrides(config: RepoMapConfig) -> RepoMapConfig:
     )
     if dep_enable_impact_analysis_env:
         config.dependencies.enable_impact_analysis = (
-            dep_enable_impact_analysis_env.lower() in ("true", "1", "yes")
+            dep_enable_impact_analysis_env.lower()
+            in (
+                "true",
+                "1",
+                "yes",
+            )
         )
 
     dep_centrality_algorithms_env = os.environ.get("REPOMAP_DEP_CENTRALITY_ALGORITHMS")

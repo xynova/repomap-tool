@@ -7,7 +7,6 @@ predefined categories. It's much more flexible and adaptive.
 """
 
 import re
-import logging
 from ..core.config_service import get_config
 from ..core.logging_service import get_logger
 from typing import Dict, List, Set, Tuple
@@ -46,8 +45,9 @@ class AdaptiveSemanticMatcher:
             {}
         )  # word -> set of identifiers containing it
 
-        # Similarity cache
+        # Similarity cache with size limit to prevent unbounded memory growth
         self.similarity_cache: Dict[str, float] = {}
+        self.max_cache_size = get_config("CACHE_SIZE", 1000)
 
         if self.verbose:
             logger.info("Initialized AdaptiveSemanticMatcher")
@@ -116,7 +116,11 @@ class AdaptiveSemanticMatcher:
 
         # Calculate IDF for each word
         for word, freq in self.word_frequencies.items():
-            self.idf_cache[word] = math.log(self.total_identifiers / freq)
+            if self.total_identifiers > 0 and freq > 0:
+                self.idf_cache[word] = math.log(self.total_identifiers / freq)
+            else:
+                # Handle edge case: no identifiers or zero frequency
+                self.idf_cache[word] = 0.0
 
         if self.verbose:
             logger.info(
@@ -228,7 +232,10 @@ class AdaptiveSemanticMatcher:
         # Calculate similarity
         similarity = self.cosine_similarity(query_vector, identifier_vector)
 
-        # Cache result
+        # Cache result with size limit to prevent unbounded memory growth
+        # Check cache size before insertion to enforce limit strictly
+        if len(self.similarity_cache) >= self.max_cache_size:
+            self._limit_cache_size()
         self.similarity_cache[cache_key] = similarity
 
         return similarity
@@ -448,6 +455,25 @@ class AdaptiveSemanticMatcher:
     def clear_cache(self) -> None:
         """Clear the similarity cache."""
         self.similarity_cache.clear()
+
+    def _limit_cache_size(self) -> None:
+        """Limit cache size by removing oldest entries when limit is exceeded.
+
+        This method should only be called when len(self.similarity_cache) >= self.max_cache_size.
+        """
+        # Remove oldest entries (dict order is insertion order in Python 3.7+)
+        # Use iterator to efficiently remove oldest entries without creating full list
+        excess = len(self.similarity_cache) - self.max_cache_size + 1
+        keys_iter = iter(self.similarity_cache.keys())
+        keys_to_remove = [next(keys_iter) for _ in range(excess)]
+        for key in keys_to_remove:
+            del self.similarity_cache[key]
+
+        # Only log if verbose and we removed a significant number
+        if self.verbose and excess > 100:
+            logger.debug(
+                f"Similarity cache size limited: removed {excess} oldest entries"
+            )
 
     def get_cache_stats(self) -> Dict[str, int]:
         """Get cache statistics."""

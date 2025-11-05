@@ -14,12 +14,14 @@ from typing import List, Dict, Set, Optional, Tuple, Any, Union
 from dataclasses import dataclass
 from enum import Enum
 
+from .tree_sitter_parser import TreeSitterParser
 from .models import (
     Import,
     ImportType,
     FunctionCall,
     FileAnalysisResult,
     CrossFileRelationship,
+    CodeTag,
 )
 
 logger = get_logger(__name__)
@@ -38,35 +40,45 @@ class AnalysisType(str, Enum):
 class ASTFileAnalyzer:
     """Tree-sitter-based analyzer for individual files and cross-file relationships."""
 
-    def __init__(self, project_root: Optional[str] = None):
+    def __init__(
+        self,
+        tree_sitter_parser: TreeSitterParser,
+        project_root: Optional[str] = None,
+    ):
         """Initialize the tree-sitter file analyzer.
 
         Args:
             project_root: Root path of the project for resolving relative imports
+            tree_sitter_parser: TreeSitterParser instance (required dependency)
         """
+        # All dependencies are required and injected via DI container
+
         # Ensure project_root is always a string, not a ConfigurationOption
         self.project_root = str(project_root) if project_root is not None else None
         # Removed aider dependencies - using TreeSitterParser directly
         self.analysis_cache: Dict[str, FileAnalysisResult] = {}
         self.cache_enabled = True
 
-        # Initialize tree-sitter parser
-        from .tree_sitter_parser import TreeSitterParser
-
-        self.tree_sitter_parser = TreeSitterParser()
+        # Use injected tree-sitter parser
+        self.tree_sitter_parser = tree_sitter_parser
 
         logger.debug(
             f"ASTFileAnalyzer initialized with tree-sitter for project: {self.project_root}"
         )
 
     def analyze_file(
-        self, file_path: str, analysis_type: AnalysisType = AnalysisType.ALL
+        self,
+        file_path: str,
+        analysis_type: AnalysisType = AnalysisType.ALL,
+        prefetched_tags: Optional[List[CodeTag]] = None,
     ) -> FileAnalysisResult:
         """Analyze a single file using tree-sitter.
 
         Args:
             file_path: Path to the file to analyze
             analysis_type: Type of analysis to perform
+            prefetched_tags: Optional list of CodeTag objects from batch query.
+                If provided, uses these tags instead of fetching individually.
 
         Returns:
             FileAnalysisResult with extracted information
@@ -80,6 +92,23 @@ class ASTFileAnalyzer:
         try:
             # Resolve file path
             full_path = self._resolve_file_path(file_path)
+
+            # Check if file should be excluded before attempting to parse
+            from .file_filter import FileFilter
+
+            if FileFilter.should_exclude_file(full_path):
+                logger.debug(f"Skipping excluded file: {full_path}")
+                return FileAnalysisResult(
+                    file_path=file_path,
+                    imports=[],
+                    function_calls=[],
+                    defined_functions=[],
+                    defined_classes=[],
+                    used_classes=[],
+                    used_variables=[],
+                    line_count=0,
+                    analysis_errors=[],
+                )
 
             # Check for syntax errors first
             analysis_errors = []
@@ -100,14 +129,21 @@ class ASTFileAnalyzer:
             except Exception as e:
                 analysis_errors.append(f"File read error: {str(e)}")
 
-            # Use TreeSitterParser directly for tag extraction
-            tags = self.tree_sitter_parser.parse_file(full_path)
+            # Use prefetched tags if available, otherwise fetch them
+            if prefetched_tags is not None:
+                tags = prefetched_tags
+                logger.debug(f"Using prefetched tags for {full_path}")
+            else:
+                tags = self.tree_sitter_parser.get_tags(full_path, use_cache=True)
 
             # Extract information from tags
             imports = self._extract_imports_from_tags(tags, full_path)
             defined_functions = self._extract_functions_from_tags(tags)
             defined_classes = self._extract_classes_from_tags(tags)
             function_calls = self._extract_function_calls_from_tags(tags, full_path)
+            defined_methods = self._extract_methods_from_tags(tags)
+            used_classes = self._extract_used_classes_from_tags(tags, defined_classes)
+            used_variables = self._extract_used_variables_from_tags(tags)
 
             # Create result
             result = FileAnalysisResult(
@@ -116,15 +152,18 @@ class ASTFileAnalyzer:
                 function_calls=function_calls,
                 defined_functions=defined_functions,
                 defined_classes=defined_classes,
-                used_classes=[],  # TODO: Extract from tags if needed
-                used_variables=[],  # TODO: Extract from tags if needed
+                used_classes=used_classes,
+                used_variables=used_variables,
                 line_count=self._get_line_count(full_path),
                 analysis_errors=analysis_errors,
+                defined_methods=defined_methods,  # Added defined_methods to result
             )
 
-            # Cache the result
+            # Cache the result with size limit to prevent unbounded growth
             if self.cache_enabled:
                 self.analysis_cache[cache_key] = result
+                # Limit cache size to prevent memory issues during long-running operations
+                self.limit_cache_size(max_size=1000)
 
             logger.debug(
                 f"Tree-sitter analysis complete for {full_path}: "
@@ -135,7 +174,17 @@ class ASTFileAnalyzer:
             return result
 
         except Exception as e:
-            logger.error(f"Error analyzing file {file_path} with tree-sitter: {e}")
+            # Check if file should be excluded - if so, log at debug level
+            from .file_filter import FileFilter
+
+            if FileFilter.should_exclude_file(file_path):
+                logger.debug(
+                    f"Skipped excluded file during parsing: {file_path} (error: {e})"
+                )
+            else:
+                logger.warning(
+                    f"Error analyzing file {file_path} with tree-sitter: {e}"
+                )
             # Return empty result on error
             return FileAnalysisResult(
                 file_path=file_path,
@@ -162,290 +211,149 @@ class ASTFileAnalyzer:
     def _extract_imports_from_tags(
         self, tags: List[Any], file_path: str
     ) -> List[Import]:
-        """Extract imports from file content since tree-sitter tags don't include imports."""
+        """Extract imports from tree-sitter tags."""
         imports = []
 
-        try:
-            # Read file content to extract imports
-            with open(file_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
+        for tag in tags:
+            if tag.kind in ["import", "import_from"]:
+                module = getattr(
+                    tag, "module", tag.name
+                )  # Use module if available, otherwise name
+                symbols = getattr(tag, "symbols", [])  # Get symbols if available
+                is_relative = module.startswith(
+                    "."
+                )  # Determine if relative based on module name
 
-            for line_num, line in enumerate(lines, 1):
-                line = line.strip()
+                # Determine import type more robustly based on tag kind and module name
+                if tag.kind == "import_from":
+                    import_type = (
+                        ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                    )
+                else:  # tag.kind == "import"
+                    import_type = (
+                        ImportType.RELATIVE if is_relative else ImportType.ABSOLUTE
+                    )
 
-                # Skip empty lines and comments
-                if not line or line.startswith("#"):
-                    continue
-
-                # Handle Python imports
-                if line.startswith("import ") and " from " not in line:
-                    # Standard import: import module
-                    module = line[7:].strip()  # Remove "import "
-                    # Handle multiple imports: import os, sys
-                    for module_name in module.split(","):
-                        module_name = module_name.strip()
-                        if module_name:
-                            imports.append(
-                                Import(
-                                    module=module_name,
-                                    symbols=[],
-                                    is_relative=module_name.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module_name.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-                elif line.startswith("from "):
-                    # From import: from module import symbol
-                    if " import " in line:
-                        parts = line.split(" import ")
-                        if len(parts) == 2:
-                            from_part = parts[0].strip()  # "from module"
-                            import_part = parts[1].strip()  # "symbol"
-
-                            if from_part.startswith("from "):
-                                module = from_part[5:].strip()  # Remove "from "
-                                symbols = []
-
-                                # Handle multiple symbols: import os, sys
-                                for symbol in import_part.split(","):
-                                    symbol = symbol.strip()
-                                    if symbol:
-                                        symbols.append(symbol)
-
-                                imports.append(
-                                    Import(
-                                        module=module,
-                                        symbols=symbols,
-                                        is_relative=module.startswith("."),
-                                        import_type=(
-                                            ImportType.RELATIVE
-                                            if module.startswith(".")
-                                            else ImportType.ABSOLUTE
-                                        ),
-                                        line_number=line_num,
-                                    )
-                                )
-
-                # Handle JavaScript/TypeScript imports
-                elif line.startswith("import ") and (
-                    " from " in line or " = require(" in line
-                ):
-                    if " from " in line:
-                        # ES6 import: import { symbol } from 'module'
-                        parts = line.split(" from ")
-                        if len(parts) == 2:
-                            symbols_part = parts[0].strip()
-                            module = parts[1].strip().strip("'\"")
-
-                            symbols = []
-                            if symbols_part.startswith("import "):
-                                symbols_str = symbols_part[
-                                    7:
-                                ].strip()  # Remove "import "
-                                if symbols_str.startswith("{") and symbols_str.endswith(
-                                    "}"
-                                ):
-                                    # Named imports: { symbol1, symbol2 }
-                                    symbols_str = symbols_str[1:-1]  # Remove braces
-                                    for symbol in symbols_str.split(","):
-                                        symbol = symbol.strip()
-                                        if symbol:
-                                            symbols.append(symbol)
-                                elif symbols_str == "*":
-                                    # Namespace import: import * as name
-                                    symbols = ["*"]
-                                else:
-                                    # Default import: import name
-                                    symbols = [symbols_str]
-
-                            imports.append(
-                                Import(
-                                    module=module,
-                                    symbols=symbols,
-                                    is_relative=module.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-                    elif " = require(" in line:
-                        # CommonJS require: const module = require('module')
-                        start = line.find("require(") + 8
-                        end = line.find(")", start)
-                        if start < end:
-                            module = line[start:end].strip().strip("'\"")
-                            imports.append(
-                                Import(
-                                    module=module,
-                                    symbols=[],
-                                    is_relative=module.startswith("."),
-                                    import_type=(
-                                        ImportType.RELATIVE
-                                        if module.startswith(".")
-                                        else ImportType.ABSOLUTE
-                                    ),
-                                    line_number=line_num,
-                                )
-                            )
-
-        except Exception as e:
-            logger.warning(f"Could not extract imports from {file_path}: {e}")
+                imports.append(
+                    Import(
+                        module=module,
+                        symbols=symbols,
+                        is_relative=is_relative,
+                        import_type=import_type,
+                        line_number=tag.line,
+                    )
+                )
 
         return imports
 
     def _extract_functions_from_tags(self, tags: List[Any]) -> List[str]:
-        """Extract function names from tree-sitter tags."""
+        """Extract function names from tree-sitter tags, filtering out methods."""
         functions = []
 
         for tag in tags:
-            if tag.kind in ["def", "function"]:
-                # Filter out false positives - tree-sitter sometimes tags variable assignments as 'def'
-                # We can identify these by checking if the name appears to be a variable assignment
-                # in the context of the file content
-                if not self._is_likely_variable_assignment(
-                    tag
-                ) and not self._is_likely_class_definition(tag):
-                    functions.append(tag.name)
+            # Only include if it's a function definition and not a method
+            if tag.kind in ["def", "function"] and "method" not in tag.kind:
+                functions.append(tag.name)
 
         return functions
 
+    def _extract_methods_from_tags(self, tags: List[Any]) -> List[str]:
+        """Extract method names from tree-sitter tags."""
+        methods = []
+        for tag in tags:
+            if "method" in tag.kind:
+                methods.append(tag.name)
+        return methods
+
     def _is_likely_variable_assignment(self, tag: Any) -> bool:
         """Check if a tag is likely a variable assignment rather than a function definition."""
-        # This is a heuristic to filter out false positives from tree-sitter parsing
-        # Variable assignments that tree-sitter incorrectly tags as 'def' often have these characteristics:
-
-        # 1. Single word names that are common variable names
-        common_variable_names = {
-            "result",
-            "obj",
-            "message",
-            "counts",
-            "data",
-            "value",
-            "item",
-            "items",
-            "response",
-            "request",
-            "config",
-            "settings",
-            "options",
-            "params",
-            "args",
-            "kwargs",
-            "self",
-            "cls",
-            "var",
-            "temp",
-            "tmp",
-            "file",
-            "path",
-            "url",
-            "name",
-            "id",
-            "key",
-            "val",
-            "content",
-            "text",
-            "string",
-            "number",
-            "list",
-            "dict",
-            "tuple",
-            "set",
-            "bool",
-        }
-
-        if tag.name.lower() in common_variable_names:
-            return True
-
-        # 2. Names that are very short (1-3 characters) and lowercase
-        if len(tag.name) <= 3 and tag.name.islower():
-            return True
-
-        # 3. Names that are common variable patterns but not function patterns
-        # Functions typically have descriptive names, variables are often short/generic
-        # But we need to be careful not to filter out legitimate short function names
-        if (
-            tag.name.islower()
-            and len(tag.name) <= 6
-            and not any(
-                word in tag.name
-                for word in [
-                    "get",
-                    "set",
-                    "is",
-                    "has",
-                    "can",
-                    "should",
-                    "will",
-                    "do",
-                    "make",
-                    "create",
-                    "build",
-                    "process",
-                    "handle",
-                    "manage",
-                    "parse",
-                    "format",
-                    "validate",
-                    "check",
-                    "find",
-                    "search",
-                    "load",
-                    "save",
-                    "delete",
-                    "update",
-                    "add",
-                    "remove",
-                    "init",
-                    "method",
-                    "test",
-                    "run",
-                    "call",
-                    "exec",
-                    "eval",
-                ]
-            )
-        ):
-            return True
-
-        return False
+        # This heuristic is no longer needed if we rely on explicit tag kinds
+        return False  # Always return False as we no longer filter based on this
 
     def _extract_classes_from_tags(self, tags: List[Any]) -> List[str]:
         """Extract class names from tree-sitter tags."""
+        from repomap_tool.code_analysis.tag_kinds import is_class_definition
+
         classes = []
-
         for tag in tags:
-            if tag.kind in ["class"]:
+            if is_class_definition(tag.kind):
                 classes.append(tag.name)
-            elif tag.kind == "def" and self._is_likely_class_definition(tag):
-                # Tree-sitter sometimes tags class definitions as 'def'
-                classes.append(tag.name)
-
         return classes
 
-    def _is_likely_class_definition(self, tag: Any) -> bool:
-        """Check if a tag is likely a class definition rather than a function."""
-        # Class names typically follow PascalCase convention
-        if tag.name[0].isupper() and tag.name[1:].islower():
-            return True
+    def _extract_used_classes_from_tags(
+        self, tags: List[Any], defined_classes: List[str]
+    ) -> List[str]:
+        """Extract used class names from tree-sitter tags (references to classes).
 
-        # Class names that are all uppercase (constants/enums)
-        if tag.name.isupper():
-            return True
+        Args:
+            tags: List of CodeTag objects from tree-sitter
+            defined_classes: List of class names defined in this file
 
-        # Class names with multiple uppercase letters (PascalCase)
-        if any(c.isupper() for c in tag.name[1:]):
-            return True
+        Returns:
+            List of class names that are referenced (used) but not defined in this file
+        """
+        used_classes = set()
+        defined_classes_set = set(defined_classes)
 
-        return False
+        for tag in tags:
+            # Look for name.reference.name that match class patterns
+            # These are references to classes that might be imported or defined elsewhere
+            if "reference" in tag.kind.lower() and "name" in tag.kind.lower():
+                # Check if this reference looks like a class usage
+                # (e.g., MyClass() or MyClass.method())
+                if tag.name and tag.name not in defined_classes_set:
+                    # Check if it's used in a call context (class instantiation)
+                    # or attribute access (class method/property access)
+                    if "call" in tag.kind.lower() or "attribute" in tag.kind.lower():
+                        # Capitalized names are likely classes (Python convention)
+                        if len(tag.name) > 0 and tag.name[0].isupper():
+                            used_classes.add(tag.name)
+
+        return sorted(list(used_classes))
+
+    def _extract_used_variables_from_tags(self, tags: List[Any]) -> List[str]:
+        """Extract used variable names from tree-sitter tags (references to variables).
+
+        Args:
+            tags: List of CodeTag objects from tree-sitter
+
+        Returns:
+            List of variable names that are referenced (used) in the file
+        """
+        from repomap_tool.code_analysis.tag_kinds import (
+            is_variable_definition,
+            is_function_call,
+            is_import,
+        )
+
+        used_variables = set()
+        defined_variables = set()
+
+        # First pass: collect defined variables
+        for tag in tags:
+            if is_variable_definition(tag.kind):
+                if tag.name:
+                    defined_variables.add(tag.name)
+
+        # Second pass: collect used variables (references that aren't definitions)
+        for tag in tags:
+            # Look for name.reference.name that aren't calls, imports, or definitions
+            if "reference" in tag.kind.lower() and "name" in tag.kind.lower():
+                # Skip if it's a call, import, or definition
+                if (
+                    not is_function_call(tag.kind)
+                    and not is_import(tag.kind)
+                    and not is_variable_definition(tag.kind)
+                ):
+                    if tag.name:
+                        # Only include if it's not a defined variable (to avoid duplicates)
+                        # or if it's used in a different context
+                        if tag.name not in defined_variables:
+                            # Lowercase names are likely variables (Python convention)
+                            if len(tag.name) > 0 and tag.name[0].islower():
+                                used_variables.add(tag.name)
+
+        return sorted(list(used_variables))
 
     def _extract_function_calls_from_tags(
         self, tags: List[Any], file_path: str
@@ -453,19 +361,27 @@ class ASTFileAnalyzer:
         """Extract function calls from tree-sitter tags."""
         calls = []
 
-        # For now, we'll create basic function calls from tag references
-        # This is a simplified approach - can be enhanced with more detailed parsing
         for tag in tags:
-            if tag.kind in ["ref"]:  # References to functions
+            if tag.kind in ["call", "method_call", "function_call"]:
+                # Determine if it's a method call or a direct function call
+                is_method_call = False
+                object_name = None
+                callee = tag.callee if hasattr(tag, "callee") else tag.name
+
+                if "." in callee:
+                    parts = callee.split(".", 1)
+                    object_name = parts[0]
+                    is_method_call = True
+
                 calls.append(
                     FunctionCall(
                         name=tag.name,
-                        caller="unknown",
-                        callee=tag.name,
+                        caller=getattr(tag, "caller", "unknown"),
+                        callee=callee,
                         file_path=file_path,
                         line_number=tag.line,
-                        is_method_call=False,
-                        object_name=None,
+                        is_method_call=is_method_call,
+                        object_name=object_name,
                     )
                 )
 
@@ -493,10 +409,28 @@ class ASTFileAnalyzer:
         """
         results = {}
 
+        # Prefetch all tags in one batch query for better performance
+        try:
+            tags_dict = self.tree_sitter_parser.get_tags_batch(
+                file_paths, use_cache=True
+            )
+            logger.debug(
+                f"Prefetched tags for {len(tags_dict)} files using batch query"
+            )
+        except Exception as e:
+            logger.debug(f"Batch tag prefetch failed: {e}, will fetch individually")
+            tags_dict = {}
+
         for file_path in file_paths:
             try:
-                result = self.analyze_file(file_path, analysis_type)
+                # Use prefetched tags if available
+                prefetched_tags = tags_dict.get(file_path)
+                result = self.analyze_file(
+                    file_path, analysis_type, prefetched_tags=prefetched_tags
+                )
                 results[file_path] = result
+                # Clear prefetched_tags reference to allow GC
+                prefetched_tags = None
             except Exception as e:
                 logger.error(f"Error analyzing file {file_path}: {e}")
                 # Add empty result for failed files
@@ -511,6 +445,9 @@ class ASTFileAnalyzer:
                     line_count=0,
                     analysis_errors=[str(e)],
                 )
+
+        # Clear tags_dict to free memory after batch processing
+        tags_dict.clear()
 
         return results
 
@@ -527,8 +464,14 @@ class ASTFileAnalyzer:
                 return reverse_deps
 
             # Check each file to see if it imports the target module
+            from .file_filter import FileFilter
+
             for other_file in all_files:
                 if other_file == file_path:
+                    continue
+
+                # Skip excluded files
+                if FileFilter.should_exclude_file(other_file):
                     continue
 
                 try:
@@ -590,8 +533,23 @@ class ASTFileAnalyzer:
 
     def clear_cache(self) -> None:
         """Clear the analysis cache."""
+        cache_size_before = len(self.analysis_cache)
         self.analysis_cache.clear()
-        logger.debug("Analysis cache cleared")
+        logger.debug(f"Analysis cache cleared ({cache_size_before} entries removed)")
+
+    def limit_cache_size(self, max_size: int = 1000) -> None:
+        """Limit cache size by removing oldest entries when limit is exceeded.
+
+        Args:
+            max_size: Maximum number of entries to keep in cache
+        """
+        if len(self.analysis_cache) > max_size:
+            # Remove oldest entries (dict order is insertion order in Python 3.7+)
+            excess = len(self.analysis_cache) - max_size
+            keys_to_remove = list(self.analysis_cache.keys())[:excess]
+            for key in keys_to_remove:
+                del self.analysis_cache[key]
+            logger.debug(f"Cache size limited: removed {excess} oldest entries")
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get cache statistics."""

@@ -5,22 +5,38 @@ This module provides a centralized way to create services for CLI commands
 using the dependency injection container.
 """
 
+from __future__ import annotations
+
 import logging
 from repomap_tool.core.logging_service import get_logger
-from typing import Optional, Any
+from typing import Optional, Any, TYPE_CHECKING, Union, cast
 from pathlib import Path
 
 from repomap_tool.models import RepoMapConfig
-from repomap_tool.core.container import create_container
+
+# Revert Container and create_container to TYPE_CHECKING / local import
+# from repomap_tool.core.container import Container, create_container # REMOVED
 from repomap_tool.core.repo_map import RepoMapService
 from repomap_tool.code_exploration.discovery_engine import EntrypointDiscoverer
-from repomap_tool.code_exploration.tree_builder import TreeBuilder
-from repomap_tool.code_exploration.tree_manager import TreeManager
+
+# from repomap_tool.code_exploration.tree_builder import TreeBuilder # Moved import
+# from repomap_tool.code_exploration.tree_manager import TreeManager # Moved import
 from repomap_tool.code_exploration.session_manager import SessionManager
 from repomap_tool.code_analysis.advanced_dependency_graph import AdvancedDependencyGraph
-from repomap_tool.core.parallel_processor import ParallelTagExtractor
 from repomap_tool.code_search.fuzzy_matcher import FuzzyMatcher
 from rich.console import Console
+from repomap_tool.cli.output.manager import OutputManager
+
+# from repomap_tool.core.container import Container # Removed top-level import
+
+if TYPE_CHECKING:
+    from repomap_tool.code_exploration.tree_builder import TreeBuilder
+    from repomap_tool.code_exploration.tree_manager import TreeManager
+
+    # Use string literal for Container type hint in TYPE_CHECKING
+    from repomap_tool.core.container import (
+        Container,
+    )  # REMOVED, now only string literal used
 
 logger = get_logger(__name__)
 
@@ -34,28 +50,19 @@ class ServiceFactory:
         self._services: dict[str, Any] = {}
 
     def create_repomap_service(self, config: RepoMapConfig) -> RepoMapService:
-        """Create a RepoMapService with all dependencies injected.
-
-        Args:
-            config: RepoMap configuration
-
-        Returns:
-            RepoMapService instance with injected dependencies
-        """
+        """Create a RepoMapService with all dependencies injected."""
         cache_key = f"repomap_{config.project_root}"
 
         if cache_key in self._services:
             return self._services[cache_key]  # type: ignore
-        # Create DI container
-        container = create_container(config)
-        self._containers[cache_key] = container
+        # Ensure the container is created and cached via the helper method
+        container = self._get_or_create_container(config)
 
         # Get all dependencies from container
         console: Console = container.console()
-        parallel_extractor: ParallelTagExtractor = container.parallel_tag_extractor()
         fuzzy_matcher: FuzzyMatcher = container.fuzzy_matcher()
         embedding_matcher = container.embedding_matcher()
-        semantic_matcher = None
+        semantic_matcher: Optional[Any] = None
         hybrid_matcher = None
         if config.semantic_match.enabled:
             semantic_matcher = container.adaptive_semantic_matcher()
@@ -67,19 +74,29 @@ class ServiceFactory:
             impact_analyzer = container.impact_analyzer()
         centrality_calculator = container.centrality_calculator()
         spellchecker_service = container.spellchecker_service()
+        tree_sitter_parser = (
+            container.tree_sitter_parser()
+        )  # Get tree_sitter_parser from container
+        tag_cache = container.tag_cache()  # Get tag_cache from container
+        file_discovery_service = (
+            container.file_discovery_service()
+        )  # Get file_discovery_service from container
 
         # Create RepoMapService with injected dependencies
+        # RepoMapService.__init__ signature: (config, console, fuzzy_matcher, dependency_graph, centrality_calculator, tree_sitter_parser, tag_cache, file_discovery_service, semantic_matcher, embedding_matcher, hybrid_matcher, impact_analyzer, spellchecker_service)
         service = RepoMapService(
             config=config,
             console=console,
-            parallel_extractor=parallel_extractor,
             fuzzy_matcher=fuzzy_matcher,
+            dependency_graph=dependency_graph,
+            centrality_calculator=centrality_calculator,
+            tree_sitter_parser=tree_sitter_parser,
+            tag_cache=tag_cache,
+            file_discovery_service=file_discovery_service,
             semantic_matcher=semantic_matcher,
             embedding_matcher=embedding_matcher,
             hybrid_matcher=hybrid_matcher,
-            dependency_graph=dependency_graph,
             impact_analyzer=impact_analyzer,
-            centrality_calculator=centrality_calculator,
             spellchecker_service=spellchecker_service,
         )
 
@@ -90,39 +107,27 @@ class ServiceFactory:
     def create_entrypoint_discoverer(
         self, repo_map_service: RepoMapService, config: RepoMapConfig
     ) -> EntrypointDiscoverer:
-        """Create an EntrypointDiscoverer with injected dependencies.
-
-        Args:
-            repo_map_service: RepoMapService instance
-            config: RepoMap configuration
-
-        Returns:
-            EntrypointDiscoverer instance with injected dependencies
-        """
+        """Create an EntrypointDiscoverer with injected dependencies."""
         cache_key = f"discoverer_{config.project_root}"
 
         if cache_key in self._services:
             return self._services[cache_key]  # type: ignore
 
-        # Get container (reuse existing one for this project)
-        container = self._containers.get(f"repomap_{config.project_root}")
-        if container is None:
-            container = create_container(config)
-            self._containers[f"repomap_{config.project_root}"] = container
+        # Ensure the container is created and cached via the helper method
+        container = self._get_or_create_container(config)
 
-        # Get dependencies from container
         import_analyzer = container.import_analyzer()
-        dependency_graph: AdvancedDependencyGraph = container.dependency_graph()
+        dependency_graph = container.dependency_graph()
         centrality_calculator = container.centrality_calculator()
-        impact_analyzer = None
-        if config.dependencies.enable_impact_analysis:
-            impact_analyzer = container.impact_analyzer()
+        impact_analyzer = container.impact_analyzer()
+
         # Create EntrypointDiscoverer with injected dependencies
+        # EntrypointDiscoverer.__init__ signature: (import_analyzer, dependency_graph, centrality_calculator, repo_map, impact_analyzer)
         discoverer = EntrypointDiscoverer(
-            repo_map=repo_map_service,
             import_analyzer=import_analyzer,
             dependency_graph=dependency_graph,
             centrality_calculator=centrality_calculator,
+            repo_map=repo_map_service,
             impact_analyzer=impact_analyzer,
         )
 
@@ -133,29 +138,26 @@ class ServiceFactory:
     def create_tree_builder(
         self, repo_map_service: RepoMapService, config: RepoMapConfig
     ) -> TreeBuilder:
-        """Create a TreeBuilder with injected dependencies.
-
-        Args:
-            repo_map_service: RepoMapService instance
-            config: RepoMap configuration
-
-        Returns:
-            TreeBuilder instance with injected dependencies
-        """
+        """Create a TreeBuilder with injected dependencies."""
         cache_key = f"tree_builder_{config.project_root}"
 
         if cache_key in self._services:
             return self._services[cache_key]  # type: ignore
 
-        # Create entrypoint discoverer
-        entrypoint_discoverer: EntrypointDiscoverer = self.create_entrypoint_discoverer(
-            repo_map_service, config
-        )
+        # Ensure the container is created and cached via the helper method
+        container = self._get_or_create_container(config)
+
+        entrypoint_discoverer = container.entrypoint_discoverer()
+
+        from repomap_tool.code_exploration.tree_builder import (
+            TreeBuilder,
+        )  # Moved import
 
         # Create TreeBuilder with injected dependencies
+        # TreeBuilder.__init__ signature: (entrypoint_discoverer, repo_map)
         tree_builder = TreeBuilder(
-            repo_map=repo_map_service,
             entrypoint_discoverer=entrypoint_discoverer,
+            repo_map=repo_map_service,
         )
 
         self._services[cache_key] = tree_builder
@@ -165,60 +167,44 @@ class ServiceFactory:
     def create_tree_manager(
         self, repo_map_service: RepoMapService, config: RepoMapConfig
     ) -> TreeManager:
-        """Create a TreeManager with injected dependencies.
-
-        Args:
-            repo_map_service: RepoMapService instance
-            config: RepoMap configuration
-
-        Returns:
-            TreeManager instance with injected dependencies
-        """
+        """Create a TreeManager with injected dependencies."""
         cache_key = f"tree_manager_{config.project_root}"
 
         if cache_key in self._services:
             return self._services[cache_key]  # type: ignore
 
-        # Get container (reuse existing one for this project)
-        container = self._containers.get(f"repomap_{config.project_root}")
-        if container is None:
-            container = create_container(config)
-            self._containers[f"repomap_{config.project_root}"] = container
+        # Ensure the container is created and cached via the helper method
+        container = self._get_or_create_container(config)
 
-        # Get dependencies from container
         session_manager = container.session_manager()
         tree_builder: TreeBuilder = self.create_tree_builder(repo_map_service, config)
 
+        from repomap_tool.code_exploration.tree_manager import (
+            TreeManager,
+        )  # Moved import
+
         # Create TreeManager with injected dependencies
+        # TreeManager.__init__ signature: (repo_map, session_manager, tree_builder)
         tree_manager = TreeManager(
             repo_map=repo_map_service,
             session_manager=session_manager,
             tree_builder=tree_builder,
         )
-
-        self._services[cache_key] = tree_manager
-        logger.debug(f"Created TreeManager for {config.project_root}")
+        self._services["tree_manager_" + str(config.project_root)] = (
+            tree_manager  # Explicitly cast to str
+        )
+        logger.debug(f"Created and cached TreeManager for {config.project_root}")
         return tree_manager
 
     def create_fuzzy_matcher(self, config: RepoMapConfig) -> FuzzyMatcher:
-        """Create a FuzzyMatcher with all dependencies injected.
-
-        Args:
-            config: RepoMap configuration
-
-        Returns:
-            FuzzyMatcher instance with injected dependencies
-        """
+        """Create a FuzzyMatcher with all dependencies injected."""
         cache_key = f"fuzzy_matcher_{config.project_root}"
 
         if cache_key in self._services:
             return self._services[cache_key]  # type: ignore
 
-        # Get container (reuse existing one for this project)
-        container = self._containers.get(f"repomap_{config.project_root}")
-        if container is None:
-            container = create_container(config)
-            self._containers[f"repomap_{config.project_root}"] = container
+        # Use the helper method to get or create container
+        container = self._get_or_create_container(config)
 
         # Get fuzzy matcher from container
         fuzzy_matcher = container.fuzzy_matcher()
@@ -227,24 +213,14 @@ class ServiceFactory:
         return fuzzy_matcher
 
     def get_llm_analyzer(self, config: RepoMapConfig) -> Any:
-        """Get LLM analyzer from container.
-
-        Args:
-            config: RepoMap configuration
-
-        Returns:
-            LLM analyzer instance
-        """
+        """Get LLM analyzer from container."""
         cache_key = f"llm_analyzer_{config.project_root}"
 
         if cache_key in self._services:
             return self._services[cache_key]
 
-        # Get container (reuse existing one for this project)
-        container = self._containers.get(f"repomap_{config.project_root}")
-        if container is None:
-            container = create_container(config)
-            self._containers[f"repomap_{config.project_root}"] = container
+        # Use the helper method to get or create container
+        container = self._get_or_create_container(config)
 
         # Get LLM analyzer from container
         llm_analyzer = container.llm_file_analyzer()
@@ -252,22 +228,69 @@ class ServiceFactory:
         logger.debug(f"Created LLM analyzer for {config.project_root}")
         return llm_analyzer
 
-    def clear_cache(self, project_root: Optional[str] = None) -> None:
-        """Clear service cache.
+    def create_output_manager(self, config: RepoMapConfig) -> OutputManager:
+        """Create an OutputManager with all dependencies injected."""
+        cache_key = f"output_manager_{config.project_root}"
+
+        if cache_key in self._services:
+            return self._services[cache_key]  # type: ignore
+
+        container = self._get_or_create_container(config)
+        output_manager = container.output_manager()
+        self._services[cache_key] = output_manager
+        logger.debug(f"Created OutputManager for {config.project_root}")
+        return output_manager
+
+    def _get_or_create_container(
+        self, config: RepoMapConfig
+    ) -> "Container":  # Use string literal for return type
+        """Get or create a container for a given project root, with caching.
 
         Args:
-            project_root: Specific project root to clear, or None to clear all
+            config: The RepoMapConfig for the project.
+
+        Returns:
+            The Dependency Injector container.
         """
-        if project_root is None:
-            self._containers.clear()
-            self._services.clear()
-            logger.debug("Cleared all service caches")
+        container_key = f"repomap_{str(config.project_root)}"  # Explicitly cast to str
+        if container_key not in self._containers:
+            # Dynamically import create_container only when needed for initial creation
+            import importlib
+
+            container_module = importlib.import_module("repomap_tool.core.container")
+            create_container_func = getattr(container_module, "create_container")
+
+            container = create_container_func(config)
+            self._containers[container_key] = container
+            logger.debug(f"Created and cached new container for {config.project_root}")
         else:
-            keys_to_remove = [k for k in self._containers.keys() if project_root in k]
-            for key in keys_to_remove:
-                self._containers.pop(key, None)
-                self._services.pop(key, None)
-            logger.debug(f"Cleared service cache for {project_root}")
+            logger.debug(f"Using cached container for {config.project_root}")
+        # No longer casting directly to Container, as it's a dynamic import
+        return self._containers[  # type: ignore[no-any-return]
+            container_key
+        ]  # Return type handled by string literal hint
+
+    def clear_cache(self, project_root: Optional[Union[str, Path]] = None) -> None:
+        """Clear cached services and containers.
+
+        Args:
+            project_root: If provided, only clear cache for this specific project root.
+        """
+        if project_root:
+            project_root_str = str(project_root)  # Convert Path to string
+            # Clear specific services
+            keys_to_remove = [k for k in self._services.keys() if project_root_str in k]
+            for k in keys_to_remove:
+                del self._services[k]
+
+            # Clear specific containers
+            keys_to_remove = [
+                k for k in self._containers.keys() if project_root_str in k
+            ]
+            for k in keys_to_remove:
+                del self._containers[k]
+
+            logger.info(f"Cache cleared for project root: {project_root_str}")
 
 
 # Global service factory instance

@@ -11,7 +11,7 @@ import importlib
 from pathlib import Path
 
 
-def test_venv_activation():
+def test_venv_activation(capsys):
     """Test that we're running in the virtual environment."""
     print(f"Python executable: {sys.executable}")
     print(f"Python version: {sys.version}")
@@ -32,7 +32,7 @@ def test_venv_activation():
         print("⚠️ Not running in virtual environment")
 
 
-def test_required_imports():
+def test_required_imports(capsys):
     """Test that all required modules can be imported."""
     required_modules = ["pydantic", "click", "rich", "pytest"]
 
@@ -46,7 +46,7 @@ def test_required_imports():
             raise
 
 
-def test_repomap_imports():
+def test_repomap_imports(capsys):
     """Test that repomap-tool modules can be imported."""
     # Add src to path
     project_root = Path(__file__).parent.parent.parent
@@ -66,7 +66,7 @@ def test_repomap_imports():
             # Don't raise here as these might not be available in all environments
 
 
-def test_matcher_imports():
+def test_matcher_imports(capsys):
     """Test that matcher modules can be imported."""
     # Add src to path
     project_root = Path(__file__).parent.parent.parent

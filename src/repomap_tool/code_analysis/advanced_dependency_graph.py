@@ -12,6 +12,7 @@ from typing import List, Dict, Set, Optional, Any, Tuple
 from collections import defaultdict, deque
 
 from .dependency_graph import DependencyGraph
+from .import_analyzer import ImportAnalyzer
 from .call_graph_builder import CallGraphBuilder
 from .models import CallGraph, FunctionCall
 
@@ -21,11 +22,22 @@ logger = get_logger(__name__)
 class AdvancedDependencyGraph(DependencyGraph):
     """Enhanced dependency graph with call graph integration and advanced metrics."""
 
-    def __init__(self) -> None:
-        """Initialize the advanced dependency graph."""
-        super().__init__()
+    def __init__(
+        self,
+        import_analyzer: ImportAnalyzer,
+        call_graph_builder: CallGraphBuilder,
+    ) -> None:
+        """Initialize the advanced dependency graph.
+
+        Args:
+            import_analyzer: ImportAnalyzer instance (required dependency)
+            call_graph_builder: CallGraphBuilder instance (required dependency)
+        """
+        # All dependencies are required and injected via DI container
+
+        super().__init__(import_analyzer=import_analyzer)
         self.call_graph: Optional[CallGraph] = None
-        self.call_graph_builder = CallGraphBuilder()
+        self.call_graph_builder = call_graph_builder
         self.function_dependencies: Dict[str, Set[str]] = {}
         self.function_dependents: Dict[str, Set[str]] = {}
         self.centrality_scores: Dict[str, float] = {}
@@ -249,7 +261,10 @@ class AdvancedDependencyGraph(DependencyGraph):
                 try:
                     depth = self._calculate_path_depth(root, file_path)
                     depths.append(depth)
-                except Exception:
+                except Exception as e:
+                    logger.debug(
+                        f"Error calculating dependency depth from {root} to {file_path}: {e}"
+                    )
                     continue
 
             return max(depths) if depths else 0
