@@ -17,7 +17,6 @@ if TYPE_CHECKING:
     from .impact_analysis_engine import ImpactAnalysisEngine
     from .centrality_analysis_engine import CentralityAnalysisEngine
     from .path_resolver import PathResolver
-    from ..llm.hierarchical_formatter import HierarchicalFormatter
 else:
     # Import for runtime to avoid circular imports
     from .advanced_dependency_graph import AdvancedDependencyGraph
@@ -27,7 +26,6 @@ else:
     from .impact_analysis_engine import ImpactAnalysisEngine
     from .centrality_analysis_engine import CentralityAnalysisEngine
     from .path_resolver import PathResolver
-    from ..llm.hierarchical_formatter import HierarchicalFormatter
 
 
 class LLMAnalyzerConfig(BaseModel):
@@ -78,9 +76,6 @@ class LLMAnalyzerDependencies(BaseModel):
 
     # Analysis engines
     ast_analyzer: ASTFileAnalyzer = Field(..., description="AST file analyzer")
-    hierarchical_formatter: HierarchicalFormatter = Field(
-        ..., description="Hierarchical formatter"
-    )
     path_resolver: PathResolver = Field(..., description="Path resolver")
     impact_analyzer: ImpactAnalyzer = Field(..., description="Impact analyzer")
     impact_engine: ImpactAnalysisEngine = Field(
@@ -96,7 +91,6 @@ class LLMAnalyzerDependencies(BaseModel):
     @field_validator(
         "dependency_graph",
         "ast_analyzer",
-        "hierarchical_formatter",
         "path_resolver",
         "impact_analyzer",
         "impact_engine",

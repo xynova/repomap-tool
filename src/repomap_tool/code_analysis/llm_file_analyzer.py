@@ -44,7 +44,6 @@ from .format_utils import (
     format_text_impact,
     format_text_centrality,
 )
-from ..llm.hierarchical_formatter import HierarchicalFormatter
 
 logger = get_logger(__name__)
 
@@ -87,7 +86,6 @@ class LLMFileAnalyzer:
 
         # Store injected dependencies
         self.ast_analyzer = dependencies.ast_analyzer
-        self.hierarchical_formatter = dependencies.hierarchical_formatter
         self.path_resolver = dependencies.path_resolver
         self.centrality_calculator = dependencies.centrality_calculator
         self.centrality_engine = dependencies.centrality_engine
